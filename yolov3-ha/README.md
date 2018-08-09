@@ -17,9 +17,23 @@ there are multiple ways to install this.
 # Getting started
 To make a really quick test when you have the above installed.
 
-1. git clone ...
+1. Clone the keras-yolo3 and checkout the modified code (yolo3-boxes-api branch)
 
-2. git clone ...
+    > git clone https://github.com/joakimeriksson/keras-yolo3.git
+    > cd keras-yolo3
+    > git checkout yolo3-boxes-api
 
-3. 
+2. Clone this repository.
+
+    > git clone https://github.com/joakimeriksson/ai-smarthome.git
+    
+    
+3. Start the application
+
+    > cd ai-smarthome/yolov3-ha
+    > python smartcam.py -v 0 -s
+    
+ This should give you a video feed from "camera 0" on your computer. On My OS-X it is the webcam.
+    
+
 

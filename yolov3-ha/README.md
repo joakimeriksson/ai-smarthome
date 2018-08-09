@@ -37,3 +37,31 @@ To make a really quick test when you have the above installed.
     
 More documentation to come... including how to configure home assistant to receive the MQTT events.
 
+# Home Assistant configuration
+
+I have the following configuration in the Home Assistant configuration.yaml file:
+
+    # MQTT Broker
+    mqtt:
+      broker: 192.168.1.169
+
+    ffmpeg:
+
+    # Live view + MQTT detection camera view
+    camera:
+      - platform: ffmpeg
+        name: LiveView
+        input: rtsp://192.168.1.169:7447/5b5b034b9008df24782d88f1_2
+      - platform: mqtt
+        name: Last Detection (YOLOv3)
+        topic: ha/camera/mqtt
+
+    # Binary MQTT Sensor
+    binary_sensor:
+      - platform: mqtt
+        name: GardenMotionSensor
+        device_class: motion
+        value_template: '{{value_json.on}}'
+        state_topic: "ha/motion/mqtt"
+        
+This assumes a MQTT Broker such as mosquitto or similar running at host 192.168.1.169.

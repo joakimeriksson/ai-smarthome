@@ -84,3 +84,4 @@ This will register a subscribe on the topic ha/tts/say and trigger an action on 
 based on the content of the MQTT message. So any message to ha/tts/say will be spoken out on the
 Sonos speakers in my kitchen.
 
+![HomeAssistantTest](https://user-images.githubusercontent.com/599447/43793953-440994d0-9a7d-11e8-9b40-7f701500247c.png)

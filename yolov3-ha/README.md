@@ -5,7 +5,7 @@ The integration is done over MQTT - images with detection boxes, motion event (w
 Requirements:
 * Python 3.x
 * Tensorflow + Keras installed (in your python environment)
-* Keras-Yolov3 repository with my PR pulled in (or my local version at:)
+* Keras-Yolov3 repository with my PR pulled in (or my local version at: https://github.com/joakimeriksson/keras-yolo3)
 
 I used the Anaconda python data science environment to get Keras and Tensorflow installed on my MAC but
 there are multiple ways to install this.

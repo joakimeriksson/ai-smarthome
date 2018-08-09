@@ -35,7 +35,31 @@ To make a really quick test when you have the above installed.
     
  This should give you a video feed from "camera 0" on your computer. On My OS-X it is the webcam.
     
-More documentation to come... including how to configure home assistant to receive the MQTT events.
+You can also run it using 
+
+    >python smartcam.py -c config-file.yaml
+
+This will load configuration from the config file that can be used to configre video stream and
+MQTT broker host and other things.
+
+My config looks like this:
+
+    cvconf:
+        video: rtsp://192.168.1.169:7447/5b5b034b9008df24782d88f1_2
+        plugin: hacv.CVMQTTPlugin
+
+    hacv:
+        host: 192.168.1.169
+        name: livingroom
+
+The cvconf is for configuring the smart-camera application with its video stream and
+which plugin that is going to be used for notifications of detections.
+
+The hacv part is for configuring the homeassistant integration with MQTT Broker host and
+the name of the "view" of the camera. In this case detection will be sent to TTS with
+"There is a <detected-object-class> in the livingroom". The object-class is from the YOLOv3
+object classes (person, sofa, horse, dog, etc.).
+
 
 # Home Assistant configuration
 

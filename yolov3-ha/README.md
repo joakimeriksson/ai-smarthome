@@ -35,5 +35,5 @@ To make a really quick test when you have the above installed.
     
  This should give you a video feed from "camera 0" on your computer. On My OS-X it is the webcam.
     
-
+More documentation to come... including how to configure home assistant to receive the MQTT events.
 

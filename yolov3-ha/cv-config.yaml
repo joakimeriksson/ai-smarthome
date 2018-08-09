@@ -1,0 +1,7 @@
+cvconf:
+    video: rtsp://192.168.1.169:7447/5b5b034b9008df24782d88f1_2
+    plugin: hacv.CVMQTTPlugin
+
+hacv:
+    host: 192.168.1.169
+    name: livingroom

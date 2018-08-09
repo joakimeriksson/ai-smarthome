@@ -65,3 +65,22 @@ I have the following configuration in the Home Assistant configuration.yaml file
         state_topic: "ha/motion/mqtt"
         
 This assumes a MQTT Broker such as mosquitto or similar running at host 192.168.1.169.
+
+I also have some TTS triggering code in the automations.yaml file to get the notifications on my
+sonos speakers (called media_player.kitchen).
+
+    - id: mqtt_tts_id
+      alias: MQTT TTS
+      trigger:
+      - platform: mqtt
+        topic: ha/tts/say
+      action:
+      - service_template: tts.google_say
+        entity_id: media_player.kitchen
+        data_template:
+          message: '{{ trigger.payload }}'
+
+This will register a subscribe on the topic ha/tts/say and trigger an action on the Google TTS
+based on the content of the MQTT message. So any message to ha/tts/say will be spoken out on the
+Sonos speakers in my kitchen.
+

@@ -1,8 +1,11 @@
-# Integration of Keras-Yolov3 with Home Assistant over MQTT.
+# Integration of Yolov3 with Home Assistant over MQTT.
 This is an integration of object detection for the Home Asstant smart home platform. 
 The integration is done over MQTT - images with detection boxes, motion event (with binary sensor) and TTS-text are sent over MQTT.
 
-Requirements:
+First version made use of a Keras Tensorflow version of YoloV3. Second version is using the new Darknet support that
+is built-in in the latest version of OpenCV. This means that there is no need for Tensorflow or Keras anymore.
+
+Requirements (version 1):
 * Python 3.x
 * Tensorflow + Keras installed (in your python environment)
 * Keras-Yolov3 repository with my PR pulled in (or my local version at: https://github.com/joakimeriksson/keras-yolo3/tree/yolo3-boxes-api)
@@ -11,10 +14,18 @@ Requirements:
 * MQTT broker
 * A home assistant installation (if you want to test the integration)
 
+Requirements (version 2):
+* Python 3.x
+* OpenCV for python (pip3 install opencv-python)
+* Camera (built in web camera or RTSP camera)
+* MQTT broker
+* A home assistant installation (if you want to test the integration)
+
+
 I used the Anaconda python data science environment to get Keras and Tensorflow installed on my MAC but
 there are multiple ways to install this.
 
-# Getting started
+# Getting started (v1)
 To make a really quick test when you have the above installed.
 
 1. Clone the keras-yolo3 and checkout the modified code (yolo3-boxes-api branch)
@@ -34,7 +45,25 @@ To make a really quick test when you have the above installed.
     > python smartcam.py -v 0 -s
     
  This should give you a video feed from "camera 0" on your computer. On My OS-X it is the webcam.
-    
+
+# Getting started (v2)
+To make a quick test with this - ensure that you have latest version of open-cv (3.4.2 or later).
+
+1. Clone this repository.
+
+     > git clone https://github.com/joakimeriksson/ai-smarthome.git
+
+2. Download the yolov3 weights:
+
+    > wget https://pjreddie.com/media/files/yolov3.weights
+
+Then run:
+ 
+    > cd ai-smarthome/yolov3-ha
+    > python smartcam-ocv.py -v 0 -s
+    >
+
+# Run with configuration
 You can also run it using 
 
     >python smartcam.py -c config-file.yaml

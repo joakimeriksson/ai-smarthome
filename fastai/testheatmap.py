@@ -52,7 +52,8 @@ acts  = hook_a.stored[0].cpu()
 avg_acts = acts.mean(0)
 show_heatmap(avg_acts)
 
-# Heatmap over all graders on a specific class
+# Heatmap over a specific class
+>>>>>>> added heatmap test
 grad = hook_g.stored[0][0].cpu()
 grad_chan = grad.mean(1).mean(1)
 grad.shape,grad_chan.shape

@@ -33,6 +33,7 @@
 #
 
 import ipaddress
+import socket
 from scapy.all import *
 from scapy.layers.inet import UDP, TCP
 from scapy.layers.inet6 import IPv6
@@ -59,6 +60,7 @@ sockmap = {}
 adrmap = {}
 input = []
 tun = None
+tunconnection = None
 prefix = ipaddress.ip_address("64:ff9b::0").packed
 
 # Remove the state for this specific socket
@@ -81,6 +83,14 @@ def update_tcp_state_totun(st, data):
     ipv6.ack = tcpState['ack']
     return ipv6
 
+def send_to_tun(ipv6):
+    if ipv6 is not None:
+        print("Writing to tun")
+        if tun is not None:
+            os.write(tun, bytes(ipv6))
+        if tunconnection is not None:
+            tunconnection.send(bytes(ipv6))
+
 # Handle TCP state - TCP from ipv6 toward IPv4 socket
 def handle_tcp_state_tosock(ip, sock):
     global tun
@@ -98,7 +108,7 @@ def handle_tcp_state_tosock(ip, sock):
         print("SYN received - send SYNACK (tun)! ", st[5])
         ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="SA", seq=tcpState['seq'], ack=tcpState['ack'])
         ipv6.show()
-        os.write(tun, bytes(IPv6(ipv6)))
+        send_to_tun(bytes(IPv6(ipv6)))
 #    sock.send(ip.load)
     elif ip.flags.FA or ip.flags.F:
         tcpState['state'] = TCP_FIN_CLOSE_WAIT
@@ -107,7 +117,7 @@ def handle_tcp_state_tosock(ip, sock):
         print("TCP: FIN received - sending FIN.")
         ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="FA", seq=tcpState['seq'], ack=tcpState['ack'])
         ipv6.show()
-        os.write(tun, bytes(IPv6(ipv6)))
+        send_to_tun(bytes(IPv6(ipv6)))
         # Clean out this socket?
     elif ip.flags.A or ip.flags.AP:
         if tcpState['state'] == TCP_ESTABLISHED:
@@ -122,7 +132,7 @@ def handle_tcp_state_tosock(ip, sock):
                 ipv6 = IPv6(ipv6)
                 print("TCP Sending ACK (tun)!", st[5])
                 ipv6.show()
-                os.write(tun, bytes(ipv6))
+                send_to_tun(bytes(ipv6))
     if hasattr(ip, 'load'):
         print("TCP: Sending over socket - Payload:", ip.load)
         sock.send(ip.load)
@@ -136,6 +146,22 @@ def nat64_send(ip):
         ip4dst = ipaddress.ip_address(dst.packed[-4:])
         print("NAT64 dst:", ip4dst, ip.nh)
         if ip.nh == PROTO_UDP:
+            if DNS in ip:
+                print("DNS name:", ip[DNS].opcode)
+                if ip[DNS].opcode == 0 and ip[DNS].qdcount > 0:
+                    print(ip[DNSQR].qname)
+                    addr = socket.gethostbyname(ip[DNSQR].qname)
+                    dns64addr = ipaddress.ip_address(prefix[0:16-4] +
+                                                     ipaddress.ip_address(addr).packed)
+                    print(" => ", addr, str(dns64addr))
+                    name = "www.sics.se"
+                    ipaddr = "64:ff9b::c10a:402a"
+                    resp = IPv6(dst=ip.src, src=ip.dst)/UDP(dport=ip[UDP].sport, sport=53)/DNS(id=ip[DNS].id, qr=1, ancount=1)/DNSRR(type='AAAA', rrname=name,rdata=ipaddr)
+                    reps = IPv6(resp)
+                    resp.show()
+                    print(repr(resp))
+                    send_to_tun(resp)
+                    return 0
             key = "udp:%s:%s-%s:%s"%(ip.src, ip.sport, ip4dst, ip.dport)
             if key not in adrmap:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -150,8 +176,9 @@ def nat64_send(ip):
                 input = input + [sock]
             else:
                 sock = adrmap[key]
-            print("=== NAT64 UDP Sending:", ip.load, sock, "===")
-            sock.send(ip.load)
+
+            print("=== NAT64 UDP Sending:", bytes(ip[UDP]), sock, "===")
+            sock.send(bytes(ip[UDP]))
         elif ip.nh == PROTO_TCP:
             key = "tcp:%s:%s-%s:%s"%(ip.src, ip.sport, ip4dst, ip.dport)
             if key not in adrmap:
@@ -183,14 +210,34 @@ def nat64_recv(sock, data, addr):
         ipv6 = IPv6(update_tcp_state_totun(t, data))
         print("NAT64 TCP to tun")
         ipv6.show()
-    if ipv6 is not None:
-        os.write(tun, bytes(ipv6))
+    send_to_tun(ipv6)
+
+def recv_from_tun(packet):
+    ip = IPv6(packet)
+    if ip.nh != PROTO_ICMP:
+        print(">> RECV from TUN: ")
+        ip.show()
+        # do nat64 and send
+        nat64_send(ip)
 
 # Only for OS-X for now.
 # Should be easy to adapt for linux also.
 tun = os.open("/dev/tun12", os.O_RDWR)
-os.system("ifconfig tun12 inet6 64:ff9b::1/96")
+os.system("ifconfig tun12 inet6 64:ff9b::1/96 up")
+os.system("sysctl -w net.inet.ip.forwarding=1");
+
 input = [tun]
+
+tunsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_address = ('localhost', 8888)
+print(sys.stderr, 'starting up on %s port %s' % server_address)
+tunsock.bind(server_address)
+tunsock.listen(1)
+print("Accepting connections...")
+tunconnection, client_address = tunsock.accept()
+print("Connection from:", client_address)
+tunconnection.send(b"hello.")
+input = input + [tunconnection]
 try:
     while 1:
         print("Input:", input)
@@ -198,12 +245,14 @@ try:
         for r in inputready:
             if r == tun:
                 packet = os.read(tun, 4000)
-                ip = IPv6(packet)
-                if ip.nh != PROTO_ICMP:
-                    print(">> RECV from TUN: ")
-                    ip.show()
-                    # do nat64 and send
-                    nat64_send(ip)
+                recv_from_tun(packet)
+            elif r == tunconnection:
+                data = r.recv(4000)
+                if not data:
+                    print(">> Socket shutdown - remove socket!")
+                    sock_remove(r)
+                else:
+                    recv_from_tun(data)
             else:
                 # avoid getting too big packet in over socket. To avoid IP fragmentation.
                 data, addr = r.recvfrom(1400)

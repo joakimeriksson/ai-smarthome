@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 #
-# Experimental NAT64 using tun-interface (for the NAT64 IPv6 interface and the
+# Experimental NAT64 and DNS64 using tun-interface (for the NAT64 IPv6 interface and the
 # regular sockets as the TCP/UDP interface.
 #
 
@@ -85,7 +85,7 @@ def update_tcp_state_totun(st, data):
 
 def send_to_tun(ipv6):
     if ipv6 is not None:
-        print("Writing to tun")
+        print("Writing to tun:", len(bytes(ipv6)))
         if tun is not None:
             os.write(tun, bytes(ipv6))
         if tunconnection is not None:
@@ -104,6 +104,7 @@ def handle_tcp_state_tosock(ip, sock):
         tcpState['ack'] = ip.seq + 1
         # We are established...
         tcpState['state'] = TCP_ESTABLISHED
+        tcpState['window'] = ip[TCP].window
         print("TCP State:", tcpState)
         print("SYN received - send SYNACK (tun)! ", st[5])
         ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="SA", seq=tcpState['seq'], ack=tcpState['ack'])
@@ -128,6 +129,8 @@ def handle_tcp_state_tosock(ip, sock):
                 # ACK immediately - we assume that we get data from other side soon...
                 print("TCP: received ", len(ip.load), "seq:", ip.seq, "ack:", tcpState['ack'])
                 tcpState['ack'] = ip.seq + len(ip.load)
+                # We should also handle the sanity checks for the ACK
+                tcpState['seq'] = ip.ack
                 ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="A", seq=tcpState['seq'], ack=tcpState['ack'])
                 ipv6 = IPv6(ipv6)
                 print("TCP Sending ACK (tun)!", st[5])
@@ -154,8 +157,8 @@ def nat64_send(ip):
                     dns64addr = ipaddress.ip_address(prefix[0:16-4] +
                                                      ipaddress.ip_address(addr).packed)
                     print(" => ", addr, str(dns64addr))
-                    name = "www.sics.se"
-                    ipaddr = "64:ff9b::c10a:402a"
+                    name = ip[DNSQR].qname
+                    ipaddr = dns64addr
                     resp = IPv6(dst=ip.src, src=ip.dst)/UDP(dport=ip[UDP].sport, sport=53)/DNS(id=ip[DNS].id, qr=1, ancount=1)/DNSRR(type='AAAA', rrname=name,rdata=ipaddr)
                     reps = IPv6(resp)
                     resp.show()
@@ -206,7 +209,6 @@ def nat64_recv(sock, data, addr):
     if proto == PROTO_UDP:
         ipv6 = IPv6(IPv6(src = t[2], dst = t[0])/UDP(sport=t[3], dport=t[1])/raw(data))
     elif proto == PROTO_TCP:
-        # Need to fix the SEQ and ACK pointers here later!!
         ipv6 = IPv6(update_tcp_state_totun(t, data))
         print("NAT64 TCP to tun")
         ipv6.show()
@@ -255,7 +257,13 @@ try:
                     recv_from_tun(data)
             else:
                 # avoid getting too big packet in over socket. To avoid IP fragmentation.
-                data, addr = r.recvfrom(1400)
+                max = 1200
+                st = sockmap[r]
+                if(len(st) > 5):
+                    tcpState = st[5]
+                    print("Recv:", tcpState)
+                    max = tcpState['window']
+                data, addr = r.recvfrom(max)
                 if not data:
                     print(">> Socket shutdown - remove socket!")
                     sock_remove(r)

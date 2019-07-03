@@ -50,18 +50,181 @@ TCP_FIN_CLOSE_WAIT = 6
 PROTO_UDP = 17
 PROTO_TCP = 6
 PROTO_ICMP = 58
+PROTOS = {PROTO_UDP: "udp", PROTO_TCP: "tcp", PROTO_ICMP: "icmp"}
 
-# all connections will get their own socket - so all incoming will be
-# looked up by socket
-# all from IPv6 => IPv4 will be looked up by proto:IPv6:port,IPv4:port
-udp_port = 15000
-tcp_port = 15000
 sockmap = {}
 adrmap = {}
 input = []
 tun = None
 tunconnection = None
 prefix = ipaddress.ip_address("64:ff9b::0").packed
+
+def genkey(proto, src, dest, sport, dport):
+    return "%s:%s:%s-%s:%s"%(PROTOS[proto], src, sport, dest, dport)
+
+def add_socket(socket):
+    global input
+    if socket is not None and socket not in input:
+        input = input + [socket]
+
+def remomve_socket(socket):
+    global input
+    input.remove(socket)
+
+class NAT64State:
+
+    def __init__(self, src, dst, sport, dport, proto):
+        self.dst = dst
+        self.src = src
+        self.sport = sport
+        self.dport = dport
+        self.proto = proto
+        self.maxreceive = 1200
+        self.key = genkey(proto, src, dst, sport, dport)
+
+class UDP64State(NAT64State):
+    udp_port = 15000
+
+    def __init__(self, src, dst, sport, dport):
+        super(TCP64State, self).__init__(src, dst, sport, dport, PROTO_UDP)
+        ip4dst = ipaddress.ip_address(ipaddress.ip_address(dst).packed[-4:])
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", UDP64State.udp_port))
+        sock.settimeout(1.0)
+        sock.connect((str(ip4dst), dport))
+        self.sock = sock
+        UDP64State.udp_port = UDP64State.udp_port + 1
+
+    def receive(self):
+        print("UDP: socket receive:", self)
+        data, addr = self.sock.recvfrom(self.maxreceive)
+        if not data:
+            sock_remove(self.sock)
+            return None
+        ipv6 = IPv6(IPv6(src = self.dst, dst = self.src)/UDP(sport=self.dport, dport=self.sport)/raw(data))
+        send_to_tun(ipv6)
+        return data
+
+    def __repr__(self):
+        return "UDP - src:%s:%d dst:%s:%d state:%d seq:%d ack:%d"%(self.src, self.sport, self.dst, self.dport)
+
+class TCP64State(NAT64State):
+    sock: None
+    tcp_port = 15000
+
+    def __init__(self, src, dst, sport, dport):
+        super(TCP64State, self).__init__(src, dst, sport, dport, PROTO_TCP)
+        ip4dst = ipaddress.ip_address(ipaddress.ip_address(dst).packed[-4:])
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", TCP64State.tcp_port))
+        sock.settimeout(1.0)
+        sock.connect((str(ip4dst), dport))
+        self.sock = sock
+        self.state = TCP_INIT
+        self.ack = 0
+        self.seq = 4711
+        self.window = 1200
+        self.mss = 1200
+        print("TCP opening ", ip4dst, dport)
+        print("Opened sock:", sock)
+        TCP64State.tcp_port = TCP64State.tcp_port + 1
+
+    # Handle TCP state - forward data from socket to tun.
+    def update_tcp_state_totun(self, data):
+        print(self)
+        ipv6 = IPv6(src = self.dst, dst = self.src)/TCP(sport=self.dport, dport=self.sport, flags="PA") / raw(data)
+        # Update with the current seq and ack.
+        ipv6.seq = self.seq
+        ipv6.ack = self.ack
+        return ipv6
+
+    # receive packet and send to tun.
+    def receive(self):
+        global input
+        if self.sock is None:
+            return None
+        print("TCP socket receive:", self)
+        maxread = max(self.maxreceive, self.mss)
+        data, addr = self.sock.recvfrom(maxread)
+        print("received from socket: ", data, not data)
+        input.remove(self.sock)
+        print("Input:", input)
+        if not data:
+            print("Socket closing... TCP state kept to handle TUN close.")
+            self.sock.close()
+            self.sock = None
+            print("TCP: FIN over socket received - sending FIN over tun.", self)
+            ipv6 = IPv6(IPv6(src=self.dst, dst=self.src)/TCP(sport=self.dport, dport=self.sport, flags="F", seq=self.seq, ack=self.ack))
+            ipv6.show()
+            self.last_to_tun = ipv6
+            send_to_tun(bytes(ipv6))
+            return None
+        ipv6 = IPv6(self.update_tcp_state_totun(data))
+        print("NAT64 TCP to tun (max:", maxread)
+        ipv6.show()
+        self.last_to_tun = ipv6
+        send_to_tun(ipv6)
+        return data
+
+    # Handle TCP state - TCP from ipv6 tun toward IPv4 socket
+    def handle_tcp_state_tosock(self, ip):
+        global tun, input
+        print("=== NAT64 TCP sock-send:", ip.flags, self.sock, "===")
+        if ip.flags.S:
+            # Use Window size to control max segment?
+            self.sock.setsockopt(socket.SOL_TCP, socket.TCP_MAXSEG, 1000)
+            print("Maxseg:", self.sock.getsockopt(socket.SOL_TCP, socket.TCP_MAXSEG))
+            self.ack = ip.seq + 1
+            # We are established...
+            self.state = TCP_ESTABLISHED
+            self.window = ip[TCP].window
+            # Get the MSS of the options
+            for k, v in ip[TCP].options:
+                if k == 'MSS':
+                    self.mss = v
+            print("TCP State:", self)
+            print("SYN received - send SYNACK (tun)! ")
+            ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="SA", seq=self.seq, ack=self.ack)
+            ipv6.show()
+            send_to_tun(bytes(IPv6(ipv6)))
+        #    sock.send(ip.load)
+        elif ip.flags.FA or ip.flags.F:
+            self.state = TCP_FIN_CLOSE_WAIT
+            self.ack = ip.seq + 1
+            self.timeout = time.time()
+            print("TCP: FIN received - sending FIN.", self)
+            ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="FA", seq=self.seq, ack=self.ack)
+            ipv6.show()
+            send_to_tun(bytes(IPv6(ipv6)))
+            # Clean out this socket?
+        elif ip.flags.A or ip.flags.AP:
+            if self.state == TCP_ESTABLISHED:
+                if not hasattr(ip,'load'):
+                    print("ESTABLISHED or ACK from other side. seq:", ip.seq, "ack:", ip.ack)
+                    self.seq = ip.ack
+                else:
+                    # ACK immediately - we assume that we get data from other side soon...
+                    print("TCP: received ", len(ip.load), "seq:", ip.seq, "ack:", ip.ack)
+                    self.ack = ip.seq + len(ip.load)
+                    # We should also handle the sanity checks for the ACK
+                    self.seq = ip.ack
+                    ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="A", seq=self.seq, ack=self.ack)
+                    ipv6 = IPv6(ipv6)
+                    print("TCP Sending ACK (tun)!", "State", self)
+                    ipv6.show()
+                    send_to_tun(bytes(ipv6))
+            print("Adding back socket...")
+            add_socket(self.sock)
+        if hasattr(ip, 'load'):
+            print("TCP: Sending over socket - Payload:", ip.load)
+            self.sock.send(ip.load)
+
+
+    def __repr__(self):
+        return "TCP - src:%s:%d dst:%s:%d state:%d seq:%d ack:%d mss:%d"%(self.src, self.sport, self.dst, self.dport, self.state,
+                                                     self.seq, self.ack, self.mss)
 
 # Remove the state for this specific socket
 def sock_remove(socket):
@@ -71,17 +234,9 @@ def sock_remove(socket):
         if adrmap[k] == socket:
             todel = k
     adrmap.pop(todel)
-    input.remove(socket)
-    socket.close()
-
-# Handle TCP state - forward data from socket to tun.
-def update_tcp_state_totun(st, data):
-    tcpState = st[5]
-    ipv6 = IPv6(src = st[2], dst = st[0])/TCP(sport=st[3], dport=st[1], flags="PA") / raw(data)
-    # Update with the current seq and ack.
-    ipv6.seq = tcpState['seq']
-    ipv6.ack = tcpState['ack']
-    return ipv6
+    if socket in input:
+        input.remove(socket)
+        socket.close()
 
 def send_to_tun(ipv6):
     if ipv6 is not None:
@@ -91,63 +246,15 @@ def send_to_tun(ipv6):
         if tunconnection is not None:
             tunconnection.send(bytes(ipv6))
 
-# Handle TCP state - TCP from ipv6 toward IPv4 socket
-def handle_tcp_state_tosock(ip, sock):
-    global tun
-    print("=== NAT64 TCP sock-send:", ip.flags, sock, "===")
-    st = sockmap[sock]
-    tcpState = st[5]
-    if ip.flags.S:
-    # Use Window size to control max segment?
-        sock.setsockopt(socket.SOL_TCP, socket.TCP_MAXSEG, 1000)
-        print("Maxseg:", sock.getsockopt(socket.SOL_TCP, socket.TCP_MAXSEG))
-        tcpState['ack'] = ip.seq + 1
-        # We are established...
-        tcpState['state'] = TCP_ESTABLISHED
-        tcpState['window'] = ip[TCP].window
-        print("TCP State:", tcpState)
-        print("SYN received - send SYNACK (tun)! ", st[5])
-        ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="SA", seq=tcpState['seq'], ack=tcpState['ack'])
-        ipv6.show()
-        send_to_tun(bytes(IPv6(ipv6)))
-#    sock.send(ip.load)
-    elif ip.flags.FA or ip.flags.F:
-        tcpState['state'] = TCP_FIN_CLOSE_WAIT
-        tcpState['ack'] = ip.seq + 1
-        tcpState['timeout'] = time.time()
-        print("TCP: FIN received - sending FIN.")
-        ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="FA", seq=tcpState['seq'], ack=tcpState['ack'])
-        ipv6.show()
-        send_to_tun(bytes(IPv6(ipv6)))
-        # Clean out this socket?
-    elif ip.flags.A or ip.flags.AP:
-        if tcpState['state'] == TCP_ESTABLISHED:
-            if not hasattr(ip,'load'):
-                print("ESTABLISHED from other side. seq:", ip.seq, "ack:", ip.ack)
-                tcpState['seq'] = ip.ack
-            else:
-                # ACK immediately - we assume that we get data from other side soon...
-                print("TCP: received ", len(ip.load), "seq:", ip.seq, "ack:", tcpState['ack'])
-                tcpState['ack'] = ip.seq + len(ip.load)
-                # We should also handle the sanity checks for the ACK
-                tcpState['seq'] = ip.ack
-                ipv6 = IPv6(src=ip.dst, dst=ip.src)/TCP(sport=ip.dport, dport=ip.sport, flags="A", seq=tcpState['seq'], ack=tcpState['ack'])
-                ipv6 = IPv6(ipv6)
-                print("TCP Sending ACK (tun)!", st[5])
-                ipv6.show()
-                send_to_tun(bytes(ipv6))
-    if hasattr(ip, 'load'):
-        print("TCP: Sending over socket - Payload:", ip.load)
-        sock.send(ip.load)
 
 def nat64_send(ip):
     global input, udp_port, tcp_port
     # NAT64 translation
     dst = ipaddress.ip_address(ip.dst)
-    key = ""
     if dst.packed[0:4] == prefix[0:4]:
         ip4dst = ipaddress.ip_address(dst.packed[-4:])
         print("NAT64 dst:", ip4dst, ip.nh)
+        key = genkey(ip.nh, ip.src, ip4dst, ip.sport, ip.dport)
         if ip.nh == PROTO_UDP:
             if DNS in ip:
                 print("DNS name:", ip[DNS].opcode)
@@ -165,54 +272,29 @@ def nat64_send(ip):
                     print(repr(resp))
                     send_to_tun(resp)
                     return 0
-            key = "udp:%s:%s-%s:%s"%(ip.src, ip.sport, ip4dst, ip.dport)
             if key not in adrmap:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(("0.0.0.0", udp_port))
-                sock.settimeout(1.0)
-                sock.connect((str(ip4dst), ip.dport))
-                udp_port = udp_port + 1
-                adrmap[key] = sock
-                sockmap[sock] = (ip.src, ip.sport, ip.dst, ip.dport, ip.nh)
-                print("Opened sock:", sock)
-                input = input + [sock]
+                udp = UDP64State(ip.src, ip.dst, ip.sport, ip.dport)
+                adrmap[key] = udp.sock
+                sockmap[udp.sock] = udp
+                print("Opened sock:", udp.sock)
+                add_socket(udp.sock)
+                sock = udp.sock
             else:
                 sock = adrmap[key]
 
             print("=== NAT64 UDP Sending:", bytes(ip[UDP]), sock, "===")
             sock.send(bytes(ip[UDP]))
         elif ip.nh == PROTO_TCP:
-            key = "tcp:%s:%s-%s:%s"%(ip.src, ip.sport, ip4dst, ip.dport)
             if key not in adrmap:
-                print("TCP opening ", ip4dst, ip.dport)
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(("0.0.0.0", tcp_port))
-                sock.settimeout(1.0)
-                sock.connect((str(ip4dst), ip.dport))
-                tcp_port = tcp_port + 1
-                adrmap[key] = sock
-                sockmap[sock] = (ip.src, ip.sport, ip.dst, ip.dport, ip.nh, {'seq':4711, 'ack':0, 'state':TCP_INIT})
-                print("Opened sock:", sock)
-                input = input + [sock]
+                tcp = TCP64State(ip.src, ip.dst, ip.sport, ip.dport)
+                adrmap[key] = tcp.sock
+                sockmap[tcp.sock] = tcp
+                add_socket(tcp.sock)
+                sock = tcp.sock
             else:
                 sock = adrmap[key]
-            handle_tcp_state_tosock(ip, sock)
-
-
-def nat64_recv(sock, data, addr):
-    print("==== NAT64 Received; ", data, addr, "====")
-    t = sockmap[sock]
-    ipv6 = None
-    proto = t[4]
-    if proto == PROTO_UDP:
-        ipv6 = IPv6(IPv6(src = t[2], dst = t[0])/UDP(sport=t[3], dport=t[1])/raw(data))
-    elif proto == PROTO_TCP:
-        ipv6 = IPv6(update_tcp_state_totun(t, data))
-        print("NAT64 TCP to tun")
-        ipv6.show()
-    send_to_tun(ipv6)
+            tcp = sockmap[sock]
+            tcp.handle_tcp_state_tosock(ip)
 
 def recv_from_tun(packet):
     ip = IPv6(packet)
@@ -229,17 +311,14 @@ os.system("ifconfig tun12 inet6 64:ff9b::1/96 up")
 os.system("sysctl -w net.inet.ip.forwarding=1");
 
 input = [tun]
-
+tunconnection = None
 tunsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = ('localhost', 8888)
 print(sys.stderr, 'starting up on %s port %s' % server_address)
 tunsock.bind(server_address)
 tunsock.listen(1)
-print("Accepting connections...")
-tunconnection, client_address = tunsock.accept()
-print("Connection from:", client_address)
-tunconnection.send(b"hello.")
-input = input + [tunconnection]
+print("Accepting connections over TCP on 8888 (only one at a time).")
+input = input + [tunsock]
 try:
     while 1:
         print("Input:", input)
@@ -248,27 +327,28 @@ try:
             if r == tun:
                 packet = os.read(tun, 4000)
                 recv_from_tun(packet)
+            # Something
             elif r == tunconnection:
                 data = r.recv(4000)
                 if not data:
-                    print(">> Socket shutdown - remove socket!")
+                    print(">> TUN Socket shutdown - remove socket!")
                     sock_remove(r)
                 else:
                     recv_from_tun(data)
+            # Something on the accept socket!?
+            elif r == tunsock:
+                tunconnection, client_address = tunsock.accept()
+                print("Connection from:", client_address)
+                tunconnection.send(b"hello.")
+                input = input + [tunconnection]
+                input.remove(tunsock)
+            # Otherwise it is on a NAT64:ed socket
             else:
-                # avoid getting too big packet in over socket. To avoid IP fragmentation.
-                max = 1200
                 st = sockmap[r]
-                if(len(st) > 5):
-                    tcpState = st[5]
-                    print("Recv:", tcpState)
-                    max = tcpState['window']
-                data, addr = r.recvfrom(max)
+                # Receive will receive and send back over tun.
+                data = st.receive()
                 if not data:
-                    print(">> Socket shutdown - remove socket!")
-                    sock_remove(r)
-                else:
-                    nat64_recv(r, data, addr)
+                    print(">> Socket shutdown - remove socket?!")
         for r in exceptready:
             print(r)
 except KeyboardInterrupt:

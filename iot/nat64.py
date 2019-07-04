@@ -266,7 +266,7 @@ def nat64_send(ip):
                     print(" => ", addr, str(dns64addr))
                     name = ip[DNSQR].qname
                     ipaddr = dns64addr
-                    resp = IPv6(dst=ip.src, src=ip.dst)/UDP(dport=ip[UDP].sport, sport=53)/DNS(id=ip[DNS].id, qr=1, ancount=1)/DNSRR(type='AAAA', rrname=name,rdata=ipaddr)
+                    resp = IPv6(dst=ip.src, src=ip.dst)/UDP(dport=ip[UDP].sport, sport=53)/DNS(id=ip[DNS].id, qr=1, ancount=1)/DNSRR(type='AAAA', rrname=name,rdata=ipaddr, ttl=3600)
                     reps = IPv6(resp)
                     resp.show()
                     print(repr(resp))

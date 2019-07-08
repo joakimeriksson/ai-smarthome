@@ -34,6 +34,7 @@
 
 import ipaddress
 import socket
+from struct import *
 from scapy.all import *
 from scapy.layers.inet import UDP, TCP
 from scapy.layers.inet6 import IPv6
@@ -66,10 +67,6 @@ def add_socket(socket):
     global input
     if socket is not None and socket not in input:
         input = input + [socket]
-
-def remomve_socket(socket):
-    global input
-    input.remove(socket)
 
 class NAT64State:
 
@@ -240,11 +237,13 @@ def sock_remove(socket):
 
 def send_to_tun(ipv6):
     if ipv6 is not None:
-        print("Writing to tun:", len(bytes(ipv6)))
+        data = bytes(ipv6)
+        print("Writing to tun:", len(data))
         if tun is not None:
-            os.write(tun, bytes(ipv6))
+            os.write(tun, data)
         if tunconnection is not None:
-            tunconnection.send(bytes(ipv6))
+            data = struct.pack("!HH", len(data) + 4, 2) + data
+            tunconnection.send(data)
 
 
 def nat64_send(ip):
@@ -304,6 +303,13 @@ def recv_from_tun(packet):
         # do nat64 and send
         nat64_send(ip)
 
+def recv_from_tuntcp(packet):
+    plen, type = unpack("!HH", packet[0:4])
+    print("Len:", plen, "Type", type)
+    # Assume that we got the whole packet...
+    # In the future we should check - and wait for more if not complete.
+    recv_from_tun(packet[4:])
+
 # Only for OS-X for now.
 # Should be easy to adapt for linux also.
 tun = os.open("/dev/tun12", os.O_RDWR)
@@ -334,7 +340,7 @@ try:
                     print(">> TUN Socket shutdown - remove socket!")
                     sock_remove(r)
                 else:
-                    recv_from_tun(data)
+                    recv_from_tuntcp(data)
             # Something on the accept socket!?
             elif r == tunsock:
                 tunconnection, client_address = tunsock.accept()

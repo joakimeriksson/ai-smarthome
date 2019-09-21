@@ -1,5 +1,5 @@
 cvconf:
-    video: rtsp://192.168.1.169:7447/5b5b034b9008df24782d88f1_2
+    video: rtsp://192.168.1.169:7447/5c8d2bf990085177ff91c7a2_2
     plugin: hacv.CVMQTTPlugin
 
 hacv:

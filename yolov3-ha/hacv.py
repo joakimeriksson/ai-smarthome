@@ -29,16 +29,24 @@ class CVMQTTPlugin:
             self.name = cfg['hacv']['name']
         else:
             broker_address = "127.0.0.1"
-        self.client = mqttClient.Client("Python-CV-YOLO3")
-        self.client.on_connect = on_connect
-        self.client.connect(broker_address)
-        self.client.loop_start()
+        try:
+            self.client = mqttClient.Client("Python-CV-YOLO3")
+            self.client.on_connect = on_connect
+            self.client.connect(broker_address)
+            self.client.loop_start()
+        except:
+            print("Could not connect to mqtt broker", broker_address)
+            self.client = None
 
     def no_motion(self):
+        if self.client == None:
+            return
         print("publishing motion OFF");
         self.client.publish("ha/motion/mqtt", '{"on":"OFF"}')
 
     def publish_detection(self, detection_type, likelihood):
+        if self.client == None:
+            return
         print("Publishing ", detection_type, likelihood)
         if detection_type not in self.detects:
             self.detects[detection_type] = 0
@@ -55,10 +63,14 @@ class CVMQTTPlugin:
             self.timer.start()
 
     def publish_image(self, image):
+        if self.client == None:
+            return
         print("Publishing image.")
         self.client.publish("ha/camera/mqtt", image)
 
     def __del__(self):
+        if self.client == None:
+            return
         self.client.disconnect()
         self.client.loop_stop()
 

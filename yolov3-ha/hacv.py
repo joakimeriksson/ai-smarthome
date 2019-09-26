@@ -11,11 +11,16 @@
 import paho.mqtt.client as mqttClient
 import threading, time, yaml
 
+debug_enable = 0
+def debug(*arg):
+    if debug_enable:
+        print(arg)
+
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("Connected to broker:", rc)
+        debug("Connected to broker:", rc)
     else:
-        print("Connection failed: ", rc)
+        debug("Connection failed: ", rc)
 
 class CVMQTTPlugin:
     client = None
@@ -41,31 +46,31 @@ class CVMQTTPlugin:
     def no_motion(self):
         if self.client == None:
             return
-        print("publishing motion OFF");
+        debug("publishing motion OFF");
         self.client.publish("ha/motion/mqtt", '{"on":"OFF"}')
 
     def publish_detection(self, detection_type, likelihood):
         if self.client == None:
             return
-        print("Publishing ", detection_type, likelihood)
+        debug("Publishing ", detection_type, likelihood)
         if detection_type not in self.detects:
             self.detects[detection_type] = 0
         if self.detects[detection_type] + 10.0 < time.time():
             self.detects[detection_type] = time.time()
-            print("publish TTS")
+            debug("publish TTS")
             self.client.publish("ha/tts/say", "There is a " + detection_type + " in the " + self.name)
-            print("publish Motion")
+            debug("publish Motion")
             self.client.publish("ha/motion/mqtt", '{"on":"ON", "type":"' + detection_type + '"}')
             if self.timer is not None:
                 self.timer.cancel()
-            print("Setting up timer for 15 seconds")
+            debug("Setting up timer for 15 seconds")
             self.timer = threading.Timer(15, self.no_motion)
             self.timer.start()
 
     def publish_image(self, image):
         if self.client == None:
             return
-        print("Publishing image.")
+        debug("Publishing image.")
         self.client.publish("ha/camera/mqtt", image)
 
     def __del__(self):

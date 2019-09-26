@@ -22,6 +22,11 @@ sys.path.append(yolo_path)
 import yolo
 import hacv
 
+debug = 0
+def debug(*arg):
+    if debug:
+        print(arg)
+
 def usage():
         print("Usage: ", sys.argv[0],"[-v <URI>] [-s] [-d]")
         print("Options:")
@@ -64,7 +69,7 @@ for opt, arg in opts:
 if config is not None:
         with open(config, 'r') as ymlfile:
                 yaml_cfg = yaml.load(ymlfile)
-        print("Config: ", yaml_cfg)
+        debug("Config: ", yaml_cfg)
         cvconf = yaml_cfg['cvconf']
         plugin = cvconf['plugin'].split(".")
         video_path = cvconf['video']
@@ -104,7 +109,7 @@ while(1):
         th1 = th1 / 255
         w, h = th1.shape
         sum = cv2.sumElems(th1)[0]/(w*h)
-        print("SUM:", cv2.sumElems(th1)[0]/(w*h), w, h)
+        debug("SUM:", cv2.sumElems(th1)[0]/(w*h), w, h)
         if sum > 0.001:
                 fconv = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 image = Image.fromarray(fconv)
@@ -124,7 +129,7 @@ while(1):
 
                 # only publish if score is higher than zero
                 if max_score > 0:
-                        print("*** Detected ", detect_name)
+                        debug("*** Detected ", detect_name)
                         ha_detect.publish_detection(detect_class, max_score)
                         ha_detect.publish_image(cv2.imencode('.png', detect)[1].tostring())
                 # show the image and save detection disk

@@ -1,0 +1,12 @@
+cvconf:
+    video: rtsp://user:pass@1.2.3.4:554/Streaming/Channels/101/
+    plugin: hacv.CVMQTTPlugin
+
+hacv:
+    host: mqtt.local
+    name: tensorflow
+    username: User
+    password: Pass
+    mqtt_motion: ha/motion/mqtt
+    mqtt_camera: ha/camera/mqtt
+    mqtt_tts: ha/tts/mqtt

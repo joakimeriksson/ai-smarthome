@@ -17,7 +17,7 @@ class MQTTCamera:
         self.broker = mqttBroker
         self.camera = camera
         self.topic = topic
-        self.cap = cv2.VideoCapture(video)
+        self.cap = cv2.VideoCapture(camera)
         # First frame is average...
         ret, self.avgframe = self.cap.read()
         self.client = mqttClient.Client("Python-CV-YOLO3")

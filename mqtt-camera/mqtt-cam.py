@@ -9,6 +9,7 @@ import paho.mqtt.client as mqttClient
 import threading, time, yaml
 import numpy as np, sys, time
 import cv2
+import images_pb2
 
 class MQTTCamera:
 
@@ -49,6 +50,18 @@ class MQTTCamera:
         if self.client == None:
             return
         self.client.publish(self.topic, frame)
+    
+    def publish_image_pb(self, w, h, id, frame):
+        if self.client == None:
+            return
+        img = images_pb2.Image()
+        img.width = w
+        img.height = h
+        img.id = id
+        img.imgdata = frame
+        frame_pb = img.SerializeToString()
+        self.client.publish(self.topic + "_pb", frame_pb)
+        
 
     def camera_loop(self):
         fc = 0
@@ -59,7 +72,9 @@ class MQTTCamera:
             self.avgframe, sum = self.diff_filter(frame, self.avgframe)
             if sum > 0.01:
                 print("Publishing image diff:", sum)
-                self.publish_image(cv2.imencode('.png', frame)[1].tostring())
+                #self.publish_image(cv2.imencode('.png', frame)[1].tostring())
+                h, w = frame.shape[:2]
+                self.publish_image_pb(w, h, "hej", cv2.imencode('.png', frame)[1].tostring())
 
             # Our operations on the frame come here
             #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

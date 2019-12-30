@@ -1,6 +1,7 @@
 #
-# This integration is towards MQTT in Home-Assistant and can easily
-# be configured to provide both images streamed unfiltered or diff-filtered.
+# This is a basic example of a MQTT camera viewer - it will show both plain
+# images encoded in binary format (png, etc) in the payload or make use of
+# a protocol buffer encoded image that also include width, height + id.
 #
 # Author: Joakim Eriksson, joakim.eriksson@ri.se
 #
@@ -9,6 +10,7 @@ import paho.mqtt.client as mqttClient
 import threading, time, yaml
 import numpy as np, sys, time
 import cv2
+import images_pb2
 
 show = True
 client = None
@@ -27,15 +29,27 @@ def on_message(client, userdata, message):
     global showFrame
     print("Received message on topic '"
           + message.topic + "' with QoS " + str(message.qos))
-    nparr = np.frombuffer(message.payload, np.uint8)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    showFrame = True
+    if message.topic == "ha/camera/mqtt":
+        print("Matched!!!")
+        nparr = np.frombuffer(message.payload, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        showFrame = True
+    elif message.topic == "ha/camera/mqtt_pb":
+        frame_pb = images_pb2.Image()
+        frame_pb.ParseFromString(message.payload)
+        print("PB img: width:",frame_pb.width, "height:", frame_pb.height)
+        nparr = np.frombuffer(frame_pb.imgdata, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        showFrame = True
+
 
 client = mqttClient.Client("Python-MQTT-CAM")
 client.on_connect = on_connect
 client.connect("localhost")
 client.on_message = on_message
+# Should take this a configs...
 client.subscribe("ha/camera/mqtt", 0)
+client.subscribe("ha/camera/mqtt_pb", 0)
 client.loop_start()
 
 
@@ -46,6 +60,7 @@ while(True):
         showFrame = False
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
 
 # When everything done, release the capture
 cv2.destroyAllWindows()

@@ -1,5 +1,7 @@
-// +build example
-// Needs MQTT paho installed, and opencv for GO (gocv)
+// Basic MQTT Camera source - for home assistant.
+// Needs Paho MQTT client and opencv for GO (gocv) installed
+// Author: Joakim Eriksson, joakim.eriksson@ri.se
+
 package main
 
 import (

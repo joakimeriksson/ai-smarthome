@@ -9,7 +9,11 @@ import (
 	"time"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	proto "github.com/golang/protobuf/proto"
 	"gocv.io/x/gocv"
+
+	pb "./images.pb"
 )
 
 type MqttCam struct {
@@ -45,6 +49,9 @@ func main() {
 
 	mcam.show()
 
+	c := mqtt.NewClient(mcam.Opts)
+	c.Connect()
+
 	//window := gocv.NewWindow("Hello")
 	//w2 := gocv.NewWindow("Hello - Avg.")
 
@@ -78,6 +85,16 @@ func main() {
 			//fmt.Println("IMG:", imgdata, error)
 			fmt.Println("Publish image on ", mcam.Topic)
 			c.Publish(mcam.Topic, 0, false, string(imgdata))
+
+			test := &pb.Image{
+				Width:   int32(w),
+				Height:  int32(h),
+				Id:      "hej",
+				Imgdata: imgdata,
+			}
+			data, err := proto.Marshal(test)
+			fmt.Println("Publish pb image.", err)
+			c.Publish(mcam.Topic+"_pb", 0, false, data)
 		}
 		//window.IMShow(img)
 		//w2.IMShow(mcam.Avg)

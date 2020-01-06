@@ -12,6 +12,11 @@ import numpy as np, sys, time
 import cv2
 import images_pb2
 
+# Hack to allow import of the yolov3 detector
+# should be in a package later...
+sys.path.append('../yolov3-ha')
+import yolo3
+
 show = True
 client = None
 frame = None
@@ -52,11 +57,15 @@ client.subscribe("ha/camera/mqtt", 0)
 client.subscribe("ha/camera/mqtt_pb", 0)
 client.loop_start()
 
+yolo = yolo3.YoloV3(0.5, 0.4, datapath="../yolov3-ha")
 
 while(True):
     # Capture frame-by-frame
     if showFrame:
-        cv2.imshow('Cam-frame',frame)
+#        cv2.imshow('Cam-frame', frame)
+        nf = frame.copy()
+        d = yolo.detect(nf)
+        cv2.imshow('Det-frame', nf)
         showFrame = False
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

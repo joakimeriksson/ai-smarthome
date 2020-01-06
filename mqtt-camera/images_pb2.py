@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='images',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x0cimages.proto\x12\x06images\"C\n\x05Image\x12\r\n\x05width\x18\x01 \x01(\x05\x12\x0e\n\x06height\x18\x02 \x01(\x05\x12\n\n\x02id\x18\x03 \x01(\t\x12\x0f\n\x07imgdata\x18\x04 \x01(\x0c\"o\n\x0fObjectDetection\x12\x0e\n\x06xstart\x18\x01 \x01(\x05\x12\x0c\n\x04xend\x18\x02 \x01(\x05\x12\x0e\n\x06ystart\x18\x03 \x01(\x05\x12\x0c\n\x04yend\x18\x04 \x01(\x05\x12\x12\n\nlikelihood\x18\x05 \x01(\x02\x12\x0c\n\x04type\x18\x06 \x01(\x05\x62\x06proto3'
+  serialized_pb=b'\n\x0cimages.proto\x12\x06images\"C\n\x05Image\x12\r\n\x05width\x18\x01 \x01(\x05\x12\x0e\n\x06height\x18\x02 \x01(\x05\x12\n\n\x02id\x18\x03 \x01(\t\x12\x0f\n\x07imgdata\x18\x04 \x01(\x0c\"n\n\x0fObjectDetection\x12\x0c\n\x04left\x18\x01 \x01(\x05\x12\r\n\x05right\x18\x02 \x01(\x05\x12\x0b\n\x03top\x18\x03 \x01(\x05\x12\x0e\n\x06\x62ottom\x18\x04 \x01(\x05\x12\r\n\x05score\x18\x05 \x01(\x02\x12\x12\n\nclass_name\x18\x06 \x01(\t\"z\n\x15ImageObjectDetections\x12\x1c\n\x05image\x18\x01 \x01(\x0b\x32\r.images.Image\x12+\n\ndetections\x18\x02 \x03(\x0b\x32\x17.images.ObjectDetection\x12\x16\n\x0e\x61lgorithm_name\x18\x03 \x01(\tb\x06proto3'
 )
 
 
@@ -84,44 +84,44 @@ _OBJECTDETECTION = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='xstart', full_name='images.ObjectDetection.xstart', index=0,
+      name='left', full_name='images.ObjectDetection.left', index=0,
       number=1, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='xend', full_name='images.ObjectDetection.xend', index=1,
+      name='right', full_name='images.ObjectDetection.right', index=1,
       number=2, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='ystart', full_name='images.ObjectDetection.ystart', index=2,
+      name='top', full_name='images.ObjectDetection.top', index=2,
       number=3, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='yend', full_name='images.ObjectDetection.yend', index=3,
+      name='bottom', full_name='images.ObjectDetection.bottom', index=3,
       number=4, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='likelihood', full_name='images.ObjectDetection.likelihood', index=4,
+      name='score', full_name='images.ObjectDetection.score', index=4,
       number=5, type=2, cpp_type=6, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='type', full_name='images.ObjectDetection.type', index=5,
-      number=6, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      name='class_name', full_name='images.ObjectDetection.class_name', index=5,
+      number=6, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -138,11 +138,59 @@ _OBJECTDETECTION = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=93,
-  serialized_end=204,
+  serialized_end=203,
 )
 
+
+_IMAGEOBJECTDETECTIONS = _descriptor.Descriptor(
+  name='ImageObjectDetections',
+  full_name='images.ImageObjectDetections',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='image', full_name='images.ImageObjectDetections.image', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='detections', full_name='images.ImageObjectDetections.detections', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='algorithm_name', full_name='images.ImageObjectDetections.algorithm_name', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=205,
+  serialized_end=327,
+)
+
+_IMAGEOBJECTDETECTIONS.fields_by_name['image'].message_type = _IMAGE
+_IMAGEOBJECTDETECTIONS.fields_by_name['detections'].message_type = _OBJECTDETECTION
 DESCRIPTOR.message_types_by_name['Image'] = _IMAGE
 DESCRIPTOR.message_types_by_name['ObjectDetection'] = _OBJECTDETECTION
+DESCRIPTOR.message_types_by_name['ImageObjectDetections'] = _IMAGEOBJECTDETECTIONS
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 Image = _reflection.GeneratedProtocolMessageType('Image', (_message.Message,), {
@@ -158,6 +206,13 @@ ObjectDetection = _reflection.GeneratedProtocolMessageType('ObjectDetection', (_
   # @@protoc_insertion_point(class_scope:images.ObjectDetection)
   })
 _sym_db.RegisterMessage(ObjectDetection)
+
+ImageObjectDetections = _reflection.GeneratedProtocolMessageType('ImageObjectDetections', (_message.Message,), {
+  'DESCRIPTOR' : _IMAGEOBJECTDETECTIONS,
+  '__module__' : 'images_pb2'
+  # @@protoc_insertion_point(class_scope:images.ImageObjectDetections)
+  })
+_sym_db.RegisterMessage(ImageObjectDetections)
 
 
 # @@protoc_insertion_point(module_scope)

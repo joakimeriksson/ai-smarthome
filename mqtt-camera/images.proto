@@ -9,11 +9,16 @@ message Image {
 }
 
 message ObjectDetection {
-    int32 xstart = 1;
-    int32 xend = 2;
-    int32 ystart = 3;
-    int32 yend = 4;
-    float likelihood = 5;
-    int32 type = 6;
+    int32 left = 1;
+    int32 right = 2;
+    int32 top = 3;
+    int32 bottom = 4;
+    float score = 5;
+    string class_name = 6;
 }
 
+message ImageObjectDetections {
+    Image image = 1;
+    repeated ObjectDetection detections = 2;
+    string algorithm_name = 3;
+}

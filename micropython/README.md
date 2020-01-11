@@ -5,20 +5,28 @@ https://docs.micropython.org/en/latest/esp8266/tutorial/intro.html
 
 Uploading the files to the ESP8266 device. Check which device your ESP8266 gets in your OS (different under linux / OS-X).
 
-# gpio-wget example
-This example is using a GPIO state change to trigger a wget. Useful when you have a GP-out in any system that you want to turn into a http request for controlling anything (enabling somethinng when turning on the burglar alarm or similar).
-
-Example of a config.json
-'''
-{
-    "SSID": "your-wifi-ssid",
-    "password": "your-wifi-password"
-}
-'''
-
-
     >ampy --port /dev/ttyUSB0 --baud 115200 put main.py
     >ampy --port /dev/ttyUSB0 --baud 115200 put config.json
+
+Ampy is available as arduino-ampy, see this for install instructions:
+
+https://learn.adafruit.com/micropython-basics-load-files-and-run-code/install-ampy
+
+>ampy --port /dev/ttyUSB0 --baud 115200 put main.py
+
+Then just reboot the device and check its serial output. 
+(on OS-X you could use: picocom /dev/tty.SLAB_USBtoUART -b115200)
+
+# gpio-wget example
+This example is using a GPIO state change to trigger a wget. Useful when you have a GP-out in any system that you want to turn into a http request for controlling anything (enabling somethinng when turning on the burglar alarm or similar). This application needs a config file to setup wifi: 
+
+Example of a config.json
+
+    {
+        "SSID": "your-wifi-ssid",
+        "password": "your-wifi-password"
+    }
+
 
 Checking which files are on your ESP8266 can be done via ampy also:
 
@@ -28,11 +36,5 @@ Checking which files are on your ESP8266 can be done via ampy also:
     /main.py
 
 
-Ampy is available as arduino-ampy, see this for install instructions:
-
-https://learn.adafruit.com/micropython-basics-load-files-and-run-code/install-ampy
-
->ampy --port /dev/ttyUSB0 --baud 115200 put main.py
 
 
-Then just reboot the device an

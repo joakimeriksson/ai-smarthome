@@ -1,9 +1,23 @@
+#
+# GPIO web fetch - will fetch a web page when GPIO port on pin 12 changes.
+# Joakim Eriksson, 2020.
+#
+# Config in config.json - needs to be uploaded to the NodeMCU / micropython
+# {
+#  "SSID": "<your SSID>",
+#  "password": "<your wifi-password>",
+#  "url-on": "<the url to fetch when pin is 1>",
+#  "url-off": "<the url to fetch when pin is 0>",
+# }
+
 import time, socket
 import network
 import machine
 import json
 
+# Simple HTTP request function
 def http_get(url):
+    print("Fetching:", url)
     _, _, host, path = url.split('/', 3)
     addr = socket.getaddrinfo(host, 80)[0][-1]
     s = socket.socket()
@@ -25,17 +39,18 @@ f.close()
 cdata = ""
 for s in data:
     cdata = cdata + s
-print(cdata)
+print("Raw file", cdata)
 config = json.loads(cdata)
 
-print(config)
-
+print("Parsed Config:", config)
+url_on = config["url-on"]
+url_off = config["url-off"]
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 nets = wlan.scan()
 
 print("Networks", nets)
-wlan.connect(config['SSID'], config['password']) #'joxehome', 'nadapokada')
+wlan.connect(config['SSID'], config['password'])
 while not wlan.isconnected():
     machine.idle() # save power while waiting
 print('WLAN connection succeeded!')
@@ -46,6 +61,9 @@ while True:
     v = pin.value()
     time.sleep(1)
     if v != last_v:
-        http_get("http://192.168.1.1/" + str(v))
+        if (v == 1):
+            http_get(url_on)
+        else:
+            http_get(url_off)
     last_v = v
     print("This is output... PIN:", v)

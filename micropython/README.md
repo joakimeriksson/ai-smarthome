@@ -25,6 +25,8 @@ Example of a config.json
     {
         "SSID": "your-wifi-ssid",
         "password": "your-wifi-password"
+        "url-on": "http://<host/path>
+        "url-off": "http://<host/path>
     }
 
 
@@ -35,6 +37,8 @@ Checking which files are on your ESP8266 can be done via ampy also:
     /config.json
     /main.py
 
+This program will use GPIO 12, which on a nodemcu ESP8266 is on D6 on the board:
+![NodeMCU Board](esp8266-nodemcu-pinouts.jpg)
 
 
 

@@ -10,7 +10,7 @@
 #  "url-off": "<the url to fetch when pin is 0>",
 # }
 
-import time, socket
+import time, socket, ussl
 import network
 import machine
 import json
@@ -18,13 +18,21 @@ import json
 # Simple HTTP request function
 def http_get(url):
     print("Fetching:", url)
-    _, _, host, path = url.split('/', 3)
-    addr = socket.getaddrinfo(host, 80)[0][-1]
+    proto, _, host, path = url.split('/', 3)
+
+    if proto == "http:":
+        port = 80
+    elif proto == "https:":
+        port = 443
+
+    addr = socket.getaddrinfo(host, port)[0][-1]
     s = socket.socket()
     s.connect(addr)
-    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
+    if proto == "https:":
+        s = ussl.wrap_socket(s, server_hostname=host)
+    s.write(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
     while True:
-        data = s.recv(100)
+        data = s.read(100)
         if data:
             print(str(data, 'utf8'), end='')
         else:

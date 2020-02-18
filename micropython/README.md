@@ -17,6 +17,10 @@ https://learn.adafruit.com/micropython-basics-load-files-and-run-code/install-am
 Then just reboot the device and check its serial output. 
 (on OS-X you could use: picocom /dev/tty.SLAB_USBtoUART -b115200)
 
+#OS-X Driver for UART to USB
+https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers
+
+
 # gpio-wget example
 This example is using a GPIO state change to trigger a wget. Useful when you have a GP-out in any system that you want to turn into a http request for controlling anything (enabling somethinng when turning on the burglar alarm or similar). This application needs a config file to setup wifi: 
 

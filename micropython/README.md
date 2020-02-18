@@ -17,7 +17,7 @@ https://learn.adafruit.com/micropython-basics-load-files-and-run-code/install-am
 Then just reboot the device and check its serial output. 
 (on OS-X you could use: picocom /dev/tty.SLAB_USBtoUART -b115200)
 
-#OS-X Driver for UART to USB
+# OS-X Driver for UART to USB
 https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers
 
 

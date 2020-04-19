@@ -9,7 +9,7 @@
 #
 
 import paho.mqtt.client as mqttClient
-import threading, time, yaml
+import threading, time, yaml, json
 
 debug_enable = 0
 def debug(*arg):
@@ -32,6 +32,7 @@ class CVMQTTPlugin:
     mqtt_tts = "ha/tts/mqtt"
     mqtt_motion = "ha/motion/mqtt"
     mqtt_camera = "ha/camera/mqtt"
+    mqtt_detections = "ha/detect/detections"
 
     def __init__(self, cfg):
         if cfg is not None:
@@ -54,7 +55,7 @@ class CVMQTTPlugin:
             self.client = mqttClient.Client("Python-CV-YOLO3")
             self.client.on_connect = on_connect
             if self.username and self.password:
-	        self.client.username_pw_set(self.username, self.password)
+                self.client.username_pw_set(self.username, self.password)
             self.client.connect(broker_address)
             self.client.loop_start()
         except:
@@ -67,11 +68,17 @@ class CVMQTTPlugin:
         debug("publishing motion OFF");
         self.client.publish(self.mqtt_motion, '{"on":"OFF"}')
 
+    def publish_detections(self, detections):
+        if self.client == None:
+            return
+        print("Detections", json.dumps({'detections':detections}))
+        self.client.publish(self.mqtt_detections, json.dumps({'detections':detections}))
+
+
     def publish_detection(self, detection_type, likelihood):
         if self.client == None:
             return
         debug("Publishing ", detection_type, likelihood)
-
         if detection_type not in self.detects:
             self.detects[detection_type] = 0
         if self.detects[detection_type] + 10.0 < time.time():

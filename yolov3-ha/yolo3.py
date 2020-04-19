@@ -14,15 +14,16 @@ class YoloV3:
 
     inpWidth = 416       #Width of network's input image
     inpHeight = 416      #Height of network's input image
+    drawPerformance = True
     
-    def __init__(self, confThreshold, nmsThreshold):
+    def __init__(self, confThreshold, nmsThreshold, datapath="."):
         self.confThreshold = confThreshold
         self.nmsThreshold = nmsThreshold
         self.classes = None
-        self.net = cv2.dnn.readNetFromDarknet(modelConfiguration, modelWeights)
+        self.net = cv2.dnn.readNetFromDarknet(datapath + "/" + modelConfiguration, datapath + "/" + modelWeights)
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
-        with open(classesFile, 'rt') as f:
+        with open(datapath + "/" + classesFile, 'rt') as f:
             self.classes = f.read().rstrip('\n').split('\n')
         # Generate colors for drawing bounding boxes.
         hsv_tuples = [(x / len(self.classes), 1., 1.)
@@ -77,7 +78,7 @@ class YoloV3:
             top = box[1]
             width = box[2]
             height = box[3]
-            retval = retval + [(self.classes[classIds[i]], confidences[i])]
+            retval = retval + [(self.classes[classIds[i]], confidences[i], (left, top, left + width, top + height))]
             print(self.classes[classIds[i]], confidences[i], left, top, width, height)
             self.drawPred(frame, classIds[i], confidences[i], left, top, left + width, top + height, color)
         return retval
@@ -96,6 +97,7 @@ class YoloV3:
         top = max(top, labelSize[1])
         cv2.rectangle(frame, (left, top + 3), (left + labelSize[0], top - labelSize[1] - 6), color[classId], -1)
         cv2.putText(frame, label, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        print("Draw pref on frame:" + str(classId))
 
     def detect(self, frame):
         fconv = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -108,6 +110,14 @@ class YoloV3:
         outs = self.net.forward(self.getOutputsNames())
         # Remove the bounding boxes with low confidence
         detection = self.postprocess(frame, outs, self.colors)
+
+        # Put efficiency information. The function getPerfProfile returns the
+        # overall time for inference(t) and the timings for each of the layers(in layersTimes)
+        if self.drawPerformance:
+            t, _ = self.net.getPerfProfile()
+            label = 'Inference time: %.2f ms' % (t * 1000.0 / cv2.getTickFrequency())
+            cv2.putText(frame, label, (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+
         return detection
 
 

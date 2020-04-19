@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+    <body>
+        <script type="text/javascript">
+        function speak(text) {
+            speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        }
+        </script>
+        <h1>Speech demo.</h1>
+        <button onclick="speak('Hello, this is your browser speaking.')">Speak!</button>
+    </body>
+</html>

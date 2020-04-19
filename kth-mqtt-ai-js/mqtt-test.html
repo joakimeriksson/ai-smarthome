@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+  <script src="./mqtt.js" type="text/javascript"></script>
+    <style type="text/css">
+        body { font-family: Helvetica, sans-serif; }
+        h2, h3 { margin-top:0; }
+        form { margin-top: 15px; }
+        form > input { margin-right: 15px; }
+        #results { float:right; margin:20px; padding:20px; border:1px solid; background:#ccc; }
+    </style>
+</head>
+  <title>MQTT Demo</title>
+</head>
+<body>
+  <script type="text/javascript">
+    let count = 0
+    function onConnect() {
+      console.log("connection successful")
+      client.subscribe(myTopic)   //subscribe to our topic
+      setInterval(()=>{
+        publish(myTopic, `Joakim says: The count is now ${count++}`)
+      },5000)   // publish count every 5s
+      publish(myTopic, "Joakim says - this is the init message!")
+    }
+    
+    const publish = (topic, msg) => {  //takes topic and message string
+      let message = new Paho.MQTT.Message(msg);
+      message.destinationName = topic;
+      client.send(message);
+    }
+
+    function onConnectionLost(responseObject) {
+      if (responseObject.errorCode !== 0) {
+        console.log("onConnectionLost:" + responseObject.errorMessage);
+      }
+      client.connect({ onSuccess: onConnect });
+    }
+
+    function onMessageArrived(message) {
+      console.log("Got message on topic " + message.destinationName + " with payload: " + message.payloadString);
+      let el= document.createElement('div')
+      el.innerHTML = message.payloadString
+      document.body.appendChild(el)
+    }
+  
+    const client = new Paho.MQTT.Client("ws://mqtt.eclipse.org/mqtt", "myJSClientId" + new Date().getTime());
+    const myTopic = "testTopic";
+    client.onMessageArrived = onMessageArrived;
+    client.onConnectionLost = onConnectionLost;
+    client.connect({ onSuccess: onConnect });
+  </script>
+
+  <h1>MQTT is awesome!!!</h1>
+  <div id="results" ></div>
+
+</body>
+</html>

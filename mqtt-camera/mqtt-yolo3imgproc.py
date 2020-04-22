@@ -2,7 +2,7 @@
 import cv2, sys, numpy as np
 sys.path.append('../yolov3-ha')
 import yolo3
-import base64
+import base64, json
 import mqttimgproc
 
 # If you want to use a specific client id, use
@@ -41,6 +41,8 @@ while(True):
                 # Add reply in topic
                 replyTopic = client.msgtopic.replace("dm2518/", "dm2518/reply/")
                 client.publish(replyTopic, img.decode('ascii'))
+                client.publish(replyTopic.replace("imgb64", "json"), json.dumps(d))
+                print(d)
             else:
                 print("unhandled image type")
         client.show_frame = False

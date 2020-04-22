@@ -10,16 +10,14 @@ import mqttimgproc
 # but note that the client id must be unique on the broker. Leaving the client
 # id parameter empty will generate a random id for you.
 # Should take this a configs...
-topic = "ha/camera/mqtt"
-replyTopic = "ha/camera/reply/mqtt"
+topic = "kth/dm2518/yolo3"
+replyTopic = "kth/dm2518/reply/yolo3"
 mqttBroker = "mqtt.eclipse.org"
 
 # Connect to the broker
-client = MQTTImageProcess("yolov3-img")
+client = mqttimgproc.MQTTImageProcess(topic, id = "yolov3-img")
 client.connect(mqttBroker)
-client.subscribe(topic, 0)
-client.subscribe(topic + "_pb", 0)
-client.subscribe(topic + "_b64", 0)
+client.subscribe(topic + "/#", 0)
 client.loop_start()
 
 yolo = yolo3.YoloV3(0.5, 0.4, datapath="../yolov3-ha")
@@ -39,14 +37,10 @@ while(True):
                 print("Nothing for raw")
             elif (client.type == client.FRAME_B64):
                 img =  b'data:image/jpeg;base64,' + base64.encodebytes(cv2.imencode('.jpeg',  nf)[1].tostring())
-                print("IMG:" + img.decode('ascii'))
-                client.publish(replyTopic + "_b64", img.decode('ascii'))
+                print("Topic:" + topic)
+                # Add reply in topic
+                replyTopic = client.msgtopic.replace("dm2518/", "dm2518/reply/")
+                client.publish(replyTopic, img.decode('ascii'))
             else:
                 print("unhandled image type")
-        cv2.imshow('Det-frame', nf)
         client.show_frame = False
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# When everything done, release the capture
-cv2.destroyAllWindows()

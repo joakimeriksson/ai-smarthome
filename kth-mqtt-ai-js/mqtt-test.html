@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
-  <script src="./mqtt.js" type="text/javascript"></script>
     <style type="text/css">
         body { font-family: Helvetica, sans-serif; }
         h2, h3 { margin-top:0; }
@@ -46,7 +45,8 @@
       document.body.appendChild(el)
     }
   
-    const client = new Paho.MQTT.Client("ws://mqtt.eclipse.org/mqtt", "myJSClientId" + new Date().getTime());
+//    const client = new Paho.MQTT.Client("ws://mqtt.eclipse.org/mqtt", "myJSClientId" + new Date().getTime());
+    const client = new Paho.MQTT.Client("ws://test.mosquitto.org:8080/mqtt", "myJSClientId" + new Date().getTime());
     const myTopic = "testTopic";
     client.onMessageArrived = onMessageArrived;
     client.onConnectionLost = onConnectionLost;
@@ -58,3 +58,4 @@
 
 </body>
 </html>
+

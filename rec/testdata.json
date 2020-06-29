@@ -1,0 +1,1526 @@
+[
+  {
+    "observationTime": "2020-06-28T19:27:30Z",
+    "value": 23.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T19:28:30Z",
+    "value": 23.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T19:29:30Z",
+    "value": 23.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T19:34:30Z",
+    "value": 24
+  },
+  {
+    "observationTime": "2020-06-28T19:35:30Z",
+    "value": 24
+  },
+  {
+    "observationTime": "2020-06-28T19:36:30Z",
+    "value": 23.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T19:37:30Z",
+    "value": 23.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T19:39:30Z",
+    "value": 23.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T19:40:30Z",
+    "value": 23.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T19:43:30Z",
+    "value": 23.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T19:45:30Z",
+    "value": 23.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T19:46:30Z",
+    "value": 23.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T19:48:30Z",
+    "value": 23.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T19:50:30Z",
+    "value": 23.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T19:51:30Z",
+    "value": 23.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T19:52:30Z",
+    "value": 23.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T19:54:30Z",
+    "value": 23.5
+  },
+  {
+    "observationTime": "2020-06-28T19:55:30Z",
+    "value": 23.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T19:56:30Z",
+    "value": 23.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T19:57:30Z",
+    "value": 23.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:03:30Z",
+    "value": 23.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T20:04:30Z",
+    "value": 23.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:07:30Z",
+    "value": 23.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:08:30Z",
+    "value": 23.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:09:30Z",
+    "value": 23.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:10:30Z",
+    "value": 23.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:11:30Z",
+    "value": 23.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:14:30Z",
+    "value": 23.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:15:30Z",
+    "value": 23.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:17:30Z",
+    "value": 23
+  },
+  {
+    "observationTime": "2020-06-28T20:21:30Z",
+    "value": 23.100000381469727
+  },
+  {
+    "observationTime": "2020-06-28T20:22:30Z",
+    "value": 23.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:23:30Z",
+    "value": 23
+  },
+  {
+    "observationTime": "2020-06-28T20:24:30Z",
+    "value": 22.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T20:26:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:27:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:30:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:31:30Z",
+    "value": 22.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T20:32:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:33:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:36:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:38:30Z",
+    "value": 22.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T20:39:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:41:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:45:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T20:51:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T20:52:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T20:53:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T20:54:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T20:55:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T20:56:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T20:58:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T20:59:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-28T21:00:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T21:01:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T21:02:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T21:03:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T21:04:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T21:06:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T21:08:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T21:10:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:11:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:14:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:17:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T21:18:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:21:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:22:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:24:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:26:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:29:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:30:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T21:32:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:33:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:35:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T21:42:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:44:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:46:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T21:47:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:49:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T21:50:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:52:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T21:55:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T21:56:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:00:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T22:01:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:02:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:04:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:06:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T22:07:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T22:10:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:11:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:13:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T22:17:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:19:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:20:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T22:21:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:22:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:23:30Z",
+    "value": 22.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:24:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T22:25:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:27:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T22:32:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:33:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:34:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T22:35:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:36:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T22:37:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:39:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T22:40:30Z",
+    "value": 22.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:41:30Z",
+    "value": 22.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:43:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T22:44:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T22:45:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:46:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:47:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:48:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:49:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:54:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T22:56:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T22:57:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T23:01:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T23:02:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T23:04:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T23:06:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T23:07:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-28T23:08:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T23:10:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:11:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-28T23:12:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:14:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-28T23:15:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-28T23:22:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T23:23:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-28T23:24:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-28T23:25:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-28T23:27:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:28:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:32:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:33:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:34:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T23:38:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:41:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-28T23:44:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:45:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:46:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:47:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:49:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:52:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:55:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-28T23:56:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:57:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-28T23:59:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:02:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T00:04:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:06:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:07:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:08:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:14:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:15:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:16:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:17:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:18:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:19:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:20:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:22:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:23:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:25:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:27:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:28:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:31:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:32:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T00:33:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T00:34:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:35:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T00:36:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:37:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:38:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T00:41:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:42:30Z",
+    "value": 22.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:43:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:44:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-29T00:45:30Z",
+    "value": 22.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:46:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:47:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:48:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:49:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T00:50:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T00:52:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T00:54:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T00:55:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T00:56:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T00:58:30Z",
+    "value": 22.5
+  },
+  {
+    "observationTime": "2020-06-29T00:59:30Z",
+    "value": 22.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:01:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:02:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:03:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:04:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:05:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:06:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:07:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:09:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:10:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:11:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:12:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:13:30Z",
+    "value": 22.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:14:30Z",
+    "value": 22.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:15:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:16:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:17:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:18:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:19:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:20:30Z",
+    "value": 22.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:21:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:23:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:24:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:25:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:27:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:28:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:29:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:30:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:32:30Z",
+    "value": 22
+  },
+  {
+    "observationTime": "2020-06-29T01:33:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:34:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:35:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:37:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:38:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:39:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:42:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:43:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:45:30Z",
+    "value": 21.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:46:30Z",
+    "value": 21.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:47:30Z",
+    "value": 21.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:48:30Z",
+    "value": 21.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:49:30Z",
+    "value": 21.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:50:30Z",
+    "value": 21.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:51:30Z",
+    "value": 21.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:52:30Z",
+    "value": 20.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:53:30Z",
+    "value": 19.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T01:54:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T01:55:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T01:56:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T01:57:30Z",
+    "value": 16.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T01:58:30Z",
+    "value": 16.5
+  },
+  {
+    "observationTime": "2020-06-29T01:59:30Z",
+    "value": 16.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:03:30Z",
+    "value": 16.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T02:04:30Z",
+    "value": 17.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:06:30Z",
+    "value": 17.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:07:30Z",
+    "value": 17.5
+  },
+  {
+    "observationTime": "2020-06-29T02:11:30Z",
+    "value": 17.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:12:30Z",
+    "value": 17.5
+  },
+  {
+    "observationTime": "2020-06-29T02:13:30Z",
+    "value": 17.5
+  },
+  {
+    "observationTime": "2020-06-29T02:14:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:15:30Z",
+    "value": 17.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:17:30Z",
+    "value": 17.5
+  },
+  {
+    "observationTime": "2020-06-29T02:19:30Z",
+    "value": 17.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:22:30Z",
+    "value": 17.5
+  },
+  {
+    "observationTime": "2020-06-29T02:23:30Z",
+    "value": 17.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:26:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:27:30Z",
+    "value": 17.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:28:30Z",
+    "value": 17.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:29:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:31:30Z",
+    "value": 17.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T02:32:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:33:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:35:30Z",
+    "value": 17.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:36:30Z",
+    "value": 17.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:40:30Z",
+    "value": 17.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T02:41:30Z",
+    "value": 17.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:42:30Z",
+    "value": 17.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T02:45:30Z",
+    "value": 17.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:46:30Z",
+    "value": 17.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T02:47:30Z",
+    "value": 17.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:48:30Z",
+    "value": 17.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T02:49:30Z",
+    "value": 17.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T02:51:30Z",
+    "value": 18
+  },
+  {
+    "observationTime": "2020-06-29T02:53:30Z",
+    "value": 17.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T02:57:30Z",
+    "value": 18
+  },
+  {
+    "observationTime": "2020-06-29T02:58:30Z",
+    "value": 18.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T02:59:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:00:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:04:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:05:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:06:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:07:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:08:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:09:30Z",
+    "value": 18.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T03:10:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:13:30Z",
+    "value": 18.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T03:14:30Z",
+    "value": 18.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T03:15:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:17:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:18:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:21:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:22:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:23:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:24:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:25:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T03:26:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:27:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:28:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:30:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:35:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:36:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:37:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:38:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:39:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:42:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:44:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:46:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:47:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:48:30Z",
+    "value": 18.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T03:49:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:50:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T03:51:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T03:52:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:53:30Z",
+    "value": 18.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T03:54:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T03:56:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T03:57:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T03:59:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:01:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:02:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:03:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:04:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:05:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:06:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:07:30Z",
+    "value": 18.5
+  },
+  {
+    "observationTime": "2020-06-29T04:09:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:11:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:12:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:13:30Z",
+    "value": 18.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:14:30Z",
+    "value": 18.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:15:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:17:30Z",
+    "value": 18.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:19:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:20:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:22:30Z",
+    "value": 18.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:24:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:25:30Z",
+    "value": 18.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:26:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T04:27:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T04:29:30Z",
+    "value": 18.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:30:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T04:31:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:32:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:33:30Z",
+    "value": 19.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:34:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:35:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:38:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:39:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T04:40:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:41:30Z",
+    "value": 19.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:42:30Z",
+    "value": 19.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:43:30Z",
+    "value": 19.5
+  },
+  {
+    "observationTime": "2020-06-29T04:44:30Z",
+    "value": 19.600000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:45:30Z",
+    "value": 19.700000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:46:30Z",
+    "value": 19.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:47:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:49:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T04:51:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:52:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T04:54:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T04:55:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T04:56:30Z",
+    "value": 18.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T04:57:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:58:30Z",
+    "value": 18.799999237060547
+  },
+  {
+    "observationTime": "2020-06-29T04:59:30Z",
+    "value": 19
+  },
+  {
+    "observationTime": "2020-06-29T05:01:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T05:03:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T05:07:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T05:08:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T05:09:30Z",
+    "value": 19.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T05:10:30Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T05:12:30Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T05:14:30Z",
+    "value": 18.899999618530273
+  },
+  {
+    "observationTime": "2020-06-29T05:15:31Z",
+    "value": 19.100000381469727
+  },
+  {
+    "observationTime": "2020-06-29T05:16:31Z",
+    "value": 19.200000762939453
+  },
+  {
+    "observationTime": "2020-06-29T05:19:31Z",
+    "value": 19.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T05:20:31Z",
+    "value": 19.299999237060547
+  },
+  {
+    "observationTime": "2020-06-29T05:21:31Z",
+    "value": 19.399999618530273
+  },
+  {
+    "observationTime": "2020-06-29T05:22:31Z",
+    "value": 19.100000381469727
+  }
+]

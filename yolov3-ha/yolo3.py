@@ -5,9 +5,15 @@ import os.path
 import colorsys
 
 # Give the configuration and weight files for the model and load the network using them.
+
+
 modelConfiguration = "cfg/yolov3.cfg";
 modelWeights = "yolov3.weights";
 classesFile = "data/coco.names";
+
+#modelConfiguration = "cfg/yolov4.cfg";
+#modelWeights = "yolov4.weights";
+#classesFile = "data/coco.names";
 
 
 class YoloV3:

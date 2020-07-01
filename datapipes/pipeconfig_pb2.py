@@ -16,10 +16,10 @@ from google.protobuf import any_pb2 as google_dot_protobuf_dot_any__pb2
 
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='pipeconfig.proto',
-  package='',
+  package='datapipe',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x10pipeconfig.proto\x1a\x19google/protobuf/any.proto\"7\n\x0fInputStreamInfo\x12\x11\n\ttag_index\x18\x01 \x01(\t\x12\x11\n\tback_edge\x18\x02 \x01(\x08\"\xbf\x02\n\x15\x43\x61lculatorGraphConfig\x12)\n\x04node\x18\x01 \x03(\x0b\x32\x1b.CalculatorGraphConfig.Node\x12\x14\n\x0cinput_stream\x18\n \x03(\t\x12\x15\n\routput_stream\x18\x0f \x03(\t\x12\x0f\n\x07package\x18\x13 \x01(\t\x12\x0c\n\x04type\x18\x14 \x01(\t\x1a\xae\x01\n\x04Node\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x12\n\ncalculator\x18\x02 \x01(\t\x12\x14\n\x0cinput_stream\x18\x03 \x03(\t\x12\x15\n\routput_stream\x18\x04 \x03(\t\x12*\n\x0cnode_options\x18\x08 \x03(\x0b\x32\x14.google.protobuf.Any\x12+\n\x11input_stream_info\x18\r \x03(\x0b\x32\x10.InputStreamInfob\x06proto3'
+  serialized_pb=b'\n\x10pipeconfig.proto\x12\x08\x64\x61tapipe\x1a\x19google/protobuf/any.proto\"7\n\x0fInputStreamInfo\x12\x11\n\ttag_index\x18\x01 \x01(\t\x12\x11\n\tback_edge\x18\x02 \x01(\x08\"\x81\x02\n\rMapNodeOption\x12\x41\n\rdoubleOptions\x18\x01 \x03(\x0b\x32*.datapipe.MapNodeOption.DoubleOptionsEntry\x12\x41\n\rstringOptions\x18\x02 \x03(\x0b\x32*.datapipe.MapNodeOption.StringOptionsEntry\x1a\x34\n\x12\x44oubleOptionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01:\x02\x38\x01\x1a\x34\n\x12StringOptionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x84\x03\n\x15\x43\x61lculatorGraphConfig\x12\x32\n\x04node\x18\x01 \x03(\x0b\x32$.datapipe.CalculatorGraphConfig.Node\x12\x14\n\x0cinput_stream\x18\n \x03(\t\x12\x15\n\routput_stream\x18\x0f \x03(\t\x12\x0f\n\x07package\x18\x13 \x01(\t\x12\x0c\n\x04type\x18\x14 \x01(\t\x1a\xea\x01\n\x04Node\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x12\n\ncalculator\x18\x02 \x01(\t\x12\x14\n\x0cinput_stream\x18\x03 \x03(\t\x12\x15\n\routput_stream\x18\x04 \x03(\t\x12*\n\x0cnode_options\x18\x08 \x03(\x0b\x32\x14.google.protobuf.Any\x12\x31\n\x10map_node_options\x18\t \x01(\x0b\x32\x17.datapipe.MapNodeOption\x12\x34\n\x11input_stream_info\x18\r \x03(\x0b\x32\x19.datapipe.InputStreamInfob\x06proto3'
   ,
   dependencies=[google_dot_protobuf_dot_any__pb2.DESCRIPTOR,])
 
@@ -28,20 +28,20 @@ DESCRIPTOR = _descriptor.FileDescriptor(
 
 _INPUTSTREAMINFO = _descriptor.Descriptor(
   name='InputStreamInfo',
-  full_name='InputStreamInfo',
+  full_name='datapipe.InputStreamInfo',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='tag_index', full_name='InputStreamInfo.tag_index', index=0,
+      name='tag_index', full_name='datapipe.InputStreamInfo.tag_index', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='back_edge', full_name='InputStreamInfo.back_edge', index=1,
+      name='back_edge', full_name='datapipe.InputStreamInfo.back_edge', index=1,
       number=2, type=8, cpp_type=7, label=1,
       has_default_value=False, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
@@ -59,55 +59,174 @@ _INPUTSTREAMINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=47,
-  serialized_end=102,
+  serialized_start=57,
+  serialized_end=112,
 )
 
 
-_CALCULATORGRAPHCONFIG_NODE = _descriptor.Descriptor(
-  name='Node',
-  full_name='CalculatorGraphConfig.Node',
+_MAPNODEOPTION_DOUBLEOPTIONSENTRY = _descriptor.Descriptor(
+  name='DoubleOptionsEntry',
+  full_name='datapipe.MapNodeOption.DoubleOptionsEntry',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='name', full_name='CalculatorGraphConfig.Node.name', index=0,
+      name='key', full_name='datapipe.MapNodeOption.DoubleOptionsEntry.key', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='calculator', full_name='CalculatorGraphConfig.Node.calculator', index=1,
+      name='value', full_name='datapipe.MapNodeOption.DoubleOptionsEntry.value', index=1,
+      number=2, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=b'8\001',
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=266,
+  serialized_end=318,
+)
+
+_MAPNODEOPTION_STRINGOPTIONSENTRY = _descriptor.Descriptor(
+  name='StringOptionsEntry',
+  full_name='datapipe.MapNodeOption.StringOptionsEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='datapipe.MapNodeOption.StringOptionsEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='datapipe.MapNodeOption.StringOptionsEntry.value', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=b'8\001',
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=320,
+  serialized_end=372,
+)
+
+_MAPNODEOPTION = _descriptor.Descriptor(
+  name='MapNodeOption',
+  full_name='datapipe.MapNodeOption',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='doubleOptions', full_name='datapipe.MapNodeOption.doubleOptions', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='stringOptions', full_name='datapipe.MapNodeOption.stringOptions', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_MAPNODEOPTION_DOUBLEOPTIONSENTRY, _MAPNODEOPTION_STRINGOPTIONSENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=115,
+  serialized_end=372,
+)
+
+
+_CALCULATORGRAPHCONFIG_NODE = _descriptor.Descriptor(
+  name='Node',
+  full_name='datapipe.CalculatorGraphConfig.Node',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='datapipe.CalculatorGraphConfig.Node.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='calculator', full_name='datapipe.CalculatorGraphConfig.Node.calculator', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='input_stream', full_name='CalculatorGraphConfig.Node.input_stream', index=2,
+      name='input_stream', full_name='datapipe.CalculatorGraphConfig.Node.input_stream', index=2,
       number=3, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='output_stream', full_name='CalculatorGraphConfig.Node.output_stream', index=3,
+      name='output_stream', full_name='datapipe.CalculatorGraphConfig.Node.output_stream', index=3,
       number=4, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='node_options', full_name='CalculatorGraphConfig.Node.node_options', index=4,
+      name='node_options', full_name='datapipe.CalculatorGraphConfig.Node.node_options', index=4,
       number=8, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='input_stream_info', full_name='CalculatorGraphConfig.Node.input_stream_info', index=5,
+      name='map_node_options', full_name='datapipe.CalculatorGraphConfig.Node.map_node_options', index=5,
+      number=9, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='input_stream_info', full_name='datapipe.CalculatorGraphConfig.Node.input_stream_info', index=6,
       number=13, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -125,47 +244,47 @@ _CALCULATORGRAPHCONFIG_NODE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=250,
-  serialized_end=424,
+  serialized_start=529,
+  serialized_end=763,
 )
 
 _CALCULATORGRAPHCONFIG = _descriptor.Descriptor(
   name='CalculatorGraphConfig',
-  full_name='CalculatorGraphConfig',
+  full_name='datapipe.CalculatorGraphConfig',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='node', full_name='CalculatorGraphConfig.node', index=0,
+      name='node', full_name='datapipe.CalculatorGraphConfig.node', index=0,
       number=1, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='input_stream', full_name='CalculatorGraphConfig.input_stream', index=1,
+      name='input_stream', full_name='datapipe.CalculatorGraphConfig.input_stream', index=1,
       number=10, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='output_stream', full_name='CalculatorGraphConfig.output_stream', index=2,
+      name='output_stream', full_name='datapipe.CalculatorGraphConfig.output_stream', index=2,
       number=15, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='package', full_name='CalculatorGraphConfig.package', index=3,
+      name='package', full_name='datapipe.CalculatorGraphConfig.package', index=3,
       number=19, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='type', full_name='CalculatorGraphConfig.type', index=4,
+      name='type', full_name='datapipe.CalculatorGraphConfig.type', index=4,
       number=20, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -183,39 +302,70 @@ _CALCULATORGRAPHCONFIG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=105,
-  serialized_end=424,
+  serialized_start=375,
+  serialized_end=763,
 )
 
+_MAPNODEOPTION_DOUBLEOPTIONSENTRY.containing_type = _MAPNODEOPTION
+_MAPNODEOPTION_STRINGOPTIONSENTRY.containing_type = _MAPNODEOPTION
+_MAPNODEOPTION.fields_by_name['doubleOptions'].message_type = _MAPNODEOPTION_DOUBLEOPTIONSENTRY
+_MAPNODEOPTION.fields_by_name['stringOptions'].message_type = _MAPNODEOPTION_STRINGOPTIONSENTRY
 _CALCULATORGRAPHCONFIG_NODE.fields_by_name['node_options'].message_type = google_dot_protobuf_dot_any__pb2._ANY
+_CALCULATORGRAPHCONFIG_NODE.fields_by_name['map_node_options'].message_type = _MAPNODEOPTION
 _CALCULATORGRAPHCONFIG_NODE.fields_by_name['input_stream_info'].message_type = _INPUTSTREAMINFO
 _CALCULATORGRAPHCONFIG_NODE.containing_type = _CALCULATORGRAPHCONFIG
 _CALCULATORGRAPHCONFIG.fields_by_name['node'].message_type = _CALCULATORGRAPHCONFIG_NODE
 DESCRIPTOR.message_types_by_name['InputStreamInfo'] = _INPUTSTREAMINFO
+DESCRIPTOR.message_types_by_name['MapNodeOption'] = _MAPNODEOPTION
 DESCRIPTOR.message_types_by_name['CalculatorGraphConfig'] = _CALCULATORGRAPHCONFIG
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 InputStreamInfo = _reflection.GeneratedProtocolMessageType('InputStreamInfo', (_message.Message,), {
   'DESCRIPTOR' : _INPUTSTREAMINFO,
   '__module__' : 'pipeconfig_pb2'
-  # @@protoc_insertion_point(class_scope:InputStreamInfo)
+  # @@protoc_insertion_point(class_scope:datapipe.InputStreamInfo)
   })
 _sym_db.RegisterMessage(InputStreamInfo)
+
+MapNodeOption = _reflection.GeneratedProtocolMessageType('MapNodeOption', (_message.Message,), {
+
+  'DoubleOptionsEntry' : _reflection.GeneratedProtocolMessageType('DoubleOptionsEntry', (_message.Message,), {
+    'DESCRIPTOR' : _MAPNODEOPTION_DOUBLEOPTIONSENTRY,
+    '__module__' : 'pipeconfig_pb2'
+    # @@protoc_insertion_point(class_scope:datapipe.MapNodeOption.DoubleOptionsEntry)
+    })
+  ,
+
+  'StringOptionsEntry' : _reflection.GeneratedProtocolMessageType('StringOptionsEntry', (_message.Message,), {
+    'DESCRIPTOR' : _MAPNODEOPTION_STRINGOPTIONSENTRY,
+    '__module__' : 'pipeconfig_pb2'
+    # @@protoc_insertion_point(class_scope:datapipe.MapNodeOption.StringOptionsEntry)
+    })
+  ,
+  'DESCRIPTOR' : _MAPNODEOPTION,
+  '__module__' : 'pipeconfig_pb2'
+  # @@protoc_insertion_point(class_scope:datapipe.MapNodeOption)
+  })
+_sym_db.RegisterMessage(MapNodeOption)
+_sym_db.RegisterMessage(MapNodeOption.DoubleOptionsEntry)
+_sym_db.RegisterMessage(MapNodeOption.StringOptionsEntry)
 
 CalculatorGraphConfig = _reflection.GeneratedProtocolMessageType('CalculatorGraphConfig', (_message.Message,), {
 
   'Node' : _reflection.GeneratedProtocolMessageType('Node', (_message.Message,), {
     'DESCRIPTOR' : _CALCULATORGRAPHCONFIG_NODE,
     '__module__' : 'pipeconfig_pb2'
-    # @@protoc_insertion_point(class_scope:CalculatorGraphConfig.Node)
+    # @@protoc_insertion_point(class_scope:datapipe.CalculatorGraphConfig.Node)
     })
   ,
   'DESCRIPTOR' : _CALCULATORGRAPHCONFIG,
   '__module__' : 'pipeconfig_pb2'
-  # @@protoc_insertion_point(class_scope:CalculatorGraphConfig)
+  # @@protoc_insertion_point(class_scope:datapipe.CalculatorGraphConfig)
   })
 _sym_db.RegisterMessage(CalculatorGraphConfig)
 _sym_db.RegisterMessage(CalculatorGraphConfig.Node)
 
 
+_MAPNODEOPTION_DOUBLEOPTIONSENTRY._options = None
+_MAPNODEOPTION_STRINGOPTIONSENTRY._options = None
 # @@protoc_insertion_point(module_scope)

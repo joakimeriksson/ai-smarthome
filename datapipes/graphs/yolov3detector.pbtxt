@@ -1,0 +1,33 @@
+# MediaPipe graph that performs YoloV3 in CV2 detection on a live video stream.
+# Images coming into and out of the graph.
+
+input_stream: "input_video"
+output_stream: "output_video"
+
+# Calculate diff on image and only send on when large diff is detected
+
+node: {
+  calculator: "ImageMovementDetector"
+  input_stream: "input_video"
+  output_stream: "motion_detected"
+  map_node_options: {
+    doubleOptions: { key:"threshold"; value:0.02 }
+    doubleOptions: { key:"threshold2"; value:1.0 }
+    stringOptions: { key:"hej"; value:"a string" }
+  }
+}
+
+node: {
+  calculator: "YoloDetector"
+  input_stream: "motion_detected"
+  output_stream: "yolo_object_detector_img"
+  output_stream: "yolo_detections"
+}
+
+# Applies a box and label annotator to the image
+node: {
+  calculator: "DrawDetections"
+  input_stream: "motion_detected"
+  input_stream: "yolo_detections"
+  output_stream: "output_video"
+}

@@ -32,17 +32,25 @@ class ImageMovementDetector(Calculator):
     def __init__(self, name, s):
         super().__init__(name, s)
         self.avg = cvutils.DiffFilter()
+        self.threshold = 0.01
 
     def process(self):
         image = self.get(0)
         print(image)
         if isinstance(image, ImageData):
             value = self.avg.calculate_diff(image.image)
-            if value > self.options['threshold']:
+            if value > self.threshold:
                 print(" *** Trigger motion!!! => output set!")
                 self.set_output(0, image)
                 return True
         return False
+
+    def set_options(self, options):
+        super().set_options(options)
+        if 'threshold' in options:
+            self.threshold = options['threshold']
+            print("Set threshold to ", self.threshold)
+
 
 class ShowImage(Calculator):
 

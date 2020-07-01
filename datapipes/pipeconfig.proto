@@ -22,6 +22,9 @@
 // Modified by Joakim Eriksson
 
 syntax = "proto3";
+
+package datapipe;
+
 import "google/protobuf/any.proto";
 
 // Additional information about an input stream.
@@ -48,6 +51,11 @@ message InputStreamInfo {
     // goes in the opposite direction. For a formal definition of a back edge,
     // please see https://en.wikipedia.org/wiki/Depth-first_search.
     bool back_edge = 2;
+}
+
+message MapNodeOption {
+    map<string, double> doubleOptions = 1;
+    map<string, string> stringOptions = 2;
 }
 
 // Describes the topology and function of a MediaPipe Graph.  The graph of
@@ -99,6 +107,7 @@ message CalculatorGraphConfig {
     // If the same message type is specified in |options| and |node_options|,
     // only the message in |options| is used.
     repeated google.protobuf.Any node_options = 8;
+    MapNodeOption map_node_options = 9;
 
     // Note: the following fields are only applicable to calculators, not
     // subgraphs.

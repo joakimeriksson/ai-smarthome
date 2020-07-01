@@ -48,6 +48,7 @@ class Calculator:
         self.output_data = [None] * len(outputs)
 
     def set_options(self, options):
+        print(self.name  + " set options:", options)
         self.options = options
 
     def get(self, index):

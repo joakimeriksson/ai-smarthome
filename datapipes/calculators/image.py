@@ -45,6 +45,7 @@ class ImageMovementDetector(Calculator):
         return False
 
 class ShowImage(Calculator):
+
     def process(self):
         image = self.get(0)
         if image is not None:
@@ -94,10 +95,38 @@ class DrawDetections(Calculator):
         if self.input_data[0] is not None and self.input_data[1] is not None:
             image = self.get(0)
             detections = self.get(1)
-            self.input_data[1] = None
             if isinstance(image, ImageData):
                 frame = image.image.copy()
                 cvutils.drawDetections(frame, detections)
                 self.set_output(0, ImageData(frame, image.timestamp))
                 return True
         return False
+
+class LuminanceCalculator(Calculator):
+    def __init__(self, name, s):
+        super().__init__(name, s)
+        self.input_data = [None]
+
+    def process(self):
+        if self.input_data[0] is not None:
+            image = self.get(0)
+            if isinstance(image, ImageData):
+                gray = cv2.cvtColor(image.image, cv2.COLOR_BGR2GRAY)
+                self.set_output(0, ImageData(gray, image.timestamp))
+            return True
+
+class SobelEdgesCalculator(Calculator):
+    def __init__(self, name, s):
+        super().__init__(name, s)
+        self.input_data = [None]
+
+    def process(self):
+        if self.input_data[0] is not None:
+            image = self.get(0)
+            if isinstance(image, ImageData):
+                img = cv2.GaussianBlur(image.image, (3,3), 0)
+                sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize = 5)
+                self.set_output(0, ImageData(sobelx, image.timestamp))
+            return True
+
+            

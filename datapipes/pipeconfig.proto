@@ -1,0 +1,127 @@
+// Datapipe node format description - based on the Google Media Pipe format
+//
+//
+// Copyright 2019 The MediaPipe Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Forked from mediapipe/framework/calculator.proto.
+// The forked proto must remain identical to the original proto and should be
+// ONLY used by mediapipe open source project.
+//
+// Modified by Joakim Eriksson
+
+syntax = "proto3";
+import "google/protobuf/any.proto";
+
+// Additional information about an input stream.
+message InputStreamInfo {
+    // A description of the input stream.
+    // This description uses the Calculator visible specification of
+    // a stream.  The format is a tag, then an index with both being
+    // optional.  If the tag is missing it is assumed to be "" and if
+    // the index is missing then it is assumed to be 0.  If the index
+    // is provided then a colon (':') must be used.
+    // Examples:
+    //   "TAG"     -> tag "TAG",   index 0
+    //   ""        -> tag "",      index 0
+    //   ":0"      -> tag "",      index 0
+    //   ":3"      -> tag "",      index 3
+    //   "VIDEO:0" -> tag "VIDEO", index 0
+    //   "VIDEO:2" -> tag "VIDEO", index 2
+    string tag_index = 1;
+    // Whether the input stream is a back edge.
+    // By default, MediaPipe requires graphs to be acyclic and treats cycles in a
+    // graph as errors. To allow MediaPipe to accept a cyclic graph, set the
+    // back_edge fields of the input streams that are back edges to true. A
+    // cyclic graph usually has an obvious forward direction, and a back edge
+    // goes in the opposite direction. For a formal definition of a back edge,
+    // please see https://en.wikipedia.org/wiki/Depth-first_search.
+    bool back_edge = 2;
+}
+
+// Describes the topology and function of a MediaPipe Graph.  The graph of
+// Nodes must be a Directed Acyclic Graph (DAG) except as annotated by
+// "back_edge" in InputStreamInfo.  Use a mediapipe::CalculatorGraph object to
+// run the graph.
+message CalculatorGraphConfig {
+  // A single node in the DAG.
+  message Node {
+    // The name of the node.  This field is optional and doesn't generally
+    // need to be specified, but does improve error messaging.
+    string name = 1;
+    // The registered type of a calculator (provided via REGISTER_CALCULATOR),
+    // or of a subgraph (via REGISTER_MEDIAPIPE_GRAPH).
+    string calculator = 2;
+    // A Calculator can choose to access its input streams, output
+    // streams, and input side packets either by tag or by index.  If the
+    // calculator chooses indexes then it will receive the streams or side
+    // packets in the same order as they are specified in this proto.
+    // If the calculator chooses to use tags then it must specify a
+    // tag along with each name.  The field is given as "TAG:name".
+    // Meaning a tag name followed by a colon followed by the name.
+    // Tags use only upper case letters, numbers, and underscores, whereas
+    // names use only lower case letters, numbers, and underscores.
+    // Example:
+    //   Node {
+    //     calculator: "SomeAudioVideoCalculator"
+    //     # This calculator accesses its inputs by index (no tag needed).
+    //     input_stream: "combined_input"
+    //     # This calculator accesses its outputs by tags, so all
+    //     # output_streams must specify a tag.
+    //     output_stream: "AUDIO:audio_stream"
+    //     output_stream: "VIDEO:video_stream"
+    //     # This calculator accesses its input side packets by tag.
+    //     input_side_packet: "MODEL:model_01"
+    //   }
+
+    // String(s) representing "TAG:name" of the stream(s) from which the current
+    // node will get its inputs. "TAG:" part is optional, see above.
+    // A calculator with no input stream is a source.
+    repeated string input_stream = 3;
+    // String(s) representing "TAG:name" of the stream(s) produced by this node.
+    // "TAG:" part is optional, see above. These must be different from any
+    // other output_streams specified for other nodes in the graph.
+    repeated string output_stream = 4;
+
+    // The options passed to the Calculator, in proto3 syntax.
+    // Each node_options message must have a different message type.
+    // If the same message type is specified in |options| and |node_options|,
+    // only the message in |options| is used.
+    repeated google.protobuf.Any node_options = 8;
+
+    // Note: the following fields are only applicable to calculators, not
+    // subgraphs.
+
+    // Additional information about an input stream. The |name| field of the
+    // InputStreamInfo must match an input_stream.
+    repeated InputStreamInfo input_stream_info = 13;
+  }
+
+  // The nodes.
+  repeated Node node = 1;
+
+  // Specify input streams to the entire graph. 
+  repeated string input_stream = 10;
+  // Output streams for the graph when used as a subgraph.
+  repeated string output_stream = 15;
+  
+  // The namespace used for class name lookup within this graph.
+  // An unqualified or partially qualified class name is looked up in
+  // this namespace first and then in enclosing namespaces.
+  string package = 19;
+
+  // The type name for the graph config, used for registering and referencing
+  // the graph config.
+  string type = 20;
+}

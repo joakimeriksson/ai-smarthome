@@ -49,7 +49,6 @@ class ImageMovementDetector(Calculator):
         super().set_options(options)
         if 'threshold' in options:
             self.threshold = options['threshold']
-            print("Set threshold to ", self.threshold)
 
 
 class ShowImage(Calculator):

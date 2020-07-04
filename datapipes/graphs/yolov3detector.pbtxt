@@ -12,7 +12,6 @@ node: {
   output_stream: "motion_detected"
   map_node_options: {
     doubleOptions: { key:"threshold"; value:0.02 }
-    doubleOptions: { key:"threshold2"; value:1.0 }
     stringOptions: { key:"hej"; value:"a string" }
   }
 }
@@ -30,4 +29,11 @@ node: {
   input_stream: "motion_detected"
   input_stream: "yolo_detections"
   output_stream: "output_video"
+}
+
+# Send MQTT detection message
+node: {
+    calculator: "MQTTPublishYoloClass"
+    input_stream: "yolo_detections"
+    output_stream: "ha/tts/say"
 }

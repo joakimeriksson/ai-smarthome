@@ -12,10 +12,10 @@ class Calculator:
     def __init__(self, name, streams):
         self.name = name
         # input names
-        self.input = ['in']
+        self.input = [name + '-in']
         self.input_data = [None]
         # output names
-        self.output = ['out']
+        self.output = [name + '-out']
         self.output_data = [None]
         self.lastStep = False
         self.streams = streams
@@ -26,7 +26,10 @@ class Calculator:
         return self.lastStep
 
     def get_output_index(self, name):
-       return output.index(name)
+        return output.index(name)
+
+    def get_input_index(self, name):
+        return self.input.index(name)
 
     def set_input(self, index, inputData):
         print(self.name + " setting input ", index)
@@ -37,7 +40,17 @@ class Calculator:
 
     def set_output(self, index, data):
         print("Setting output:" + self.output[index])
-        self.streams[self.output[index]] = data
+        if (self.output[index] not in self.streams):
+            print("  - No subscriber...")
+            return
+        # Set this in all "subscribers"
+        subs = self.streams[self.output[index]]
+        for sub in subs:
+            # 0 => node, 1 => index
+            print("### Setting input in " + sub[0].name + " indx:", sub[1])
+            sub[0].set_input(sub[1], data)
+        # the cache
+        self.output_data[index] = data
 
     def set_input_names(self, inputs):
         self.input = inputs
@@ -51,6 +64,7 @@ class Calculator:
         print(self.name  + " set options:", options)
         self.options = options
 
+    # Get out data and "clear".
     def get(self, index):
         val = self.input_data[index]
         self.input_data[index] = None

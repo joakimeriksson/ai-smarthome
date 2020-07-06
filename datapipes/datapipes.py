@@ -3,7 +3,6 @@
 #
 # Inspired by Google Media pipelines
 #
-#
 # Dataflow can be within a "process" and then hook in locally
 # But can also be via a "bus" or other communication mechanism
 # 
@@ -22,20 +21,12 @@ from google.protobuf import text_format
 import pipeconfig_pb2
 
 def add_stream_input_node(dict, name, node):
-    print("Name:", name)
     if name not in dict:
         dict[name] = []
     dict[name] = dict[name] + [(node, node.get_input_index(name))]
-    print("Sub on " + name + ":", dict[name])
 
 def merge_options(mapoptions):
-    options = {}
-    for key in mapoptions.doubleOptions:
-        options[key] = mapoptions.doubleOptions[key]
-    for key in mapoptions.stringOptions:
-        options[key] = mapoptions.stringOptions[key]
-        
-    print(options)
+    options = {**mapoptions.doubleOptions, **mapoptions.stringOptions}
     return options
 
 # Either load a pbtxt file or use the default above

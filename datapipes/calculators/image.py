@@ -29,10 +29,12 @@ class ImageData:
         self.timestamp = timestamp
 
 class ImageMovementDetector(Calculator):
-    def __init__(self, name, s):
+    def __init__(self, name, s, options=None):
         super().__init__(name, s)
         self.avg = cvutils.DiffFilter()
         self.threshold = 0.01
+        if 'threshold' in options:
+            self.threshold = options['threshold']
 
     def process(self):
         image = self.get(0)
@@ -45,14 +47,7 @@ class ImageMovementDetector(Calculator):
                 return True
         return False
 
-    def set_options(self, options):
-        super().set_options(options)
-        if 'threshold' in options:
-            self.threshold = options['threshold']
-
-
 class ShowImage(Calculator):
-
     def process(self):
         image = self.get(0)
         if image is not None:
@@ -64,10 +59,15 @@ sys.path.append('../yolov3-ha')
 import yolo3
 
 class CaptureNode(Calculator):
-    def __init__(self, name, s):
-        super().__init__(name, s)
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
         self.output_data = [None]
-        self.cap = cv2.VideoCapture(0)
+        if options is not None and 'video' in options:
+            self.video = options['video']
+        else:
+            self.video = 0
+        print("*** Capture from ", self.video)
+        self.cap = cv2.VideoCapture(self.video)
 
     def process(self):
         ret, frame = self.cap.read()
@@ -77,7 +77,7 @@ class CaptureNode(Calculator):
         return True
 
 class YoloDetector(Calculator):
-    def __init__(self, name, s):
+    def __init__(self, name, s, options=None):
         super().__init__(name, s)
         self.input_data = [None]
         self.yolo = yolo3.YoloV3(0.5, 0.4, datapath="../yolov3-ha")
@@ -94,7 +94,7 @@ class YoloDetector(Calculator):
         return False
 
 class DrawDetections(Calculator):
-    def __init__(self, name, s):
+    def __init__(self, name, s, options=None):
         super().__init__(name, s)
         self.input_data = [None, None]
 
@@ -110,8 +110,8 @@ class DrawDetections(Calculator):
         return False
 
 class LuminanceCalculator(Calculator):
-    def __init__(self, name, s):
-        super().__init__(name, s)
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
         self.input_data = [None]
 
     def process(self):
@@ -123,8 +123,8 @@ class LuminanceCalculator(Calculator):
             return True
 
 class SobelEdgesCalculator(Calculator):
-    def __init__(self, name, s):
-        super().__init__(name, s)
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
         self.input_data = [None]
 
     def process(self):

@@ -9,7 +9,7 @@
 # 
 
 class Calculator:
-    def __init__(self, name, streams):
+    def __init__(self, name, streams, options=None):
         self.name = name
         # input names
         self.input = [name + '-in']
@@ -19,6 +19,7 @@ class Calculator:
         self.output_data = [None]
         self.lastStep = False
         self.streams = streams
+        self.options = options
 
     # called to trigger a calculation of inputs => output
     def process_node(self):
@@ -59,10 +60,6 @@ class Calculator:
     def set_output_names(self, outputs):
         self.output = outputs
         self.output_data = [None] * len(outputs)
-
-    def set_options(self, options):
-        print(self.name  + " set options:", options)
-        self.options = options
 
     # Get out data and "clear".
     def get(self, index):

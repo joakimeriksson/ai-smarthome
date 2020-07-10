@@ -29,42 +29,57 @@ def merge_options(mapoptions):
     options = {**mapoptions.doubleOptions, **mapoptions.stringOptions}
     return options
 
+# Setup a pipeline based on a configuration
+def setup_pipeline(config, pipe, options={}, prefix=""):
+    streaming_data = {}
+    pipeline = []
+    c = text_format.Parse(txt, pipe)
+
+    # Should check if this already exists in the config...
+    #   map_node_options: { key:"video"; value:"rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2" }
+    ins = CaptureNode(prefix + "input_video", streaming_data, options=options.get('input_video',{}))
+    ins.set_input_names([])
+    ins.set_output_names([prefix + "input_video"])
+
+    outs = ShowImage(prefix + "output_video", streaming_data)
+    outs.set_input_names([prefix + "output_video"])
+    outs.set_output_names([])
+    add_stream_input_node(streaming_data, prefix + "output_video", outs)
+    pipeline = pipeline + [ins]
+    for nr, node in enumerate(pipe.node, start = 1):
+        print(node.input_stream)
+        options = merge_options(node.map_node_options)
+        n = globals()[node.calculator]("Node:" + prefix + str(nr) + ":" + node.calculator, streaming_data, options=options)
+        nr = nr + 1
+        n.set_input_names(list(map(lambda x: prefix + x, node.input_stream)))
+        n.set_output_names(list(map(lambda x: prefix + x, node.output_stream)))
+        for name in node.input_stream:
+            add_stream_input_node(streaming_data, prefix + name, n)
+        pipeline = pipeline + [n]
+
+
+
+    pipeline = pipeline + [outs]
+    return streaming_data, pipeline
+
+
 # Either load a pbtxt file or use the default above
 if __name__ == "__main__":
 
     streaming_data = {}
+    pipeline = []
 
     if len(sys.argv) == 2:
         pipe = pipeconfig_pb2.CalculatorGraphConfig()
         print("Loading pipeline from ", sys.argv[1])
         f = open(sys.argv[1], "r")
         txt = f.read()
-        c = text_format.Parse(txt, pipe)
-
-        pipeline = []
-
-        ins = CaptureNode("input_video", streaming_data)
-        ins.set_input_names([])
-        ins.set_output_names(["input_video"])
-
-        outs = ShowImage("output_video", streaming_data)
-        outs.set_input_names(["output_video"])
-        outs.set_output_names([])
-        add_stream_input_node(streaming_data, "output_video", outs)
-
-        pipeline = pipeline + [ins]
-        for nr, node in enumerate(pipe.node, start = 1):
-            print(node.input_stream)
-            n = globals()[node.calculator]("Node:" + str(nr) + ":" + node.calculator, streaming_data)
-            nr = nr + 1
-            n.set_input_names(list(node.input_stream))
-            n.set_output_names(list(node.output_stream))
-            n.set_options(merge_options(node.map_node_options))
-            for name in node.input_stream:
-                add_stream_input_node(streaming_data, name, n)
-            pipeline = pipeline + [n]
-
-        pipeline = pipeline + [outs]
+        s1,p1 = setup_pipeline(txt, pipe, options={'input_video': {'video': "rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2"}})
+        streaming_data.update(s1)
+        pipeline = pipeline + p1
+        s1,p1 = setup_pipeline(txt, pipe, prefix="2/")
+        streaming_data.update(s1)
+        pipeline = pipeline + p1
     else:
         print("*** Missing config file for pipeline.")
         exit()

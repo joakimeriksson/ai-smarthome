@@ -22,8 +22,8 @@ def mqtt_connect_client():
         mqttClient.loop_start()
 
 class MQTTPublishCalculator(Calculator):
-    def set_options(self, options):
-        super().set_options(options)
+    def __init__(self, name, s, options):
+        super().__init__(name, s, options)
         if 'topic' in options:
             self.topic = options['topic']
 
@@ -41,7 +41,6 @@ class MQTTPublishCalculator(Calculator):
                 mqttClient.publish(topic, json.dumps(data))
 
 class MQTTPublishYoloClass(MQTTPublishCalculator):
-
     def process(self):
         data = self.get(0)
         if data is not None:

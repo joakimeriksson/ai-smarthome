@@ -19,6 +19,7 @@ from calculators.image import *
 from calculators.mqtt import *
 from google.protobuf import text_format
 import pipeconfig_pb2
+import sched, threading
 
 def add_stream_input_node(dict, name, node):
     if name not in dict:
@@ -31,6 +32,7 @@ def merge_options(mapoptions):
 
 class Pipeline:
     def __init__(self):
+        self.scheduler = sched.scheduler(time.time, time.sleep)
         self.streaming_data = {}
         self.pipeline = []
         self.do_exit = False
@@ -68,7 +70,12 @@ class Pipeline:
         self.pipeline = self.pipeline + [outs]
         return self.streaming_data, self.pipeline
 
+    def get_node_by_output(self, outputname):
+        return list(filter(lambda x : outputname in x.output, self.pipeline))
+
+    # Running with the main thread - as it make use of CV2.
     def run(self):
+        print("Main Thread:", threading.get_ident())
         while(not self.do_exit):
             if self.run_pipeline or self.run_step > 0:
                 # Just process all nodes - they will produce output and process the input.
@@ -81,6 +88,8 @@ class Pipeline:
             else:
                 # Nothing running at the moment...
                 time.sleep(1)
+            self.scheduler.run()
+
     def step(self):
         self.run_step = 1
 

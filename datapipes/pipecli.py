@@ -83,6 +83,7 @@ class PipeCli(Cmd):
     def do_step(self, inp):
         self.pipeline.step()
 
+# Setup the CLI and start a separate thread for that - as main is needed for the CV processing.
 p = PipeCli()
 thread = threading.Thread(target=p.cmdloop)
 thread.start()

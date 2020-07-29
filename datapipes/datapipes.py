@@ -73,21 +73,21 @@ class Pipeline:
     def get_node_by_output(self, outputname):
         return list(filter(lambda x : outputname in x.output, self.pipeline))
 
-    # Running with the main thread - as it make use of CV2.
+    # Running with the main thread - as it make use of CV2s show image.
     def run(self):
-        print("Main Thread:", threading.get_ident())
         while(not self.do_exit):
             if self.run_pipeline or self.run_step > 0:
                 # Just process all nodes - they will produce output and process the input.
                 for node in self.pipeline:
                     node.process_node()
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    return
                 time.sleep(0.001)
                 self.run_step -= 1
             else:
                 # Nothing running at the moment...
                 time.sleep(1)
+            # CV2 wait-key
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                return
             self.scheduler.run()
 
     def step(self):
@@ -98,6 +98,10 @@ class Pipeline:
 
     def stop(self):
         self.run_pipeline = False
+
+    # I always forget if it is quit or exit - so I have both...
+    def quit(self):
+        self.do_exit = True
 
     def exit(self):
         self.do_exit = True

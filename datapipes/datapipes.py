@@ -115,7 +115,7 @@ if __name__ == "__main__":
         print("Loading pipeline from ", sys.argv[1])
         f = open(sys.argv[1], "r")
         txt = f.read()
-        s1,p1 = pipeline.setup_pipeline(txt, options={'input_video': {'video': "rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2"}})
+        #s1,p1 = pipeline.setup_pipeline(txt, options={'input_video': {'video': "rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2"}})
         s1,p1 = pipeline.setup_pipeline(txt, prefix="2/")
     else:
         print("*** Missing config file for pipeline.")

@@ -35,5 +35,7 @@ node: {
 node: {
     calculator: "MQTTPublishYoloClass"
     input_stream: "yolo_detections"
-    output_stream: "ha/tts/say"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/tts/say" }
+  }
 }

@@ -45,7 +45,11 @@ class MQTTPublishYoloClass(MQTTPublishCalculator):
         data = self.get(0)
         if data is not None:
             mqtt_connect_client()
-            topic = getattr(self, 'topic', self.output[0])
+            if len(self.output) > 0:
+                def_topic = self.output[0]
+            else:
+                def_topic = "say"
+            topic = getattr(self, 'topic', def_topic)
             # This should be protobuf image in the long run
             print("MQTT publish:", topic, data)
             mqttClient.publish(topic, data[0][0])

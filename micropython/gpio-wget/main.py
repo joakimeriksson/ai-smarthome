@@ -53,6 +53,10 @@ config = json.loads(cdata)
 print("Parsed Config:", config)
 url_on = config["url-on"]
 url_off = config["url-off"]
+
+wlan_ap = network.WLAN(network.AP_IF)
+wlan_ap.active(False)
+
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 nets = wlan.scan()

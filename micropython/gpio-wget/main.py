@@ -73,9 +73,13 @@ while True:
     v = pin.value()
     time.sleep(1)
     if v != last_v:
-        if (v == 1):
-            http_get(url_on)
-        else:
-            http_get(url_off)
-    last_v = v
-    print("This is output... PIN:", v)
+        try:
+            if (v == 1):
+                http_get(url_on)
+            else:
+                http_get(url_off)
+            last_v = v
+        except OSError as exc:
+            print("OSError: ", exc.args[0])
+            time.sleep(4)
+    print("This is output... PIN:", v, " last:", last_v)

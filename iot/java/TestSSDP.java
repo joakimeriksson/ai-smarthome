@@ -12,7 +12,7 @@ public class TestSSDP {
     public static void main(String args[]) throws Exception {
 	
 	NetworkInterface ni = NetworkInterface.getByName("en0");
-	System.out.println("Name:" + ni.getDisplayName());
+	System.out.println("Name:" + ni.getDisplayName() + " Index:" + ni.getIndex());
 	System.out.println("Adr:" + ni.getInetAddresses().nextElement());
 	MulticastSocket socket = new MulticastSocket(1900);
 	InetAddress ipv6addr = Inet6Address.getByName("ff02::c%en0");
@@ -39,7 +39,7 @@ public class TestSSDP {
 	    System.out.print("" + (char) buf[i]);
 	}
 	System.out.println("");
-
+	System.out.println("Adr:" + recv.getAddress());
 	
     }
 }

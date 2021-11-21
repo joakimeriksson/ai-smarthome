@@ -1,3 +1,4 @@
+import json
 
 class ThermIQ:
 
@@ -286,14 +287,153 @@ class ThermIQ:
         types["DR_TIM_TS2"] = "h"
         types["STATUS15"] = "  "
         types["STATUS16"] = "  "
-        types["COMPR_STARTS"] = "ggr"
+
+        id_names = {  
+            't_ute'              : 'Outdoor temp.',
+            't_rum_ar'           : 'Indoor temp.',
+            't_rum_ar_dec'       : 'Indoor temp., decimal',
+            't_rum_bor'          : 'Indoor target temp.',
+            't_rum_bor_dec'      : 'Indoor target temp., decimal',
+            't_fram'             : 'Supplyline temp.',
+            't_retur'            : 'Returnline temp.',
+            't_vatten'           : 'Hotwater temp.',
+            't_brine_ut'         : 'Brine out temp.',
+            't_brine_in'         : 'Brine in temp.',
+            't_kylning'          : 'Cooling temp.',
+            't_fram_shunt'       : 'Supplyline temp., shunt',
+            'stromforbr'         : 'Electrical Current',
+            'ts_1'               : 'Aux. heater 3 kW',
+            'ts_2'               : 'Aux. heater 6 kW',
+            't_fram_bor'         : 'Supplyline target temp.',
+            't_fram_shunt_bor'   : 'Supplyline target temp., shunt',
+            'brine'              : 'Brinepump',
+            'kompr'              : 'Compressor',
+            'cirkp'              : 'Flowlinepump',
+            'varmvatten'         : 'Hotwater production.',
+            'ts2'                : 'Auxilliary 2',
+            'shuntn'             : 'Shunt -',
+            'shuntp'             : 'Shunt +',
+            'ts1'                : 'Auxilliary 1',
+            'shntgrpn'           : 'Shuntgroup -',
+            'shntgrpp'           : 'Shuntgroup +',
+            'shnt_kyln'          : 'Shunt cooling -',
+            'shnt_kylp'          : 'Shunt cooling +',
+            'akt_kyl'            : 'Active cooling',
+            'pass_kyl'           : 'Passive cooling',
+            'larm'               : 'Alarm',
+            'pwm_ut'             : 'PWM Out',
+            'alm_hp'             : 'Alarm highpr.pressostate',
+            'alm_lp'             : 'Alarm lowpr.pressostate',
+            'alm_ms'             : 'Alarm motorcircuit breaker',
+            'alm_blf'            : 'Alarm low flow brine',
+            'alm_blt'            : 'Alarm low temp. brine',
+            'alm_ute'            : 'Alarm outdoor t-sensor',
+            'alm_fram'           : 'Alarm supplyline t-sensor',
+            'alm_retur'          : 'Alarm returnline t-sensor',
+            'alm_vv'             : 'Alarm hotw. t-sensor',
+            'alm_rum'            : 'Alarm indoor t-sensor',
+            'alm_fas'            : 'Alarm incorrect 3-phase order',
+            'alm_ovrh'           : 'Alarm overheating',
+            'behov1'             : 'DEMAND1',
+            'behov2'             : 'DEMAND2',
+            'tryckr_t'           : 'Pressurepipe temp.',
+            'hgw_vv'             : 'Hotw. supplyline temp.',
+            'integr'             : 'Integral',
+            'intgr_steg'         : 'Integral, reached A-limit',
+            'clk_vv'             : 'Defrost',
+            'min_time_start'     : 'Minimum time to start',
+            'sw_ver'             : 'Program version',
+            'cirk_speed'         : 'Flowlinepump speed',
+            'brine_speed'        : 'Brinepump speed',
+            'clk_vv_stop'        : 'STATUS3',
+            'rum_bor2'           : 'Indoor target temp.',
+            'dl'                 : 'Mode',
+            'kurva'              : 'Curve',
+            'kurva_min'          : 'Curve min',
+            'kurva_max'          : 'Curve max',
+            'kurva_p5'           : 'Curve +5',
+            'kurva_0'            : 'Curve 0',
+            'kurva_n5'           : 'Curve -5',
+            'varme_stp'          : 'Heatstop',
+            'sankn_t'            : 'Temp. reduction',
+            'rumfakt'            : 'Room factor',
+            'kurva2'             : 'Curve 2',
+            'kurva2_min'         : 'Curve 2 min',
+            'kurva2_max'         : 'Curve 2 max',
+            'kurva2_bor'         : 'Curve 2, Target',
+            'kurva2_ar'          : 'Curve 2, Actual',
+            'status6'            : 'Outdoor stop temp. (20=-20C)',
+            'tryckr_limit'       : 'Pressurepipe, temp. limit',
+            'vv_start'           : 'Hotwater starttemp.',
+            'vv_tid'             : 'Hotwater operating time',
+            'varme_tid'          : 'Heatpump operating time',
+            'leg_interv'         : 'Legionella interval',
+            'leg_stop_t'         : 'Legionella stop temp.',
+            'integr_a1'          : 'Integral limit A1',
+            'hyst_vp'            : 'Hysteresis, heatpump',
+            'max_ret'            : 'Returnline temp., max limit',
+            'min_st_int'         : 'Minimum starting interval',
+            'min_brine_t'        : 'Brinetemp., min limit (-15=OFFV)',
+            'kyla_bor'           : 'Cooling, target',
+            'integr_a2'          : 'Integral limit A2',
+            'hyst_ts'            : 'Hysteresis limit, aux',
+            'max_steg_ts'        : 'Max step, aux',
+            'max_strom'          : 'Electrical current, max limit',
+            'shunttid'           : 'Shunt time',
+            'vv_stop'            : 'Hotwater stop temp.',
+            'test_mode'          : 'Manual test mode',
+            'status7'            : 'DT_LARMOFF',
+            'lang'               : 'Language',
+            'status8'            : 'SERVFAS',
+            'fabriksinst'        : 'Factory settings',
+            'reset_dr_tid'       : 'Reset runtime counters',
+            'cal_ute'            : 'Calibration outdoor sensor',
+            'cal_fram'           : 'Calibration supplyline sensor',
+            'cal_ret'            : 'Calibration returnline sensor',
+            'cal_vv'             : 'Calibration hotwater sensor',
+            'cal_brut'           : 'Calibration brine out sensor',
+            'cal_brin'           : 'Calibration brine in sensor',
+            'sys_typ'            : 'Heating system type 0=VL 4=D',
+            'till_fasm'          : 'Add-on phase order measurement',
+            'till_2'             : 'TILL2',
+            'till_hgw'           : 'Add-on HGW',
+            'till_4'             : 'TILL4',
+            'till_5'             : 'TILL5',
+            'till_6'             : 'TILL6',
+            'till_opt'           : 'Add-on Optimum',
+            'till_fw'            : 'Add-on flow guard',
+            'log_tim'            : 'Logging time',
+            'brine_tim_on'       : 'Brine run-out duration',
+            'brine_tim_off'      : 'Brine run-in duration',
+            'leg_top_on'         : 'Legionella peak heating enable',
+            'leg_top_tim'        : 'Legionella peak heating duration',
+            'dr_tim_vp'          : 'Runtime compressor',
+            'status10'           : 'DVP_MSD1',
+            'dr_tim_ts1'         : 'Runtime 3 kW',
+            'status11'           : 'DTS_MSD1',
+            'dr_tim_vv'          : 'Runtime hotwater production',
+            'status12'           : 'DVV_MSD1',
+            'dr_tim_pas_kyl'     : 'Runtime passive cooling',
+            'status13'           : 'DPAS_MSD1',
+            'dr_tim_akt_kyl'     : 'Runtime active cooling',
+            'status14'           : 'DACT_MSD1',
+            'dr_tim_ts2'         : 'Runtime 6 kW',
+            'status15'           : 'DTS2_MSD1',
+            'status16'           : 'GrafCounterOffSet',
+            'indr_t'             : 'INDR_T',
+        }
+        
         self.vpreg = vpreg
         self.types = types
+        self.id_names = id_names
         self.values = {}
 
     def set_value(self, reg, value):
+        name = self.get_name(reg)
+        if name in self.types and self.types[name] == "C":
+            if value > 32768:
+                value = value - 65536; 
         self.values[(reg,0)] = value
-
 
     def get_value(self, reg):
         return self.values[(reg, 0)]
@@ -304,7 +444,16 @@ class ThermIQ:
             return self.vpreg[(reg,0)]
         return "Flag:" + str(reg)
 
+    def get_description(self, name):
+        namelow = name.lower()
+        if namelow in self.id_names:
+            return self.id_names[namelow]
+        return name
     def get_type(self, name):
         if name in self.types:
             return self.types[name]
         return "Boolsk"
+
+    def json(self):
+        mdict = {self.get_name(k) : v for (k,n), v in self.values.items()}
+        return json.dumps(mdict)

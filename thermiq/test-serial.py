@@ -6,7 +6,7 @@ tregs = regs.ThermIQ()
 ser = serial.Serial('/dev/ttyACM0', timeout=1)  # open serial port
 print(ser.name)         # check which port was really used
 ser.write(b'ati\n')     # write a string
-ser.write(b'atr0060\n')
+ser.write(b'atr0075\n')
 while(True):
     line = ser.readline()
     print(line)
@@ -20,5 +20,9 @@ while(True):
         name = tregs.get_name(reg)
         print("Reg: " + str(reg) + " = " + str(val) + " Name:" + name + " " + tregs.get_type(name))
         tregs.set_value(reg, val)
-    
+        print(tregs.get_description(name),"=", tregs.get_value(reg), tregs.get_type(name))
+        if reg == 117:
+            print("-------")
+            print(tregs.json())
+            print("-------")
 ser.close()

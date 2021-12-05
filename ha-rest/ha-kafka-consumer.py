@@ -1,7 +1,13 @@
+#
+# Experimental Kafka consumer connecting Kafka topic with the REST API of 
+# Home Assistant. Control a light via home assistant REST API.
+#
+
 from confluent_kafka import DeserializingConsumer
 from confluent_kafka.serialization import StringDeserializer
 import toml, json
 import requests
+
 
 # Load HopsWorks Kafka configuration - and Home Assistant API token
 conf = toml.load("config.toml")
@@ -25,6 +31,7 @@ consumer = DeserializingConsumer(consumer_conf)
 # Subscribe to a topic
 consumer.subscribe([conf['kafka']['topic']])
 
+# Get the token, URL and light for Home Assistant API
 token = conf['hass']['token']
 url = conf['hass']['url']
 light = conf['hass']['light']
@@ -34,20 +41,13 @@ headers = {
     "content-type": "application/json",
 }
 
-response = requests.get(url + "services", headers=headers)
-print(response.text)
-
+# Load and print state of light
 response = requests.get(url + "states/" + light, headers=headers)
 print(response.text)
 
 
-print("Do post:")
-data = {'entity_id': light,'rgb_color':[255,220,145], 'brightness':250}
-response = requests.post(url + "services/light/turn_on", headers=headers, json=data)
-print(response)
-
 print("Consuming Kafka messages.")
-# Main loop - polls for Kafka messages
+# Main loop - polls for Kafka messages and controls light if receiving a service message.
 while True:
     try:
         # SIGINT can't be handled when polling, limit timeout to 1 second.

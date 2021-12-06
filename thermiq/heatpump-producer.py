@@ -7,6 +7,8 @@ import socket
 from datetime import datetime
 import toml
 
+DEBUG = False
+
 def acked(err, msg):
     if err is not None:
         print("Failed to deliver message: %s: %s" % (str(msg), str(err)))
@@ -47,25 +49,31 @@ while(True):
         ser.write(b'atr0075\n')
     
     line = ser.readline()
-    #print(line)
     line = str(line, 'ascii')
     if len(line) > 3 and "=" in line:
         line = line.strip()
         d = line.split("=")
         #print(line, d)
-        reg = int(d[0], 16)
-        val = int(d[1], 16)
-        name = tregs.get_name(reg)
-        #print("Reg: " + str(reg) + " = " + str(val) + " Name:" + name + " " + tregs.get_type(name))
-        tregs.set_value(reg, val)
-        print(tregs.get_description(name),"=", tregs.get_value(reg), tregs.get_type(name))
-        if reg == 117:
-            print("-------")
-            print(tregs.json())
-            print("-------")
-            producer.produce(conf['kafka']['topic'], key="key", value=tregs.json(), on_delivery=acked)
-            # Wait up to 1 second for events. Callbacks will be invoked during
-            # this method call if the message is acknowledged.
-            producer.poll(1)
+        try:
+            reg = int(d[0], 16)
+            val = int(d[1], 16)
+            name = tregs.get_name(reg)
+            #print("Reg: " + str(reg) + " = " + str(val) + " Name:" + name + " " + tregs.get_type(name))
+            tregs.set_value(reg, val)
+            if DEBUG:
+                print(tregs.get_description(name),"=", tregs.get_value(reg), tregs.get_type(name))
+            if reg == 117:
+                if DEBUG:
+                    print("-------")
+                print(tregs.json())
+                if DEBUG:
+                    print("-------")
+                producer.produce(conf['kafka']['topic'], key="key", value=tregs.json(), on_delivery=acked)
+                # Wait up to 1 second for events. Callbacks will be invoked during
+                # this method call if the message is acknowledged.
+                producer.poll(1)
+        except ValueError:
+            # Handle the exception
+            print('Failed parsing:', d)
 
 ser.close()

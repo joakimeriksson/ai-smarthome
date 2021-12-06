@@ -1,6 +1,9 @@
-#
+# 2021 - Joakim Eriksson, RISE, joakim.eriksson@ri.se
 # Experimental Kafka consumer connecting Kafka topic with the REST API of 
 # Home Assistant. Control a light via home assistant REST API.
+# The Hops/Kafka part is inspired by Ahmad Al-Shishtawy's blog at 
+# https://www.logicalclocks.com/blog/using-an-external-python-kafka-client-to-interact-with-a-hopsworks-cluster
+#
 #
 
 from confluent_kafka import DeserializingConsumer

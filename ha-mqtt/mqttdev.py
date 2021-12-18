@@ -73,28 +73,27 @@ class MQTTDevice(mqtt.Client):
     def on_log(mqttc, obj, level, string):
         print(string)
 
-            
-# Test of the mqttdev
-print("---- registering sensor ----")
-import cv2, random, time, sys
+# Test of the mqttdev - (if run as main)
+if __name__ == '__main__':
+    print("---- registering sensor ----")
+    import cv2, random, time, sys
 
-if len(sys.argv) > 1:
-    broker = sys.argv[1]
-else:
-    broker = "localhost"
+    if len(sys.argv) > 1:
+        broker = sys.argv[1]
+    else:
+        broker = "localhost"
 
+    print("Connecting to broker: ", broker)
+    tempDev = MQTTDevice("outdoorTemp", "22342", "sensor", dev_class = "temperature", mqttBroker=broker)
+    tempDev.send_disco()
+    val = random.random() * 10 + 15
+    tempDev.send_data(val)
 
-print("Connecting to broker: ", broker)
-tempDev = MQTTDevice("outdoorTemp", "22342", "sensor", dev_class = "temperature", mqttBroker=broker)
-tempDev.send_disco()
-val = random.random() * 10 + 15
-tempDev.send_data(val)
+    camDev = MQTTDevice("TestCam", "1234", "camera", mqttBroker=broker)
+    camDev.send_disco()
+    cap = cv2.VideoCapture(1)
 
-camDev = MQTTDevice("TestCam", "1234", "camera", mqttBroker=broker)
-camDev.send_disco()
-cap = cv2.VideoCapture(1)
-
-for i in range(10):
-    time.sleep(1)
-    ret, frame = cap.read()
-    camDev.send_data(cv2.imencode('.png', frame)[1].tostring())
+    for i in range(10):
+        time.sleep(1)
+        ret, frame = cap.read()
+        camDev.send_data(cv2.imencode('.png', frame)[1].tostring())

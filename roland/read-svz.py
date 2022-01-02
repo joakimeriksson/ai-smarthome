@@ -11,7 +11,10 @@ import sys
 
 startOffset = 128
 patch = {
-    'name':{'offset':8, 'len':16, 'type':'string'}
+    'name':{'offset':8, 'len':16, 'type':'string'},
+    'level':{'offset':8 + 16 + 5, 'len':1, 'type':'int'},
+    'structure1-2':{'offset':1460, 'len':1, 'type':'int'},
+    'structure3-4':{'offset':1461, 'len':1, 'type':'int'}
     }
 
 def get_data(name, bytes):
@@ -22,6 +25,13 @@ def get_data(name, bytes):
         len = patch[name]['len']
         if t == 'string':
             return str(bytes[startOffset + offset : startOffset + offset + len], "UTF-8")
+        elif t == 'int':
+            v = 0
+            # MIDI might use other schemes for converting - might be similar here... (SysEx)
+            for i in range(len):
+                b = bytes[startOffset + offset + i]
+                v = v * 256 + b
+            return v
     return "no-found."
 
 def conv(b):
@@ -32,7 +42,6 @@ def conv(b):
     return c
 
 print("Loading", sys.argv[1])
-     
 
 with open(sys.argv[1], "rb") as f:
     bytes_read = f.read()
@@ -56,7 +65,7 @@ for adr, b in enumerate(bytes_read):
         b2 = bytes_read2[adr]
         s2 = s2 + conv(b2)
         d2 = d2 + "%02x" % b2
-        if b != bytes_read2[adr]:
+        if b != b2:
             diff = True
     print("%02x" %b, end='')
     i = i + 1
@@ -74,4 +83,7 @@ if bytes_read[0:3] == b'SVZ':
     print("")
     print("Roland SVZ file")
     print("First sound:", get_data('name', bytes_read))
+    print("Level:" + str(get_data('level', bytes_read)))
+    print("Osc-mode-1-2:" + str(get_data('structure1-2', bytes_read)))
+    print("Osc-mode-3-4:" + str(get_data('structure3-4', bytes_read)))
 

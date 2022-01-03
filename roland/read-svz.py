@@ -10,11 +10,19 @@ import sys
 # Offset from start
 
 startOffset = 128
+# Should setup the different parts for simpler offset calculations...
+# Check that the endian of word / long is correct also.
 patch = {
     'name':{'offset':8, 'len':16, 'type':'string'},
     'level':{'offset':8 + 16 + 5, 'len':1, 'type':'int'},
     'structure1-2':{'offset':1460, 'len':1, 'type':'int'},
-    'structure3-4':{'offset':1461, 'len':1, 'type':'int'}
+    'structure3-4':{'offset':1461, 'len':1, 'type':'int'},
+    'ring-level1-2':{'offset':1464, 'len':1, 'type':'int'},
+    'ring-level3-4':{'offset':1465, 'len':1, 'type':'int'},
+    'ringosc1-level':{'offset':1466, 'len':1, 'type':'int'},
+    'ringosc2-level':{'offset':1467, 'len':1, 'type':'int'},
+    'ringosc3-level':{'offset':1468, 'len':1, 'type':'int'},
+    'ringosc4-level':{'offset':1469, 'len':1, 'type':'int'},
     }
 
 def get_data(name, bytes):
@@ -86,4 +94,6 @@ if bytes_read[0:3] == b'SVZ':
     print("Level:" + str(get_data('level', bytes_read)))
     print("Osc-mode-1-2:" + str(get_data('structure1-2', bytes_read)))
     print("Osc-mode-3-4:" + str(get_data('structure3-4', bytes_read)))
+    print("Ring-level1-2:" + str(get_data('ring-level1-2', bytes_read)))
+    print("Ring-level3-4:" + str(get_data('ring-level3-4', bytes_read)))
 

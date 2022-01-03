@@ -18,16 +18,16 @@ startOffset = 128
 
 patch = {
     'name':{'offset':8, 'len':16, 'type':'string'},
-    'level':{'offset':28, 'len':1, 'type':'int'},
+    'level':{'offset':28, 'len':1, 'type':'uint'},
     'pan':{'offset':29, 'len':1, 'type':'int'},
-    'structure1-2':{'offset':1460, 'len':1, 'type':'int'},
-    'structure3-4':{'offset':1461, 'len':1, 'type':'int'},
-    'ring-level1-2':{'offset':1464, 'len':1, 'type':'int'},
-    'ring-level3-4':{'offset':1465, 'len':1, 'type':'int'},
-    'ringosc1-level':{'offset':1466, 'len':1, 'type':'int'},
-    'ringosc2-level':{'offset':1467, 'len':1, 'type':'int'},
-    'ringosc3-level':{'offset':1468, 'len':1, 'type':'int'},
-    'ringosc4-level':{'offset':1469, 'len':1, 'type':'int'},
+    'structure1-2':{'offset':1460, 'len':1, 'type':'uint'},
+    'structure3-4':{'offset':1461, 'len':1, 'type':'uint'},
+    'ring-level1-2':{'offset':1464, 'len':1, 'type':'uint'},
+    'ring-level3-4':{'offset':1465, 'len':1, 'type':'uint'},
+    'ringosc1-level':{'offset':1466, 'len':1, 'type':'uint'},
+    'ringosc2-level':{'offset':1467, 'len':1, 'type':'uint'},
+    'ringosc3-level':{'offset':1468, 'len':1, 'type':'uint'},
+    'ringosc4-level':{'offset':1469, 'len':1, 'type':'uint'},
     }
 
 def get_data(name, bytes):
@@ -38,12 +38,15 @@ def get_data(name, bytes):
         len = patch[name]['len']
         if t == 'string':
             return str(bytes[startOffset + offset : startOffset + offset + len], "UTF-8")
-        elif t == 'int':
+        elif t == 'int' or t == 'uint':
             v = 0
+            maxval = 2**(8*len)
             # MIDI might use other schemes for converting - might be similar here... (SysEx)
             for i in range(len):
                 b = bytes[startOffset + offset + i]
                 v = v * 256 + b
+            if t == 'int' and v >= maxval / 2:
+                v = v - maxval
             return v
     return "no-found."
 
@@ -124,3 +127,4 @@ if bytes_read[0:3] == b'SVZ':
     crc32 = binascii.crc32(bytes_read[128+12:1632+(128+12)])
     checksum = bytes_read[128 + 4] + bytes_read[128 + 5] * 256 + bytes_read[128 + 6] * 65536 + bytes_read[128 + 7] * 16777216
     print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)
+

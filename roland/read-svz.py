@@ -15,11 +15,16 @@ startOffset = 128
 # Check that the endian of word / long is correct also.
 
 
-
 patch = {
     'name':{'offset':8, 'len':16, 'type':'string'},
+    'category':{'offset':24, 'len':1, 'type':'uint'},
     'level':{'offset':28, 'len':1, 'type':'uint'},
     'pan':{'offset':29, 'len':1, 'type':'int'},
+    'coarse-tune':{'offset':33, 'len':1, 'type':'int'},
+    'fine-tune':{'offset':34, 'len':1, 'type':'int'},
+    'octave-shift':{'offset':35, 'len':1, 'type':'int'},
+    'stretch-depth':{'offset':36, 'len':1, 'type':'uint'},
+    'analog-feel':{'offset':37, 'len':1, 'type':'uint'},
     'structure1-2':{'offset':1460, 'len':1, 'type':'uint'},
     'structure3-4':{'offset':1461, 'len':1, 'type':'uint'},
     'ring-level1-2':{'offset':1464, 'len':1, 'type':'uint'},
@@ -28,6 +33,15 @@ patch = {
     'ringosc2-level':{'offset':1467, 'len':1, 'type':'uint'},
     'ringosc3-level':{'offset':1468, 'len':1, 'type':'uint'},
     'ringosc4-level':{'offset':1469, 'len':1, 'type':'uint'},
+    'xmod1-2-depth':{'offset':1472, 'len':2, 'type':'uint'},
+    'xmod3-4-depth':{'offset':1474, 'len':2, 'type':'uint'},
+    'xmodosc1-level':{'offset':1476, 'len':1, 'type':'uint'},
+    'xmodosc2-level':{'offset':1477, 'len':1, 'type':'uint'},
+    'xmodosc3-level':{'offset':1478, 'len':1, 'type':'uint'},
+    'xmodosc4-level':{'offset':1479, 'len':1, 'type':'uint'},
+    'phase-lock':{'offset':1480, 'len':1, 'type':'uint'},
+    'xmod21-2-depth':{'offset':1481, 'len':1, 'type':'uint'},
+    'xmod23-4-depth':{'offset':1482, 'len':1, 'type':'uint'},
     }
 
 def get_data(name, bytes):
@@ -44,7 +58,7 @@ def get_data(name, bytes):
             # MIDI might use other schemes for converting - might be similar here... (SysEx)
             for i in range(len):
                 b = bytes[startOffset + offset + i]
-                v = v * 256 + b
+                v = v + 2**(8*i) * b
             if t == 'int' and v >= maxval / 2:
                 v = v - maxval
             return v
@@ -117,12 +131,18 @@ if bytes_read[0:3] == b'SVZ':
     print("Total len:" + str(mlen + plen) + " Total file:" + str(adr + 1)) 
     startOffset = 128 + num_patches * 4 - 4;
     print("First sound:", get_data('name', bytes_read))
+    for p in patch:
+        print(p, get_data(p, bytes_read))
+
     print("Level:" + str(get_data('level', bytes_read)))
     print("Pan:" + str(get_data('pan', bytes_read)))
+    print("Category:" + str(get_data('category', bytes_read)))
     print("Osc-mode-1-2:" + str(get_data('structure1-2', bytes_read)))
     print("Osc-mode-3-4:" + str(get_data('structure3-4', bytes_read)))
     print("Ring-level1-2:" + str(get_data('ring-level1-2', bytes_read)))
     print("Ring-level3-4:" + str(get_data('ring-level3-4', bytes_read)))
+    print("coarse-tune:" + str(get_data('coarse-tune', bytes_read)))
+    print("fine-tune:" + str(get_data('fine-tune', bytes_read)))
     # Seems like the checksum is a plain CRC32 - which is great!
     crc32 = binascii.crc32(bytes_read[128+12:1632+(128+12)])
     checksum = bytes_read[128 + 4] + bytes_read[128 + 5] * 256 + bytes_read[128 + 6] * 65536 + bytes_read[128 + 7] * 16777216

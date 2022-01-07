@@ -25,6 +25,8 @@ patch = {
     'octave-shift':{'offset':35, 'len':1, 'type':'int'},
     'stretch-depth':{'offset':36, 'len':1, 'type':'uint'},
     'analog-feel':{'offset':37, 'len':1, 'type':'uint'},
+
+    # Structure configuration
     'structure1-2':{'offset':1460, 'len':1, 'type':'uint'},
     'structure3-4':{'offset':1461, 'len':1, 'type':'uint'},
     'ring-level1-2':{'offset':1464, 'len':1, 'type':'uint'},
@@ -42,10 +44,67 @@ patch = {
     'phase-lock':{'offset':1480, 'len':1, 'type':'uint'},
     'xmod21-2-depth':{'offset':1481, 'len':1, 'type':'uint'},
     'xmod23-4-depth':{'offset':1482, 'len':1, 'type':'uint'},
-    }
 
-def get_data(name, bytes):
-    global patch, startOffset
+    # Key
+    # Oscillator 1.
+    'osc1':{'offset':164, 'type':'map',
+        'patch_data': {
+            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
+            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
+            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
+            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
+            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
+            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
+            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
+            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
+        }
+    },
+    'osc2':{'offset':176, 'type':'map',
+        'patch_data': {
+            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
+            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
+            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
+            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
+            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
+            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
+            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
+            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
+        }
+    },
+    'osc3':{'offset':188, 'type':'map',
+        'patch_data': {
+            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
+            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
+            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
+            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
+            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
+            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
+            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
+            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
+        }
+    },
+    'osc4':{'offset':200, 'type':'map',
+        'patch_data': {
+            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
+            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
+            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
+            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
+            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
+            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
+            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
+            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
+        }
+    }
+}
+
+def print_map(kv, spacing, read_data):
+    global startOffset
+    offset = kv['offset']
+    for k in kv['patch_data']:
+        print(spacing, k, ':', get_data_patch(k, startOffset + offset, kv['patch_data'], read_data))
+
+def get_data_patch(name, startOffset, ppart, bytes):
+    patch=ppart
     if name in patch:
         t = patch[name]['type']
         offset = patch[name]['offset']
@@ -63,6 +122,11 @@ def get_data(name, bytes):
                 v = v - maxval
             return v
     return "no-found."
+
+
+def get_data(name, bytes):
+    global patch, startOffset
+    return get_data_patch(name, startOffset, patch, bytes)
 
 def conv(b):
     if b > 30 and b < 127:
@@ -131,8 +195,15 @@ if bytes_read[0:3] == b'SVZ':
     print("Total len:" + str(mlen + plen) + " Total file:" + str(adr + 1)) 
     startOffset = 128 + num_patches * 4 - 4;
     print("First sound:", get_data('name', bytes_read))
+    space = ""
     for p in patch:
-        print(p, get_data(p, bytes_read))
+        if patch[p]['type'] == 'map':
+            print(p + " ------")
+            space = "  "
+            print_map(patch[p], space, bytes_read)
+        else:
+            space = ""
+            print(p, get_data(p, bytes_read))
 
     print("Level:" + str(get_data('level', bytes_read)))
     print("Pan:" + str(get_data('pan', bytes_read)))

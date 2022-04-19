@@ -58,6 +58,20 @@ ul li a{
   transition: transform .15s linear;
 }
 
+form {
+    padding:0px;
+    margin:0px;
+    font-size: 1.5rem;
+}
+input {
+    padding:0px;
+    margin:0px; 
+    background: rgba(33,33,33,.5);
+    color: white;
+    border: none;
+
+}
+
 ul li:nth-child(even) a{
   transform:rotate(4deg);
   position:relative;
@@ -97,6 +111,10 @@ ul li{
 
 <body>
     <h1>Computer Science and AI - Poster and Demos</h1>
+    <form action="#">
+        Filter: <input type="text" id="search" />  
+    </form>
+    
   <ul>
   <li>
     <a href="#hej">
@@ -175,6 +193,23 @@ ul li{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="abstracts.js"></script>
 <script>
+
+    $('input#search').keyup(function () {
+        var value = $('input#search').val();
+        console.log(value);
+
+        $("li a").each(function () {
+            var $this = $(this);
+            text = $("h2", this).text() + " " + $("p", this).text();
+            if ($("h2", this).text().length > 0 && text.toLowerCase().indexOf(value) !== -1) {
+                $this.show();
+            } else {
+                $this.hide();
+            }
+        });
+    });
+
+
     var length = 300;
     all_notes = $("li a");
 
@@ -194,8 +229,10 @@ ul li{
         $(this).attr("href", note_link);
       } else {
           $(this).hide()
+          $(this).find("h2").text("");
       }
-    
+
+      
 });
 </script>
 </body>

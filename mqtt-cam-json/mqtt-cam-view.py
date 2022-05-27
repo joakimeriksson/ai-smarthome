@@ -30,6 +30,7 @@ def on_message(client, userdata, message):
     img = base64.b64decode(b64img)
     nparr = np.frombuffer(img, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    print("detections:" + str(imgdata['detections']))
     showFrame = True
 
 # parse the command line

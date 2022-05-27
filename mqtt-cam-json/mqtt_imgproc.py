@@ -9,12 +9,11 @@ import json
 from threading import Condition
 import paho.mqtt.client as mqtt
 import cv2, sys, numpy as np
-
 import base64
 
 class MQTTImageProcess(mqtt.Client):
 
-    def __init__(self, topic, id = None):
+    def __init__(self, topic, id = None, description = None):
         if (id == None):
             super().__init__()
         else:
@@ -23,6 +22,9 @@ class MQTTImageProcess(mqtt.Client):
         self.imgdata = None
         self.topic = topic
         self.imgget = Condition()
+        if description is None:
+            self.description = {"type": "MQTT image processing"}
+        self.description = description
         self.queue =[]
 
     def set_frame(self, frame, imgdata, topic):
@@ -51,7 +53,7 @@ class MQTTImageProcess(mqtt.Client):
     def on_connect(self, mqttc, obj, flags, rc):
         if rc == 0:
             self.subscribe(self.topic + "/in/#", 0)
-            self.publish(self.topic+ "/info", json.dumps({"type":"imgproc", "model": "none"}), retain=True)
+            self.publish(self.topic+ "/info", json.dumps(self.description), retain=True)
             print("Connected to broker:", rc)
         else:
             print("Connection failed: ", rc)
@@ -71,7 +73,7 @@ class MQTTImageProcess(mqtt.Client):
         print(string)
 
     # Should add detections also! (JSON for detections)
-    def publish_image(self, frame, detections, topic):
+    def publish_image(self, frame, topic, detections = {}):
         h, w = frame.shape[:2]
         img = cv2.imencode('.png', frame)[1].tostring()
         encoded_img = base64.b64encode(img).decode("utf-8")
@@ -114,7 +116,7 @@ if __name__ == "__main__":
         cv2.imshow('Cam-frame', frame)
         i = i + 1
         if i % 10 == 9:
-            client.publish_image(frame, [], client.msgtopic)
+            client.publish_image(frame, client.msgtopic, [])
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
 

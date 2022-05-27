@@ -69,7 +69,7 @@ parser = argparse.ArgumentParser(description="Send video/image stream over MQTT 
                                  formatter_class=argparse.RawTextHelpFormatter, epilog="MQTT Camera")
 
 parser.add_argument("--camera", type=int, default=0, help="index of the camera to use (default: 0)")
-parser.add_argument("--topic", type=str, default="ha/camera/mqtt_json/in", help="MQTT topic to publish to")
+parser.add_argument("--topic", type=str, default="ha/camera/mqtt_json", help="MQTT topic to publish to")
 parser.add_argument("--broker", type=str, default="localhost", help="MQTT broker to connect to")
 try:
 	opt = parser.parse_known_args()[0]

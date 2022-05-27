@@ -1,0 +1,3 @@
+nump>=1.21.1
+opencv_python>=4.1.2.30
+paho_mqtt>=1.6.1

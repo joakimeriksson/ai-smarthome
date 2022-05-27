@@ -1,14 +1,12 @@
 #
-# This is a basic example of a MQTT camera viewer - it will show both plain
-# images encoded in binary format (png, etc) in the payload or make use of
-# a protocol buffer encoded image that also include width, height + id.
+# This is a basic example of a MQTT camera viewer taking as input a JSON format with a base64 encoded image.
 #
 # Author: Joakim Eriksson, joakim.eriksson@ri.se
 #
 
 import paho.mqtt.client as mqttClient
 import numpy as np, sys, json, base64
-import cv2, argparse
+import cv2, argparse, random
 
 show = True
 client = None
@@ -47,12 +45,12 @@ except:
 	parser.print_help()
 	sys.exit(0)
 
-client = mqttClient.Client("Python-MQTT-CAM Viewer")
+client = mqttClient.Client("CAMViewer-" + str(hex(random.randint(0,16777215)))[2:])
 client.on_connect = on_connect
 client.connect(opt.broker)
 client.on_message = on_message
 # Should take this a configs...
-print("Subscribing to topic:", opt.topic)
+print("Client", client._client_id, "Subscribing to topic:", opt.topic)
 client.subscribe(opt.topic, 0)
 client.loop_start()
 

@@ -8,7 +8,7 @@
 
 import paho.mqtt.client as mqttClient
 import numpy as np, sys, json, base64
-import cv2
+import cv2, argparse
 
 show = True
 client = None
@@ -27,22 +27,33 @@ def on_message(client, userdata, message):
     global showFrame
     print("Received message on topic '"
           + message.topic + "' with QoS " + str(message.qos))
-    if message.topic == "ha/camera/mqtt_json":
-        print("Matched!!!")
-        imgdata = json.loads(message.payload)
-        b64img = imgdata['image']
-        img = base64.b64decode(b64img)
-        nparr = np.frombuffer(img, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        showFrame = True
+    imgdata = json.loads(message.payload)
+    b64img = imgdata['image']
+    img = base64.b64decode(b64img)
+    nparr = np.frombuffer(img, np.uint8)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    showFrame = True
 
+# parse the command line
+parser = argparse.ArgumentParser(description="View images received over MQTT.", 
+                                 formatter_class=argparse.RawTextHelpFormatter, epilog="MQTT Camera Viewer")
 
-client = mqttClient.Client("Python-MQTT-CAM")
+parser.add_argument("--topic", type=str, default="ha/camera/mqtt_json", help="MQTT topic to subscribe to")
+parser.add_argument("--broker", type=str, default="localhost", help="MQTT broker to connect to")
+try:
+	opt = parser.parse_known_args()[0]
+except:
+	print("")
+	parser.print_help()
+	sys.exit(0)
+
+client = mqttClient.Client("Python-MQTT-CAM Viewer")
 client.on_connect = on_connect
-client.connect("localhost")
+client.connect(opt.broker)
 client.on_message = on_message
 # Should take this a configs...
-client.subscribe("ha/camera/mqtt_json", 0)
+print("Subscribing to topic:", opt.topic)
+client.subscribe(opt.topic, 0)
 client.loop_start()
 
 while(True):

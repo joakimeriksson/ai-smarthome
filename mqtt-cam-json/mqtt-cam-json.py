@@ -6,9 +6,8 @@
 #
 
 import paho.mqtt.client as mqttClient
-import threading, time
-import numpy as np, sys, time, base64
-import cv2, json
+import sys, base64
+import cv2, json, argparse
 
 # Can this be put within the class?
 def on_connect(client, userdata, flags, rc):
@@ -54,7 +53,8 @@ class MQTTCamera:
         img = cv2.imencode('.png', frame)[1].tostring()
         encoded_img = base64.b64encode(img).decode("utf-8")
         jsimg = { "height": h, "witdth": w, "image": encoded_img}
-        print(json.dumps(jsimg))
+        # print(json.dumps(jsimg))
+        print("Publishing image:", self.topic)
         self.client.publish(self.topic, json.dumps(jsimg))
         
 
@@ -81,11 +81,22 @@ class MQTTCamera:
                         break
         self.cap.release()
 
-video = 1
-if len(sys.argv) > 1:
-    video = sys.argv[1]
+# parse the command line
+parser = argparse.ArgumentParser(description="Send video/image stream over MQTT from camera (index).", 
+                                 formatter_class=argparse.RawTextHelpFormatter, epilog="MQTT Camera")
 
-mqCam = MQTTCamera("localhost", video, topic="ha/camera/mqtt_json")
+parser.add_argument("--camera", type=int, default=0, help="index of the camera to use (default: 0)")
+parser.add_argument("--topic", type=str, default="ha/camera/mqtt_json", help="MQTT topic to subscribe to")
+parser.add_argument("--broker", type=str, default="localhost", help="MQTT broker to connect to")
+try:
+	opt = parser.parse_known_args()[0]
+except:
+	print("")
+	parser.print_help()
+	sys.exit(0)
+
+# TODO: add support for a Camera URL also (so that we can use a RTSP camera)
+mqCam = MQTTCamera(opt.broker, opt.camera, topic=opt.topic)
 mqCam.show = False
 mqCam.camera_loop()
 

@@ -5,6 +5,16 @@ This is a code-base for experimenting with AI/ML-models for image processing usi
 Ensure that you have python3 installed
 Run the requirements.txt file to ensure that all the libraries are installed.
  
+## JSON Format
+All the messages are using a JSON-format that includes some meta-data and a base-64 encoded image.
+An image is represented as:
+
+     { "height": h, "witdth": w, "image": encoded_img}
+
+and when there is detections in the image there is a detection attribute added:
+
+     { "height": h, "witdth": w, "image": encoded_img, "detections": detections}
+
 ## Camera source
 The camera source will be used for publishing a stream of images to the MQTT broker at a specified topic. This will create an input topic for the AI/ML model to do inferencing on.
 
@@ -13,10 +23,10 @@ The camera source will be used for publishing a stream of images to the MQTT bro
     ...
 
 ## Image viewer
-The viewer is used to display the images from the camera source or from an analyzer / ML Model. The follwing will just show the images from the above we-camera source.
+The viewer is used to display the images from the camera source or from an analyzer / ML Model. The follwing will just show the images from the above web-camera source.
 
     >python3 mqtt-cam-view.py --topic ha/camera/mqtt_json/in/joakimwebcam --broker=192.168.1.237
     ...
 
 ## Image processors
-...
+The image processors will process incoming image data and reply with a new image (processed) and a set of detection meta-data. 

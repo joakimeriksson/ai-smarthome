@@ -11,8 +11,13 @@ import cv2, argparse, random
 show = True
 client = None
 frame = None
+detections = {}
 showFrame = False
 
+keypoints = [
+    "nose", "left_eye", "right_eye", "left_ear", "right_ear",
+    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+    "left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle" ]
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -22,7 +27,7 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, message):
     global frame
-    global showFrame
+    global showFrame, detections
     print("Received message on topic '"
           + message.topic + "' with QoS " + str(message.qos))
     imgdata = json.loads(message.payload)
@@ -31,6 +36,7 @@ def on_message(client, userdata, message):
     nparr = np.frombuffer(img, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     print("detections:" + str(imgdata['detections']))
+    detections = imgdata['detections']
     showFrame = True
 
 # parse the command line
@@ -58,6 +64,20 @@ client.loop_start()
 while(True):
     # Capture frame-by-frame
     if showFrame:
+        if detections != {}:
+            for pose in detections['poses']:
+                kps = pose['keypoints']
+                for link in pose['links']:
+                    from_p = kps[link[0]]
+                    to_p = kps[link[1]]                    
+                    print(link)
+                    cv2.line(frame, (from_p['x'], from_p['y']), (to_p['x'], to_p['y']), (0,255,0), 3)
+                for kp in pose['keypoints']:
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    cv2.circle(frame, (kp['x'], kp['y']), 5, (100, 255, 100), -1)
+                    cv2.putText(frame, str(kp['ID']), (kp['x'] - 20, kp['y']), font, 1, (100, 255, 100), 2, cv2.LINE_AA)
+                    if kp['ID'] < len(keypoints):
+                        cv2.putText(frame, keypoints[kp['ID']], (kp['x'] - 0, kp['y']), font, 1, (255, 100, 100), 2, cv2.LINE_AA)                    
         cv2.imshow('Cam-frame', frame)
         showFrame = False
     if cv2.waitKey(1) & 0xFF == ord('q'):

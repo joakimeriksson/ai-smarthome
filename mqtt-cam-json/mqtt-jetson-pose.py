@@ -77,19 +77,22 @@ while True:
     # print the pose results
     print("detected {:d} objects in image".format(len(poses)))
 
-    keyps = []
-    links = []
+    dpose = []
     for pose in poses:
+        keyps = []
+        links = []
+
         print(pose)
         print('Keypoints', pose.Keypoints)
         print('Links', pose.Links)
         for keypoint in pose.Keypoints:
                 print(keypoint.ID, keypoint.x, keypoint.y)
-                keyps = keyps + [{'ID':keypoint.ID, 'x':keypoint.x, 'y':keypoint.y}]
+                keyps = keyps + [{'ID':keypoint.ID, 'x':int(keypoint.x), 'y':int(keypoint.y)}]
         for link in pose.Links:
                 links = links + [[link[0], link[1]]]
+        dpose = dpose + [{'keypoints':keyps, 'links':links}]        
 
-    detection = {'type': "pose-estimation", 'keypoints': keyps, 'links': links}
+    detection = {'type': "pose-estimation", 'poses': dpose}
     jsonDet = json.dumps(detection)
     print(jsonDet)
 

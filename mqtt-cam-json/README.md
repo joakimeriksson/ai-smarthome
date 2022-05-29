@@ -32,6 +32,8 @@ The viewer is used to display the images from the camera source or from an analy
 The image processors will process incoming image data and reply with a new image (processed) and a set of detection meta-data. 
 
 ### Jetson inference - Pose Estimator
+Note that the Jetson inference code is supposed to exist together with the other files of jetson-inference and under python/examples/
+
 The pose estimator will use the Jetson Inference Engine to do pose estimation on the incoming images. The pose estimator will produce JSON expression on the following format:
 
     "detections" : {
@@ -44,3 +46,4 @@ The pose estimator will use the Jetson Inference Engine to do pose estimation on
                 ... ]
 
 Note that the index in links is not the ID of the keypoint but the index of the keypoint in the keypoints array.
+

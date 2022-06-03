@@ -8,10 +8,13 @@ import paho.mqtt.client as mqttClient
 import sys, base64, random, time
 import cv2, json, argparse
 
+connected = False
 # Can this be put within the class?
 def on_connect(client, userdata, flags, rc):
+    global connected
     if rc == 0:
         print("Connected to broker:", rc)
+        connected = True
     else:
         print("Connection failed: ", rc)
 
@@ -27,9 +30,9 @@ class MQTTCamera:
         ret, self.avgframe = self.cap.read()
         self.client = mqttClient.Client("CameraJSON-" + str(hex(random.randint(0,16777215)))[2:])
         self.client.on_connect = on_connect
+        self.connected = False
         self.client.connect(mqttBroker)
         self.client.loop_start()
-
 
     def diff_filter(self, frame, avgframe):
         subframe = cv2.subtract(frame, avgframe)
@@ -43,7 +46,11 @@ class MQTTCamera:
         return avgframe, sum
 
     def publish_image(self, frame):
+        global connected
         if self.client == None:
+            return
+        if not connected:
+            print("Not yet connected", connected)
             return
         h, w = frame.shape[:2]
         img = cv2.imencode('.png', frame)[1].tostring()

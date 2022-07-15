@@ -98,18 +98,25 @@ tft.clear()
 while(True):
     c.check_msg()
     time.sleep(1)
-    now = time.gmtime()
+    # Ugly hack to get the Swedish (CET) time - but will change during winter...
+    now = time.gmtime(int(time.time() + 2 * 3600))
     tft.text(10, 10, "Spot Price at %02d:%02d:%02d   " % (now[3], now[4], now[5]))
  
     if len(spot_price_today) > 23:
         current_spot = spot_price_today[now[3]]
-        tft.text(10, 30, "Now: %.2f" % current_spot)
+        tft.text(10, 30, "Now: %.2f    " % current_spot)
         # Draw a graph on todays SPOT prices...
         x = 10
         y = 50 + 60
+        hour = 0
         ymul = 60 / max(spot_price_today)
         tft.rect(10, 50, 200, 60, get_spot_color(current_spot), tft.BLACK)
         for spot in spot_price_today:
             tft.rect(x, y - int(spot * ymul), 8, int(spot * ymul), get_spot_color(spot), get_spot_color(spot))
+            if hour % 4 == 0:
+                tft.text(x - 4, y + 2, "%02d" % (hour))
+            if now[3] == hour:
+                tft.line(x + 4, y - 59, x + 4, y - 1, tft.WHITE)
             x = x + 8
+            hour = hour + 1
 

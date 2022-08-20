@@ -71,8 +71,9 @@ if bytes_read[0:3] == b'SVZ':
 
     show_all_data(bytes_read, startOffset + 8)
 
-    # Seems like the checksum is a plain CRC32 - which is great!
-    crc32 = binascii.crc32(bytes_read[128+12:1632+(128+12)])
+    # Seems like the checksum is a plain CRC32 - which is great! NOTE - start offset includes the 0000 + CRC so name
+    # starts at 8 + startOffset. The crcOFfset is taking the name and all the data after that - and calculate CRC.
+    crcOffset = 8
+    crc32 = binascii.crc32(bytes_read[startOffset + crcOffset : size_patches + startOffset + crcOffset])
     checksum = bytes_read[128 + 4] + bytes_read[128 + 5] * 256 + bytes_read[128 + 6] * 65536 + bytes_read[128 + 7] * 16777216
     print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)
-

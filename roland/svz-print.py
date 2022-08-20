@@ -13,7 +13,6 @@ def get_data(group, name, data, offset):
     gdata = zendata[group]
     for param in gdata:
         if param['id'] == name:
-            print(param)
             offset = offset + param['pos']
             return data[offset:offset + param['size']]
     return 0
@@ -76,10 +75,16 @@ if bytes_read[0:3] == b'SVZ':
     print("Name of First sound:", get_data('PCMT_CMN', 'NAME', bytes_read, startOffset))
     space = ""
 
+    for i in range(0, num_patches):
+        print("Patch", i + 1, " Name", get_data('PCMT_CMN', 'NAME', bytes_read, startOffset + i * size_patches))
+        crc32 = binascii.crc32(bytes_read[startOffset + i * size_patches: startOffset + size_patches * (i + 1)])
+        checksum = bytes_read[i * 4 + crcOffset] + bytes_read[i * 4 + crcOffset + 1] * 256 + bytes_read[i * 4 + crcOffset + 2] * 65536 + bytes_read[i * 4 + crcOffset + 3] * 16777216
+        print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)
+
+
     #show_all_data(bytes_read, startOffset + 8)
 
     # Seems like the checksum is a plain CRC32 - which is great! NOTE - start offset is from Name in the patch/tone
     crc32 = binascii.crc32(bytes_read[startOffset : size_patches + startOffset])
     checksum = bytes_read[crcOffset] + bytes_read[crcOffset + 1] * 256 + bytes_read[crcOffset + 2] * 65536 + bytes_read[crcOffset + 3] * 16777216
-#    checksum = bytes_read[128 + 4] + bytes_read[128 + 5] * 256 + bytes_read[128 + 6] * 65536 + bytes_read[128 + 7] * 16777216
     print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)

@@ -13,7 +13,42 @@ import binascii
 startOffset = 128
 # Should setup the different parts for simpler offset calculations...
 # Check that the endian of word / long is correct also.
-
+sub_patches = {
+    'keyboard': {
+            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
+            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
+            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
+            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
+            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
+            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
+            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
+            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
+        },
+    'oscillator' : {
+        'oscillator-type': {'offset':0, 'len':1, 'type':'uint'},
+        'wave-bank': {'offset':1, 'len':1, 'type':'uint'},
+        'wave-left': {'offset':2, 'len':2, 'type':'uint'}, # correct
+        'wave-right': {'offset':4, 'len':2, 'type':'uint'}, # correct
+        'va-waveform': {'offset':1141, 'len':1, 'type':'uint'}, # this is at a completely different location
+        'va-invert' : {'offset':7, 'len':1, 'type':'uint'},
+        'pcm-sync-wave' : {'offset':8, 'len':1, 'type':'uint'},
+        'gain' : {'offset':9, 'len':1, 'type':'uint'},
+        'pulse-width' : {'offset':10, 'len':1, 'type':'uint'},
+        'pwm-depth' : {'offset':11, 'len':1, 'type':'int'},
+        'super-saw-detune' : {'offset':12, 'len':1, 'type':'uint'},
+        'click-type' : {'offset':13, 'len':1, 'type':'uint'},
+        'fat' : {'offset':14, 'len':1, 'type':'uint'},
+        'osc-attenuation' : {'offset':15, 'len':1, 'type':'uint'},
+        'fxm-sw' : {'offset':16, 'len':1, 'type':'uint'},
+        'fxm-color' : {'offset':17, 'len':1, 'type':'uint'},
+        'fxm-depth' : {'offset':18, 'len':1, 'type':'uint'},
+        'delay-mode' : {'offset':19, 'len':1, 'type':'uint'},
+        'delay-time-sync' : {'offset':20, 'len':1, 'type':'uint'},
+        'delay-time-note' : {'offset':21, 'len':1, 'type':'uint'},
+        'delay-time' : {'offset':22, 'len':1, 'type':'uint'},
+        'wave-tempo-sync' : {'offset':23, 'len':1, 'type':'uint'}
+    }
+}
 
 patch = {
     'name':{'offset':8, 'len':16, 'type':'string'},
@@ -47,61 +82,21 @@ patch = {
 
     # Key
     # Oscillator 1.
-    'osc1':{'offset':164, 'type':'map',
-        'patch_data': {
-            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
-            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
-            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
-            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
-            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
-            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
-            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
-            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
-        }
-    },
-    'osc2':{'offset':176, 'type':'map',
-        'patch_data': {
-            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
-            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
-            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
-            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
-            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
-            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
-            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
-            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
-        }
-    },
-    'osc3':{'offset':188, 'type':'map',
-        'patch_data': {
-            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
-            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
-            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
-            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
-            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
-            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
-            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
-            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
-        }
-    },
-    'osc4':{'offset':200, 'type':'map',
-        'patch_data': {
-            'key-range-lower': {'offset':0, 'len':1, 'type':'uint'},
-            'key-range-upper': {'offset':1, 'len':1, 'type':'uint'},
-            'key-fade-lower': {'offset':2, 'len':1, 'type':'uint'},
-            'key-fade-upper': {'offset':3, 'len':1, 'type':'uint'},
-            'velocity-range-lower': {'offset':4, 'len':1, 'type':'uint'},
-            'velocity-range-upper': {'offset':5, 'len':1, 'type':'uint'},
-            'velocity-fade-lower': {'offset':6, 'len':1, 'type':'uint'},
-            'velocity-fade-upper': {'offset':7, 'len':1, 'type':'uint'}
-        }
-    }
+    'osc1':{'offset':164, 'type':'map', 'name':'keyboard'},
+    'osc2':{'offset':176, 'type':'map', 'name':'keyboard'},
+    'osc3':{'offset':188, 'type':'map', 'name':'keyboard'},
+    'osc4':{'offset':200, 'type':'map', 'name':'keyboard'},
+    'osc1':{'offset':232, 'type':'map', 'name':'oscillator'},
+#    'osc1':{'offset':1496, 'type':'map', 'name':'oscillator'},
 }
 
 def print_map(kv, spacing, read_data):
     global startOffset
     offset = kv['offset']
-    for k in kv['patch_data']:
-        print(spacing, k, ':', get_data_patch(k, startOffset + offset, kv['patch_data'], read_data))
+    name = kv['name']
+    patch_data = sub_patches[name]
+    for k in patch_data:
+        print(spacing, k, ':', get_data_patch(k, startOffset + offset, patch_data, read_data))
 
 def get_data_patch(name, startOffset, ppart, bytes):
     patch=ppart
@@ -161,11 +156,12 @@ for adr, b in enumerate(bytes_read):
         d2 = d2 + "%02x" % b2
         if b != b2:
             diff = True
+            diffStr = " diff at: %04d" % adr
     print("%02x" %b, end='')
     i = i + 1
     if (i == 16):
         print("   " + s)
-        if diff: print("#    " + d2 + "   " + s2)
+        if diff: print("#    " + d2 + "   " + s2 + "   " + diffStr)
         i = 0
         s = ""
         s2 = ""
@@ -198,7 +194,7 @@ if bytes_read[0:3] == b'SVZ':
     space = ""
     for p in patch:
         if patch[p]['type'] == 'map':
-            print(p + " ------")
+            print(p + "-" + patch[p]['name'] + " ------")
             space = "  "
             print_map(patch[p], space, bytes_read)
         else:

@@ -38,7 +38,7 @@ startOffset = 128
 with open("zcformat.json", "rb") as f:
     zendata = json.loads(f.read())
 
-print(zendata)
+#print(zendata)
 
 print("Loading", sys.argv[1])
 with open(sys.argv[1], "rb") as f:
@@ -52,6 +52,10 @@ if bytes_read[0:3] == b'SVZ':
     mstart = 0
     print("")
     print("Roland SVZ file")
+    if bytes_read[16:24] == b'DIFaZCOR':
+        pstart = bytes_read[24] + bytes_read[25] * 256
+        plen = bytes_read[28] + bytes_read[29] * 256
+        print("  Type: Zen Core DIF Data of len: " + str(plen) + " starting at: " + str(pstart))
     if bytes_read[32:40] == b'PATaZCOR':
         pstart = bytes_read[40] + bytes_read[41] * 256
         plen = bytes_read[44] + bytes_read[45] * 256
@@ -64,16 +68,18 @@ if bytes_read[0:3] == b'SVZ':
     size_patches = bytes_read[pstart + 4] + bytes_read[pstart + 5] * 256
     print("Number of patches in file:" + str(num_patches) + " size of patch: " + str(size_patches))
     print("Total len:" + str(mlen + plen))
-    startOffset = 128 + num_patches * 4 - 4;
 
-    print("Name of First sound:", get_data('PCMT_CMN', 'NAME', bytes_read, startOffset + 8))
+    # patch start at pstart + 4 (num) + 4 (size) + 4 (?) + 4(?) + 32-bit CRC x num
+    startOffset = pstart + 4 + 4 + 4 + 4 + num_patches * 4
+    crcOffset = pstart + 4 + 4 + 4 + 4
+    print("Start offset", startOffset, " CrcOffset:", crcOffset)
+    print("Name of First sound:", get_data('PCMT_CMN', 'NAME', bytes_read, startOffset))
     space = ""
 
-    show_all_data(bytes_read, startOffset + 8)
+    #show_all_data(bytes_read, startOffset + 8)
 
-    # Seems like the checksum is a plain CRC32 - which is great! NOTE - start offset includes the 0000 + CRC so name
-    # starts at 8 + startOffset. The crcOFfset is taking the name and all the data after that - and calculate CRC.
-    crcOffset = 8
-    crc32 = binascii.crc32(bytes_read[startOffset + crcOffset : size_patches + startOffset + crcOffset])
-    checksum = bytes_read[128 + 4] + bytes_read[128 + 5] * 256 + bytes_read[128 + 6] * 65536 + bytes_read[128 + 7] * 16777216
+    # Seems like the checksum is a plain CRC32 - which is great! NOTE - start offset is from Name in the patch/tone
+    crc32 = binascii.crc32(bytes_read[startOffset : size_patches + startOffset])
+    checksum = bytes_read[crcOffset] + bytes_read[crcOffset + 1] * 256 + bytes_read[crcOffset + 2] * 65536 + bytes_read[crcOffset + 3] * 16777216
+#    checksum = bytes_read[128 + 4] + bytes_read[128 + 5] * 256 + bytes_read[128 + 6] * 65536 + bytes_read[128 + 7] * 16777216
     print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)

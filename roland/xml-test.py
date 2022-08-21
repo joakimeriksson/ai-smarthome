@@ -51,7 +51,7 @@ def read_baseblock(bblock):
                 for param in subblock:
                     d = copy.deepcopy(param)
                     if d['type'] == 'param':
-                        d['id'] = prefix + '_' + str(sbi) + '_' + param['id']
+                        d['id'] = prefix + '_' + str(sbi + 1) + '_' + param['id']
                     d['pos'] = pos
                     pos = pos + d['bytesize']
                     bbData.append(d)
@@ -151,7 +151,7 @@ def show_group(gstr):
             print("BLOCK ", e['baseblock'], e['id'], i)
             pos, data = show_block(e['baseblock'], pos)
             name = e['baseblock']
-            if arr > 1: name  = name + '_' + str(i)
+            if arr > 1: name  = name + '_' + str(i + 1)
             grpjson[name] = data
     return grpjson
 

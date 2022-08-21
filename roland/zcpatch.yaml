@@ -1,0 +1,20 @@
+#
+# Experimental YAML patch file format for Zencore Tones
+# All other values than specified here will be at init value.
+#
+version: 0.1
+patches:
+  - sound 1
+    PCMT_CMM:
+      NAME: INIT TONE++
+      CATEGORY: 14
+      LEVEL: 100
+      PAN: 0
+    PTL_LFO_0:
+      LFO_0_FORM: 5
+      LFO_0_RATE: 250
+      LFO_0_TVF_DEPTH: 35
+  - sound 2
+    PCMT_CMM:
+      NAME: Piano 42
+    # ...

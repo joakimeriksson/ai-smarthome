@@ -4,34 +4,44 @@
 # (c) Joakim Eriksson
 #
 import sys
-import json, binascii
+import json, binascii, yaml
 
+zenconv = {'PCMT_CMN':{'NAME':lambda x : x.decode("utf-8")}}
 zendata = {}
 
 def get_data(group, name, data, offset):
     global zendata
-    gdata = zendata[group]
-    for param in gdata:
+    for param in zendata[group]:
         if param['id'] == name:
             offset = offset + param['pos']
             return data[offset:offset + param['size']]
     return 0
 
 def show_all_data(data, offset):
+    patch = {}
+    yamlData = {'version':0.1,'patches':[patch]}
     for group in zendata:
         if group == 'name':
             print("Name" + zendata[group])
             continue
         print("Group:", group)
+        paramlist = []
         for param in zendata[group]:
-            #print(param)
             voffset = offset + param['pos']
             val = data[voffset : voffset + param['size']]
             if param['size'] < 3:
                 val = int.from_bytes(val, "little")
             # Padding can be ignored...
             if 'id' in param:
+                id = param['id']
+                # Autoconvert where explicitly stated
+                if group in zenconv and id in zenconv[group]:
+                    val = zenconv[group][id](val)
+                    print("autoconv ", group, id, val)
                 print('  ' + param['id'], param['size'], "=", val)
+                paramlist = paramlist + [{param['id']:val}]
+        patch[group] = paramlist
+    return yamlData
 
 # Offset from start
 startOffset = 128
@@ -83,9 +93,11 @@ if bytes_read[0:3] == b'SVZ':
         checksum = bytes_read[i * 4 + crcOffset] + bytes_read[i * 4 + crcOffset + 1] * 256 + bytes_read[i * 4 + crcOffset + 2] * 65536 + bytes_read[i * 4 + crcOffset + 3] * 16777216
         print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)
 
-
-    # Show first patch
-    show_all_data(bytes_read, startOffset)
+    # Show first patch and generate data for it.
+    patchdata = show_all_data(bytes_read, startOffset)
+    # Write YAML file
+    with open('data.yaml', 'w', encoding='utf8') as outfile:
+        yaml.dump(patchdata, outfile, sort_keys=False, allow_unicode=True)
 
     # Seems like the checksum is a plain CRC32 - which is great! NOTE - start offset is from Name in the patch/tone
     crc32 = binascii.crc32(bytes_read[startOffset : size_patches + startOffset])

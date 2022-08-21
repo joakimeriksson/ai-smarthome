@@ -1,5 +1,13 @@
+#
+#
+# Reader of XML files in rolands generic editor format (Jupiter-X or Juno-X)
+# Can generate JSON data for reading / writing zencore data.
+#
+#  Author: Joakim Eriksson
+#
 import xml.etree.ElementTree as ET
 import json, copy
+
 
 numdef = {}
 groups = {}
@@ -11,6 +19,16 @@ def get_num(str):
     except:
         return numdef[str]
 
+# define some attributes to get for params
+attdefs = {'id':str, 'desc':str, 'init':get_num, 'min':get_num, 'max':get_num, 'array':get_num}
+
+def fill_atts(data, elem):
+    atts = elem.attrib
+    for t in atts:
+        if t in attdefs:
+            data[t] = attdefs[t](atts[t])
+    print("FILL ATTS:", data)
+
 #<baseblock name="PCMT_CMN" desc="PCMTone Common">
 #	<param id="NAME"			init="32"		min="32"	max="127"					array="16" 	desc="Name" 					desc_val="32 - 127 [ASCII]" 		/>
 #   <param id="CATEGORY"		init="0" 		min="0" 	max="50" 								desc="Category"		 			desc_val="None, Ac.Piano, Pop-Piano, E.Grand Piano, E.Piano1, E.Piano2, E.Organ, Pipe Organ, Reed Organ, Harpsichord, Clav, Celesta, Accordion, Harmonica, Bell, Mallet, Ac.Guitar, E.Guitar, Dist.Guitar, Ac.Bass, E.Bass, Synth Bass, Plucked/Stroke, Solo Strings, Ensemble Strs, Orchestral, Solo Brass, Ensemble Brass, Wind, Flute, Sax, Recorder, Vox/Choir, Scat, Synth Lead, Synth Brass, Synth Pad/Str, Synth BellPad, Synth PolyKey, Synth FX, Synth Seq/Pop, Phrase, Pulsating, Beat&amp;Groove, Hit, Sound FX, Drums, Percussion, Stack, Zone, Vocoder"					/>
@@ -21,6 +39,7 @@ def read_baseblock(bblock):
     for e in bblock:
         size = 1
         data = {'type':e.tag}
+        fill_atts(data, e)
         if e.tag == 'sysex_end':
             continue
         if e.tag == 'subblock':
@@ -39,8 +58,6 @@ def read_baseblock(bblock):
             continue
         if e.tag == 'padding':
             size = int(e.attrib['bytesize'])
-        if 'id' in e.attrib:
-            data['id'] = e.attrib['id']
         # Use max to guess bytesize...
         if 'max' in e.attrib:
             max = get_num(e.attrib['max'])
@@ -49,12 +66,6 @@ def read_baseblock(bblock):
                 size = 2
             if max - min > 255:
                 size = 2
-            data['max'] = max
-            data['min'] = min
-        if 'desc' in e.attrib:
-            data['desc'] = e.attrib['desc']
-        if 'array' in e.attrib:
-            data['array'] = get_num(e.attrib['array'])
         if 'type' in e.attrib:
             if e.attrib['type'] == 'uint16':
                 size = 2 
@@ -118,8 +129,10 @@ def show_block(block, pos):
         if 'array' in e: arr = e['array']
         size = arr * e['bytesize']
         if e['type'] == 'param':
-            print("   ", e['id'], " ", pos, " ", size)
-            data = data + [{'id': e['id'], 'pos': pos, 'size': size}]
+            print("   ", e['id'], " ", pos, " ", size, e)
+        # copy over some of the data in the param data
+        newelem = {key: e[key] for key in e.keys() & {'id', 'init', 'min', 'max', 'desc'}}
+        data = data + [{**newelem, 'pos': pos, 'size': size}]
         if e['type'] == 'padding':
             print("    <padding>", pos, size)
         pos = pos + size

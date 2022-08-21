@@ -29,7 +29,9 @@ def show_all_data(data, offset):
             val = data[voffset : voffset + param['size']]
             if param['size'] < 3:
                 val = int.from_bytes(val, "little")
-            print('  ' + param['id'], param['size'], "=", val)
+            # Padding can be ignored...
+            if 'id' in param:
+                print('  ' + param['id'], param['size'], "=", val)
 
 # Offset from start
 startOffset = 128
@@ -82,7 +84,8 @@ if bytes_read[0:3] == b'SVZ':
         print("CRC32: " + "%08x" % crc32 + " vs " + "%08x" % checksum)
 
 
-    #show_all_data(bytes_read, startOffset + 8)
+    # Show first patch
+    show_all_data(bytes_read, startOffset)
 
     # Seems like the checksum is a plain CRC32 - which is great! NOTE - start offset is from Name in the patch/tone
     crc32 = binascii.crc32(bytes_read[startOffset : size_patches + startOffset])

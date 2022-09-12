@@ -1,0 +1,12 @@
+intro:
+  audio: intro.m4a
+  image: lm-eye-green.png
+session:
+  footer1: "Learning Machines Seminar by RISE"
+  footer2: "Free online seminars every Thursday 15:00 CET. See full list at ri.se/lm-sem"
+  title: "SoundStream, an end-to-end neural audio codec"
+  speaker: "Neil Zeghidour"
+  introby: "Olof Mogren"
+  date: "September 8, 2022"
+video:
+  start: [13,2]

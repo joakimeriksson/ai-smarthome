@@ -91,6 +91,8 @@ name = path[-1].split(".")[0]
 output_movie = "proc-" + path[-1]
 clip_info(clip1)
 
+logo = logo.resize(width = clip1.w)
+
 start_time = (config['video']['start'][0], config['video']['start'][1])
 print("Clip Start time:", start_time)
 if "end" in config['video']:

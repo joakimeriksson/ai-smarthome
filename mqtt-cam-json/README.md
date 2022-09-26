@@ -47,3 +47,18 @@ The pose estimator will use the Jetson Inference Engine to do pose estimation on
 
 Note that the index in links is not the ID of the keypoint but the index of the keypoint in the keypoints array.
 
+### Jetson inference - Object Detector
+The object detector make use of jetson-inference pre-trained models - mobililnet-ssd, etc.
+
+
+    "detections" : {
+            "type" : "object-detector", 
+            "detections" : [
+		 {  "category_id": 1,
+		    "score": 0.70654296875,
+		    "bbox": [498.125, 208.4765625, 476.25, 500.625]}
+                 }
+                ... ]
+
+The category_id is from the COCO object detector categories.
+

@@ -6,7 +6,7 @@
 
 import paho.mqtt.client as mqttClient
 import numpy as np, sys, json, base64
-import cv2, argparse, random
+import cv2, argparse, random, time
 
 show = True
 client = None
@@ -66,20 +66,31 @@ while(True):
     # Capture frame-by-frame
     if showFrame:
         if detections != {}:
-            for pose in detections['poses']:
-                kps = pose['keypoints']
-                for link in pose['links']:
-                    from_p = kps[link[0]]
-                    to_p = kps[link[1]]                    
-                    print(link)
-                    cv2.line(frame, (from_p['x'], from_p['y']), (to_p['x'], to_p['y']), (0,255,0), 3)
-                for kp in pose['keypoints']:
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    cv2.circle(frame, (kp['x'], kp['y']), 5, (100, 255, 100), -1)
-                    cv2.putText(frame, str(kp['ID']), (kp['x'] - 20, kp['y']), font, 1, (100, 255, 100), 2, cv2.LINE_AA)
-                    if kp['ID'] < len(keypoints):
-                        cv2.putText(frame, keypoints[kp['ID']], (kp['x'] - 0, kp['y']), font, 1, (255, 100, 100), 2, cv2.LINE_AA)                    
+            start_time = time.process_time()
+            start_wt = time.time()
+            if detections['type'] == 'body-pose':
+                for pose in detections['poses']:
+                    kps = pose['keypoints']
+                    for link in pose['links']:
+                        from_p = kps[link[0]]
+                        to_p = kps[link[1]]                    
+                        print(link)
+                        cv2.line(frame, (from_p['x'], from_p['y']), (to_p['x'], to_p['y']), (0,255,0), 3)
+                    for kp in pose['keypoints']:
+                        font = cv2.FONT_HERSHEY_SIMPLEX
+                        cv2.circle(frame, (kp['x'], kp['y']), 5, (100, 255, 100), -1)
+                        cv2.putText(frame, str(kp['ID']), (kp['x'] - 20, kp['y']), font, 1, (100, 255, 100), 2, cv2.LINE_AA)
+                        if kp['ID'] < len(keypoints):
+                            cv2.putText(frame, keypoints[kp['ID']], (kp['x'] - 0, kp['y']), font, 1, (255, 100, 100), 2, cv2.LINE_AA)
+                    print("Drawing skeleton took: ", time.process_time() - start_time, time.time() - start_wt)
+            if detections['type'] == 'object-detection':
+                for detection in detections['detections']:
+                    bbox = detection['bbox']
+                    cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])),
+                                  (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3])),
+                                  (0, 255, 0), 2)
         cv2.imshow('Cam-frame', frame)
+        cv2.imwrite('image-' + str(int(time.time())) + '.jpg', frame)
         showFrame = False
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

@@ -44,8 +44,8 @@ parser = argparse.ArgumentParser(description="Run object detector DNN on a video
                                  jetson.utils.videoSource.Usage() + jetson.utils.videoOutput.Usage() + jetson.utils.logUsage())
 
 parser.add_argument("--network", type=str, default="resnet18-body", help="pre-trained model to load (see below for options)")
-parser.add_argument("--overlay", type=str, default="links,keypoints", help="pose overlay flags (e.g. --overlay=links,keypoints)\nvalid combinations are:  'links', 'keypoints', 'boxes', 'none'")
-parser.add_argument("--threshold", type=float, default=0.15, help="minimum detection threshold to use")
+parser.add_argument("--overlay", type=str, default="box,labels,conf", help="detection overlay flags (e.g. --overlay=box,labels,conf)\nvalid combinations are:  'box', 'labels', 'conf', 'none'")
+parser.add_argument("--threshold", type=float, default=0.50, help="minimum detection threshold to use")
 parser.add_argument("--topic", type=str, default="ha/camera/mqtt_json", help="MQTT topic to subscribe to")
 parser.add_argument("--broker", type=str, default="localhost", help="MQTT broker to connect to")
 try:

@@ -52,7 +52,7 @@ The object detector make use of jetson-inference pre-trained models - mobililnet
 
 
     "detections" : {
-            "type" : "object-detector", 
+            "type" : "object-detection", 
             "detections" : [
 		 {  "category_id": 1,
 		    "score": 0.70654296875,

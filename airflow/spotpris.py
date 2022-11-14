@@ -36,7 +36,7 @@ with DAG('spot_pris_dag',
         task_id="load_data_task", requirements=["mechanize", "beautifulsoup4"], system_site_packages=False
     )
     def load_data(**context):
-      import mechanize, re, json, datetime
+      import mechanize, re, datetime
       from bs4 import BeautifulSoup
       br = mechanize.Browser()
       resp = br.open("https://www.elbruk.se/timpriser-se3-stockholm")
@@ -50,7 +50,7 @@ with DAG('spot_pris_dag',
           for data in all:
             print(data[0] + ":" + data[2])
             if data[0] == "'Idag'":
-              spot = json.loads(data[2])
+              spot = data[2]
               return spot
       raise ValueError("Could not find spot-price in html page.")
     
@@ -58,13 +58,13 @@ with DAG('spot_pris_dag',
 
   def pull_from_return(values):
     import paho.mqtt.client as mqtt
-    import json, time
+    import time
     # Run the other thing...
     client = mqtt.Client()
     client.connect("192.168.1.237", 1883, 60)
     client.loop()
     print(values)
-    mqttPublish = client.publish("test-spot", payload=json.dumps(values), retain=True)
+    mqttPublish = client.publish("test-spot", payload=values, retain=True)
     
     for i in range(1,10):
       client.loop()

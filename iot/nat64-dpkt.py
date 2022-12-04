@@ -1,6 +1,6 @@
 #!/bin/python3
 #
-# Copyright (c) 2019 Joakim Eriksson
+# Copyright (c) 2019-2022 Joakim Eriksson
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 # regular sockets as the TCP/UDP interface.
 #
 
-import ipaddress, os, select, time
-import socket, logging, struct
+import ipaddress, os, platform, select, time
+import socket, logging, struct, fcntl
 import dpkt
 
 # TCP State machine
@@ -70,7 +70,6 @@ log.setLevel(logging.DEBUG)
 # create log formatter and add it to the handlers
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 log.addHandler(ch)
 
@@ -103,7 +102,7 @@ class UDP64State(NAT64State):
     udp_port = 15000
 
     def __init__(self, src, dst, sport, dport):
-        super(TCP64State, self).__init__(src, dst, sport, dport, PROTO_UDP)
+        super(UDP64State, self).__init__(src, dst, sport, dport, PROTO_UDP)
         ip4dst = ipaddress.ip_address(ipaddress.ip_address(dst).packed[-4:])
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -115,8 +114,7 @@ class UDP64State(NAT64State):
 
     def udpip(self, data = None):
         udp = dpkt.udp.UDP()
-        udp.dst = self.src
-        udp.src = self.dst
+        udp.dport, udp.sport = self.sport, self.dport
         ip = dpkt.ip6.IP6()
         ip.src = self.dst
         ip.dst = self.src
@@ -129,13 +127,15 @@ class UDP64State(NAT64State):
         return ip
 
     def receive(self):
-        log.debug("UDP: socket receive:", self)
+        log.debug("UDP: socket receive: %s" % repr(self))
         data, addr = self.sock.recvfrom(self.maxreceive)
         if not data:
+            log.debug("UDP Removing socket. No Data.")
             sock_remove(self.sock)
             return None
         ipv6 = self.udpip(data)
 #        ipv6 = IPv6(IPv6(src = self.dst, dst = self.src)/UDP(sport=self.dport, dport=self.sport)/raw(data))
+        log.debug("send to tun %s", repr(ipv6))
         send_to_tun(ipv6)
         return data
 
@@ -192,8 +192,7 @@ class TCP64State(NAT64State):
     # Handle TCP state - forward data from socket to tun.
     def update_tcp_state_totun(self, data):
         ip6 = self.tcpip(dpkt.tcp.TH_ACK | dpkt.tcp.TH_PUSH, data)
-        print("IP6 :", bytes(ip6))
-        print("IP6: ", repr(ip6))
+        log.debug("IP6: %s" % repr(ip6))
         return ip6
 
     # receive packet and send to tun.
@@ -212,15 +211,14 @@ class TCP64State(NAT64State):
             self.sock = None
             log.debug("TCP: FIN over socket received - sending FIN over tun.")
             ip6 = self.tcpip(dpkt.tcp.TH_FIN)
-            print("FIN IP6 :", bytes(ip6))
-            print("FIN IP6:", repr(ip6))
+            log.debug("FIN IP6: %s" % repr(ip6))
             self.last_to_tun = ip6
-            send_to_tun(bytes(ip6))
+            send_to_tun(ip6)
             return None
         log.debug("NAT64 TCP to tun max: %d" % maxread)
         ipv6 = self.update_tcp_state_totun(data)
         self.last_to_tun = ipv6
-        send_to_tun(bytes(ipv6))
+        send_to_tun(ipv6)
         return data
 
     # Handle TCP state - TCP from ipv6 tun toward IPv4 socket
@@ -243,15 +241,15 @@ class TCP64State(NAT64State):
             opts = dpkt.tcp.parse_opts(tcp.opts)
             for k, v in opts:
                 if k == dpkt.tcp.TCP_OPT_MSS:
-                    print("MSS:", v)
+                    log.debug("MSS:", v)
                     self.mss, = struct.unpack("!H", v)
-                    print("MSS:", self.mss)
+                    log.debug("MSS:", self.mss)
             log.debug("TCP State: %d SYN received." % self.mss)
 
             self.tcp_reply(ip, dpkt.tcp.TH_SYN | dpkt.tcp.TH_ACK)
 
-            print("IP:", repr(ip))
-            send_to_tun(bytes(ip))
+            log.debug("IP: %s" % repr(ip))
+            send_to_tun(ip)
         #    sock.send(ip.load)
         elif tcp.flags & dpkt.tcp.TH_FIN:
             self.state = TCP_FIN_CLOSE_WAIT
@@ -259,9 +257,8 @@ class TCP64State(NAT64State):
             self.timeout = time.time()
             log.debug("TCP: FIN received - sending FIN. %s" % self)
             self.tcp_reply(ip, dpkt.tcp.TH_FIN | dpkt.tcp.TH_ACK)
-            print("IP:", repr(ip))
-
-            send_to_tun(bytes(ip))
+            log.debug("IP: %s" % repr(ip))
+            send_to_tun(ip)
             # Clean out this socket?
         elif tcp.flags & dpkt.tcp.TH_ACK:
             if self.state == TCP_ESTABLISHED:
@@ -275,9 +272,9 @@ class TCP64State(NAT64State):
                     # We should also handle the sanity checks for the ACK
                     self.seq = tcp.ack
                     self.tcp_reply(ip, dpkt.tcp.TH_ACK)
-                    print("IP:", repr(ip))
+                    log.debug("IP: %s" % repr(ip))
 
-                    send_to_tun(bytes(ip))
+                    send_to_tun(ip)
             add_socket(self.sock)
         if len(tcp.data) > 0:
             self.sock.send(tcp.data)
@@ -321,7 +318,7 @@ def nat64_send(ip6, packet):
             key = genkey(ip6.nxt, ip6.src, ip4dst, udp.sport, udp.dport)
             if udp.dport == 53:
                 dns = dpkt.dns.DNS(udp.data)
-                print("*** DNS ***", dns.opcode, dns.qd)
+                log.debug("*** DNS *** op:%s qd:%s" % (dns.opcode, dns.qd))
                 if dns.opcode == 0 and len(dns.qd) > 0:
                     name = dns.qd[0].name
                     log.debug("DNS name - lookup: %s" % name)
@@ -347,13 +344,11 @@ def nat64_send(ip6, packet):
                     ip6.dst, ip6.src = ip6.src,ip6.dst
                     udp.data = dns
                     udp.ulen = len(udp)
-                    print("UDP - udplen:", len(udp), udp)
+                    log.debug("UDP - udplen:%d" % len(udp))
                     ip6.data = udp
                     ip6.plen = len(udp)
-                    print("IP6 - iplen:", len(ip6), ip6)
+                    log.debug("IP6 - iplen:%d" % len(ip6))
                     resp = ip6
-                    print("*** DNS Resp:", resp)
-                    log.debug(repr(resp))
                     send_to_tun(resp)
                     return 0
             if key not in adrmap:
@@ -366,7 +361,6 @@ def nat64_send(ip6, packet):
             else:
                 sock = adrmap[key]
 #            sock.send(bytes(ip[UDP]))
-            print("Sending UDP:", udp.data)
             sock.send(udp.data)
         elif ip6.nxt == PROTO_TCP:
             tcp = ip6.data
@@ -386,7 +380,7 @@ def nat64_send(ip6, packet):
 def recv_from_tun(packet):
     ip6 = dpkt.ip6.IP6()
     ip6.unpack(packet)
-    print("DPKT IPv6: SRC:", ip6.src, ip6.dst, " NH:", ip6.nxt, " data:", ip6.data)
+    log.debug("DPKT IPv6: SRC:%s DST:%s NH:%s data:%s" % (ip6.src, ip6.dst, ip6.nxt, ip6.data))
     if ip6.nxt == PROTO_UDP or ip6.nxt == PROTO_TCP:
         log.debug(">> RECV from TUN: ")
         # do nat64 and send
@@ -406,16 +400,27 @@ def recv_from_tuntcp(socket, packet):
         # Not matching prefix... Send to all tuntcp except "socket" to get things out to other nodes.
         if ip.dst[0:4] != prefix[0:4]:
             log.debug("Not matching prefix - send back to all. %d" % len(tuntcp))
-            print("IP:", repr(ip))
+            print("IP: %s" % repr(ip))
             send_to_tuntcp(socket, packet[4:])
         else:
             recv_from_tun(packet[4:])
 
 # Only for OS-X for now.
 # Should be easy to adapt for linux also.
-tun = os.open("/dev/tun12", os.O_RDWR)
-os.system("ifconfig tun12 inet6 64:ff9b::1/96 up")
-os.system("sysctl -w net.inet.ip.forwarding=1");
+if platform.system() == 'Darwin':
+    tun = os.open("/dev/tun12", os.O_RDWR)
+    os.system("ifconfig tun12 inet6 64:ff9b::1/96 up")
+    os.system("sysctl -w net.inet.ip.forwarding=1");
+elif platform.system() == 'Linux':
+    TUNSETIFF = 0x400454ca
+    IFF_TUN = 0x0001
+    IFF_NO_PI = 0x1000
+    tun = os.open("/dev/net/tun", os.O_RDWR)
+    ifr = struct.pack('16sH', b'tun0', IFF_TUN | IFF_NO_PI)
+    fcntl.ioctl(tun, TUNSETIFF, ifr)
+    os.system("ifconfig tun0 inet `hostname` up")
+    os.system("ifconfig tun0 add 64:ff9b::1/96")
+
 
 input = [tun]
 tunconnection = None

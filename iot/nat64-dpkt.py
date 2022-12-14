@@ -416,10 +416,10 @@ elif platform.system() == 'Linux':
     IFF_TUN = 0x0001
     IFF_NO_PI = 0x1000
     tun = os.open("/dev/net/tun", os.O_RDWR)
-    ifr = struct.pack('16sH', b'tun0', IFF_TUN | IFF_NO_PI)
+    ifr = struct.pack('16sH', b'nat64', IFF_TUN | IFF_NO_PI)
     fcntl.ioctl(tun, TUNSETIFF, ifr)
-    os.system("ifconfig tun0 inet `hostname` up")
-    os.system("ifconfig tun0 add 64:ff9b::1/96")
+    os.system("ifconfig nat64 inet `hostname` up")
+    os.system("ifconfig nat64 add 64:ff9b::1/96")
 
 
 input = [tun]

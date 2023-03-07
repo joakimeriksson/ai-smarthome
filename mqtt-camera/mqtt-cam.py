@@ -11,6 +11,12 @@ import numpy as np, sys, time
 import cv2
 import images_pb2
 
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to broker:", rc)
+    else:
+        print("Connection failed: ", rc)
+
 class MQTTCamera:
 
     def __init__(self, mqttBroker, camera, topic="ha/camera/mqtt"):
@@ -22,15 +28,10 @@ class MQTTCamera:
         # First frame is average...
         ret, self.avgframe = self.cap.read()
         self.client = mqttClient.Client("Python-CV-YOLO3")
-        self.client.on_connect = self.on_connect
+        self.client.on_connect = on_connect
         self.client.connect(mqttBroker)
         self.client.loop_start()
 
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("Connected to broker:", rc)
-        else:
-            print("Connection failed: ", rc)
 
     def diff_filter(self, frame, avgframe):
         subframe = cv2.subtract(frame, avgframe)
@@ -60,6 +61,7 @@ class MQTTCamera:
         img.id = id
         img.imgdata = frame
         frame_pb = img.SerializeToString()
+        print("Public as ", self.topic + "_pb")
         self.client.publish(self.topic + "_pb", frame_pb)
         
 
@@ -88,7 +90,7 @@ class MQTTCamera:
                         break
         self.cap.release()
 
-video = 0
+video = 1
 if len(sys.argv) > 1:
     video = sys.argv[1]
 

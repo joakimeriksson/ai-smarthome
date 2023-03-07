@@ -4,14 +4,13 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
+# Default camera is the first web-cam (if no argument is given)
 cam = 0
 if len(sys.argv) > 1:
   cam = sys.argv[1]
   if cam.isnumeric():
     cam = int(cam)
 cap = cv2.VideoCapture(cam)
-#"rtsp://192.168.1.55:554/s2")
-#rtsp://192.168.1.55:554/s0
 
 with mp_hands.Hands(
     model_complexity=0,

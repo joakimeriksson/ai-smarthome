@@ -21,16 +21,13 @@ import display
 tft=display.TFT()
 tft.init(tft.ST7789, rst_pin=23, backl_pin=4, miso=0, mosi=19, clk=18, cs=5, dc=16, width=235, height=340, backl_on=1)
 
-# invert colors
+# invert colors and configure the display
 tft.tft_writecmd(0x21)
-
-# set orientation (optional)
 tft.orient(tft.LANDSCAPE)
-
-# set window size
 tft.setwin(40, 52, 279, 186)
 
 spot_topic = b"spot"
+img_topic = b"img"
 spot_price_today = []
 
 # get a color that corresponds to the price (in SEK/100 per kWh)
@@ -52,6 +49,9 @@ def sub_cb(topic, msg):
         jprice = json.loads(msg)
         print("Spot Prices:", jprice)
         spot_price_today = jprice
+    if topic == img_topic:
+        jprice = json.loads(msg)
+
 
 # Read config
 # should have { 'SSID': <YOUR_SSID>, 'password':<pass> }

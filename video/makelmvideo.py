@@ -56,23 +56,37 @@ else:
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
+if 'color' in config['config']:
+    h = config['config']['color']
+    colorfooter = tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+colortitle = colorfooter
+if 'offset_footer' in config['config']:
+    offset_footer = config['config']['offset_footer']
+else:
+    offset_footer = [0,0]
+
+print("Offset:", offset_footer)
+    
 im = Image.open(config['intro']['image'])
 w = 1920
 h = im.height * 1920.0 / im.width
 im = im.resize((int(w),int(h)), Image.ANTIALIAS)
 draw = ImageDraw.Draw(im)
-color = (255, 249, 232)
+color = colorfooter
+left = 120 + offset_footer[0]
+draw_multi_line(draw, (left, 900 + offset_footer[1]), config['session']['footer1'], font2, 1800)
+draw_multi_line(draw, (left, 970 + offset_footer[1]), config['session']['footer2'], font3, 1800)
+
 left = 120
-draw_multi_line(draw, (left, 900), config['session']['footer1'], font2, 1800)
-draw_multi_line(draw, (left, 970), config['session']['footer2'], font3, 1800)
-color = (255, 255, 255)
+color = colortitle
 draw_multi_line(draw, (left, 200), config['session']['date'], font3, 1800)
 (x, by) = draw_multi_line(draw, (left, 280), config['session']['title'], font_title, 1800)
 
 (x, y) = draw_multi_line(draw, (left, by + 80), "Speaker: ", font3, 1800)
 draw_multi_line(draw, (x + 10, by + 80), config['session']['speaker'], font1, 1800)
-(x, y) = draw_multi_line(draw, (left, by + 120), "Introduction: ", font3, 1800)
-draw_multi_line(draw, (x + 10, by + 120), config['session']['introby'], font1, 1800)
+if 'introby' in config['session']:
+    (x, y) = draw_multi_line(draw, (left, by + 120), "Introduction: ", font3, 1800)
+    draw_multi_line(draw, (x + 10, by + 120), config['session']['introby'], font1, 1800)
 
 audioclip = AudioFileClip(config['intro']['audio'])
 # Fade in / out audio.

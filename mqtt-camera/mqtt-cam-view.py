@@ -62,10 +62,10 @@ yolo = yolo3.YoloV3(0.5, 0.4, datapath="../yolov3-ha")
 while(True):
     # Capture frame-by-frame
     if showFrame:
-#        cv2.imshow('Cam-frame', frame)
-        nf = frame.copy()
-        d = yolo.detect(nf)
-        cv2.imshow('Det-frame', nf)
+        cv2.imshow('Cam-frame', frame)
+#        nf = frame.copy()
+#        d = yolo.detect(nf)
+#        cv2.imshow('Det-frame', nf)
         showFrame = False
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

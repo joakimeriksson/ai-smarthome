@@ -157,7 +157,7 @@ class TCP64State(NAT64State):
         self.seq = 4711
         self.window = 1200
         self.mss = 1200
-        log.debug("TCP opening ", ip4dst, dport, sock)
+        log.debug("TCP opening %s %d %s" %(str(ip4dst), dport, repr(sock)))
         TCP64State.tcp_port = TCP64State.tcp_port + 1
 
     # TCP packets are more or less always for sending back over tun.
@@ -202,12 +202,13 @@ class TCP64State(NAT64State):
             return None
         print("MSS:", self.mss)
         log.debug("TCP socket receive.")
-        maxread = max(self.maxreceive, self.mss)
+        maxread = min(self.maxreceive, self.mss)
         data, addr = self.sock.recvfrom(maxread)
         input.remove(self.sock)
         if not data:
             log.debug("Socket closing... TCP state kept to handle TUN close.")
             self.sock.close()
+            input.remove(self.sock)
             self.sock = None
             log.debug("TCP: FIN over socket received - sending FIN over tun.")
             ip6 = self.tcpip(dpkt.tcp.TH_FIN)
@@ -421,14 +422,15 @@ elif platform.system() == 'Linux':
     os.system("ifconfig nat64 inet `hostname` up")
     os.system("ifconfig nat64 add 64:ff9b::1/96")
 
-
 input = [tun]
+port = 18888
+#input = []
 tunconnection = None
 tunsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_address = ('localhost', 8888)
+server_address = ('localhost', port)
 tunsock.bind(server_address)
 tunsock.listen(1)
-log.info("Accepting tunctp connections over TCP on 8888.")
+log.info("Accepting tunctp connections over TCP on " + str(port) + ".")
 input = input + [tunsock]
 try:
     while 1:

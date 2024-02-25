@@ -60,7 +60,7 @@ with DAG('spot_pris_dag',
     import paho.mqtt.client as mqtt
     import time
     # Run the other thing...
-    client = mqtt.Client()
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
     client.connect("192.168.1.237", 1883, 60)
     client.loop()
     print(values)

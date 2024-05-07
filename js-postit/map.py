@@ -5,6 +5,7 @@ import cv2
 # Fonts for the texts on the intro slide
 font1 = ImageFont.truetype("fonts/Calibri.ttf", 34)
 color = (0,0,0)
+circle_color = (255, 200, 200)
 
 image = None
 positions = []
@@ -21,14 +22,13 @@ def closest_point_on_line(p1, p2, p3):
 def draw_pos(n, x, y):
     center_coordinates = (x, y)  # Adjust these values based on your image dimensions       
     radius = 10
-    color = (255, 200, 200)  # Blue in BG
     thickness = 3  # Use -1 for a filled circle
     # Draw the circle
-    cv2.circle(image, center_coordinates, radius, color, thickness)
+    cv2.circle(image, center_coordinates, radius, circle_color, thickness)
     if n is not None:
         org = (x - 20, y + 10)  # Bottom-left corner of the text string in the image
         font = cv2.FONT_HERSHEY_SIMPLEX  # Font type
-        fontScale = 1  # Font scale (size of the font)
+        fontScale = 0.9  # Font scale (size of the font)
         color = (0, 0, 0)  # White color in BGR
         thickness = 2  # Thickness of the lines used to draw the text
         cv2.putText(image, str(n), org, font, fontScale, color, thickness, cv2.LINE_AA)
@@ -40,7 +40,6 @@ def mouse_callback(event, x, y, flags, param):
         draw_pos(len(positions), x, y)
 
 def draw_line(draw, pos, text, font, predict = False):
-    global color
     if not predict:
         draw.text((pos[0], pos[1]), text, color,font=font)
     size = font.getsize(text)
@@ -113,10 +112,15 @@ def load_and_update(input):
         pos = draw_multi_line(draw, pos, poster['name'], font1, wid - 55)
         pos = (xpos + 4, pos[1])
         print(str(pnum) + ": " + poster['name'])
+    n = 0
+    for pos in positions:
+        n = n + 1
+        draw_line(draw, (pos['x'] - 18, pos['y'] - 20), str(n) , font1)
 
     # Convert back to OpenCV image and show it
     image = np.array(pil_img)
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
     return image
 
 
@@ -152,10 +156,7 @@ P = (800, 1190)  # Point P for which we want to find the closest point on the li
 
 cv2.namedWindow("Test")
 cv2.setMouseCallback("Test", mouse_callback)
-n = 0
-for pos in positions:
-    n = n + 1
-    draw_pos(n, pos['x'], pos['y'])
+
 while True:
     cv2.imshow("Test", image)
     key = cv2.waitKey(1) & 0xff
@@ -163,11 +164,6 @@ while True:
         positions.pop()
         print(positions)
         image = load_and_update(input)
-        n = 0
-        for pos in positions:
-            n = n + 1
-            draw_pos(n, pos['x'], pos['y'])
-
     if key == ord('q'):  # Press 'q' to quit
         break
 

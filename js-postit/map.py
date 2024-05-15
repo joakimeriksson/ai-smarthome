@@ -3,7 +3,7 @@ from PIL import Image, ImageFont, ImageDraw, ImageOps
 import cv2
 
 # Fonts for the texts on the intro slide
-font1 = ImageFont.truetype("fonts/Calibri.ttf", 34)
+font1 = ImageFont.truetype("fonts/Calibri.ttf", 31)
 color = (0,0,0)
 circle_color = (255, 200, 200)
 
@@ -79,7 +79,7 @@ def load_and_update(input):
     draw = ImageDraw.Draw(pil_img, "RGBA")
 
     # The boxes where we will put the poster names
-    boxes = [(40,1400, 950, 380), (1060,1400, 950,380), (2080,1400, 950, 380), (700, 40, 950, 950), (1950, 40, 950,950)]
+    boxes = [(40,1400, 960, 380), (1060,1400, 960,380), (2080,1400, 960, 380), (700, 40, 960, 970), (1950, 40, 960,970)]
 
     for box in boxes:
         (xpos, ypos, wid, hei) = box
@@ -93,7 +93,10 @@ def load_and_update(input):
     # Need to move the "boxes" also...
     (xpos, ypos, wid, hei) = boxes[boxnr]
     pos = (xpos + 4, ypos)
-    for poster in posters:
+
+    sorted_posters = sorted(posters, key=lambda obj: obj['position'])
+    count = {}
+    for poster in sorted_posters:
         pnum = pnum + 1
 
         # predict
@@ -107,11 +110,27 @@ def load_and_update(input):
         if (pnum < 10):
             pos = (pos[0] + 20, pos[1])
 
-        draw_multi_line(draw, pos, str(pnum), font1, wid - 55)
+        poster_pos = poster['position']
+        draw_multi_line(draw, pos, str(poster_pos), font1, wid - 55)
         pos = (pos[0] + 50, pos[1])
         pos = draw_multi_line(draw, pos, poster['name'], font1, wid - 55)
         pos = (xpos + 4, pos[1])
         print(str(pnum) + ": " + poster['name'])
+        # draw a circle...
+        p = positions[poster_pos - 1]
+        count[poster_pos] = count.get(poster_pos, 0) + 1
+        print("Draw circle at ", poster_pos, p)
+        radius = 10
+        # Define the bounding box for the circle
+        left_up_point = (p['x'] - radius, p['y'] - radius)
+        right_down_point = (p['x'] + radius, p['y'] + radius)
+        bbox = [left_up_point, right_down_point]
+        # Draw the circle
+        color = "#b0b0ff"
+        if count[poster_pos] > 1:
+            color = "#f0b0b0"
+        draw.ellipse(bbox, fill=color)
+
     n = 0
     for pos in positions:
         n = n + 1

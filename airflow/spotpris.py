@@ -36,23 +36,25 @@ with DAG('spot_pris_dag',
         task_id="load_data_task", requirements=["mechanize", "beautifulsoup4"], system_site_packages=False
     )
     def load_data(**context):
-      import mechanize, re, datetime
-      from bs4 import BeautifulSoup
-      br = mechanize.Browser()
-      resp = br.open("https://www.elbruk.se/timpriser-se3-stockholm")
-      data = resp.read()
-      print(br.title())
-      soup = BeautifulSoup(data, 'html.parser')
+      import mechanize, re, json, time
+      from datetime import datetime
 
-      for script in soup.find_all('script'):
-        if (script.text.find("label: 'Idag'") != -1):
-          all = re.findall(r'label: (.+),((?:\n.+?)+)data: (.+)', script.text, re.MULTILINE)
-          for data in all:
-            print(data[0] + ":" + data[2])
-            if data[0] == "'Idag'":
-              spot = data[2]
-              return spot
-      raise ValueError("Could not find spot-price in html page.")
+      # Get the current date
+      current_date = datetime.now().strftime("%Y/%m-%d")
+      br = mechanize.Browser()
+      # Construct the URL with the current date
+      url = f"https://www.elprisetjustnu.se/api/v1/prices/{current_date}_SE3.json"
+      resp = br.open(url)
+      data = resp.read()
+
+      js = json.loads(data)
+      values = []
+      for obj in js:
+          print(obj)
+          values = values + [obj['SEK_per_kWh']]
+
+      values = json.dumps(values)
+      return values
     
     load_data_task = load_data()
 

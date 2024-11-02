@@ -33,23 +33,23 @@ with DAG('spot_pris_dag',
   else:
     # [START howto_operator_python_venv]
     @task.virtualenv(
-        task_id="load_data_task", requirements=["mechanize", "beautifulsoup4"], system_site_packages=False
+        task_id="load_data_task", requirements=["requests"], system_site_packages=False
     )
     def load_data(**context):
-      import mechanize, re, json, time
+      import requests, re, json, time
       from datetime import datetime
 
       # Get the current date
       current_date = datetime.now().strftime("%Y/%m-%d")
-      br = mechanize.Browser()
       # Construct the URL with the current date
       url = f"https://www.elprisetjustnu.se/api/v1/prices/{current_date}_SE3.json"
-      resp = br.open(url)
-      data = resp.read()
 
-      js = json.loads(data)
+      # Make the GET request
+      resp = requests.get(url)
+      data = resp.json()
+      print(data)
       values = []
-      for obj in js:
+      for obj in data:
           print(obj)
           values = values + [obj['SEK_per_kWh']]
 

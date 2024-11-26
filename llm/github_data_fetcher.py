@@ -2,6 +2,7 @@ import sys
 from github import Github
 from tqdm import tqdm
 import toml
+import git
 
 # Load configuration from config.toml
 config = toml.load('config.toml')

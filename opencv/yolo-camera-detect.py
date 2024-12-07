@@ -12,6 +12,10 @@ def parse_args():
                       help='YOLO model to use (default: yolo11n.pt)')
     parser.add_argument('--conf', type=float, default=0.60,
                       help='Confidence threshold (default: 0.60)')
+    parser.add_argument('--track', action='store_true',
+                      help='Enable object tracking')
+    parser.add_argument('--iou', type=float, default=0.5,
+                      help='IOU threshold for tracking (default: 0.5)')
     return parser.parse_args()
 
 def main():
@@ -23,6 +27,9 @@ def main():
     print(f"Using camera index: {args.camera}")
     print(f"Using YOLO model: {args.model}")
     print(f"Confidence threshold: {args.conf}")
+    print(f"Tracking enabled: {args.track}")
+    if args.track:
+        print(f"IOU threshold: {args.iou}")
 
     # Initialize YOLO model
     try:
@@ -48,7 +55,11 @@ def main():
         if ret:
             try:
                 # Run YOLO inference on the frame
-                results = model(frame, device=device, conf=args.conf)
+                if args.track:
+                    results = model.track(frame, conf=args.conf, iou=args.iou, 
+                                       show=True, persist=True)
+                else:
+                    results = model(frame, device=device, conf=args.conf)
                 
                 # Visualize the results on the frame
                 annotated_frame = results[0].plot()

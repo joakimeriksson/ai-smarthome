@@ -1,0 +1,36 @@
+body { 
+    font: 14px helvetica neue, helvetica, arial, sans-serif;
+    background-color: #00f;
+  }
+  
+  #cy {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: #00057d;
+  }
+  
+  #eat {
+    position: absolute;
+    left: 1em;
+    top: 1em;
+    font-size: 1em;
+    z-index: -1;
+    color: #c88;
+  }
+  
+  .tooltip {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: black;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    max-width: 250px;
+    z-index: 999;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }

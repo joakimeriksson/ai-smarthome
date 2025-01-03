@@ -1,0 +1,22 @@
+[project]
+name = "mcp-server-dirigera"
+version = "0.1.0"
+description = "A simple Dirigera MCP server for IoT device management."
+readme = "README.md"
+
+requires-python = ">=3.10"
+dependencies = [
+    "dirigera>=1.2.2",
+    "mcp>=1.0.0",
+    "toml>=0.10.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = ["pyright>=1.1.389"]
+
+[project.scripts]
+mcp-server-dirigera = "mcp_server_dirigera:main"

@@ -1,0 +1,15 @@
+pdf_directories = [
+    { path = "docs" }
+]
+
+[extraction]
+exclude_patterns = [
+    "*temp*",
+    "*backup*",
+    "*.bak"
+]
+
+[dataset]
+output_dir = "dataset"
+min_text_length = 100   # Minimum length for a chunk
+max_text_length = 2000  # Maximum length for a chunk 

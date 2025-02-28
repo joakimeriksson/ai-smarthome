@@ -1,3 +1,7 @@
+#
+# Author: Joakim Eriksson
+# Created: 2025
+#
 import logging
 import argparse, toml
 import dirigera
@@ -9,7 +13,11 @@ from typing import Sequence
 from enum import Enum
 import json
 
-
+"""
+This module serves as the main MCP server for the Dirigera application. 
+It initializes the logging configuration, handles command-line arguments,
+and integrates with the Dirigera library to manage the smart home functionalities.
+"""
 logger = logging.getLogger('mcp_dirigera_server')
 logger.error("Starting MCP Dirigera Server")
 

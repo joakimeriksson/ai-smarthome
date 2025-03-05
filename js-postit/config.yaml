@@ -1,0 +1,499 @@
+posters:
+  - number: 1
+    name: "Verification of AI models"
+    responsible: "Jan Ekman"
+    type: "Poster"
+    position: 64
+  - number: 2
+    name: "Towards robust machine learning: defending against adversarial attacks"
+    responsible: "Jia Fu"
+    type: "Poster"
+    position: 65
+  - number: 3
+    name: "LLMs and Foreign Information Manipulation & Interference"
+    responsible: "Björn Bjurling"
+    type: "Poster"
+    position: 66
+  - number: 4
+    name: "AI 4 Predictive maintenance"
+    responsible: "Sepideh & Anders Holst"
+    type: "Poster"
+    position: 61
+  - number: 5
+    name: "First Responder – Locally Hosted LLM Chatbots for Everyone"
+    responsible: "Leon Sütfeld"
+    type: "Poster"
+    position: 67
+  - number: 6
+    name: "Controlled Image Synthesis"
+    responsible: "Liam Tabibzadeh"
+    type: "Poster"
+    position: 68
+  - number: 7
+    name: "Detecting illegal activities at sea"
+    responsible: "Anders Holst"
+    type: "Demo/Poster"
+    requirement: "Table"
+    position: 60
+  - number: 8
+    name: "LEAKPRO: Leakage Profiling and Risk Oversight for Machine Learning Models"
+    responsible: "Henrik Forsgren"
+    type: "Poster"
+    position: 55
+  - number: 9
+    name: "SARDIN: Decentralized platform for secure processing of health data"
+    responsible: "Johan Kristiansson"
+    type: "Poster"
+    position: 50
+  - number: 10
+    name: "Digital Earth Sweden"
+    responsible: "Jesper Dejby"
+    type: "Poster + demo"
+    requirement: "Table"
+    position: 56
+  - number: 11
+    name: "ENCCS"
+    responsible: "Apostolos Vasileiadis"
+    type: "Rollup"
+    requirement: "Small Table"
+    position: 54
+  - number: 12
+    name: "ColonyOS - A Meta operating system"
+    responsible: "Johan Kristiansson"
+    type: "Poster + demo"
+    requirement: "Table"
+    position: 51
+  - number: 13
+    name: "EBRAINS – European Brain ReseArch INfraStructure"
+    responsible: "Anastasiia Andriievska"
+    type: "Poster + demo"
+    requirement: "Table"
+    position: 57
+  - number: 14
+    name: "Creating and Leveraging a Synthetic Dataset for Cloud Detection in MSI"
+    responsible: "Thomas Ohlson Timoudas, Aleksis Pirinen"
+    type: "Poster"
+    position: 53
+  - number: 15
+    name: "A Cognitive Serverless Framework for the Cloud-Edge Continuum"
+    responsible: "Thomas Ohlson Timoudas, Johan Kristiansson"
+    type: "Poster"
+    position: 52
+  - number: 16
+    name: "Serverless CRDTs at the Edge"
+    responsible: "Adam Hasselberg"
+    type: "Poster"
+    position: 2
+  - number: 17
+    name: "Finding Small Rectilinear Steiner Trees Quickly"
+    responsible: "Karl-Filip Faxén"
+    type: "Poster/Demo"
+    requirement: "Table"
+    position: 18
+  - number: 18
+    name: "FASTER-AI"
+    responsible: "Björn Forsberg"
+    type: "Poster"
+    position: 28
+  - number: 19
+    name: "Better Sawing for Future Sawmills"
+    responsible: "Mats Carlsson"
+    type: "Poster"
+    position: 20
+  - number: 20
+    name: "High Level and Low Level Program Specifications for Safe Composability"
+    responsible: "Lars Rasmusson"
+    type: "Poster"
+    position: 19
+  - number: 21
+    name: "Towards GenAI on Wireless RayTracing"
+    responsible: "Yifei Jin, Sarunas Girdzijauskas"
+    type: "Poster"
+    position: 5
+  - number: 22
+    name: "AI embeddings: Matrices are better than vectors"
+    responsible: "Martin Nilsson"
+    type: "Poster"
+    requirement: "Small Table"
+    position: 11
+  - number: 23
+    name: "Adaptive Expert Models for Federated Learning"
+    responsible: "Martin Isaksson, Sarunas Girdzijauskas"
+    type: "Poster"
+    position: 12
+  - number: 24
+    name: "mmWave Beam Selection in Analog Beamforming Using Personalized Federated Learning"
+    responsible: "Martin Isaksson, Seif Haridi"
+    type: "Poster"
+    position: 13
+  - number: 25
+    name: "Edge AI on Spatio-Temporal Data for Smart Mobility"
+    responsible: "Lodovico Giaretta, Sarunas Girdzijauskas"
+    type: "Poster"
+    position: 6
+  - number: 26
+    name: "SICStus Prolog: Powering Innovations for Decades"
+    responsible: "Per Mildner"
+    type: "Poster"
+    position: 21
+  - number: 27
+    name: "AI Assurance: Prevent Digital Meltdowns And Keep AI Tantrums At Bay!"
+    responsible: "Fatemeh Rahimian"
+    type: "Poster"
+    position: 7
+  - number: 28
+    name: "Aqua Poster"
+    responsible: "Seif Haridi et al"
+    type: "Poster"
+    position: 30
+  - number: 29
+    name: "Using the OSCORE Security Protocol at Proxies and for CoAP Secure Tunneling"
+    responsible: "Marco Tiloca"
+    type: "Poster"
+    position: 49
+  - number: 30
+    name: "Cybernoden"
+    responsible: "Petra Fröderberg, Martin Bergling"
+    type: "Poster"
+    requirement: "Small Table"
+    position: 47
+  - number: 31
+    name: "Scalable Privacy-Preserving Federated Machine Learning Analytics"
+    responsible: "Apostolos Pyrgelis"
+    type: "Poster"
+    position: 46
+  - number: 32
+    name: "Cybersecurity for 6G satellite communication"
+    responsible: "Arlette Houndji"
+    type: "Poster"
+    position: 45
+  - number: 33
+    name: "Lightweight Key Update Procedure for the OSCORE Protocol"
+    responsible: "Rikard Höglund"
+    type: "Poster"
+    position: 48
+  - number: 34
+    name: "EU-Hybnet"
+    responsible: "Rolf Blom"
+    type: "Poster"
+    position: 43
+  - number: 35
+    name: "Cybercampus Sverige"
+    responsible: "Paola Lundén, Katarina Boustedt"
+    type: "Poster"
+    position: 42
+  - number: 36
+    name: "Path Awareness Techniques in Non-Terrestrial Networks for 6G"
+    responsible: "Alfonso Iacovazzi"
+    type: "Poster"
+    position: 44
+  - number: 37
+    name: "Membership Inference Attack"
+    responsible: "Han Wang"
+    type: "Poster"
+    position: 41
+  - number: 38
+    name: "TEE for Open Hardware IoT"
+    responsible: "Asrin Abdollahi"
+    type: "Poster"
+    position: 40
+  - number: 39
+    name: "Cyber Range"
+    responsible: "Erik Mickols, Karl Resare"
+    type: "Poster"
+    position: 39
+  - number: 40
+    name: "CyberNode Games as a Tool Working Group"
+    responsible: "Stewart Kowalski"
+    type: "Poster"
+    position: 38
+  - number: 41
+    name: "CUSTODES Project Introduction"
+    responsible: "Simon Bouget"
+    type: "Poster"
+    position: 37
+  - number: 42
+    name: "CEST Project Results"
+    responsible: "Simon Bouget"
+    type: "Poster"
+    position: 36
+  - number: 43
+    name: "aSSist Project: Fuzzing with the Renode Simulation Framework"
+    responsible: "Peter Gielda"
+    type: "Poster"
+    position: 35
+  - number: 44
+    name: "ICE Connect"
+    responsible: "Daniel/Johannes"
+    type: "Demo/Poster"
+    position: 33
+  - number: 45
+    name: "Graphene Enhanced Immersion Cooling for Data Centers"
+    responsible: "Henrik/Tina"
+    type: "Poster"
+    requirement: "Small Table"
+    position: 1
+  - number: 46
+    name: "ED5GE"
+    responsible: "Cagatay/Martin"
+    type: "Poster"
+    position: 16
+  - number: 47
+    name: "HEATWISE"
+    responsible: "Cagatay/Henrik"
+    type: "Poster"
+    position: 15
+  - number: 48
+    name: "Sustainability in Data Centers"
+    responsible: "Parvathi"
+    type: "Poster"
+    position: 3
+  - number: 49
+    name: "E2P2"
+    responsible: "Jeanette Petersson"
+    type: "Poster"
+    position: 4
+  - number: 50
+    name: "Partner program"
+    responsible: "Isabelle/Jonas"
+    type: "Poster"
+    position: 31
+  - number: 51
+    name: "ICE Datacenter"
+    responsible: "Isabelle/Jonas"
+    type: "Poster"
+    position: 32
+  - number: 52
+    name: "Inhibition: Efficient Attention for Transformers"
+    responsible: "Rickard Brännvall"
+    type: "Poster"
+    position: 69
+  - number: 53
+    name: "What is wrong with Large Language Models?"
+    responsible: "Evangelia Gogoulou"
+    type: "Poster + Demo"
+    requirement: "Table"
+    position: 62
+  - number: 54
+    name: "ImpactDB: tracking environmental impact with LLMs"
+    responsible: "Shorouq Zahra, Chanjuan Meng"
+    type: "Poster"
+    position: 63
+  - number: 55
+    name: "Sound matters: machine learning for sound analysis"
+    responsible: "John Martinsson"
+    type: "Poster"
+    position: 8
+  - number: 56
+    name: "Impacts of Color and Texture Distortions on Earth Observation Data in Deep Learning"
+    responsible: "Martin Willbo"
+    type: "Poster"
+    position: 34
+  - number: 57
+    name: "Decentralized deep learning"
+    responsible: "Edvin Listo Zec"
+    type: "Poster"
+    position: 9
+  - number: 58
+    name: "Aerial View Localization with Reinforcement Learning: Towards Emulating Search-and-Rescue"
+    responsible: "Aleksis Pirinen"
+    type: "Poster (A0)"
+    position: 10
+  - number: 59
+    name: "Brain-inspired algorithms for computing"
+    responsible: "Denis Kleyko"
+    type: "Poster"
+    position: 58
+  - number: 60
+    name: "Representations of smells: The next frontier for language models?"
+    responsible: "Murathan Kurfalı"
+    type: "Poster"
+    position: 59
+  - number: 61
+    name: "RISC-V Demo"
+    responsible: "Joakim Eriksson"
+    type: "Demo"
+    requirement: "Table"
+    position: 27
+  - number: 62
+    name: "Safe Application Execution on Resource-Constrained IoT Devices using WebAssembly"
+    responsible: "Fredrik Engstrand"
+    type: "Demo"
+    requirement: "Table"
+    position: 14
+  - number: 63
+    name: "Mid-sized Haptic Interactions - The Pelvic Chair and Autonomous Driving"
+    responsible: "Anna Ståhl"
+    type: "Poster/Video"
+    requirement: "Table"
+    position: 29
+  - number: 64
+    name: "On-device Learning for Secure Internet of Things"
+    responsible: "Shuai Zhu"
+    type: "Poster"
+    position: 24
+  - number: 65
+    name: "Secure System Monitoring in TrustZone-Enabled IoT Devices"
+    responsible: "Niclas Finne"
+    type: "Poster"
+    position: 23
+  - number: 66
+    name: "Detecting Attacks against IoT Networks using Machine Learning at the Edge"
+    responsible: "Viktor Frideen"
+    type: "Poster"
+    position: 25
+  - number: 67
+    name: "5G Forge - private 5G infrastructure"
+    responsible: "Alex Jonsson"
+    type: "Poster"
+    position: 17
+  - number: 68
+    name: "Fighting Dengue Fever with Drones"
+    responsible: "Thiemo Voigt"
+    type: "Poster"
+    position: 26
+  - number: 69
+    name: "Supporting waste-room stewardship using sensor networks"
+    responsible: "Mattias Jacobsson"
+    type: "Poster"
+    position: 22
+
+positions:
+- x: 177
+  y: 740
+- x: 224
+  y: 743
+- x: 320
+  y: 727
+- x: 291
+  y: 802
+- x: 285
+  y: 865
+- x: 493
+  y: 809
+- x: 488
+  y: 948
+- x: 477
+  y: 1016
+- x: 477
+  y: 1070
+- x: 474
+  y: 1139
+- x: 530
+  y: 1208
+- x: 594
+  y: 1207
+- x: 660
+  y: 1208
+- x: 534
+  y: 947
+- x: 553
+  y: 904
+- x: 616
+  y: 979
+- x: 661
+  y: 1017
+- x: 708
+  y: 1062
+- x: 738
+  y: 1098
+- x: 741
+  y: 1142
+- x: 713
+  y: 1206
+- x: 786
+  y: 1206
+- x: 850
+  y: 1207
+- x: 957
+  y: 1202
+- x: 1014
+  y: 1202
+- x: 1070
+  y: 1201
+- x: 1121
+  y: 1202
+- x: 1173
+  y: 1202
+- x: 1223
+  y: 1202
+- x: 1323
+  y: 1199
+- x: 1387
+  y: 1198
+- x: 1432
+  y: 1140
+- x: 1431
+  y: 1071
+- x: 1758
+  y: 1121
+- x: 1758
+  y: 989
+- x: 1754
+  y: 868
+- x: 1751
+  y: 802
+- x: 1753
+  y: 737
+- x: 1754
+  y: 611
+- x: 1749
+  y: 534
+- x: 1749
+  y: 474
+- x: 1747
+  y: 420
+- x: 1746
+  y: 365
+- x: 1748
+  y: 307
+- x: 1747
+  y: 253
+- x: 1748
+  y: 194
+- x: 1746
+  y: 145
+- x: 1745
+  y: 90
+- x: 1746
+  y: 50
+- x: 1893
+  y: 1198
+- x: 1944
+  y: 1199
+- x: 1993
+  y: 1198
+- x: 2046
+  y: 1196
+- x: 2099
+  y: 1196
+- x: 2159
+  y: 1195
+- x: 2227
+  y: 1192
+- x: 2275
+  y: 1192
+- x: 2333
+  y: 1190
+- x: 2381
+  y: 1191
+- x: 2431
+  y: 1191
+- x: 2487
+  y: 1191
+- x: 2548
+  y: 1151
+- x: 2545
+  y: 1094
+- x: 2626
+  y: 1190
+- x: 2672
+  y: 1190
+- x: 2720
+  y: 1190
+- x: 2812
+  y: 1190
+- x: 2910
+  y: 1190
+- x: 2962
+  y: 1190

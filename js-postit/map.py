@@ -1,5 +1,5 @@
 import sys, os, argparse, numpy as np, yaml
-from PIL import Image, ImageFont, ImageDraw, ImageOps
+from PIL import Image, ImageFont, ImageDraw
 import cv2
 
 # Fonts for the texts on the intro slide
@@ -9,6 +9,7 @@ circle_color = (255, 200, 200)
 
 image = None
 positions = []
+line_spacing = 8
 
 def closest_point_on_line(p1, p2, p3):
     x1, y1 = p1
@@ -45,7 +46,9 @@ def draw_line(draw, pos, text, font, predict = False):
     bbox = font.getbbox(text)
     size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
     example_bbox = font.getbbox("ABCDEFyglq")
-    xsize, ysize = example_bbox[2] - example_bbox[0], example_bbox[3] - example_bbox[1]
+    # Somehow bbox gets less height than the old getsize of the font call. 
+    # add 1 here to compensate a bit.
+    xsize, ysize = example_bbox[2] - example_bbox[0], line_spacing + example_bbox[3] - example_bbox[1]
     return (pos[0] + size[0], pos[1] + ysize)
 
 def draw_multi_line(draw, pos, text, font, max_width, predict = False):
@@ -75,8 +78,6 @@ def load_and_update(input):
     image = cv2.imread(input)
 
     # Pillow setup
-    # Convert the color from BGR to RGB
-    image2 = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # Convert the OpenCV image to a PIL Image
     pil_img = Image.fromarray(image)
 
@@ -166,17 +167,11 @@ with open(conopts.config, 'r') as file:
         positions = config['positions']
     if 'posters' in config:
         posters = config['posters']
+    if 'linespacing' in config:
+        line_spacing = config['linespacing']
 
 
 image = load_and_update(input)
-
-# A test of line-snapping...
-A = (526, 1205)  # Point A on the line
-B = (2959, 1182)  # Point B on the line
-P = (800, 1190)  # Point P for which we want to find the closest point on the line
-#draw_pos(None, P[0], P[1])
-#closest_point = closest_point_on_line(A, B, P)
-#draw_pos(None, int(closest_point[0]), int(closest_point[1]))
 
 cv2.namedWindow("Test")
 cv2.setMouseCallback("Test", mouse_callback)

@@ -1,3 +1,5 @@
+linespacing: 10
+
 posters:
   - number: 1
     name: "Verification of AI models"

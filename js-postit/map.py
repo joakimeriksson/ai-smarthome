@@ -42,12 +42,16 @@ def mouse_callback(event, x, y, flags, param):
 def draw_line(draw, pos, text, font, predict = False):
     if not predict:
         draw.text((pos[0], pos[1]), text, color,font=font)
-    size = font.getsize(text)
-    (xsize,ysize) = font.getsize("ABCDEFyglq")
+    bbox = font.getbbox(text)
+    size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
+    example_bbox = font.getbbox("ABCDEFyglq")
+    xsize, ysize = example_bbox[2] - example_bbox[0], example_bbox[3] - example_bbox[1]
     return (pos[0] + size[0], pos[1] + ysize)
 
 def draw_multi_line(draw, pos, text, font, max_width, predict = False):
-    if font.getsize(text)[0] <= max_width:
+    bbox = font.getbbox(text)
+    text_width = bbox[2] - bbox[0]
+    if text_width <= max_width:
         return draw_line(draw, pos, text, font, predict)
     else:
         # split the line by spaces to get words
@@ -56,7 +60,8 @@ def draw_multi_line(draw, pos, text, font, max_width, predict = False):
         # append every word to a line while its width is shorter than image width
         line = ''
         for word in words:
-            if font.getsize(line + word)[0] <= max_width:
+            bbox = font.getbbox(line + word)
+            if (bbox[2] - bbox[0]) <= max_width:
                 line = line + word + " "
             else:
                 (x, y) = draw_line(draw, pos, line, font, predict)

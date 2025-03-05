@@ -3,7 +3,7 @@ authors = ["Joakim Eriksson <joakim.eriksson@ri.se>"]
 channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Add a short description here"
 name = "js-postit"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]

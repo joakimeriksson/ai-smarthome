@@ -1,0 +1,24 @@
+[{
+    "conditions": {
+        "executortype": "container-executor",
+        "executornames": [
+            "dev-docker"
+        ],
+        "nodes": 1,
+        "processespernode": 1,
+        "mem": "10Gi",
+        "cpu": "1000m",
+        "gpu": {
+            "count": 0
+        },
+        "walltime": 120
+    },
+    "nodename": "spotmqtt",
+    "funcname": "execute",
+    "kwargs": {
+        "cmd": "wget https://raw.githubusercontent.com/joakimeriksson/ai-smarthome/refs/heads/master/airflow/spotmqtt.py; pip install requests; pip install paho-mqtt; python spotmqtt.py",
+        "docker-image": "python:3.11"
+    },
+    "maxexectime": 55,
+    "maxretries": 3
+}]

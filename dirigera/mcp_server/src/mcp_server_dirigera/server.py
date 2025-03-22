@@ -24,6 +24,7 @@ logger.error("Starting MCP Dirigera Server")
 class DirigeraTools(str, Enum):
     LIST_ENVIRONMENT_SENSORS = "list_environment_sensors"
     LIST_OUTLETS = "list_outlets"
+    LIST_LIGHTS = "list_lights"
 
 class DirigeraServer:
     def __init__(self, config_path: str):
@@ -40,6 +41,9 @@ class DirigeraServer:
 
     def get_outlets(self):
         return self.client.get_outlets()
+
+    def get_lights(self):
+        return self.client.get_lights()
 
 async def main(config_path: str):
     logger.error("Starting Dirigera MCP Server (main)")
@@ -64,7 +68,15 @@ async def main(config_path: str):
                     "type": "object",
                     "properties": {},
                 },
-            )           
+            ),
+            Tool(
+                name= DirigeraTools.LIST_LIGHTS.value,
+                description="Get current status of all lights, including their names and on/off status, etc.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            )              
         ]
 
     @server.call_tool()
@@ -101,12 +113,24 @@ async def main(config_path: str):
                     return [
                         TextContent(type="text", text=txt)
                     ]
-
+                case DirigeraTools.LIST_LIGHTS.value:
+                    lights = dirigera.get_lights()
+                    txt = ""
+                    for light in lights:
+                        dict = {'id': light.id, 'name': light.attributes.custom_name,
+                                'light_level': light.attributes.light_level,
+                                'color_temperature': light.attributes.color_temperature,
+                                'is_on': light.attributes.is_on
+                        }
+                        txt = txt + json.dumps(dict) + "\n"
+                    return [
+                        TextContent(type="text", text=txt)
+                    ]
                 case _:
                     raise ValueError(f"Unknown tool: {name}")
 
         except Exception as e:
-            lohger.error(f"Error processing mcp-server-dirigera query: {str(e)}")
+            logger.error(f"Error processing mcp-server-dirigera query: {str(e)}")
             raise ValueError(f"Error processing mcp-server-dirigera query: {str(e)}")
 
     options = server.create_initialization_options()

@@ -1,4 +1,4 @@
-[{
+{
     "conditions": {
         "executortype": "container-executor",
         "executornames": [
@@ -39,4 +39,4 @@
             }
         ]
     }
-}]
+}

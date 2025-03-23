@@ -1,0 +1,42 @@
+[{
+    "conditions": {
+        "executortype": "container-executor",
+        "executornames": [
+            "dev-docker"
+        ],
+        "nodes": 1,
+        "processespernode": 1,
+        "mem": "10Gi",
+        "cpu": "1000m",
+        "gpu": {
+            "count": 0
+        },
+        "walltime": 300
+    },
+    "nodename": "hopsheat",
+    "funcname": "execute",
+    "kwargs": {
+        "cmd": "pip install hsfs==3.0.1 hopsworks==3.0.1 packaging toml; python /cfs/cronfiles/runheatpump.py",
+        "docker-image": "python:3.9"
+    },
+    "maxexectime": 240,
+    "maxretries": 3,
+    "fs": {
+        "mount": "/cfs",
+        "dirs": [
+            {
+                "label": "/cronfiles",
+                "dir": "/cronfiles",
+                "keepfiles": false,
+                "onconflicts": {
+                    "onstart": {
+                        "keeplocal": false
+                    },
+                    "onclose": {
+                        "keeplocal": false
+                    }
+                }
+            }
+        ]
+    }
+}]

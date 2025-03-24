@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Poster Planner</title>
+  <style>
+    canvas {
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <label for="imageLoader">Select an image for the poster plan:</label>
+  <input type="file" id="imageLoader" accept="image/*"/>
+  <br />
+  <label for="configLoader">Select a .yaml file with the poster configuration:</label>
+  <input type="file" id="configLoader" accept=".yaml,.yml"/>
+  <br />
+  <canvas id="posterCanvas"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

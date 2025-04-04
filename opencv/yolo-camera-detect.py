@@ -62,8 +62,17 @@ def main():
                     results = model(frame, device=device, conf=args.conf)
                 
                 # Visualize the results on the frame
+                boxes = results[0].boxes
+                detections = []
+                for box in boxes:
+                    x1, y1, x2, y2 = box.xyxy[0].tolist()  # Bounding box coordinates
+                    confidence = box.conf[0].item()        # Confidence score
+                    class_id = int(box.cls[0].item())      # Class ID
+                    class_name = results[0].names[class_id]
+                    detections += [{"x1": x1, "y1": y1, "x2": x2, "y2": y2, "confidence": confidence, "class_id": class_id, "class_name": class_name}]
                 annotated_frame = results[0].plot()
-                
+                print(detections)
+                                
                 # Display the annotated frame
                 cv2.imshow('YOLO Detection', annotated_frame)
             except Exception as e:

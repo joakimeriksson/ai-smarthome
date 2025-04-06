@@ -25,6 +25,7 @@ class DirigeraTools(str, Enum):
     LIST_ENVIRONMENT_SENSORS = "list_environment_sensors"
     LIST_OUTLETS = "list_outlets"
     LIST_LIGHTS = "list_lights"
+    SET_LIGHT = "set_light"
 
 class DirigeraServer:
     def __init__(self, config_path: str):
@@ -44,6 +45,15 @@ class DirigeraServer:
 
     def get_lights(self):
         return self.client.get_lights()
+
+    def set_light(self, name: str, is_on: bool, light_level: int, color_saturation: int, color_hue: int):
+        light = self.client.get_light_by_name(name)
+        if light is None:
+            return f"Light '{name}' not found"
+        light.set_light(lamp_on=is_on)
+        light.set_light_level(light_level=light_level)
+        light.set_light_color(hue=color_hue, saturation=color_saturation)
+        return f"light {name} set to {is_on} with level {light_level} and color {color_saturation} and {color_hue}."
 
 async def main(config_path: str):
     logger.error("Starting Dirigera MCP Server (main)")
@@ -75,6 +85,21 @@ async def main(config_path: str):
                 inputSchema={
                     "type": "object",
                     "properties": {},
+                },
+            ),
+            Tool(
+                name= DirigeraTools.SET_LIGHT.value,
+                description="Set light status of a named light. Arguments are on/off, intensity (int), color_saturation (float 0.0-1.0), color_hue (float, 0-360)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "is_on": {"type": "boolean"},
+                        "light_level": {"type": "number", "minimum": 0, "maximum": 100},
+                        "color_saturation": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                        "color_hue": {"type": "number", "minimum": 0.0, "maximum": 360.0}
+                    },
+                    "required": ["name", "is_on", "light_level", "color_saturation", "color_hue"]
                 },
             )              
         ]
@@ -120,11 +145,19 @@ async def main(config_path: str):
                         dict = {'id': light.id, 'name': light.attributes.custom_name,
                                 'light_level': light.attributes.light_level,
                                 'color_temperature': light.attributes.color_temperature,
+                                'color_saturation': light.attributes.color_saturation,
+                                'color_hue' : light.attributes.color_hue,
                                 'is_on': light.attributes.is_on
                         }
                         txt = txt + json.dumps(dict) + "\n"
                     return [
                         TextContent(type="text", text=txt)
+                    ]
+                case DirigeraTools.SET_LIGHT.value:
+                    logger.info(f"Setting light args: {arguments}")
+                    txt = dirigera.set_light(arguments['name'], arguments['is_on'], arguments['light_level'], arguments['color_saturation'], arguments['color_hue'])
+                    return [
+                        TextContent(type="text", text=txt + " args:" + json.dumps(arguments))
                     ]
                 case _:
                     raise ValueError(f"Unknown tool: {name}")

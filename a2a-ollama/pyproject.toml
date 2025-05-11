@@ -1,0 +1,15 @@
+[project]
+name = "a2a-ollama"
+version = "0.1.0"
+description = "A simple A2A example using Ollama to respond on prompts"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.2.0",
+    "langchain>=0.3.25",
+    "langchain-ollama>=0.3.2",
+    "langgraph>=0.4.3",
+    "logging>=0.4.9.6",
+    "sse-starlette>=2.3.4",
+    "uvicorn>=0.34.2",
+]

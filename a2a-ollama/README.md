@@ -11,7 +11,7 @@ Start up the A2A server:
 ```console
 >uv run main.py
 INFO:A2A Ollama Test:Starting A2A server
-INFO:A2A Ollama Test:Creating ollama agent: http://127.0.0.1:11434, llama3.2
+INFO:A2A Ollama Test:Creating ollama agent: http://127.0.0.1:11434, gemma3:12b
 DEBUG:asyncio:Using selector: KqueueSelector
 INFO:     Started server process [7733]
 INFO:     Waiting for application startup.
@@ -46,5 +46,28 @@ Then you can use the A2A client to send a task to the server. Move to the direct
         }]
     }
 =========  starting a new task ======== 
+What do you want to send to the agent? (:q or quit to exit): What model is running?
+Select a file path to attach? (press enter to skip): 
+
+{
+        "jsonrpc":"2.0",
+        "id":"7345b0d02d2f4d08afca94b634d25fe1",
+        "result":
+            {
+                "id":"cbee5995923b4d999124f1ab93ef2b60",
+                "sessionId":"d86c5b12242c4dc89ff64c398496f532",
+                "status":
+                    {
+                        "state":"completed",
+                        "message":{"role":"agent","parts":[{"type":"text","text":"I'm running on the Gemma family of models. Specifically, I'm Gemma 1.1 7B."}]},
+                        "timestamp":"2025-05-11T22:08:19.073628"
+                    },
+                "artifacts":[{"parts":[{"type":"text","text":"I'm running on the Gemma family of models. Specifically, I'm Gemma 1.1 7B."}],"index":0}],
+                "history":[{"role":"user","parts":[{"type":"text","text":"What model is running?"}]}]
+            }
+        }
+=========  starting a new task ======== 
 What do you want to send to the agent? (:q or quit to exit): 
 ```
+
+**NOTE**: I was in fact running gemma 3 in this case (but it was not in the context).

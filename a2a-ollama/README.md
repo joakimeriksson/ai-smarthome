@@ -1,10 +1,12 @@
 # A2A Example using Ollama as a backend
 This is a simple example of an A2A server that uses Ollama to generate responses.
+The Code in this repository is based on the [A2A](https://github.com/google/a2a) repository and the code in the common folder is a copy of the code in the 
+common directory that repository.
 
 ## Prerequisites
-- uvicorn
-- ollama
-- A2A CLI client (e.g. googles repository A2A and t path A2A/samples/python/hosts/cli)
+- [UV](https://docs.astral.sh/uv/)
+- [Ollama](https://ollama.com/)
+- [A2A CLI client](https://github.com/google/a2a/tree/main/samples/python/hosts/cli)
 
 ## Usage
 Start up the A2A server:

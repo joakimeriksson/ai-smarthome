@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Applications
+metadata:
+  name: ai-smarthome
+  title: AI Smart Home
+  description: Personal AI and smart-home repository
+  annotations:
+    github.com/project-slug: joakimeriksson/ai-smarthome
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - python
+    - smarthome
+    - ai
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:joakimeriksson

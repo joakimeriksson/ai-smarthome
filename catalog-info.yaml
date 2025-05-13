@@ -1,5 +1,5 @@
 apiVersion: backstage.io/v1alpha1
-kind: Applications
+kind: Component
 metadata:
   name: ai-smarthome
   title: AI Smart Home

@@ -1,3 +1,8 @@
+# MCP Server for controlling Dirigera devices (and reading out data from them)
+# Supports outlets, environment sensors and lights.
+# Author: Joakim Eriksson
+# Created: 2025
+#
 from fastmcp import FastMCP
 import toml, argparse, dirigera
 
@@ -35,7 +40,7 @@ def get_outlets() -> list:
 
 @mcp.tool()
 def get_lights() -> list:
-    """Lists all lights with their current data such as brightness, etc."""
+    """Lists all lights with their current data such as brightness, etc. Null values means that the light does not support that feature."""
     return [
         {
             'id': light.id,
@@ -59,16 +64,26 @@ def set_outlet(name: str, is_on: bool) -> str:
     return f"outlet {name} set to {is_on}."
 
 @mcp.tool()
-def set_light(name: str, is_on: bool, light_level: int, color_saturation: float, color_hue: float) -> str:
-    """Set light status of a named light. Arguments are on/off, intensity (int), color_saturation (float 0.0-1.0), color_hue (float, 0-360)"""
+def set_light_level(name: str, is_on: bool, light_level: int) -> str:
+    """Set light status of a named light. Arguments are on/off, intensity (int)"""
     light = client.get_light_by_name(name)
     if light is None:
         return f"Light '{name}' not found"
     light.set_light(lamp_on=is_on)
     light.set_light_level(light_level=light_level)
-    light.set_light_color(hue=color_hue, saturation=color_saturation)
-    return f"light {name} set to {is_on} with level {light_level} and color {color_saturation} and {color_hue}."
+    return f"light {name} set to {is_on} with level {light_level}."
 
+@mcp.tool()
+def set_light_color(name: str, color_saturation: float, color_hue: float) -> str:
+    """Set light status of a named light. Arguments are color_saturation (float 0.0-1.0), color_hue (float, 0-360)"""
+    light = client.get_light_by_name(name)
+    if light is None:
+        return f"Light '{name}' not found"
+    if "colorHue" in light.capabilities.can_receive:
+        light.set_light_color(hue=color_hue, saturation=color_saturation)
+    else:
+        return f"Light '{name}' does not support color hue and saturation"
+    return f"light {name} set to color {color_saturation} and {color_hue}."
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Dirigera MCP Server for IoT device management')

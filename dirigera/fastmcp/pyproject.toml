@@ -1,0 +1,12 @@
+[project]
+name = "dirgera-mcp"
+version = "0.1.0"
+description = "Dirigera MCP Server for IoT control"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "dirigera>=1.2.2",
+    "fastmcp>=2.3.4",
+    "toml>=0.10.2",
+]

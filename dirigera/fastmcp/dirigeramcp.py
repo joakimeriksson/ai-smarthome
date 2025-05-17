@@ -55,23 +55,28 @@ def get_lights() -> list:
     ]
 
 @mcp.tool()
-def set_outlet(name: str, is_on: bool) -> str:
-    """Set outlet status of a named outlet. Arguments are on/off"""
-    outlet = client.get_outlet_by_name(name)
-    if outlet is None:
-        return f"Outlet '{name}' not found"
-    outlet.set_on(outlet_on=is_on)
-    return f"outlet {name} set to {is_on}."
+def set_onoff(name: str, is_on: bool) -> str:
+    """Set outlet or light status of a named outlet or light. Arguments are on/off"""
+    try: 
+        outlet = client.get_outlet_by_name(name)
+        outlet.set_on(outlet_on=is_on)
+        return f"outlet {name} set to {is_on}."
+    except:
+        try: 
+            light = client.get_light_by_name(name)
+            light.set_light(lamp_on=is_on)
+            return f"light {name} set to {is_on}."
+        except:
+            return f"Outlet/Light '{name}' not found"
 
 @mcp.tool()
-def set_light_level(name: str, is_on: bool, light_level: int) -> str:
-    """Set light status of a named light. Arguments are on/off, intensity (int)"""
+def set_light_level(name: str, light_level: int) -> str:
+    """Set light status of a named light. Arguments is light_level(int)"""
     light = client.get_light_by_name(name)
     if light is None:
         return f"Light '{name}' not found"
-    light.set_light(lamp_on=is_on)
     light.set_light_level(light_level=light_level)
-    return f"light {name} set to {is_on} with level {light_level}."
+    return f"light {name} set to level {light_level}."
 
 @mcp.tool()
 def set_light_color(name: str, color_saturation: float, color_hue: float) -> str:

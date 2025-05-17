@@ -22,3 +22,21 @@ host = '<your dirigera host>'
 token = "<your dirigera token>"
 
 ```
+
+In Claude and other tools you will need something like this in your config.json:
+
+```json
+{
+  "mcpServers": {
+    "dirigera": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/joakimeriksson/work/ai-smarthome/dirigera/fastmcp",
+        "run",
+        "dirigeramcp.py"
+      ]
+    }
+  }
+}
+```

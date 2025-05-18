@@ -8,6 +8,13 @@ from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
+import os
+
+# Use Logfire if the LOGFIRE_TOKEN environment variable is set
+if os.getenv("LOGFIRE_TOKEN"):
+    import logfire
+    logfire.configure(token=os.getenv("LOGFIRE_TOKEN"))
+    logfire.instrument_pydantic_ai()
 
 # Start an MCP Server
 server = MCPServerStdio(
@@ -38,4 +45,7 @@ async def main():
         result = await agent.run("Toggle the status of the lamp at the couch (Soffa)", message_history=result.new_messages())
         print(result)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
+    
+app = agent.to_a2a()

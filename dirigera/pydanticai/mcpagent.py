@@ -44,8 +44,12 @@ async def main():
         print(result)
         result = await agent.run("Toggle the status of the lamp at the couch (Soffa)", message_history=result.new_messages())
         print(result)
+        # Start an Agent CLI
+        await agent.to_cli()
 
 if __name__ == "__main__":
+    # If run as a script, run the chat automation
     asyncio.run(main())
-    
-app = agent.to_a2a()
+else:
+    # If run as a module, run as an A2A agent (e.g. with uvicorn)
+    app = agent.to_a2a()

@@ -7,14 +7,22 @@
 </head>
 <body>
     <h1>C64 Chat Client</h1>
-    <div id="emulator-container">
-        <!-- Emulator will be embedded here -->
+
+    <div id="emulator-section"> <!-- Renamed for clarity -->
+        <h2>C64 Emulator (vice.js)</h2>
+        <canvas id="canvas" style="border: 0px none; width: 384px; height: 272px;"></canvas>
+        <!-- Note: Default C64 screen is 320x200, but often displayed in a 384x272 window.
+             The style attribute provides a basic size. vice.js might control this further. -->
     </div>
 
     <h2>Chat Log</h2>
     <div id="chat-log-container" style="height: 200px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
         <!-- Chat messages will appear here -->
     </div>
-    <script src="main.js" defer></script>
+
+    <!-- Script for main application logic and Module configuration -->
+    <script src="main.js"></script>
+    <!-- User must place x64.js (and x64.wasm if separate) from rjanicek/vice.js into c64-chat-client/js/ -->
+    <script type="text/javascript" src="js/x64.js"></script>
 </body>
 </html>

@@ -152,8 +152,8 @@ function initializeEmulator() {
             console.log("Vice.js arguments updated for autostart:", Module.arguments);
 
         } catch (e) {
-            console.error(`JS: Error loading \${c64ProgramName} into virtual FS: `, e);
-            appendToChatLog("System Error", `Failed to load C64 program (\${c64ProgramName}): \${e.message || String(e)}\`);
+            console.error('JS: Error loading ' + c64ProgramName + ' into virtual FS: ' + e.message);
+            appendToChatLog("System Error", 'Failed to load C64 program (' + c64ProgramName + '): ' + e.message);
         }
     });
 
@@ -182,8 +182,8 @@ async function readC64Memory(address, length) {
             const data = Module.HEAPU8.slice(address, address + readLength);
             return data;
         } catch (e) {
-            console.error(`JS: Error reading C64 memory at 0x${address.toString(16)} for length ${readLength}: ${e.message}`);
-            appendToChatLog("System Error", `Failed to read C64 memory: ${e.message}`);
+            console.error('JS: Error reading C64 memory at 0x' + address.toString(16) + ' for length ' + readLength + ': ' + e.message);
+            appendToChatLog("System Error", 'Failed to read C64 memory: ' + e.message);
             return new Uint8Array(readLength);
         }
     } else {
@@ -200,8 +200,8 @@ async function writeC64Memory(address, dataArray) {
         try {
             Module.HEAPU8.set(dataArray, address);
         } catch (e) {
-            console.error(`JS: Error writing to C64 memory at 0x${address.toString(16)}: ${e.message}`);
-            appendToChatLog("System Error", `Failed to write to C64 memory: ${e.message}`);
+            console.error('JS: Error writing to C64 memory at 0x' + address.toString(16) + ': ' + e.message);
+            appendToChatLog("System Error", 'Failed to write to C64 memory: ' + e.message);
         }
     } else {
         appendToChatLog("System Warning", "Emulator memory (HEAPU8 or FS) not available for writing.");
@@ -233,7 +233,7 @@ function appendToChatLog(speaker, text) {
     if (chatLogContainer) {
         const messageElement = document.createElement('p');
         const sanitizedText = String(text || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        messageElement.innerHTML = `<strong>${speaker}:</strong> ${sanitizedText.replace(/\n/g, '<br>')}`;
+        messageElement.innerHTML = '<strong>' + speaker + ':</strong> ' + sanitizedText.replace(/\n/g, '<br>');
         chatLogContainer.appendChild(messageElement);
         chatLogContainer.scrollTop = chatLogContainer.scrollHeight;
     } else {
@@ -246,13 +246,13 @@ async function checkC64Prompt() {
     const flag = flagArray[0];
 
     if (flag === 0x01) {
-        console.log("JS: Prompt ready flag is set (0x01) by C64 program!");
+        console.log('JS: C64 prompt ready: ' + promptText + " (0x01) by C64 program!");
         appendToChatLog("System", "C64 program signaled prompt is ready (flag is 1).");
 
         const promptBytes = await readC64Memory(PROMPT_BUFFER_ADDRESS, PROMPT_MAX_LENGTH);
         const promptText = convertPETSCIIBytesToString(promptBytes);
 
-        console.log(`JS: Read prompt from C64 memory (0x${PROMPT_BUFFER_ADDRESS.toString(16)}): "${promptText}" (bytes: ${Array.from(promptBytes).map(b => b.toString(16)).join(',')})`);
+        console.log("JS: Read prompt from C64 memory (0x" + PROMPT_BUFFER_ADDRESS.toString(16) + "): \"" + promptText + "\" (bytes: " + Array.from(promptBytes).map(b => b.toString(16)).join(',') + ")");
 
         if (promptText.trim().length > 0) {
             appendToChatLog("User (C64)", promptText);
@@ -281,11 +281,11 @@ async function checkC64Prompt() {
 
                     await writeC64Memory(RESPONSE_BUFFER_ADDRESS, responseBytes);
                     await writeC64Memory(RESPONSE_READY_FLAG_ADDRESS, new Uint8Array([0x01]));
-                    appendToChatLog("System", `Response written to C64 memory (0x${RESPONSE_BUFFER_ADDRESS.toString(16)}) and response flag set (0x${RESPONSE_READY_FLAG_ADDRESS.toString(16)}).`);
+                    appendToChatLog("System", "Response written to C64 memory (0x" + RESPONSE_BUFFER_ADDRESS.toString(16) + ") and response flag set (0x" + RESPONSE_READY_FLAG_ADDRESS.toString(16) + ").");
                 })
                 .catch(error => {
-                    console.error("JS: Error calling Chat API:", error);
-                    appendToChatLog("System", `Error calling API: ${error.message || String(error)}`);
+                    console.error('JS: Error in sendPromptToChatAPI: ' + error);
+                    appendToChatLog("System Error", 'Failed to get response from chat API: ' + error);
                 });
         }
     }
@@ -296,6 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setInterval(checkC64Prompt, 3000);
     console.log("Started polling for C64 prompts using real memory functions (if emulator loaded).");
-    console.log(`The C64 program '\${c64ProgramName}' should autostart, write 'HI' to 0x\${PROMPT_BUFFER_ADDRESS.toString(16)}, and set flag 0x\${PROMPT_READY_FLAG_ADDRESS.toString(16)} to 1.`);
-    appendToChatLog("System", `Chat client initialized. Vice.js emulator configured with \${c64ProgramName}. Polling for C64 prompts.`);
+    console.log("The C64 program '" + c64ProgramName + "' should autostart, write 'HI' to 0x" + PROMPT_BUFFER_ADDRESS.toString(16) + ", and set flag 0x" + PROMPT_READY_FLAG_ADDRESS.toString(16) + " to 1.");
+    appendToChatLog("System", "Chat client initialized. Vice.js emulator configured with " + c64ProgramName + ". Polling for C64 prompts.");
 });

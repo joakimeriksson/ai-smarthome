@@ -134,12 +134,18 @@ function initializeEmulator() {
       mute: false,
       wait_for_assets: false,
       hide_utils: true,
+      // turbo: false, // Default is false, can be true for faster loading/no speed limit
+      // port1: 0, // 0=keyboard, 1=mouse, 2=numpad, 3=gamepad1, etc.
+      // port2: 2,
     };
 
     console.log(`Loading virtualc64web with samesite_file: \${vc64web_player.samesite_file.name} and config:`, config);
     appendToChatLog("System", `Loading \${c64ProgramName} into virtualc64web...`);
     try {
-        vc64web_player.load(targetElement, config);
+        // Encode the config object as per virtualc64web documentation
+        const encodedConfig = encodeURIComponent(JSON.stringify(config));
+        vc64web_player.load(targetElement, encodedConfig);
+
         console.log(`virtualc64web emulator loaded with \${c64ProgramName}. Autostart is true.`);
         appendToChatLog("System", `\${c64ProgramName} loaded, emulator starting.`);
     } catch (e) {
@@ -205,15 +211,13 @@ async function writeC64Memory(address, dataArray) {
     if (typeof vc64web_player === 'undefined' || typeof vc64web_player.exec !== 'function') {
         appendToChatLog("System Warning", "Emulator exec function not available for writing memory.");
         console.warn("JS: writeC64Memory - vc64web_player.exec not available.");
-        return Promise.reject(new Error("vc64web_player.exec is not available for writing.")); // Return a rejected promise
+        return Promise.reject(new Error("vc64web_player.exec is not available for writing."));
     }
 
     if (!dataArray || dataArray.length === 0) {
-        // console.warn("JS: writeC64Memory - No data provided to write.");
-        return Promise.resolve(); // Or reject, depending on desired behavior for empty writes
+        return Promise.resolve();
     }
 
-    // Convert Uint8Array to a string representation of a JS array, e.g., "[72,73,0]"
     const dataString = `[${Array.from(dataArray).join(',')}]`;
 
     const codeToExecute = `
@@ -222,29 +226,24 @@ async function writeC64Memory(address, dataArray) {
             const data = ${dataString};
             try {
                 if (typeof wasm_poke !== 'function') {
-                    // console.error('wasm_poke is not defined in iframe.'); // Log in iframe console
                     throw new Error('wasm_poke is not defined in iframe.');
                 }
                 for (let i = 0; i < data.length; i++) {
                     wasm_poke(addr + i, data[i]);
                 }
-                // console.log('Wrote ' + data.length + ' bytes to ' + addr + ' in iframe.'); // Log in iframe console
             } catch (e) {
-                // console.error('Error in iframe during wasm_poke: ' + (e.message || String(e))); // Log in iframe console
-                // Optionally, could try to postMessage an error back if write confirmation is needed,
-                // but current spec for write doesn't involve a response.
+                // console.error('Error in iframe during wasm_poke: ' + (e.message || String(e)));
             }
         })();
     `;
 
     try {
-        // console.log(\`Executing code in iframe for write to address: 0x\${address.toString(16)}\`);
         vc64web_player.exec(codeToExecute);
-        return Promise.resolve(); // Indicate success of dispatching the write command
+        return Promise.resolve();
     } catch (e) {
         console.error(\`Error executing vc64web_player.exec for write to 0x\${address.toString(16)}:\`, e);
         appendToChatLog("System Error", `Failed to initiate C64 write: \${e.message}`);
-        return Promise.reject(e); // Propagate the error
+        return Promise.reject(e);
     }
 }
 
@@ -284,7 +283,7 @@ function appendToChatLog(speaker, text) {
 
 async function checkC64Prompt() {
     if (typeof vc64web_player === 'undefined' ||
-        (typeof vc64web_player.exec !== 'function' && (typeof vc64web_player.peek !== 'function' || typeof vc64web_player.poke !== 'function'))) {
+        (typeof vc64web_player.exec !== 'function' && (typeof vc64web_player.peek !== 'function' || typeof vc64web_player.poke !== 'function'))) { // Check for exec primarily now
         return;
     }
 

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal C64 Emulator Test (virtualc64web)</title>
+    <script src="https://vc64web.github.io/js/vc64web_player.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 20px; background-color: #f0f0f0; color: #333; }
+        #emulator_target_test { width: 384px; height: 272px; border: 1px solid #ccc; margin-bottom: 20px; background-color: #000; color: white; text-align: center; line-height: 272px; }
+        p { max-width: 600px; text-align: center; margin-bottom:15px; padding: 0 10px;}
+        .container { padding:20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p>This page attempts to load <strong>virtualc64web</strong> with a simple test program (<code>chatinput.prg</code>) that should write "HI" to memory and print "SENT HI" to the C64 screen.</p>
+        <p>If successful, the C64 screen will appear below, run the program, and display "SENT HI".<br>
+           Check your browser's developer console for any errors if it doesn't load as expected.</p>
+        <div id="emulator_target_test">Emulator loading...</div>
+    </div>
+
+    <script>
+        // This script runs after the DOM is available.
+        document.addEventListener('DOMContentLoaded', function() {
+            const targetElement_Test = document.getElementById('emulator_target_test');
+
+            if (typeof vc64web_player === 'undefined') {
+                if (targetElement_Test) {
+                    targetElement_Test.innerHTML = '<p style="color:red; font-weight:bold;">Error: vc64web_player.js did not load or `vc64web_player` object is not available. Check console for script loading errors.</p>';
+                }
+                console.error("Minimal Test Error: vc64web_player.js did not load or `vc64web_player` object is not available.");
+                return;
+            }
+
+            // Base64 encoded PRG for: 10 POKE 49152,72:POKE 49153,73:POKE 49154,0 \r 20 POKE 53247,1 \r 30 PRINT "SENT HI"
+            const c64ProgramBase64_Test = 'AQgYCApOIDQ5MTUyLDcyup4gNDkxNTMsNzO6niA0OTE1NCwwABQIFJ4gNTMyNDcsMQADDggepCITU0VOVCBISSIABA==';
+            const c64ProgramName_Test = 'chatinput.prg';
+
+            vc64web_player.samesite_file = {
+                base64: c64ProgramBase64_Test,
+                name: c64ProgramName_Test
+            };
+
+            const config_Test = {
+                openROMS: true,       // Essential for ROM loading
+                navbar: 'bottom',     // Show emulator navbar for this test (provides more feedback)
+                wide: false,          // Standard C64 aspect ratio
+                border: 0.2,          // Border thickness for the emulator view
+                autostart: true,      // Autostart the program in samesite_file
+                mute: false,          // Ensure sound is enabled
+                // turbo: false,      // Optional: set to true for faster loading/execution if needed for testing
+                // show_fps: true,    // Optional: display FPS
+            };
+
+            if (targetElement_Test) {
+                try {
+                    console.log("Minimal Test: Attempting to load virtualc64web with config:", JSON.stringify(config_Test), "and samesite_file:", vc64web_player.samesite_file);
+                    vc64web_player.load(targetElement_Test, encodeURIComponent(JSON.stringify(config_Test)));
+                    // The div content will be replaced by the iframe.
+                    // We can't reliably update it after .load() as it might already be gone.
+                    console.log("Minimal Test: vc64web_player.load() called. Check for iframe and C64 screen.");
+                } catch (e) {
+                    console.error("Minimal Test: Error calling vc64web_player.load():", e);
+                    if (targetElement_Test) { // Check again, it might be removed by a failed load attempt
+                        targetElement_Test.innerHTML = '<p style="color:red; font-weight:bold;">Error calling vc64web_player.load(): ' + e.message + '</p>';
+                    }
+                }
+            } else {
+                console.error("Minimal Test Error: Emulator target element 'emulator_target_test' not found.");
+            }
+        });
+    </script>
+</body>
+</html>

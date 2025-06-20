@@ -1,4 +1,4 @@
-{
+[{
     "conditions": {
         "executortype": "container-executor",
         "executornames": [
@@ -16,11 +16,7 @@
     "nodename": "spotmqtt",
     "funcname": "execute",
     "kwargs": {
-<<<<<<< Updated upstream
         "cmd": "pip install requests; pip install paho-mqtt; python /cfs/cronfiles/spotmqtt.py",
-=======
-        "cmd": "wget https://raw.githubusercontent.com/joakimeriksson/ai-smarthome/refs/heads/master/airflow/spotmqtt.py; pip install requests; pip install paho-mqtt; python spotmqtt.py ; cat /cfs/cronfiles/spotmqtt.py",
->>>>>>> Stashed changes
         "docker-image": "python:3.11"
     },
     "maxexectime": 55,
@@ -43,8 +39,4 @@
             }
         ]
     }
-<<<<<<< Updated upstream
 }]
-=======
-}
->>>>>>> Stashed changes

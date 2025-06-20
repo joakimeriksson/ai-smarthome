@@ -7,12 +7,9 @@ import git
 # Load configuration from config.toml
 config = toml.load('config.toml')
 GITHUB_TOKEN = config['github']['token']
-
-# Get the main repository config (first one in the list)
-repo_config = config['repositories'][0]
-REPO_FULL_NAME = repo_config['repo_full_name']
-LOCAL_REPO_PATH = repo_config['local_repo_path']
-LOCAL_REPO_BRANCH = repo_config['local_repo_branch']
+REPO_FULL_NAME = config['github']['repo_full_name']
+LOCAL_REPO_PATH = config['github']['local_repo_path']
+LOCAL_REPO_BRANCH = config['github']['local_repo_branch']
 
 def fetch_commits_from_local_repo(repo_path):
     commits = []
@@ -20,12 +17,12 @@ def fetch_commits_from_local_repo(repo_path):
     all_commits = list(repo.iter_commits(LOCAL_REPO_BRANCH))
 
     for commit in tqdm(all_commits, desc='Commits'):
-        #diff = commit.diff(None, create_patch=True)
-        #diff_text = ''.join([d.diff.decode('utf-8') for d in diff])
+        diff = commit.diff(None, create_patch=True)
+        diff_text = ''.join([d.diff.decode('utf-8') for d in diff])
         commits.append({
             'sha': commit.hexsha,
             'message': commit.message,
-            #'diff': diff_text
+            'diff': diff_text
         })
 
     return commits
@@ -62,6 +59,7 @@ def fetch_data(repo):
     print(f"Fetching commits from local repository at {LOCAL_REPO_PATH}...")
     commits = fetch_commits_from_local_repo(LOCAL_REPO_PATH)
 
+
     return issues, pull_requests, commits
 
 def link_issues_to_fixes(issues, pull_requests, commits):
@@ -74,10 +72,7 @@ def link_issues_to_fixes(issues, pull_requests, commits):
         for commit_message in pr['commits']:
             # Check if commit message closes an issue
             if 'closes #' in commit_message.lower():
-                # Extract the part after the '#'
-                issue_number_part = commit_message.split('#')[1].split()[0]
-                # Ensure it's numeric before converting to int
-                issue_number = int(''.join(filter(str.isdigit, issue_number_part)))
+                issue_number = int(commit_message.split('#')[1].split()[0])
                 if issue_number in issue_to_fix:
                     issue_to_fix[issue_number].append({
                         'type': 'PR',
@@ -85,25 +80,17 @@ def link_issues_to_fixes(issues, pull_requests, commits):
                         'body': pr['body']
                     })
 
-    repo = git.Repo(LOCAL_REPO_PATH)
     # Link via commits
     for commit in commits:
-        try:
-            if 'closes #' in commit['message'].lower():
-                issue_number_part = commit['message'].split('#')[1].split()[0]
-                issue_number = int(''.join(filter(str.isdigit, issue_number_part)))
-                if issue_number in issue_to_fix:
-                    commitobject = repo.commit(commit['sha'])
-                    diff = commitobject.diff(None, create_patch=True)
-                    diff_text = ''.join([d.diff.decode('utf-8') for d in diff])
-                    issue_to_fix[issue_number].append({
-                        'type': 'Commit',
-                        'message': commit['message'],
-                        'diff': diff_text
-                    })
-        except Exception as e:
-            print(f"Error processing commit linking: {str(e)}")
-            continue
+        if 'closes #' in commit['message'].lower():
+            issue_number = int(commit['message'].split('#')[1].split()[0])
+            if issue_number in issue_to_fix:
+                issue_to_fix[issue_number].append({
+                    'type': 'Commit',
+                    'message': commit['message'],
+                    'diff': commit['diff']
+                })
+
     return issue_to_fix
 
 def generate_dataset(issues, issue_to_fix):

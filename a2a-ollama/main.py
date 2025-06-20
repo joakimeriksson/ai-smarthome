@@ -6,7 +6,6 @@
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langgraph.graph.graph import CompiledGraph
-from langchain_core.messages import HumanMessage, SystemMessage
 import logging
 import click
 import typing
@@ -16,19 +15,9 @@ from common.types import AgentCapabilities,AgentCard, AgentSkill, JSONRPCRespons
 from common.server.task_manager import InMemoryTaskManager, SendTaskRequest, SendTaskStreamingRequest, SendTaskStreamingResponse, SendTaskResponse, Task, TaskState, TaskStatus
 
 # Configure logging
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("A2A Ollama Test")
-logger.setLevel(logging.INFO)
 
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(levelname)s - %(asctime)s - %(name)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
-
-
-system = SystemMessage(content="You are a helpful assistant that likes to talk about the weather.")
 # Some Ollama agent code
 def create_ollama_agent(ollama_base_url: str, ollama_model: str):
   logger.info(f"Creating ollama agent: {ollama_base_url}, {ollama_model}")
@@ -40,20 +29,11 @@ def create_ollama_agent(ollama_base_url: str, ollama_model: str):
   agent = create_react_agent(ollama_chat_llm, tools=[])
   return agent
 
-async def run_ollama(ollama_agent: CompiledGraph, prompt: str, image: typing.Union[None, bytes] = None):
-  # Create a message with image content
-  content = [{"type": "text", "text": prompt}]
-  if image is not None:
-    content.append({
-      "type": "image_url",
-      "image_url": {"url": f"data:image/jpeg;base64,{image}"},
-    })
-
-  message = HumanMessage(content=content)
-
+async def run_ollama(ollama_agent: CompiledGraph, prompt: str):
   agent_response = await ollama_agent.ainvoke(
     {"messages": [
-        system, message
+        {"role": "system", "content": "You are a helpful assistant that likes to talk about the weather."},
+        {"role": "user", "content": prompt}
     ]}
   )
   message = agent_response["messages"][-1].content
@@ -72,25 +52,14 @@ class MyAgentTaskManager(InMemoryTaskManager):
       self.ollama_agent = None
 
   async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
-#    logger.info(f"on_send_task received: {request}")
-    image_data = None
-
-    for part in request.params.message.parts:
-      if part.type == "text":
-        logger.info(f"on_send_task TEXT received: {part.text[0:40]}")
-      elif part.type == "file":
-        logger.info(f"on_send_task FILE received: {part.file.name}")
-        image_data = part.file.bytes
-
+    logger.info(f"on_send_task received: {request}")
     # Upsert a task stored by InMemoryTaskManager
     await self.upsert_task(request.params)
     
     received_text = request.params.message.parts[0].text
-    logger.info(f"on_send_task received: {received_text}")
-
     response_text = f"on_send_task received: {received_text}"
     if self.ollama_agent is not None:
-      response_text = await run_ollama(ollama_agent=self.ollama_agent, prompt=received_text, image=image_data)
+      response_text = await run_ollama(ollama_agent=self.ollama_agent, prompt=received_text)
 
     task_id = request.params.id
     task = await self._update_task(

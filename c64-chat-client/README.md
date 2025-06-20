@@ -28,14 +28,14 @@ No special emulator file downloads are required by the user. The `virtualc64web`
 4.  `chatinput.prg` executes on the C64:
     *   Writes "HI" (as PETSCII bytes) to `PROMPT_BUFFER_ADDRESS` (0xC000).
     *   Writes `0x01` to `PROMPT_READY_FLAG_ADDRESS` (0xCFFF).
-5.  The Javascript (`main.js`) polls the `PROMPT_READY_FLAG_ADDRESS` using its `readC64Memory` function (which now internally uses `virtualc64web`'s mechanisms, e.g., `vc64web_player.peek()`).
+5.  The Javascript (`main.js`) polls the `PROMPT_READY_FLAG_ADDRESS` using its `readC64Memory` function. This function internally uses `vc64web_player.exec()` to run a small script within the emulator environment that calls `wasm_peek()` to read C64 memory byte by byte. The resulting data is sent back to `main.js` using the browser's `postMessage` API.
 6.  When the flag is detected:
-    *   Javascript reads the prompt ("HI") from `PROMPT_BUFFER_ADDRESS`.
+    *   Javascript reads the prompt ("HI") from `PROMPT_BUFFER_ADDRESS` using the same `readC64Memory` mechanism.
     *   The prompt is displayed in the HTML chat log.
     *   Javascript sends the prompt to a (currently mocked) Chat API.
     *   The Chat API's response is received.
     *   The response is displayed in the HTML chat log.
-    *   Javascript converts the response to PETSCII bytes and writes it to `RESPONSE_BUFFER_ADDRESS` (0xC100) and sets `RESPONSE_READY_FLAG_ADDRESS` (0xCFFE) using its `writeC64Memory` function (internally using e.g. `vc64web_player.poke()`). (The current `chatinput.prg` does not read this response).
+    *   Javascript converts the response to PETSCII bytes and writes it to `RESPONSE_BUFFER_ADDRESS` (0xC100) and sets `RESPONSE_READY_FLAG_ADDRESS` (0xCFFE) using its `writeC64Memory` function. This function also uses `vc64web_player.exec()` to run a script within the emulator that calls `wasm_poke()` to write the data to C64 memory. (The current `chatinput.prg` does not read this response).
 
 ## Memory Map (JS <-> C64 Interaction)
 

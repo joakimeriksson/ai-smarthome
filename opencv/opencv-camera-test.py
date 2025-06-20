@@ -1,7 +1,7 @@
 import numpy as np
 import cv2, sys
 
-cap = cv2.VideoCapture(0) #"rtsp://192.168.1.55:554/s0")
+cap = cv2.VideoCapture(1) #"rtsp://192.168.1.55:554/s0")
 print('Is the IP camera turned on: {}'.format(cap.isOpened()))
 print(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 print(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

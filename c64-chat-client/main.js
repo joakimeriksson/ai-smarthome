@@ -1,13 +1,4 @@
 // --- Global C64 Program Data ---
-// C64 Program Definition:
-// 10 POKE 49152,72 : POKE 49153,73 : POKE 49154,0  ; Writes "HI" then null to 0xC000
-// 20 POKE 53247,1                                 ; Sets flag 0xCFFF to 1
-// 30 PRINT "SENT HI"                             ; Prints to C64 screen
-//
-// PRG file (binary for CBM, starts with load address $0801 = 2049)
-// Hex: 01 08 18 08 0A 00 9E 20 34 39 31 35 32 2C 37 32 BA 9E 20 34 39 31 35 33 2C 37 33 BA 9E 20 34 39 31 35 34 2C 30 00 14 08 14 00 9E 20 35 33 32 34 37 2C 31 00 1E 08 1E 00 99 20 22 53 45 4E 54 20 48 49 22 00 00 00
-
-// --- C64 Emulator Integration ---
 const c64ProgramBase64 = 'AQgYCApOIDQ5MTUyLDcyup4gNDkxNTMsNzO6niA0OTE1NCwwABQIFJ4gNTMyNDcsMQADDggepCITU0VOVCBISSIABA==';
 const c64ProgramName = 'chatinput.prg';
 
@@ -16,13 +7,18 @@ const CHAT_API_KEY = 'YOUR_API_KEY_HERE'; // Placeholder
 const CHAT_API_ENDPOINT = 'YOUR_CHAT_API_ENDPOINT_HERE'; // Placeholder
 
 // --- C64 Memory Map ---
-const PROMPT_BUFFER_ADDRESS = 0xC000; // 49152 (chatinput.prg writes "HI" here)
+const PROMPT_BUFFER_ADDRESS = 0xC000;
 const PROMPT_MAX_LENGTH = 255;
-const PROMPT_READY_FLAG_ADDRESS = 0xCFFF; // 53247 (chatinput.prg POKEs this to 1)
+const PROMPT_READY_FLAG_ADDRESS = 0xCFFF;
 
 const RESPONSE_BUFFER_ADDRESS = 0xC100;
 const RESPONSE_MAX_LENGTH = 255;
 const RESPONSE_READY_FLAG_ADDRESS = 0xCFFE;
+
+// --- PostMessage Read Globals ---
+let pendingC64Reads = {};
+let c64ReadRequestId = 0;
+const C64_READ_TIMEOUT_MS = 5000; // 5 seconds for read timeout
 
 
 // --- PETSCII Conversion ---
@@ -124,83 +120,134 @@ function initializeEmulator() {
         return;
     }
 
-    // samesite_file tells vc64web_player to load this program from base64 data
-    // instead of fetching from a URL.
     vc64web_player.samesite_file = {
       base64: c64ProgramBase64,
       name: c64ProgramName
     };
 
     const config = {
+      openROMS: true,
       navbar: 'hidden',
       wide: false,
       border: 0.1,
       autostart: true,
-      wait_for_assets: false, // true if you have separate .d64, .crt etc. For samesite_file, false is fine.
+      mute: false,
+      wait_for_assets: false,
       hide_utils: true,
-      // turbo: true, // Could enable for faster loading/execution if needed.
     };
 
-    console.log(`Loading virtualc64web with samesite_file: ${vc64web_player.samesite_file.name}`);
-    appendToChatLog("System", `Loading ${c64ProgramName} into virtualc64web...`);
+    console.log(`Loading virtualc64web with samesite_file: \${vc64web_player.samesite_file.name} and config:`, config);
+    appendToChatLog("System", `Loading \${c64ProgramName} into virtualc64web...`);
     try {
-        // vc64web_player.load() will replace the content of targetElement with the emulator
         vc64web_player.load(targetElement, config);
-        // Note: virtualc64web does not have a direct postRun equivalent like Emscripten's Module.
-        // We assume autostart handles running the program.
-        // Further interaction (like knowing when it's truly "ready") might require polling memory
-        // or specific player events if available.
-        console.log(`virtualc64web emulator loaded with ${c64ProgramName}. Autostart is true.`);
-        appendToChatLog("System", `${c64ProgramName} loaded, emulator starting.`);
+        console.log(`virtualc64web emulator loaded with \${c64ProgramName}. Autostart is true.`);
+        appendToChatLog("System", `\${c64ProgramName} loaded, emulator starting.`);
     } catch (e) {
         console.error("Error calling vc64web_player.load():", e);
-        appendToChatLog("System Error", `Failed to load emulator: ${e.message || String(e)}`);
+        appendToChatLog("System Error", `Failed to load emulator: \${e.message || String(e)}\`);
     }
 }
 
-// --- C64 Memory Access (now for virtualc64web) ---
-// vc64web_player provides peek() and poke()
 async function readC64Memory(address, length) {
-    const readLength = Math.max(0, length);
-    const data = new Uint8Array(readLength);
-    if (typeof vc64web_player !== 'undefined' && vc64web_player.peek) {
-        try {
-            for (let i = 0; i < readLength; i++) {
-                data[i] = vc64web_player.peek(address + i);
-            }
-            // console.log(`JS: Read ${readLength} bytes from C64 memory address 0x${address.toString(16)}`);
-            return data;
-        } catch (e) {
-            console.error(`JS: Error reading C64 memory at 0x${address.toString(16)} for length ${readLength}: ${e.message}`);
-            appendToChatLog("System Error", `Failed to read C64 memory: ${e.message}`);
-            return data; // Returns zeroed array on error
+    return new Promise((resolve, reject) => {
+        if (typeof vc64web_player === 'undefined' || typeof vc64web_player.exec !== 'function') {
+            appendToChatLog("System Warning", "Emulator exec function not available for reading memory.");
+            reject(new Error("vc64web_player.exec is not available. Emulator not ready or script not loaded."));
+            return;
         }
-    } else {
-        // console.warn("JS: readC64Memory - vc64web_player.peek not available. Emulator not ready?");
-        appendToChatLog("System Warning", "Emulator peek function not available for reading memory.");
-        return data; // Returns zeroed array
+
+        const readLength = Math.max(0, length);
+        const requestId = `readReq${c64ReadRequestId++}`;
+
+        pendingC64Reads[requestId] = { resolve, reject };
+
+        const codeToExecute = `
+            (function() {
+                const addr = ${address};
+                const len = ${readLength};
+                const reqId = '${requestId}';
+                const result = [];
+                try {
+                    if (typeof wasm_peek !== 'function') {
+                        throw new Error('wasm_peek is not defined in iframe.');
+                    }
+                    for (let i = 0; i < len; i++) {
+                        result.push(wasm_peek(addr + i));
+                    }
+                    window.parent.postMessage({ type: 'c64ReadResult', id: reqId, data: result }, '*');
+                } catch (e) {
+                    window.parent.postMessage({ type: 'c64ReadResult', id: reqId, error: e.message || String(e) }, '*');
+                }
+            })();
+        `;
+
+        try {
+            vc64web_player.exec(codeToExecute);
+            setTimeout(() => {
+                if (pendingC64Reads[requestId]) {
+                    appendToChatLog("System Error", `C64 Read Timeout (ID: \${requestId})`);
+                    pendingC64Reads[requestId].reject(new Error(`C64 read operation timed out for ID: \${requestId}`));
+                    delete pendingC64Reads[requestId];
+                }
+            }, C64_READ_TIMEOUT_MS);
+
+        } catch (e) {
+            console.error(\`Error executing vc64web_player.exec for read (ID: \${requestId}):\`, e);
+            appendToChatLog("System Error", `Failed to initiate C64 read: \${e.message}`);
+            delete pendingC64Reads[requestId];
+            reject(e);
+        }
+    });
+}
+
+
+async function writeC64Memory(address, dataArray) {
+    if (typeof vc64web_player === 'undefined' || typeof vc64web_player.exec !== 'function') {
+        appendToChatLog("System Warning", "Emulator exec function not available for writing memory.");
+        console.warn("JS: writeC64Memory - vc64web_player.exec not available.");
+        return Promise.reject(new Error("vc64web_player.exec is not available for writing.")); // Return a rejected promise
+    }
+
+    if (!dataArray || dataArray.length === 0) {
+        // console.warn("JS: writeC64Memory - No data provided to write.");
+        return Promise.resolve(); // Or reject, depending on desired behavior for empty writes
+    }
+
+    // Convert Uint8Array to a string representation of a JS array, e.g., "[72,73,0]"
+    const dataString = `[${Array.from(dataArray).join(',')}]`;
+
+    const codeToExecute = `
+        (function() {
+            const addr = ${address};
+            const data = ${dataString};
+            try {
+                if (typeof wasm_poke !== 'function') {
+                    // console.error('wasm_poke is not defined in iframe.'); // Log in iframe console
+                    throw new Error('wasm_poke is not defined in iframe.');
+                }
+                for (let i = 0; i < data.length; i++) {
+                    wasm_poke(addr + i, data[i]);
+                }
+                // console.log('Wrote ' + data.length + ' bytes to ' + addr + ' in iframe.'); // Log in iframe console
+            } catch (e) {
+                // console.error('Error in iframe during wasm_poke: ' + (e.message || String(e))); // Log in iframe console
+                // Optionally, could try to postMessage an error back if write confirmation is needed,
+                // but current spec for write doesn't involve a response.
+            }
+        })();
+    `;
+
+    try {
+        // console.log(\`Executing code in iframe for write to address: 0x\${address.toString(16)}\`);
+        vc64web_player.exec(codeToExecute);
+        return Promise.resolve(); // Indicate success of dispatching the write command
+    } catch (e) {
+        console.error(\`Error executing vc64web_player.exec for write to 0x\${address.toString(16)}:\`, e);
+        appendToChatLog("System Error", `Failed to initiate C64 write: \${e.message}`);
+        return Promise.reject(e); // Propagate the error
     }
 }
 
-async function writeC64Memory(address, dataArray) { // dataArray should be Uint8Array or array of bytes
-    if (!dataArray || dataArray.length === 0) {
-        return;
-    }
-    if (typeof vc64web_player !== 'undefined' && vc64web_player.poke) {
-        try {
-            for (let i = 0; i < dataArray.length; i++) {
-                vc64web_player.poke(address + i, dataArray[i]);
-            }
-            // console.log(`JS: Wrote \${dataArray.length} bytes to C64 memory address 0x\${address.toString(16)}`);
-        } catch (e) {
-            console.error(`JS: Error writing to C64 memory at 0x\${address.toString(16)}: ${e.message}`);
-            appendToChatLog("System Error", `Failed to write to C64 memory: ${e.message}`);
-        }
-    } else {
-        // console.warn("JS: writeC64Memory - vc64web_player.poke not available. Emulator not ready?");
-        appendToChatLog("System Warning", "Emulator poke function not available for writing memory.");
-    }
-}
 
 async function sendPromptToChatAPI(promptText) {
     console.log(`Sending prompt to Chat API: "${promptText}"`);
@@ -235,70 +282,84 @@ function appendToChatLog(speaker, text) {
     }
 }
 
-
-
-
 async function checkC64Prompt() {
-    if (!window.Module || !Module.HEAPU8 || typeof FS === 'undefined') {
-        console.error("Emulator memory (HEAPU8 or FS) not available for reading. Click start.");
+    if (typeof vc64web_player === 'undefined' ||
+        (typeof vc64web_player.exec !== 'function' && (typeof vc64web_player.peek !== 'function' || typeof vc64web_player.poke !== 'function'))) {
         return;
     }
-    
-    console.log("Checking for C64 prompt...");
-    const flagArray = await readC64Memory(PROMPT_READY_FLAG_ADDRESS, 1);
-    const flag = flagArray[0];
 
-    console.log("JS: C64 prompt ready flag: " + flag + " (0x" + flag.toString(16) + ")");
+    try {
+        const flagArray = await readC64Memory(PROMPT_READY_FLAG_ADDRESS, 1);
+        const flag = flagArray[0];
 
-    const screenarray = readRam(0x400, 256);
-    const screenText = convertPETSCIIBytesToString(screenarray);
-    console.log("JS: Read screen from C64 memory (0x400): \"" + screenText + "\" (bytes: " + Array.from(screenarray).map(b => b.toString(16)).join(',') + ")");
-    console.log("JS: Screen text: \"" + screenarray + "\"");
+        if (flag === 0x01) {
+            console.log("JS: Prompt ready flag is set (0x01) by C64 program!");
+            appendToChatLog("System", "C64 program signaled prompt is ready (flag is 1).");
 
-    if (flag === 0x01) {
-        console.log("JS: Prompt ready flag is set (0x01) by C64 program!");
-        appendToChatLog("System", "C64 program signaled prompt is ready (flag is 1).");
+            const promptBytes = await readC64Memory(PROMPT_BUFFER_ADDRESS, PROMPT_MAX_LENGTH);
+            const promptText = convertPETSCIIBytesToString(promptBytes);
 
-        const promptBytes = await readC64Memory(PROMPT_BUFFER_ADDRESS, PROMPT_MAX_LENGTH);
-        const promptText = convertPETSCIIBytesToString(promptBytes);
+            console.log(`JS: Read prompt from C64 memory (0x${PROMPT_BUFFER_ADDRESS.toString(16)}): "${promptText}"`);
 
-        console.log(`JS: Read prompt from C64 memory (0x${PROMPT_BUFFER_ADDRESS.toString(16)}): "${promptText}"`);
+            if (promptText.trim().length > 0) {
+                appendToChatLog("User (C64)", promptText);
+            } else {
+                console.log("JS: Prompt text from C64 buffer is empty. Not sending to API.");
+                appendToChatLog("System", "Detected ready flag from C64, but prompt buffer was empty.");
+            }
 
-        if (promptText.trim().length > 0) {
-            appendToChatLog("User (C64)", promptText);
-        } else {
-            console.log("JS: Prompt text from C64 buffer is empty. Not sending to API.");
-            appendToChatLog("System", "Detected ready flag from C64, but prompt buffer was empty.");
+            await writeC64Memory(PROMPT_READY_FLAG_ADDRESS, new Uint8Array([0x00]));
+            console.log("JS: Prompt ready flag reset to 0x00.");
+            appendToChatLog("System", "Prompt flag reset to 0 by JS.");
+
+            if (promptText.trim().length > 0) {
+                sendPromptToChatAPI(promptText)
+                    .then(async response => {
+                        console.log("JS: Chat API response received:", response);
+                        const assistantResponse = response.choices[0].message.content;
+                        console.log("JS: Assistant says:", assistantResponse);
+                        appendToChatLog("Assistant", assistantResponse);
+
+                        console.log("JS: Preparing to write response back to C64 memory...");
+                        const responseBytes = convertStringToPETSCIIBytes(assistantResponse);
+
+                        await writeC64Memory(RESPONSE_BUFFER_ADDRESS, responseBytes);
+                        await writeC64Memory(RESPONSE_READY_FLAG_ADDRESS, new Uint8Array([0x01]));
+                        appendToChatLog("System", `Response written to C64 memory (0x${RESPONSE_BUFFER_ADDRESS.toString(16)}) and response flag set (0x${RESPONSE_READY_FLAG_ADDRESS.toString(16)}).`);
+                    })
+                    .catch(error => {
+                        console.error("JS: Error calling Chat API:", error);
+                        appendToChatLog("System", `Error calling API: ${error.message || String(error)}`);
+                    });
+            }
         }
-
-        await writeC64Memory(PROMPT_READY_FLAG_ADDRESS, new Uint8Array([0x00]));
-        console.log("JS: Prompt ready flag reset to 0x00.");
-        appendToChatLog("System", "Prompt flag reset to 0 by JS.");
-
-        if (promptText.trim().length > 0) {
-            sendPromptToChatAPI(promptText)
-                .then(async response => {
-                    console.log("JS: Chat API response received:", response);
-                    const assistantResponse = response.choices[0].message.content;
-                    console.log("JS: Assistant says:", assistantResponse);
-                    appendToChatLog("Assistant", assistantResponse);
-
-                    console.log("JS: Preparing to write response back to C64 memory...");
-                    const responseBytes = convertStringToPETSCIIBytes(assistantResponse);
-
-                    await writeC64Memory(RESPONSE_BUFFER_ADDRESS, responseBytes);
-                    await writeC64Memory(RESPONSE_READY_FLAG_ADDRESS, new Uint8Array([0x01]));
-                    appendToChatLog("System", `Response written to C64 memory (0x${RESPONSE_BUFFER_ADDRESS.toString(16)}) and response flag set (0x${RESPONSE_READY_FLAG_ADDRESS.toString(16)}).`);
-                })
-                .catch(error => {
-                    console.error("JS: Error calling Chat API:", error);
-                    appendToChatLog("System", `Error calling API: ${error.message || String(error)}`);
-                });
-        }
+    } catch (error) {
+        console.error("JS: Error in checkC64Prompt polling cycle:", error);
+        appendToChatLog("System Error", `Polling cycle error: ${error.message || String(error)}`);
     }
 }
 
+// --- PostMessage Event Listener ---
+window.addEventListener('message', event => {
+    if (event.data && event.data.type === 'c64ReadResult') {
+        const { id, data, error } = event.data;
+        if (pendingC64Reads[id]) {
+            if (error) {
+                console.error(`C64 Read Error via postMessage (ID: \${id}):\`, error);
+                appendToChatLog("System Error", `C64 Read Error (postMessage ID \${id}): \${error}`);
+                pendingC64Reads[id].reject(new Error(error));
+            } else {
+                pendingC64Reads[id].resolve(new Uint8Array(data));
+            }
+            delete pendingC64Reads[id];
+        }
+    }
+});
+
+
 document.addEventListener('DOMContentLoaded', () => {
+    initializeEmulator();
+
     setInterval(checkC64Prompt, 3000);
     console.log("Started polling for C64 prompts.");
     console.log(`The C64 program '\${c64ProgramName}' should autostart with virtualc64web.`);

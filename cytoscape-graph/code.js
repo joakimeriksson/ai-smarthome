@@ -61,7 +61,10 @@ var cy = cytoscape({
       name: 'klay',
       directed: true,
       padding: 10,
-      klay: {spacing: 120}
+      klay: {
+        spacing: 120,
+        fixedAlignment: "LEFTDOWN"
+      }
     }
 }); // cy init
   

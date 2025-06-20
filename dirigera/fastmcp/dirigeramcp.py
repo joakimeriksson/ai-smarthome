@@ -93,9 +93,15 @@ def set_light_color(name: str, color_saturation: float, color_hue: float) -> str
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Dirigera MCP Server for IoT device management')
     parser.add_argument('--config-path', default="./dirigera_mcp_server_config.toml", help='Path to Dirigera server configuration file (TOML format)')
+    parser.add_argument('--host', default="127.0.0.1", help='Host to bind to')
+    parser.add_argument('--port', default=8000, type=int, help='Port to bind to')
+    parser.add_argument('--transport', default="stdio", help='Transport to use (stdio, sse or http)')
     args = parser.parse_args()
     conf = toml.load(args.config_path)
     host = conf['dirigera']['host']
     token = conf['dirigera']['token']
     client = dirigera.Hub(token=token, ip_address=host)
-    mcp.run()
+    if args.transport != "stdio":
+        mcp.run(transport=args.transport, host=args.host, port=args.port)
+    else:
+        mcp.run()

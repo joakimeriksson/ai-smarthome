@@ -1,7 +1,13 @@
 // --- Global C64 Program Data ---
-// Program: 10 POKE 49152,72:POKE 49153,73:POKE 49154,0  (Writes "HI" then null to 0xC000)
-//          20 POKE 53247,1 (Sets flag 0xCFFF to 1)
-//          30 PRINT "SENT HI" (Prints to C64 screen)
+// C64 Program Definition:
+// 10 POKE 49152,72 : POKE 49153,73 : POKE 49154,0  ; Writes "HI" then null to 0xC000
+// 20 POKE 53247,1                                 ; Sets flag 0xCFFF to 1
+// 30 PRINT "SENT HI"                             ; Prints to C64 screen
+//
+// PRG file (binary for CBM, starts with load address $0801 = 2049)
+// Hex: 01 08 18 08 0A 00 9E 20 34 39 31 35 32 2C 37 32 BA 9E 20 34 39 31 35 33 2C 37 33 BA 9E 20 34 39 31 35 34 2C 30 00 14 08 14 00 9E 20 35 33 32 34 37 2C 31 00 1E 08 1E 00 99 20 22 53 45 4E 54 20 48 49 22 00 00 00
+
+// --- C64 Emulator Integration ---
 const c64ProgramBase64 = 'AQgYCApOIDQ5MTUyLDcyup4gNDkxNTMsNzO6niA0OTE1NCwwABQIFJ4gNTMyNDcsMQADDggepCITU0VOVCBISSIABA==';
 const c64ProgramName = 'chatinput.prg';
 
@@ -135,8 +141,8 @@ function initializeEmulator() {
       // turbo: true, // Could enable for faster loading/execution if needed.
     };
 
-    console.log(`Loading virtualc64web with samesite_file: \${vc64web_player.samesite_file.name}`);
-    appendToChatLog("System", `Loading \${c64ProgramName} into virtualc64web...`);
+    console.log(`Loading virtualc64web with samesite_file: ${vc64web_player.samesite_file.name}`);
+    appendToChatLog("System", `Loading ${c64ProgramName} into virtualc64web...`);
     try {
         // vc64web_player.load() will replace the content of targetElement with the emulator
         vc64web_player.load(targetElement, config);
@@ -144,11 +150,11 @@ function initializeEmulator() {
         // We assume autostart handles running the program.
         // Further interaction (like knowing when it's truly "ready") might require polling memory
         // or specific player events if available.
-        console.log(`virtualc64web emulator loaded with \${c64ProgramName}. Autostart is true.`);
-        appendToChatLog("System", `\${c64ProgramName} loaded, emulator starting.`);
+        console.log(`virtualc64web emulator loaded with ${c64ProgramName}. Autostart is true.`);
+        appendToChatLog("System", `${c64ProgramName} loaded, emulator starting.`);
     } catch (e) {
         console.error("Error calling vc64web_player.load():", e);
-        appendToChatLog("System Error", `Failed to load emulator: \${e.message || String(e)}\`);
+        appendToChatLog("System Error", `Failed to load emulator: ${e.message || String(e)}`);
     }
 }
 
@@ -162,10 +168,10 @@ async function readC64Memory(address, length) {
             for (let i = 0; i < readLength; i++) {
                 data[i] = vc64web_player.peek(address + i);
             }
-            // console.log(`JS: Read \${readLength} bytes from C64 memory address 0x\${address.toString(16)}`);
+            // console.log(`JS: Read ${readLength} bytes from C64 memory address 0x${address.toString(16)}`);
             return data;
         } catch (e) {
-            console.error(`JS: Error reading C64 memory at 0x\${address.toString(16)} for length ${readLength}: ${e.message}`);
+            console.error(`JS: Error reading C64 memory at 0x${address.toString(16)} for length ${readLength}: ${e.message}`);
             appendToChatLog("System Error", `Failed to read C64 memory: ${e.message}`);
             return data; // Returns zeroed array on error
         }
@@ -229,9 +235,25 @@ function appendToChatLog(speaker, text) {
     }
 }
 
+
+
+
 async function checkC64Prompt() {
+    if (!window.Module || !Module.HEAPU8 || typeof FS === 'undefined') {
+        console.error("Emulator memory (HEAPU8 or FS) not available for reading. Click start.");
+        return;
+    }
+    
+    console.log("Checking for C64 prompt...");
     const flagArray = await readC64Memory(PROMPT_READY_FLAG_ADDRESS, 1);
     const flag = flagArray[0];
+
+    console.log("JS: C64 prompt ready flag: " + flag + " (0x" + flag.toString(16) + ")");
+
+    const screenarray = readRam(0x400, 256);
+    const screenText = convertPETSCIIBytesToString(screenarray);
+    console.log("JS: Read screen from C64 memory (0x400): \"" + screenText + "\" (bytes: " + Array.from(screenarray).map(b => b.toString(16)).join(',') + ")");
+    console.log("JS: Screen text: \"" + screenarray + "\"");
 
     if (flag === 0x01) {
         console.log("JS: Prompt ready flag is set (0x01) by C64 program!");
@@ -277,8 +299,6 @@ async function checkC64Prompt() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeEmulator();
-
     setInterval(checkC64Prompt, 3000);
     console.log("Started polling for C64 prompts.");
     console.log(`The C64 program '\${c64ProgramName}' should autostart with virtualc64web.`);

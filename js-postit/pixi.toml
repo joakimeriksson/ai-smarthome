@@ -1,7 +1,7 @@
 [project]
 authors = ["Joakim Eriksson <joakim.eriksson@ri.se>"]
 channels = ["conda-forge", "https://conda.modular.com/max"]
-description = "Add a short description here"
+description = "A simple python map generator for events."
 name = "js-postit"
 platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
@@ -14,3 +14,4 @@ numpy = ">=2.2.3,<3"
 pyyaml = ">=6.0.2,<7"
 pillow = ">=11.1.0,<12"
 pip = ">=25.0.1,<26"
+yolo11 = "*"

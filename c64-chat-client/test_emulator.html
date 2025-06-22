@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual Serial & ROM Test (virtualc64web)</title>
     <script src="js/vc64web_player.js"></script>
+    <script src="main.js"></script>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 20px; background-color: #f0f0f0; color: #333; }
         #emulator_target_test { width: 384px; height: 272px; border: 1px solid #ccc; margin-bottom: 20px; background-color: #000; color: white; text-align: center; line-height: 272px; }
@@ -103,6 +104,25 @@
             } else {
                 console.error("Minimal Test Error: Emulator target element 'emulator_target_test' not found.");
             }
+
+            setInterval(() => {
+                const iframe = document.getElementById('vc64web');
+
+                console.log("Minimal Test: Emulator should be ready. Call send_chat(prompt) to interact with the Chat API.");
+                if (iframe.contentWindow.rs232_message) {
+                    vc64web_player.exec(set_speed);
+                    console.log("Minimal Test: rs232_message is available:", iframe.contentWindow.rs232_message);
+                    response = send_chat(iframe.contentWindow.rs232_message);
+                    response.then((response) => {
+                    console.log("Minimal Test: Response from send_chat:", response);
+                    vc64web_player.exec(write_string_to_ser, response + "\\n");
+                    iframe.contentWindow.rs232_message = "";
+                    });
+                } else {
+                    console.log("Minimal Test: rs232_message is not available.");
+                }
+            }, 1000);
+
 
             // --- Serial Interface Elements JavaScript ---
             const serialInputText = document.getElementById('serial_input_text');

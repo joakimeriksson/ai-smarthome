@@ -37,18 +37,24 @@
     </div>
 
     <script>
-        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAHwgUAJ8gMiwyLDAsxyg4KQAqCB4AoSMyLEEkAD8IKACLIEEks7EiIiCnIJkgQSQ7AEgIMgCJIDMwAAAA';
+        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAJggPAJkgIkM2NCBDSEFUIENMSUVOVCIANwgUAJ8gMiwyLDAsxyg3KQBGCB4AmSAiQ0hBVD4iOwBPCCgAhSBBJABkCC0AmSAiU0VORElORzogIjtBJABuCDIAmDIsQSQAjgg3AJkgIldBSVRJTkcgRk9SIFJFU1BPTlNFLi4uIgCYCDwAhDIsQiQArQhGAJkgIlJFU1BPTlNFOiI7QiQAswhQAJkAvAhaAIkgMzAAAAA=';
+//        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAHwgUAJ8gMiwyLDAsxyg4KQAqCB4AoSMyLEEkAD8IKACLIEEks7EiIiCnIJkgQSQ7AEgIMgCJIDMwAAAA';
         const c64ProgramName = 'chatinput.prg';
 
-        let test_bkg = 0;
-        function write_hello() {
-            action(`'hello world'`);
-            wasm_poke(0xd020,0x01);
-            test_bkg = wasm_peek(0xd021);
+//        let test_bkg = 0;
+        function set_speed() {
+//            wasm_poke(0xd020,0x01);
+//            test_bkg = wasm_peek(0xd021);
             wasm_configure('OPT_SER_SPEED', 600);
-            console.log("Read test_bkg: ", test_bkg);
-            window.test_bkg = test_bkg;
+//            console.log("Read test_bkg: ", test_bkg);
+//            window.test_bkg = test_bkg;
         }
+
+        function write_string_to_ser(str) {
+            //const petsciiBytes = convertStringToPETSCIIBytes(str);
+            wasm_write_string_to_ser(str);
+        }
+
 
         document.addEventListener('DOMContentLoaded', function() {
             const targetElement_Test = document.getElementById('emulator_target_test');
@@ -114,11 +120,13 @@
                     const textToSend = serialInputText.value;
                     if (textToSend) {
                         const escapedText = textToSend.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                        const command = "wasm_write_string_to_ser('" + escapedText + "')";
-                        console.log("Executing serial send command:", command);
                         try {
-                            vc64web_player.exec(write_hello);
-                            serialOutputArea.textContent = "Sent: '" + textToSend + "' to C64.\nOn C64, try: OPEN2,2,0,\CHR$(13)+CHR$(10):INPUT#2,A$:PRINT A$:CLOSE2";
+//                            vc64web_player.exec("wasm_write_string_to_ser", escapedText + "\n")
+                            // send in the set speed.
+                            vc64web_player.exec(set_speed);
+                            // write_fn = () => write_string_to_ser(escapedText + "}n");
+                            vc64web_player.exec(write_string_to_ser, "TEST\\n");
+                            serialOutputArea.textContent = "Sent: '" + escapedText + "' to C64.\nOn C64, try: OPEN2,2,0,\CHR$(13)+CHR$(10):INPUT#2,A$:PRINT A$:CLOSE2";
                         } catch (e) {
                             console.error("Error executing serial send:", e);
                             serialOutputArea.textContent = "Error sending: " + e.message;
@@ -142,6 +150,7 @@
                         const iframe = document.getElementById('vc64web');
                         if (typeof iframe.contentWindow.rs232_message !== 'undefined') {
                             receivedData = iframe.contentWindow.rs232_message;
+                            iframe.contentWindow.rs232_message = "";
                             console.log("Attempted direct read of iframe.contentWindow.rs232_message:", receivedData);
                         } else {
                             console.log("iframe.contentWindow.rs232_message is undefined.");
@@ -154,14 +163,6 @@
                     
                     serialOutputArea.textContent = "Read attempt: " + receivedData + "\n(On C64, try: OPEN2,2,0:PRINT#2,\"HELLO FROM C64\":CLOSE2)";
 
-                    if (typeof vc64web_player.exec === 'function') {
-                        try {
-                            vc64web_player.exec("if (typeof rs232_message === 'string') { rs232_message = ''; } else { console.log('rs232_message not a string or not found in iframe for clearing.'); }");
-                            console.log("Attempted to clear rs232_message in iframe via exec.");
-                        } catch (e) {
-                            console.error("Error executing rs232_message clear:", e);
-                        }
-                    }
                 });
             }
         });

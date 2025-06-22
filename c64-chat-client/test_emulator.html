@@ -38,8 +38,7 @@
     </div>
 
     <script>
-        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAJggPAJkgIkM2NCBDSEFUIENMSUVOVCIANwgUAJ8gMiwyLDAsxyg3KQBGCB4AmSAiQ0hBVD4iOwBPCCgAhSBBJABkCC0AmSAiU0VORElORzogIjtBJABuCDIAmDIsQSQAjgg3AJkgIldBSVRJTkcgRk9SIFJFU1BPTlNFLi4uIgCYCDwAhDIsQiQArQhGAJkgIlJFU1BPTlNFOiI7QiQAswhQAJkAvAhaAIkgMzAAAAA=';
-//        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAHwgUAJ8gMiwyLDAsxyg4KQAqCB4AoSMyLEEkAD8IKACLIEEks7EiIiCnIJkgQSQ7AEgIMgCJIDMwAAAA';
+        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAJggUAJkgIkM2NCBDSEFUIENMSUVOVCIANwgeAJ8gMiwyLDAsxyg3KQBKCCgAmSA6IJkgIkNIQVQ+IjsAUwgyAIUgQSQAaQg8AIsgQSSyIlFVSVQiIKcgMjAwAH4IRgCZICJTRU5ESU5HOiAiO0EkAIgIUACYMixBJACoCFoAmSAiV0FJVElORyBGT1IgUkVTUE9OU0UuLi4iALMIZAChIzIsQiQAxQhuAIsgQiSyIiIgpyAxMDAAzwh4AJkgQiQ7ANoIggChIzIsQiQA5AiMAJkgQiQ7AP8IlgCLIMIoNjY3KbOxwig2NjgpIKcgMTMwAAUJoACZAA4JqgCJIDQwABYJyACgIDIALAnSAJkgOiCZICJHT09ELUJZRSEiADIJ3ACAAAAA'
         const c64ProgramName = 'chatinput.prg';
 
 //        let test_bkg = 0;
@@ -107,16 +106,14 @@
 
             setInterval(() => {
                 const iframe = document.getElementById('vc64web');
-
-                console.log("Minimal Test: Emulator should be ready. Call send_chat(prompt) to interact with the Chat API.");
                 if (iframe.contentWindow.rs232_message) {
                     vc64web_player.exec(set_speed);
                     console.log("Minimal Test: rs232_message is available:", iframe.contentWindow.rs232_message);
                     response = send_chat(iframe.contentWindow.rs232_message);
+                    iframe.contentWindow.rs232_message = "";
                     response.then((response) => {
                     console.log("Minimal Test: Response from send_chat:", response);
                     vc64web_player.exec(write_string_to_ser, response + "\\n");
-                    iframe.contentWindow.rs232_message = "";
                     });
                 } else {
                     console.log("Minimal Test: rs232_message is not available.");

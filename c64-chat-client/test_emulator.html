@@ -113,7 +113,8 @@
                     iframe.contentWindow.rs232_message = "";
                     response.then((response) => {
                     console.log("Minimal Test: Response from send_chat:", response);
-                    vc64web_player.exec(write_string_to_ser, response + "\\n");
+                    const safeArg = JSON.stringify(response)
+                    vc64web_player.exec(write_string_to_ser, safeArg + "\\n");
                     });
                 } else {
                     console.log("Minimal Test: rs232_message is not available.");

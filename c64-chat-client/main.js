@@ -17,7 +17,7 @@ const CHAT_API_ENDPOINT = 'http://localhost:11434/v1/chat/completions'; // Place
 async function sendPromptToChatAPI(userText, opts = {}) {
     const {
       model     = "gemma3:4b",
-      system    = "You are a helpful C64 assistant. Respond in clear, concise text suitable for a C64 display. Avoid multi-line responses.",
+      system    = "You are a helpful C64 assistant. Respond in clear, concise text suitable for a C64 display. Avoid multi-line responses and use ASCII or PETSCII characters only.",
       endpoint  = "http://localhost:11434/v1/chat/completions",   // Ollama’s OpenAI-style route  [oai_citation:0‡apidog.com](https://apidog.com/blog/how-to-use-ollama/?utm_source=chatgpt.com)
       apiKey    = null,
       stream    = false

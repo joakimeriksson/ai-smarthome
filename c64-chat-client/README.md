@@ -60,18 +60,20 @@ This creates a loop where the user types on the C64, the message goes to the AI,
     *   You can modify the `CHAT_API_ENDPOINT` and `model` (default "gemma3:4b") constants in `main.js` if your API is located elsewhere or if you wish to use a different model.
 
 3.  **Run the Application**:
-    *   Open the `c64-chat-client/test_emulator.html` file in a modern web browser (e.g., Chrome, Firefox).
-    *   The C64 emulator should load and automatically start the `chatinput.prg` program. You should see the C64 BASIC "READY." prompt, followed by messages from the chat program.
+    Start up a webserver using python:
+    ```
+    python -m http.server 8000
+    ```
+    Open the http://localhost:8000/test_emulator.html` file in a modern web browser (e.g., Chrome, Firefox).
+    The C64 emulator should load and automatically start the `chatinput.prg` program. You should see the C64 BASIC "READY." prompt, followed by messages from the chat program.
 
 4.  **Interact with the Chat Client**:
-    *   The C64 program `chatinput.prg` will prompt you with "CHAT>".
-    *   Type your message to the AI assistant and press `RETURN`.
-    *   The C64 program will display "SENDING: [your message]".
-    *   It will then show "WAITING FOR RESPONSE...".
-    *   The JavaScript code in `test_emulator.html` will detect this message via the emulated serial port, pass it to `main.js`, which sends it to the chat API.
-    *   When the API responds, the response is sent back to the C64 program via serial input.
-    *   The C64 program will then print the AI's response on the screen.
-    *   You can then type another message. To quit the C64 input loop, you can type "QUIT" (case-sensitive) and press `RETURN`.
+    The C64 program `chatinput.prg` will prompt you with "CHAT>". Type your message to the AI assistant and press `RETURN`.
+    The C64 program will display "SENDING: [your message]" and then show "WAITING FOR RESPONSE...".
+    The JavaScript code in `test_emulator.html` will detect this message via the emulated serial port, pass it to `main.js`, which sends it to the chat API.
+    When the API responds, the response is sent back to the C64 program via serial input.
+    The C64 program will then print the AI's response on the screen.
+    You can then type another message. To quit the C64 input loop, you can type "QUIT" (case-sensitive) and press `RETURN`.
 
 5.  **Developer Console**:
-    *   Open your browser's developer console to see log messages from both `test_emulator.html` and `main.js`, which can be helpful for debugging. This includes messages about serial data being sent/received and interactions with the chat API.
+    Open your browser's developer console to see log messages from both `test_emulator.html` and `main.js`, which can be helpful for debugging. This includes messages about serial data being sent/received and interactions with the chat API.

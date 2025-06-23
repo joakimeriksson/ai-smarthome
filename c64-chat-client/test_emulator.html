@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Serial & ROM Test (virtualc64web)</title>
+    <script src="js/vc64web_player.js"></script>
+    <script src="main.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 20px; background-color: #f0f0f0; color: #333; }
+        #emulator_target_test { width: 384px; height: 272px; border: 1px solid #ccc; margin-bottom: 20px; background-color: #000; color: white; text-align: center; line-height: 272px; }
+        p { max-width: 600px; text-align: center; margin-bottom:15px; padding: 0 10px;}
+        .container { padding:20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 20px;}
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p>This page attempts to load <strong>virtualc64web</strong> with explicitly defined ROM URLs and should boot to the BASIC READY prompt.</p>
+        <p>You will need to interact with the C64 screen directly (e.g., type BASIC commands).<br>
+           Check your browser's developer console for any errors. Ensure ROM files (kernal.rom, basic.rom, chargen.rom) are in a 'roms' subdirectory relative to this HTML file.</p>
+        <div id="emulator_target_test">Emulator loading...</div>
+    </div>
+
+    <div class="container" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #fff;">
+        <h3>Manual Serial Test</h3>
+        <div>
+            <input type="text" id="serial_input_text" placeholder="Enter text to send to C64" style="width: 200px; margin-right: 5px;">
+            <button id="serial_send_button">Send to C64 (Serial)</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <button id="serial_read_button">Check/Read C64 Serial Output</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <strong>Output from C64 (via rs232_message):</strong>
+            <pre id="serial_output_area" style="border: 1px solid #eee; min-height: 50px; background-color: #f9f9f9; padding: 5px;"></pre>
+        </div>
+    </div>
+
+    <script>
+        const c64ProgramBase64 = 'AQgOCAoAmSDHKDE0NykAJggUAJkgIkM2NCBDSEFUIENMSUVOVCIANwgeAJ8gMiwyLDAsxyg3KQBKCCgAmSA6IJkgIkNIQVQ+IjsAUwgyAIUgQSQAaQg8AIsgQSSyIlFVSVQiIKcgMjAwAH4IRgCZICJTRU5ESU5HOiAiO0EkAIgIUACYMixBJACoCFoAmSAiV0FJVElORyBGT1IgUkVTUE9OU0UuLi4iALMIZAChIzIsQiQAxQhuAIsgQiSyIiIgpyAxMDAAzwh4AJkgQiQ7ANoIggChIzIsQiQA5AiMAJkgQiQ7AP8IlgCLIMIoNjY3KbOxwig2NjgpIKcgMTMwAAUJoACZAA4JqgCJIDQwABYJyACgIDIALAnSAJkgOiCZICJHT09ELUJZRSEiADIJ3ACAAAAA'
+        const c64ProgramName = 'chatinput.prg';
+
+//        let test_bkg = 0;
+        function set_speed() {
+//            wasm_poke(0xd020,0x01);
+//            test_bkg = wasm_peek(0xd021);
+            wasm_configure('OPT_SER_SPEED', 600);
+//            console.log("Read test_bkg: ", test_bkg);
+//            window.test_bkg = test_bkg;
+        }
+
+        function write_string_to_ser(str) {
+            //const petsciiBytes = convertStringToPETSCIIBytes(str);
+            wasm_write_string_to_ser(str);
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const targetElement_Test = document.getElementById('emulator_target_test');
+
+            if (typeof vc64web_player === 'undefined') {
+                if (targetElement_Test) {
+                    targetElement_Test.innerHTML = '<p style="color:red; font-weight:bold;">Error: vc64web_player.js did not load or `vc64web_player` object is not available. Check console for script loading errors.</p>';
+                }
+                console.error("Minimal Test Error: vc64web_player.js did not load or `vc64web_player` object is not available.");
+                return;
+            }
+
+            const config_Test = {
+                openROMS: false,       // Still useful, but we are providing explicit URLs too
+                navbar: 'bottom',     // Show emulator navbar for this test
+                wide: false,          // Standard C64 aspect ratio
+                border: 0.2,          
+                autostart: false,     // Important: Do not autostart any program, boot to BASIC
+                mute: false,
+                // show_fps: true,    // Optional: display FPS
+            };
+
+            if (targetElement_Test) {
+                try {
+                    console.log("Minimal Test: Attempting to load virtualc64web with explicit ROM URLs and config:", JSON.stringify(config_Test));
+                    // No third argument (program URL) for booting to BASIC READY
+                    vc64web_player.samesite_file=
+                    {
+                        basic_rom_url:"roms/basic.rom",
+                        kernal_rom_url:"roms/kernal.rom",
+                        charset_rom_url:"roms/chargen.rom",
+                        // samesite_file is used to load a C64 program from a base64 string
+                        base64: c64ProgramBase64,
+                        name: c64ProgramName
+                        
+                    };
+                    vc64web_player.vc64web_url='./';  //the emulator files are in the same folder as the run.html
+                    vc64web_player.load(targetElement_Test, encodeURIComponent(JSON.stringify(config_Test)));
+                    console.log("Minimal Test: vc64web_player.load() called. Emulator should start to BASIC ready screen using specified ROMs.");
+                } catch (e) {
+                    console.error("Minimal Test: Error calling vc64web_player.load():", e);
+                    if (targetElement_Test) { 
+                        targetElement_Test.innerHTML = '<p style="color:red; font-weight:bold;">Error calling vc64web_player.load(): ' + e.message + '</p>';
+                    }
+                }
+            } else {
+                console.error("Minimal Test Error: Emulator target element 'emulator_target_test' not found.");
+            }
+
+            setInterval(() => {
+                const iframe = document.getElementById('vc64web');
+                if (iframe.contentWindow.rs232_message) {
+                    vc64web_player.exec(set_speed);
+                    console.log("Minimal Test: rs232_message is available:", iframe.contentWindow.rs232_message);
+                    response = send_chat(iframe.contentWindow.rs232_message);
+                    iframe.contentWindow.rs232_message = "";
+                    response.then((response) => {
+                    console.log("Minimal Test: Response from send_chat:", response);
+                    const safeArg = JSON.stringify(response)
+                    vc64web_player.exec(write_string_to_ser, safeArg + "\\n");
+                    });
+                } else {
+                    console.log("Minimal Test: rs232_message is not available.");
+                }
+            }, 1000);
+
+
+            // --- Serial Interface Elements JavaScript ---
+            const serialInputText = document.getElementById('serial_input_text');
+            const serialSendButton = document.getElementById('serial_send_button');
+            const serialReadButton = document.getElementById('serial_read_button');
+            const serialOutputArea = document.getElementById('serial_output_area');
+
+            if (serialSendButton) {
+                serialSendButton.addEventListener('click', function() {
+                    if (typeof vc64web_player === 'undefined' || typeof vc64web_player.exec !== 'function') {
+                        console.error("vc64web_player.exec is not available.");
+                        serialOutputArea.textContent = "Error: vc64web_player.exec not available.";
+                        return;
+                    }
+                    const textToSend = serialInputText.value;
+                    if (textToSend) {
+                        const escapedText = textToSend.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                        try {
+//                            vc64web_player.exec("wasm_write_string_to_ser", escapedText + "\n")
+                            // send in the set speed.
+                            vc64web_player.exec(set_speed);
+                            // write_fn = () => write_string_to_ser(escapedText + "}n");
+                            vc64web_player.exec(write_string_to_ser, "TEST\\n");
+                            serialOutputArea.textContent = "Sent: '" + escapedText + "' to C64.\nOn C64, try: OPEN2,2,0,\CHR$(13)+CHR$(10):INPUT#2,A$:PRINT A$:CLOSE2";
+                        } catch (e) {
+                            console.error("Error executing serial send:", e);
+                            serialOutputArea.textContent = "Error sending: " + e.message;
+                        }
+                    } else {
+                        serialOutputArea.textContent = "Enter text to send.";
+                    }
+                });
+            }
+
+            if (serialReadButton) {
+                serialReadButton.addEventListener('click', function() {
+                    if (typeof vc64web_player === 'undefined') {
+                        console.error("vc64web_player is not available.");
+                        serialOutputArea.textContent = "Error: vc64web_player not available.";
+                        return;
+                    }
+
+                    let receivedData = "No data or direct access failed.";
+                    try {
+                        const iframe = document.getElementById('vc64web');
+                        if (typeof iframe.contentWindow.rs232_message !== 'undefined') {
+                            receivedData = iframe.contentWindow.rs232_message;
+                            iframe.contentWindow.rs232_message = "";
+                            console.log("Attempted direct read of iframe.contentWindow.rs232_message:", receivedData);
+                        } else {
+                            console.log("iframe.contentWindow.rs232_message is undefined.");
+                            receivedData = "iframe.contentWindow.rs232_message is undefined.";
+                        }
+                    } catch (e) {
+                        console.error("Error during direct access attempt of rs232_message:", e);
+                        receivedData = "Error during direct access: " + e.message;
+                    }
+                    
+                    serialOutputArea.textContent = "Read attempt: " + receivedData + "\n(On C64, try: OPEN2,2,0:PRINT#2,\"HELLO FROM C64\":CLOSE2)";
+
+                });
+            }
+        });
+    </script>
+</body>
+</html>

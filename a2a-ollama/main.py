@@ -32,7 +32,7 @@ def create_ollama_agent(ollama_base_url: str, ollama_model: str):
 async def run_ollama(ollama_agent: CompiledGraph, prompt: str):
   agent_response = await ollama_agent.ainvoke(
     {"messages": [
-        {"role": "system", "content": "You are a helpful assistant that likes to talk about the weather."}, 
+        {"role": "system", "content": "You are a helpful assistant that likes to talk about the weather."},
         {"role": "user", "content": prompt}
     ]}
   )

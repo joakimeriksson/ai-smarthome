@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C64 Chat Client</title>
+    <script src="https://vc64web.github.io/js/vc64web_player.js"></script>
+</head>
+<body>
+    <h1>C64 Chat Client</h1>
+
+    <div id="emulator_target" style="width: 384px; height: 272px; border: 1px solid grey; margin: 10px auto; text-align: center; line-height: 272px;">
+        <!-- virtualc64web will load here -->
+        Emulator Target
+    </div>
+
+    <h2>Chat Log</h2>
+    <div id="chat-log-container" style="height: 200px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
+        <!-- Chat messages will appear here -->
+    </div>
+
+    <!-- Script for main application logic -->
+    <script src="main.js"></script>
+    <!-- Note: x64.js script tag removed -->
+</body>
+</html>

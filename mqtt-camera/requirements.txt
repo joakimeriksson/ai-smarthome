@@ -1,6 +1,6 @@
 numpy==1.22.0
 opencv-python==4.8.1.78
 paho-mqtt==1.5.0
-protobuf==3.18.3
+protobuf==4.25.8
 PyYAML==5.4
 six==1.13.0

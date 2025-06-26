@@ -9,16 +9,92 @@ body {
     position: absolute;
     left: 0;
     top: 0;
+    color: white;
     background-color: #00057d;
   }
   
-  #eat {
+  
+
+  #edit-graph-btn {
     position: absolute;
-    left: 1em;
-    top: 1em;
-    font-size: 1em;
-    z-index: -1;
-    color: #c88;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    padding: 10px 15px;
+    background-color: #3565DA;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  #show-persons-btn {
+    position: absolute;
+    top: 60px; /* Below edit button */
+    right: 20px;
+    z-index: 10;
+    padding: 10px 15px;
+    background-color: #3565DA;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  #persons-display-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 300px;
+    max-height: 80%;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    z-index: 10;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  #persons-display-container h3 {
+    margin-top: 0;
+    color: white;
+  }
+
+  #persons-display-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .person-list-item {
+    padding: 8px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .person-list-item:last-child {
+    border-bottom: none;
+  }
+
+  .person-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .person-list-item.highlighted {
+    background-color: #5cb85c; /* A distinct highlight color */
+    font-weight: bold;
+  }
+
+  #close-persons-display-btn {
+    margin-top: 15px;
+    padding: 8px 12px;
+    background-color: #3565DA;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
   }
   
   .tooltip {
@@ -33,4 +109,52 @@ body {
     pointer-events: none;
     display: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  #editor-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #editor {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 800px;
+    height: 80%;
+    overflow-y: auto;
+  }
+
+  .editor-section {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 20px;
+  }
+
+  #nodes-list, #edges-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+
+  .editor-controls {
+    margin-top: 20px;
   }

@@ -1,11 +1,11 @@
-const graphData = {
+let graphData = {
   nodes: [
     { data: { 
         id: 'robotics', 
         label: 'Humanoid\nRobotics',
         description: "Advanced robotics systems with human-like capabilities. Focus on natural interaction and movement.",
         image: 'imgs/bot-svgrepo-com.svg'
-      }, 
+      },
       classes: 'top-right' 
     },
     { data: { 
@@ -18,7 +18,7 @@ const graphData = {
     },
     { data: { 
         id: 'edgeai', 
-        label: 'AI on the \nEdge',
+        label: 'AI on the Edge',
         description: "Intelligent processing at device level. Reducing latency and cloud dependency.",
         image: 'imgs/computer-chip-svgrepo-com-2.svg'
       }, 
@@ -26,7 +26,7 @@ const graphData = {
     },
     { data: { 
         id: 'edge', 
-        label: 'Edge\nComputing',
+        label: 'EdgeComputing',
         description: "Distributed computing architecture. Processing data closer to the source.",
         image: 'imgs/computer-chip-svgrepo-com.svg'
       }, 
@@ -34,7 +34,7 @@ const graphData = {
     },
     { data: { 
         id: 'sustainable', 
-        label: 'Sustainable\nWorld',
+        label: 'Sustainable World',
         description: "Environmental technology solutions. Creating eco-friendly tech ecosystems.",
         image: 'imgs/tabler-icon-topology-star-3.svg'
       }, 
@@ -42,9 +42,9 @@ const graphData = {
     },
     { data: { 
         id: 'csw', 
-        label: 'Connected \nSustainable World',
+        label: 'Connected Sustainable World',
         description: "Integrated sustainable technologies. Building smart, efficient futures.",
-        image: null
+        
       }, 
       classes: 'center' 
     },
@@ -58,7 +58,7 @@ const graphData = {
     },
     { data: { 
         id: 'cloud', 
-        label: 'Cloud\nServices',
+        label: 'Cloud Services',
         description: "Scalable cloud infrastructure. Flexible computing resources on demand.",
         image: 'imgs/server-cloud-svgrepo-com.svg'
       }, 
@@ -66,7 +66,7 @@ const graphData = {
     },
     { data: { 
       id: 'sensors', 
-      label: 'Smart\nSensors',
+      label: 'Smart Sensors',
       description: "Advanced IoT sensing technologies. Enabling real-time environmental and system monitoring.",
       image: 'imgs/sensor-svgrepo-com.svg'
     }, 
@@ -74,7 +74,7 @@ const graphData = {
     },
     { data: { 
       id: 'harvest', 
-      label: 'Energy\nHarvesting',
+      label: 'Energy Harvesting',
       description: "Ambient energy collection systems. Converting environmental energy into usable power.",
       image: 'imgs/solar-energy-svgrepo-com.svg'
     }, 
@@ -82,11 +82,11 @@ const graphData = {
     },
     { data: { 
       id: 'lowpower', 
-      label: 'Ultra-Low\nPower Computing',
+      label: 'Ultra-Low Power Computing',
       description: "Minimal energy consumption processors. Optimized for maximum efficiency operations.",
-      image: 'imgs/microchip-svgrepo-com.svg'
+      image: 'imgs/computer-screen.svg'
     }, 
-    classes: 'top-right' 
+    classes: 'top-right'
     },
     { data: { 
       id: 'intermittent', 
@@ -100,13 +100,13 @@ const graphData = {
       id: 'mesh', 
       label: 'Mesh\nNetworking',
       description: "Self-organizing device networks. Enabling resilient and efficient data communication.",
-      image: 'imgs/network-white-svgrepo-com.svg'
+      image: 'imgs/computer-screen.svg'
     }, 
     classes: 'top-right' 
     },
     { data: { 
       id: 'zeroIoT', 
-      label: 'Zero Energy\nIoT',
+      label: 'Zero Energy IoT',
       description: "Self-sustaining Internet of Things devices. Operating perpetually without external power sources.",
     }, 
     classes: 'center' 
@@ -125,5 +125,10 @@ const graphData = {
     { data: { source: 'lowpower', target: 'intermittent' } },
     { data: { source: 'intermittent', target: 'mesh' } },
     { data: { source: 'mesh', target: 'zeroIoT' } }
+  ],
+  persons: [
+    { name: 'Alice Smith', email: 'alice.smith@example.com', linkedNodes: ['robotics', 'llm'] },
+    { name: 'Bob Johnson', email: 'bob.johnson@example.com', linkedNodes: ['edgeai', 'cloud'] },
+    { name: 'Charlie Brown', email: 'charlie.brown@example.com', linkedNodes: ['sustainable', 'zeroIoT'] }
   ]
 };

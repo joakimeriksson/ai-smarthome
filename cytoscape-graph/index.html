@@ -1,19 +1,71 @@
 <!DOCTYPE html>
-<!-- This code is for demonstration purposes only.  You should not hotlink to Github, Rawgit, or files from the Cytoscape.js documentation in your production apps. -->
 <html>
 <head>
-<link href="style.css" rel="stylesheet" />
-<meta charset=utf-8 />
-<meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
-<title>Images</title>
-<script src="cytoscape.min.js"></script>
-<script src="https://unpkg.com/klayjs@0.4.1/klay.js"></script>
-<script src="https://unpkg.com/cytoscape-klay@3.1.2/cytoscape-klay.js"></script>
+  <link href="style.css" rel="stylesheet" />
+  <meta charset=utf-8 />
+  <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
+  <title>Technology Journey</title>
+  <script src="cytoscape.min.js"></script>
+  <script src="https://unpkg.com/klayjs@0.4.1/klay.js"></script>
+  <script src="https://unpkg.com/cytoscape-klay@3.1.2/cytoscape-klay.js"></script>
 </head>
 <body>
-<div id="cy"></div>
-<!-- Load application code at the end to ensure DOM is loaded -->
-<script src="data.js"></script>
-<script src="code.js"></script>
+
+  <div id="cy"></div>
+  <button id="edit-graph-btn">Edit Graph</button>
+  <button id="show-persons-btn">Show Persons</button>
+
+  <div id="persons-display-container" style="display: none;">
+    <h3>Persons</h3>
+    <ul id="persons-display-list"></ul>
+    <button id="close-persons-display-btn">Close</button>
+  </div>
+
+  <div id="editor-container" style="display: none;">
+    <div id="editor">
+      <h2>Graph Editor</h2>
+      
+      <div class="editor-section">
+        <h3>Nodes</h3>
+        <div id="nodes-list"></div>
+        <input type="text" id="node-id" placeholder="ID">
+        <input type="text" id="node-label" placeholder="Label">
+        <textarea id="node-description" placeholder="Description"></textarea>
+        <select id="node-image"></select>
+        <button id="add-node-btn">Add Node</button>
+        <button id="update-node-btn" style="display: none;">Update Node</button>
+      </div>
+
+      <div class="editor-section">
+        <h3>Edges</h3>
+        <div id="edges-list"></div>
+        <select id="edge-source"></select>
+        <select id="edge-target"></select>
+        <button id="add-edge-btn">Add Edge</button>
+      </div>
+
+      <div class="editor-section">
+        <h3>Persons</h3>
+        <div id="persons-list"></div>
+        <input type="text" id="person-name" placeholder="Person Name">
+        <input type="email" id="person-email" placeholder="Email (unique)">
+        <select id="person-linked-nodes" multiple size="5"></select>
+        <button id="add-person-btn">Add Person</button>
+        <button id="update-person-btn" style="display: none;">Update Person</button>
+      </div>
+
+      <div class="editor-controls">
+        <button id="save-editor-btn">Save & Close</button>
+        <button id="export-json-btn">Export to JSON</button>
+        <button id="close-editor-btn">Close without saving</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="cytoscape-icons.js"></script>
+  <script src="code.js"></script>
+  <script src="editor.js"></script>
+
 </body>
 </html>

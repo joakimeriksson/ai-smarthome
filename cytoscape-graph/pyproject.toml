@@ -1,0 +1,12 @@
+[project]
+name = "cytoscape-graph"
+version = "0.1.0"
+requires-python = ">=3.8"
+description = "An interactive technology journey visualization with an in-browser editor."
+dependencies = [
+    "flask",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

@@ -1,6 +1,6 @@
 // photos from flickr with creative commons license
 
-var cy = cytoscape({
+var cy = window.cy = cytoscape({
     container: document.getElementById('cy'),
   
     boxSelectionEnabled: false,
@@ -15,17 +15,16 @@ var cy = cytoscape({
           'background-color': '#00057D',
           'border-color': 'white',
           'border-width': 3,
+          'color': 'white'
         })
       .selector('node[label]')
         .css({
             "label": "data(label)",
             'color': 'white',
-            'font-size': 15
+            'font-size': 15,
+            'text-max-width': '100px' // Added for text wrapping
         })
-      .selector('.eater')
-        .css({
-          'border-width': 9
-        })
+      
       .selector('edge')
         .css({
           'curve-style': 'bezier',
@@ -52,7 +51,24 @@ var cy = cytoscape({
         })
       .selector('node[image]')
         .css({
-          'background-image': 'data(image)'
+          'background-image': 'data(image)',
+          'background-position': 'center',
+          'color': 'white'
+        })
+      .selector('.highlighted-node')
+        .css({
+          'border-color': 'yellow',
+          'border-width': 5
+        })
+      .selector('.highlighted-edge')
+        .css({
+          'line-color': 'yellow',
+          'target-arrow-color': 'yellow',
+          'width': 6
+        })
+      .selector('.faded')
+        .css({
+          'opacity': 0.3
         }),
   
     elements: graphData,
@@ -61,7 +77,10 @@ var cy = cytoscape({
       name: 'klay',
       directed: true,
       padding: 10,
-      klay: {spacing: 120}
+      klay: {
+        spacing: 120,
+        fixedAlignment: "LEFTDOWN"
+      }
     }
 }); // cy init
   
@@ -108,4 +127,84 @@ var cy = cytoscape({
   // Hide tooltip during pan/zoom
   cy.on('viewport', function() {
     tooltip.style.display = 'none';
+  });
+
+  const showPersonsBtn = document.getElementById('show-persons-btn');
+  const personsDisplayContainer = document.getElementById('persons-display-container');
+  const personsDisplayList = document.getElementById('persons-display-list');
+  const closePersonsDisplayBtn = document.getElementById('close-persons-display-btn');
+
+  showPersonsBtn.addEventListener('click', () => {
+    populatePersonsDisplayList();
+    personsDisplayContainer.style.display = 'block';
+  });
+
+  closePersonsDisplayBtn.addEventListener('click', () => {
+    personsDisplayContainer.style.display = 'none';
+    cy.elements().removeClass('highlighted-node highlighted-edge faded'); // Clear highlighting when closing
+  });
+
+  function populatePersonsDisplayList() {
+    personsDisplayList.innerHTML = '';
+    if (graphData.persons) {
+      graphData.persons.forEach(person => {
+        const listItem = document.createElement('li');
+        listItem.classList.add('person-list-item');
+        listItem.textContent = person.name;
+        listItem.dataset.email = person.email; // Store email for lookup
+        listItem.addEventListener('click', () => highlightPersonNodes(person.linkedNodes));
+        personsDisplayList.appendChild(listItem);
+      });
+    }
+  }
+
+  function highlightPersonNodes(nodeIds) {
+    cy.elements().removeClass('highlighted-node highlighted-edge faded');
+    cy.elements().addClass('faded');
+
+    nodeIds.forEach(nodeId => {
+      const node = cy.$('#' + nodeId);
+      if (node.length > 0) {
+        node.removeClass('faded').addClass('highlighted-node');
+      }
+    });
+  }
+
+  cy.on('tap', 'node', function(evt) {
+    const clickedNodeId = evt.target.id();
+    
+    // Clear previous node highlighting
+    cy.elements().removeClass('highlighted-node faded');
+    cy.elements().addClass('faded');
+    evt.target.removeClass('faded').addClass('highlighted-node');
+
+    // Clear previous person highlighting
+    document.querySelectorAll('.person-list-item').forEach(item => {
+      item.classList.remove('highlighted');
+    });
+
+    // Show persons display container if not already visible
+    personsDisplayContainer.style.display = 'block';
+    populatePersonsDisplayList(); // Re-populate to ensure all items are there
+
+    // Highlight persons linked to the clicked node
+    if (graphData.persons) {
+      graphData.persons.forEach(person => {
+        if (person.linkedNodes.includes(clickedNodeId)) {
+          const personListItem = personsDisplayList.querySelector(`[data-email="${person.email}"]`);
+          if (personListItem) {
+            personListItem.classList.add('highlighted');
+          }
+        }
+      });
+    }
+  });
+
+  cy.on('tap', function(event) {
+      if (event.target === cy) { // Clicked on background
+          cy.elements().removeClass('highlighted-node faded');
+          document.querySelectorAll('.person-list-item').forEach(item => {
+            item.classList.remove('highlighted');
+          });
+      }
   });

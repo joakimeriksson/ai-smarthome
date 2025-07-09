@@ -1,0 +1,21 @@
+[project]
+name = "nat64-server"
+version = "0.1.0"
+description = "A NAT64/DNS64 server implemented in Python using dpkt."
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[tasks]
+# Run the NAT64 server
+# This task requires sudo privileges to create and configure the TUN interface.
+# Example: sudo pixi run start
+start = "python main.py"
+
+# Run the NAT64 server without the TUN interface
+# This task does not require sudo privileges.
+# Example: pixi run start-no-tun
+start-no-tun = "python main.py --no-tun"
+
+[dependencies]
+python = ">=3.8"
+dpkt = ">=1.9.8"

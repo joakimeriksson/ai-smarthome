@@ -1,0 +1,16 @@
+[project]
+name = "llm-bias-interrogator"
+version = "0.1.0"
+description = "Generate and ask bias-detection questions to LLMs"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[tasks]
+# Generate a set of bias questions using one or more LLM clients
+generate = "python question_generator.py"
+# Interrogate a model with generated questions
+interrogate = "python interrogator.py"
+
+[dependencies]
+python = ">=3.10"
+openai = "*"

@@ -1,0 +1,19 @@
+# Default configuration for the bias interrogator system
+
+[generator]
+# LLM clients used to generate questions
+clients = ["ollama:llama3"]
+
+[interrogator]
+questions = "questions.json"
+
+[interrogator.answer]
+provider = "ollama"
+model = "llama3"
+base_url = "http://localhost:11434"
+
+[interrogator.analysis]
+provider = "ollama"
+model = "llama3"
+base_url = "http://localhost:11434"
+

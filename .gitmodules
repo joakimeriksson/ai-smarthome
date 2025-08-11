@@ -1,0 +1,3 @@
+[submodule "audio/sid-synth/jsSID"]
+	path = audio/sid-synth/jsSID
+	url = https://github.com/jhohertz/jsSID.git

@@ -59,7 +59,7 @@ export class Song {
         this.currentPosition = 0;
         this.loopStart = 0;
         this.loopEnd = 0;
-        this.title = "Untitled Song";
+        this.title = "SID Tracker";
     }
     
     // Get the current pattern index
@@ -146,30 +146,49 @@ class PatternManager {
     }
     
     loadInitialPattern() {
-        // Initial pattern data (from sequencer.js)
-        const initialData = [
-            { voice: 0, step: 0, note: 'C-5', instrument: 0 },
-            { voice: 0, step: 1, note: '---', instrument: 0 },
-            { voice: 0, step: 2, note: 'E-5', instrument: 0 },
-            { voice: 0, step: 3, note: '---', instrument: 0 },
-            { voice: 0, step: 4, note: 'G-5', instrument: 0 },
-            { voice: 0, step: 5, note: 'R', instrument: 0 },
-            { voice: 0, step: 6, note: 'A-5', instrument: 0 },
-            { voice: 0, step: 7, note: '---', instrument: 0 },
-            { voice: 0, step: 8, note: 'C-6', instrument: 0 },
-            { voice: 0, step: 9, note: 'R', instrument: 0 },
-            { voice: 1, step: 0, note: 'C-3', instrument: 1 },
-            { voice: 1, step: 1, note: '---', instrument: 1 },
-            { voice: 1, step: 2, note: '---', instrument: 1 },
-            { voice: 1, step: 3, note: 'E-3', instrument: 1 },
-            { voice: 1, step: 4, note: '---', instrument: 1 },
-            { voice: 1, step: 5, note: 'R', instrument: 1 },
-        ];
-        
+        // 8-bit style starter pattern (16 steps), voice 0 only
         const patternA = this.patterns[0];
-        initialData.forEach(item => {
-            patternA.setStepData(item.voice, item.step, item.note, item.instrument);
-        });
+        patternA.length = 16;
+        // Instruments
+        const leadInst = 0; // Lead (Tri)
+        const bassInst = 1; // Bass (Pulse)
+        const percInst = 3; // Perc (Noise)
+        // Clear all
+        patternA.clear();
+        // Voice 0: Lead melody
+        [
+            { s: 0,  n: 'C-4' }, { s: 1,  n: '---' },
+            { s: 2,  n: 'E-4' }, { s: 3,  n: '---' },
+            { s: 4,  n: 'G-4' }, { s: 5,  n: '---' },
+            { s: 6,  n: 'C-5' }, { s: 7,  n: 'R'   },
+            { s: 8,  n: 'A-4' }, { s: 9,  n: '---' },
+            { s: 10, n: 'F-4' }, { s: 11, n: '---' },
+            { s: 12, n: 'G-4' }, { s: 13, n: '---' },
+            { s: 14, n: 'E-4' }, { s: 15, n: 'R'   }
+        ].forEach(x => patternA.setStepData(0, x.s, x.n, leadInst));
+        // Voice 1: Bassline (simple 8-bit bass that follows the lead)
+        [
+            { s: 0,  n: 'C-2' }, { s: 1,  n: '---' },
+            { s: 2,  n: 'E-2' }, { s: 3,  n: '---' },
+            { s: 4,  n: 'G-2' }, { s: 5,  n: '---' },
+            { s: 6,  n: 'C-3' }, { s: 7,  n: 'R'   },
+            { s: 8,  n: 'A-2' }, { s: 9,  n: '---' },
+            { s: 10, n: 'F-2' }, { s: 11, n: '---' },
+            { s: 12, n: 'G-2' }, { s: 13, n: '---' },
+            { s: 14, n: 'E-2' }, { s: 15, n: 'R'   }
+        ].forEach(x => patternA.setStepData(1, x.s, x.n, bassInst));
+        // Voice 2: Rhythm (noise hits every second step)
+        for (let s = 0; s < 16; s++) {
+            if (s % 2 === 0) {
+                patternA.setStepData(2, s, 'C-3', percInst); // note ignored for noise timbre
+            } else {
+                patternA.setStepData(2, s, 'R', percInst);
+            }
+        }
+        // Keep the song sequence to a single pattern A
+        this.song.sequence = [0];
+        this.song.currentPosition = 0;
+        this.song.setLoop(0, 0);
     }
     
     // Get current active pattern

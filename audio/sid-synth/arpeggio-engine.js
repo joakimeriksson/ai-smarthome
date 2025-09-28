@@ -21,23 +21,15 @@ class ArpeggioEngine {
     }
     
     start() {
-        if (!this.isRunning) {
-            this.isRunning = true;
-            // Update arpeggios at 60Hz for smooth transitions
-            this.updateInterval = setInterval(() => this.update(), 1000 / 60);
-            console.log("Arpeggio engine started");
-        }
+        if (this.isRunning) return;
+        this.isRunning = true;
+        console.log("Arpeggio engine started (audio-driven timing)");
     }
     
     stop() {
-        if (this.isRunning) {
-            this.isRunning = false;
-            if (this.updateInterval) {
-                clearInterval(this.updateInterval);
-                this.updateInterval = null;
-            }
-            console.log("Arpeggio engine stopped");
-        }
+        if (!this.isRunning) return;
+        this.isRunning = false;
+        console.log("Arpeggio engine stopped");
     }
     
     setVoice(voice, enabled, baseFreq, notes, speed) {

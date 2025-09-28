@@ -1,4 +1,4 @@
-import { initSynth, sidPlayer, audioContext, scriptProcessor, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO } from './synth.js';
+import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister } from './synth.js';
 import { NUM_VOICES, MAX_STEPS, playbackInterval, currentStep, noteToHz, stopPlayback, startPlayback, playStep, initialPattern, setSongMode, selectPattern, getCurrentPatternLength } from './sequencer.js';
 import { patternManager, MAX_PATTERNS } from './pattern-manager.js';
 import { tempoControl } from './tempo-control.js';
@@ -6,6 +6,8 @@ import { initInstrumentEditor } from './instrument-editor.js';
 import { initSongEditor } from './song-editor.js';
 import { recordMode } from './record-mode.js';
 import { keyboardInput } from './keyboard-input.js';
+import { sidExporter } from './sid-exporter.js';
+import { sidTester } from './sid-tester.js';
 
 // Transport controls
 const playButton = document.getElementById('playButton');
@@ -40,6 +42,8 @@ const tapTempoButton = document.getElementById('tapTempoButton');
 const saveButton = document.getElementById('saveButton');
 const loadButton = document.getElementById('loadButton');
 const exportButton = document.getElementById('exportButton');
+const exportSIDButton = document.getElementById('exportSIDButton');
+const testSIDButton = document.getElementById('testSIDButton');
 const importButton = document.getElementById('importButton');
 const importFileInput = document.getElementById('importFileInput');
 
@@ -153,15 +157,46 @@ Examples:
     `);
 
     // Transport controls
-    playButton.addEventListener('click', () => {
-        if (!sidPlayer) {
+    playButton.addEventListener('click', async () => {
+        console.log('Play button clicked - initializing audio...');
+        
+        // Always initialize synth on each play to ensure it's ready
+        try {
             initSynth();
-            sidPlayer.synth.poke(0x18, 0x0F);
-            startPlayback();
-        } else {
-            sidPlayer.synth.poke(0x18, 0x0F);
-            startPlayback();
+            console.log('Synth initialized');
+        } catch (e) {
+            console.error('Synth initialization failed:', e);
+            return;
         }
+        
+        // Ensure AudioContext is running
+        if (window.audioContext) {
+            console.log('AudioContext state:', window.audioContext.state);
+            if (window.audioContext.state === 'suspended') {
+                try { 
+                    await window.audioContext.resume(); 
+                    console.log('AudioContext resumed');
+                } catch (e) { 
+                    console.error('Audio resume failed:', e); 
+                    return;
+                }
+            }
+        } else {
+            console.error('No AudioContext available');
+            return;
+        }
+        
+        // Set master volume
+        try {
+            setGlobalSIDRegister(0x18, 0x0F);
+            console.log('Master volume set to 15');
+        } catch (e) {
+            console.error('Failed to set master volume:', e);
+        }
+        
+        // Start playback
+        console.log('Starting playback...');
+        startPlayback();
     });
 
     stopButton.addEventListener('click', stopPlayback);
@@ -342,6 +377,29 @@ Examples:
         URL.revokeObjectURL(url);
         
         console.log(`Exported complete project as ${filename}`);
+    });
+
+    // Export SID functionality
+    exportSIDButton.addEventListener('click', () => {
+        // Save current UI data first
+        saveCurrentPatternFromUI();
+        
+        // Get song title from song editor or use default
+        const songTitle = patternManager.song.title || "SID Tracker Song";
+        
+        // Export as SID file
+        sidExporter.downloadSID(songTitle);
+        
+        console.log(`Exported SID file: ${songTitle}`);
+    });
+
+    // Test SID functionality
+    testSIDButton.addEventListener('click', () => {
+        // Save current UI data first
+        saveCurrentPatternFromUI();
+        
+        // Toggle test playback
+        sidTester.toggleTest();
     });
 
     // Import functionality
@@ -669,3 +727,32 @@ function updateSongPositionDisplay() {
 // Make functions globally available for sequencer and song editor
 window.refreshTrackerFromPattern = refreshTrackerFromPattern;
 window.updateSongPositionDisplay = updateSongPositionDisplay;
+
+// Optional: step highlight updater for AudioWorklet-driven sequencing
+window.updateWorkletStep = (function() {
+    let lastStep = null;
+    return function(step) {
+        const currentPattern = patternManager.getCurrentPattern();
+        const length = currentPattern.length;
+        if (lastStep !== null) {
+            const prev = ((step - 1 + length) % length);
+            const stepElement = document.querySelector(`.step-number:nth-child(${prev + 2})`);
+            if (stepElement) stepElement.classList.remove('highlight');
+            for (let voice = 0; voice < NUM_VOICES; voice++) {
+                const noteElement = document.getElementById(`note-${voice}-${prev}`);
+                const instElement = document.getElementById(`instrument-${voice}-${prev}`);
+                if (noteElement) noteElement.classList.remove('highlight');
+                if (instElement) instElement.classList.remove('highlight');
+            }
+        }
+        const stepElement = document.querySelector(`.step-number:nth-child(${step + 2})`);
+        if (stepElement) stepElement.classList.add('highlight');
+        for (let voice = 0; voice < NUM_VOICES; voice++) {
+            const noteElement = document.getElementById(`note-${voice}-${step}`);
+            const instElement = document.getElementById(`instrument-${voice}-${step}`);
+            if (noteElement) noteElement.classList.add('highlight');
+            if (instElement) instElement.classList.add('highlight');
+        }
+        lastStep = step;
+    };
+})();

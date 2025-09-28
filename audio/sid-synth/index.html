@@ -2,11 +2,11 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>SID Synth</title>
+<title>SID Tracker</title>
 <link href="style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
-<h1>SID Synth</h1>
+<h1>SID Tracker</h1>
 <div class="controls">
     <div class="control-section">
         <h3>Transport</h3>
@@ -59,9 +59,12 @@
         <h3>Project</h3>
         <button id="saveButton">Save</button>
         <button id="loadButton">Load</button>
-        <button id="exportButton">Export</button>
+        <button id="exportButton">Export JSON</button>
+        <button id="exportSIDButton">Export SID</button>
+        <button id="testSIDButton">Test SID Player</button>
         <button id="importButton">Import</button>
         <input type="file" id="importFileInput" accept=".json,.sid" style="display: none;">
+        <span id="testSIDStatus" style="display: none; font-size: 10px; color: #0A0;">Testing SID...</span>
     </div>
     
     <div class="control-section">
@@ -69,6 +72,11 @@
         <button id="instrumentEditorButton">Instrument Editor</button>
         <button id="keyboardToggleButton">Enable Keyboard</button>
         <button id="helpButton">Help</button>
+        <a href="about.html"><button>About</button></a>
+        <label style="margin-left:8px; font-size: 12px; color:#ccc;">
+          <input type="checkbox" id="lfoDebugToggle"> LFO Debug
+        </label>
+        <span id="lfoDebugLine" style="font-size: 11px; color:#9cf; margin-left:6px;"></span>
     </div>
 </div>
 
@@ -280,6 +288,55 @@
                         </select>
                     </div>
                 </div>
+                <div class="param-section filter-section">
+                    <h3>SID Filter</h3>
+                    <div class="param-row">
+                        <label for="filterEnabled">
+                            <input type="checkbox" id="filterEnabled"> Enable Filter
+                        </label>
+                    </div>
+                    <div class="param-row">
+                        <label for="filterFrequency">Cutoff: <span id="filterFrequencyValue">1024</span></label>
+                        <input type="range" id="filterFrequency" min="0" max="2047" value="1024">
+                    </div>
+                    <div class="param-row">
+                        <label for="filterResonance">Resonance: <span id="filterResonanceValue">0</span></label>
+                        <input type="range" id="filterResonance" min="0" max="240" step="16" value="0">
+                    </div>
+                    <div class="param-row">
+                        <label for="filterType">Type:</label>
+                        <select id="filterType">
+                            <option value="16">Low-pass</option>
+                            <option value="32">Band-pass</option>
+                            <option value="64">High-pass</option>
+                            <option value="48">Low-pass + Band-pass</option>
+                            <option value="80">Low-pass + High-pass</option>
+                            <option value="96">Band-pass + High-pass</option>
+                            <option value="112">All-pass</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="param-section filterlfo-section">
+                    <h3>Filter LFO</h3>
+                    <div class="param-row">
+                        <label for="filterLFOEnabled">
+                            <input type="checkbox" id="filterLFOEnabled"> Enable Filter LFO
+                        </label>
+                    </div>
+                    <div class="param-row">
+                        <label for="filterLFOFreq">Frequency: <span id="filterLFOFreqValue">0</span> Hz</label>
+                        <input type="range" id="filterLFOFreq" min="0.1" max="10" step="0.1" value="0">
+                    </div>
+                    <div class="param-row">
+                        <label for="filterLFODepth">Depth: <span id="filterLFODepthValue">0</span>%</label>
+                        <input type="range" id="filterLFODepth" min="0" max="100" value="0">
+                    </div>
+                    <div class="param-row">
+                        <label for="filterLFOContinuous">
+                            <input type="checkbox" id="filterLFOContinuous"> Continuous (no reset)
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer">
@@ -381,13 +438,18 @@
     </div>
 </div>
 
-<script type="module" src="jsSID/js/jssid.core.js"></script>
-<script type="module" src="jsSID/js/jssid.tinysid.js"></script>
-<script type="module" src="jsSID/js/pico.js"></script>
-<script type="module" src="jsSID/js/stream.js"></script>
-<script type="module" src="jsSID/js/jssid.mos6510.js"></script>
-<script type="module" src="jsSID/js/jssid.sidplayer.js"></script>
+<!-- jsSID library (loaded as regular scripts to create global variables) -->
+<script src="jsSID/js/stream.js"></script>
+<script src="jsSID/js/jssid.core.js"></script>
+<script src="jsSID/js/jssid.tinysid.js"></script>
+<script src="jsSID/js/jssid.fastsid.js"></script>
+<script src="jsSID/js/jssid.mos6510.js"></script>
+<script src="jsSID/js/jssid.sidplayer.js"></script>
+<script src="jsSID/js/pico.dev.js"></script>
+<script type="module" src="jsSID/js/6502parser.js"></script>
+<script type="module" src="jsSID/js/6502asm.js"></script>
 <script type="module" src="synth.js"></script>
+<script type="module" src="preload-audio.js"></script>
 <script type="module" src="lfo-engine.js"></script>
 <script type="module" src="arpeggio-engine.js"></script>
 <script type="module" src="pattern-manager.js"></script>
@@ -397,6 +459,8 @@
 <script type="module" src="sequencer.js"></script>
 <script type="module" src="instrument-editor.js"></script>
 <script type="module" src="song-editor.js"></script>
+<script type="module" src="sid-exporter.js"></script>
+<script type="module" src="sid-tester.js"></script>
 <script type="module" src="main.js"></script>
 </body>
 </html>

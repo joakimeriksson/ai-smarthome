@@ -1,5 +1,5 @@
 // instrument-editor.js
-import { instruments, initSynth, sidPlayer, playNote, stopVoice, stopAllVoices } from './synth.js';
+import { instruments, initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, setGlobalSIDRegister, isWorkletActive, workletNoteOff, workletUpdateInstruments } from './synth.js';
 import { lfoEngine } from './lfo-engine.js';
 import { arpeggioEngine } from './arpeggio-engine.js';
 import { keyboardInput } from './keyboard-input.js';
@@ -157,6 +157,24 @@ function loadInstrumentToEditor() {
         }
     }
     patternSelect.value = matchingPattern;
+    
+    // Filter
+    const filter = instrument.filter || { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 };
+    document.getElementById('filterEnabled').checked = filter.enabled;
+    document.getElementById('filterFrequency').value = filter.frequency;
+    document.getElementById('filterResonance').value = filter.resonance;
+    document.getElementById('filterType').value = filter.type;
+    updateSliderDisplay('filterFrequency', filter.frequency);
+    updateSliderDisplay('filterResonance', filter.resonance);
+    
+    // Filter LFO
+    const filterLFO = instrument.filterLFO || { enabled: false, freq: 0, depth: 0, continuous: false };
+    document.getElementById('filterLFOEnabled').checked = filterLFO.enabled;
+    document.getElementById('filterLFOFreq').value = filterLFO.freq;
+    document.getElementById('filterLFODepth').value = filterLFO.depth * 100;
+    document.getElementById('filterLFOContinuous').checked = filterLFO.continuous || false;
+    updateSliderDisplay('filterLFOFreq', filterLFO.freq);
+    updateSliderDisplay('filterLFODepth', Math.round(filterLFO.depth * 100));
 }
 
 function setupParameterHandlers() {
@@ -205,6 +223,30 @@ function setupParameterHandlers() {
         updateCurrentInstrument();
     });
     document.getElementById('arpeggioPattern').addEventListener('change', updateCurrentInstrument);
+    
+    // Filter controls
+    document.getElementById('filterEnabled').addEventListener('change', updateCurrentInstrument);
+    document.getElementById('filterFrequency').addEventListener('input', (e) => {
+        updateSliderDisplay('filterFrequency', e.target.value);
+        updateCurrentInstrument();
+    });
+    document.getElementById('filterResonance').addEventListener('input', (e) => {
+        updateSliderDisplay('filterResonance', e.target.value);
+        updateCurrentInstrument();
+    });
+    document.getElementById('filterType').addEventListener('change', updateCurrentInstrument);
+    
+    // Filter LFO controls
+    document.getElementById('filterLFOEnabled').addEventListener('change', updateCurrentInstrument);
+    document.getElementById('filterLFOFreq').addEventListener('input', (e) => {
+        updateSliderDisplay('filterLFOFreq', e.target.value);
+        updateCurrentInstrument();
+    });
+    document.getElementById('filterLFODepth').addEventListener('input', (e) => {
+        updateSliderDisplay('filterLFODepth', e.target.value);
+        updateCurrentInstrument();
+    });
+    document.getElementById('filterLFOContinuous').addEventListener('change', updateCurrentInstrument);
 }
 
 function updateSliderDisplay(param, value) {
@@ -265,9 +307,30 @@ function updateCurrentInstrument() {
     const pattern = document.getElementById('arpeggioPattern').value;
     instrument.arpeggio.notes = arpeggioEngine.constructor.getChordPattern(pattern);
     
+    // Filter
+    if (!instrument.filter) {
+        instrument.filter = { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 };
+    }
+    instrument.filter.enabled = document.getElementById('filterEnabled').checked;
+    instrument.filter.frequency = parseInt(document.getElementById('filterFrequency').value);
+    instrument.filter.resonance = parseInt(document.getElementById('filterResonance').value);
+    instrument.filter.type = parseInt(document.getElementById('filterType').value);
+    
+    // Filter LFO
+    if (!instrument.filterLFO) {
+        instrument.filterLFO = { enabled: false, freq: 0, depth: 0, continuous: false };
+    }
+    instrument.filterLFO.enabled = document.getElementById('filterLFOEnabled').checked;
+    instrument.filterLFO.freq = parseFloat(document.getElementById('filterLFOFreq').value);
+    instrument.filterLFO.depth = parseFloat(document.getElementById('filterLFODepth').value) / 100;
+    instrument.filterLFO.continuous = document.getElementById('filterLFOContinuous').checked;
+    
     // Update instrument selector display
     populateInstrumentSelector();
     
+    // Push live instruments to worklet so LFO/Arp updates reflect changes during playback
+    try { workletUpdateInstruments(instruments); } catch(_) {}
+
     // Notify keyboard input to use updated instrument
     if (isEditorOpen && keyboardInput.isEnabled) {
         keyboardInput.setInstrument(currentInstrumentIndex);
@@ -333,7 +396,8 @@ function deleteInstrument() {
 }
 
 async function testCurrentInstrument() {
-    if (!sidPlayer) {
+    // Ensure audio is initialized (worklet or fallback)
+    if (!window.audioContext) {
         initSynth();
     }
     
@@ -357,19 +421,22 @@ async function testCurrentInstrument() {
     }
     
     // Set master volume to max
-    if (sidPlayer && sidPlayer.synth) {
-        sidPlayer.synth.poke(0x18, 0x0F);
-    }
+    setGlobalSIDRegister(0x18, 0x0F);
     
-    // Play the note with new parameters
-    playNote(0, testFreq, 2000, instrument.waveform, instrument.ad, instrument.sr, instrument.pulseWidth, instrument.sync, instrument.ringMod);
+    // Play the note with current instrument (worklet-aware via playNote)
+    playNoteWithInstrument(0, testFreq, 2000, currentInstrumentIndex);
     
     console.log(`Testing instrument: ${instrument.name}`);
     
     // Stop the test note after duration
     setTimeout(() => {
         // Stop voice 0 properly
-        stopVoice(0);
+        if (isWorkletActive && isWorkletActive()) {
+            const instrument2 = instruments[currentInstrumentIndex];
+            workletNoteOff(0, instrument2.waveform);
+        } else {
+            stopVoice(0);
+        }
         lfoEngine.clearVoice(0);
         lfoEngine.stop();
         arpeggioEngine.clearVoice(0);

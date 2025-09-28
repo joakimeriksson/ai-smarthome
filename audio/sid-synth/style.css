@@ -200,6 +200,9 @@ button:hover {
     border: 2px solid #0F0;
     width: 80%;
     max-width: 800px;
+    max-height: 90vh;              /* Keep modal within viewport */
+    display: flex;                 /* Make header/body/footer stack */
+    flex-direction: column;
     border-radius: 5px;
     color: #0F0;
     font-family: monospace;
@@ -212,6 +215,7 @@ button:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex: 0 0 auto;               /* Fixed height section */
 }
 
 .modal-header h2 {
@@ -233,8 +237,27 @@ button:hover {
 
 .modal-body {
     padding: 20px;
-    max-height: 70vh;
-    overflow-y: auto;
+    flex: 1 1 auto;               /* Use remaining space */
+    overflow: auto;               /* Scroll inside body */
+    -webkit-overflow-scrolling: touch; /* Smooth touch scrolling */
+    overscroll-behavior: contain; /* Prevent background scroll */
+    /* Make scrollbar clearly visible */
+    scrollbar-width: thin;                 /* Firefox */
+    scrollbar-color: #0A0 #222;            /* thumb, track */
+}
+
+/* WebKit scrollbar styling for the modal body (visible, themed) */
+#instrumentEditorModal .modal-body::-webkit-scrollbar {
+    width: 10px;
+}
+#instrumentEditorModal .modal-body::-webkit-scrollbar-track {
+    background: #222;
+    border-left: 1px solid #0F0;
+}
+#instrumentEditorModal .modal-body::-webkit-scrollbar-thumb {
+    background-color: #0A0;
+    border: 1px solid #0F0;
+    border-radius: 6px;
 }
 
 .instrument-selector {
@@ -278,6 +301,12 @@ button:hover {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+}
+
+/* Hide bottom filter sections in Instrument Editor to reduce height */
+#instrumentEditorModal .filter-section,
+#instrumentEditorModal .filterlfo-section {
+    display: none;
 }
 
 .param-section {

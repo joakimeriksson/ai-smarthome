@@ -1,6 +1,6 @@
 // sequencer.js
 
-import { instruments, hzToSid, setSIDRegister, sidPlayer, playNote, lfoPhase, calculateTriangleLFO, stopVoice, stopAllVoices } from './synth.js';
+import { instruments, hzToSid, setSIDRegister, playNote, playNoteWithInstrument, lfoPhase, calculateTriangleLFO, stopVoice, stopAllVoices, stopAudioDrivenTiming, setGlobalSIDRegister, isWorkletActive, workletStartSequencer, workletStopSequencer, workletSetBPM, onWorkletReady, workletPanic, getJSTimerStatus } from './synth.js';
 import { lfoEngine } from './lfo-engine.js';
 import { arpeggioEngine } from './arpeggio-engine.js';
 import { patternManager, NUM_VOICES, MAX_PATTERN_LENGTH } from './pattern-manager.js';
@@ -14,6 +14,8 @@ export let currentStep = 0;
 export let isSequencePlaying = false;
 export let songMode = false; // Pattern mode vs Song mode
 export let currentPatternInSong = 0;
+let tempoChangeHandler = null;
+let workletStartWatch = null;
 
 // Track current instruments and base frequencies for each voice
 export let currentVoiceState = Array(3).fill(null).map(() => ({
@@ -136,71 +138,240 @@ export function noteToHz(noteString) {
 }
 
 export function stopPlayback() {
+    // Always set isSequencePlaying to false first to prevent any new operations
+    const wasPlaying = isSequencePlaying;
+    isSequencePlaying = false;
+    
+    // Check if there's actually anything to stop
+    const timerStatus = getJSTimerStatus();
+    if (!wasPlaying && !playbackInterval && !timerStatus.stepTimer && !timerStatus.lfoTimer && !workletStartWatch) {
+        console.log("Playback already stopped.");
+        return;
+    }
+
+    console.log("Stopping playback...");
+
+    // Clear any pending worklet start watchdog FIRST to prevent race conditions
+    if (workletStartWatch) {
+        clearTimeout(workletStartWatch);
+        workletStartWatch = null;
+        console.log("Cleared worklet start watchdog");
+    }
+
+    // Stop old setInterval-based timing
     if (playbackInterval) {
         clearInterval(playbackInterval);
         playbackInterval = null;
-        isSequencePlaying = false;
-        console.log("Playback stopped.");
-        
-        // Stop LFO and arpeggio engines
-        lfoEngine.stop();
-        arpeggioEngine.stop();
-        
-        // Stop all voices properly instead of just turning down volume
-        stopAllVoices();
-        
-        // Remove highlight from all steps (using current pattern length)
+        console.log("Cleared interval-based timing");
+    }
+    
+    // Stop new audio-driven timing (includes JS timers)
+    stopAudioDrivenTiming();
+    
+    // Stop worklet sequencer if available
+    try { 
+        if (workletStopSequencer) {
+            workletStopSequencer();
+            console.log("Stopped worklet sequencer");
+        }
+    } catch(e) { 
+        console.warn("Error stopping worklet sequencer:", e);
+    }
+    
+    // Hard stop to ensure silence in all cases
+    try { 
+        if (workletPanic) {
+            workletPanic();
+            console.log("Worklet panic called");
+        }
+    } catch(e) { 
+        console.warn("Error calling worklet panic:", e);
+    }
+    
+    // Remove tempo change handler to prevent callbacks
+    if (tempoChangeHandler) {
+        try { 
+            tempoControl.removeTempoChangeCallback(tempoChangeHandler);
+            tempoChangeHandler = null;
+            console.log("Removed tempo change handler");
+        } catch(e) {
+            console.warn("Error removing tempo change handler:", e);
+        }
+    }
+    
+    // Stop LFO and arpeggio engines
+    lfoEngine.stop();
+    arpeggioEngine.stop();
+    
+    // Stop all voices properly
+    stopAllVoices();
+    
+    // Restore master volume
+    try { setGlobalSIDRegister(0x18, 0x0F); } catch(_) {}
+    
+    // Remove highlight from all steps (using current pattern length)
+    try {
         const currentPattern = patternManager.getCurrentPattern();
         for (let step = 0; step < currentPattern.length; step++) {
             removeStepHighlight(step);
         }
-        
-        // Reset LFO phases on stop
-        lfoPhase.forEach(phase => { phase.pwm = 0; phase.fm = 0; });
-        
-        // Reset voice states
-        for (let voice = 0; voice < NUM_VOICES; voice++) {
-            currentVoiceState[voice].isPlaying = false;
-            currentVoiceState[voice].instrument = null;
-        }
-        
-        console.log("All voices stopped properly.");
+    } catch(e) {
+        console.warn("Error removing step highlights:", e);
     }
+    
+    // Reset LFO phases on stop
+    lfoPhase.forEach(phase => { phase.pwm = 0; phase.fm = 0; });
+    
+    // Reset voice states
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        currentVoiceState[voice].isPlaying = false;
+        currentVoiceState[voice].instrument = null;
+    }
+    
+    console.log("Playback completely stopped.");
 }
 
 export function startPlayback() {
-    if (playbackInterval) { // Stop any existing playback first
-        stopPlayback();
+    // Prevent overlapping starts
+    if (isSequencePlaying) {
+        console.log('Playback already running; ignoring duplicate start');
+        return;
     }
+    
+    // Stop any existing playback first (safety) - but don't reset isSequencePlaying yet
+    if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+    }
+    stopAudioDrivenTiming();
+    try { workletStopSequencer && workletStopSequencer(); } catch(_) {}
+    try { workletPanic && workletPanic(); } catch(_) {}
+    if (workletStartWatch) {
+        clearTimeout(workletStartWatch);
+        workletStartWatch = null;
+    }
+    lfoEngine.stop();
+    arpeggioEngine.stop();
+    stopAllVoices();
+    
+    // Now set the state and begin
     currentStep = 0;
     isSequencePlaying = true;
     
-    // Start LFO and arpeggio engines for continuous modulation
-    lfoEngine.start();
-    arpeggioEngine.start();
+    if (isWorkletActive()) {
+        const pat = patternManager.getCurrentPattern();
+        const pattern = [];
+        for (let v = 0; v < NUM_VOICES; v++) {
+            const row = [];
+            for (let s = 0; s < pat.length; s++) {
+                const sd = pat.getStepData(v, s);
+                row.push({ note: sd.note, instrument: sd.instrument });
+            }
+            pattern.push(row);
+        }
+        workletStartSequencer({ pattern, patternLength: pat.length, instruments, bpm: tempoControl.bpm });
+        if (tempoChangeHandler) try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch(_) {}
+        tempoChangeHandler = (bpm) => { if (isSequencePlaying) workletSetBPM(bpm); };
+        tempoControl.onTempoChange(tempoChangeHandler);
+        
+        // Trigger first step immediately for worklet engine
+        setTimeout(() => {
+            if (isSequencePlaying && typeof window.updateWorkletStep === 'function') {
+                window.updateWorkletStep(0);
+            }
+        }, 10);
+    } else if (typeof window !== 'undefined' && window.sidWorkletNode) {
+        // Worklet is initializing: start when ready
+        const pat = patternManager.getCurrentPattern();
+        const pattern = [];
+        for (let v = 0; v < NUM_VOICES; v++) {
+            const row = [];
+            for (let s = 0; s < pat.length; s++) {
+                const sd = pat.getStepData(v, s);
+                row.push({ note: sd.note, instrument: sd.instrument });
+            }
+            pattern.push(row);
+        }
+        let started = false;
+        onWorkletReady(() => {
+            if (!isSequencePlaying) {
+                console.log('Worklet ready but playback stopped, ignoring');
+                return;
+            }
+            started = true;
+            
+            // Clear the watchdog since we're now ready
+            if (workletStartWatch) {
+                clearTimeout(workletStartWatch);
+                workletStartWatch = null;
+                console.log('Cleared worklet watchdog - worklet is ready');
+            }
+            
+            workletStartSequencer({ pattern, patternLength: pat.length, instruments, bpm: tempoControl.bpm });
+            if (tempoChangeHandler) try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch(_) {}
+            tempoChangeHandler = (bpm) => { if (isSequencePlaying) workletSetBPM(bpm); };
+            tempoControl.onTempoChange(tempoChangeHandler);
+            
+            console.log('Worklet sequencer started successfully');
+            
+            // Trigger first step immediately for worklet engine
+            setTimeout(() => {
+                if (isSequencePlaying && typeof window.updateWorkletStep === 'function') {
+                    window.updateWorkletStep(0);
+                }
+            }, 10);
+        });
+        // Watchdog: if worklet doesn't become ready soon, report error
+        workletStartWatch = setTimeout(() => {
+            if (!isSequencePlaying || started) {
+                console.log('Worklet watchdog: playback stopped or already started');
+                workletStartWatch = null;
+                return;
+            }
+            console.error('AudioWorklet not ready in time - playback failed');
+            workletStartWatch = null;
+            isSequencePlaying = false;
+            alert('AudioWorklet failed to initialize in time. Please refresh the page and try again.');
+        }, 700);
+    } else {
+        // AudioWorklet is required
+        console.error('No AudioWorklet available - cannot start playback');
+        isSequencePlaying = false;
+        alert('AudioWorklet is required but not available. Please use a modern browser.');
+        return;
+    }
     
-    // Use tempo-controlled step duration
-    const stepDuration = tempoControl.getStepDuration(currentStep);
-    playbackInterval = setInterval(() => playStepWithTempo(), stepDuration);
-    console.log(`Playback started at ${tempoControl.bpm} BPM`);
-    sidPlayer.synth.poke(0x18, 0x0F);
+    // AudioWorklet handles LFO and arpeggio internally - no need for main-thread engines
+    
+    // Final engine detection and debug output
+    const engineType = isWorkletActive() ? 'AudioWorklet' : 'main-thread';
+    console.log(`Playback started at ${tempoControl.bpm} BPM using ${engineType} engine`);
+    console.log(`isWorkletActive() returns: ${isWorkletActive()}`);
+    if (typeof window !== 'undefined') {
+        console.log(`window.sidWorkletNode exists: ${!!window.sidWorkletNode}`);
+        console.log(`window.audioContext exists: ${!!window.audioContext}`);
+        console.log(`window.audioContext.state: ${window.audioContext?.state}`);
+    }
+    
+    setGlobalSIDRegister(0x18, 0x0F);
     console.log("Master volume set to 15.");
 }
 
+// Audio-driven callbacks removed - AudioWorklet handles timing internally
+
+// Legacy function - kept for compatibility but no longer used
 function playStepWithTempo() {
     playStep();
     
-    // Restart interval with potentially different timing for next step (swing)
-    if (playbackInterval && isSequencePlaying) {
-        clearInterval(playbackInterval);
-        const nextStepDuration = tempoControl.getStepDuration(currentStep);
-        playbackInterval = setInterval(() => playStepWithTempo(), nextStepDuration);
-    }
+    // This function is no longer used with audio-driven timing
+    console.warn("playStepWithTempo called - should use audio-driven timing instead");
 }
 
 export function playStep() {
     const currentPattern = patternManager.getCurrentPattern();
     const patternLength = currentPattern.length;
+    
+    console.log(`playStep: currentStep=${currentStep}, patternLength=${patternLength}`);
     
     // Remove highlight from previous step
     const previousStep = (currentStep - 1 + patternLength) % patternLength; // Use pattern length for wrap-around
@@ -215,6 +386,8 @@ export function playStep() {
         // Get note data from pattern manager instead of DOM
         const stepData = currentPattern.getStepData(voice, currentStep);
         const note = stepData.note.trim().toUpperCase();
+        
+        console.log(`playStep: voice=${voice}, step=${currentStep}, note="${note}", instrument=${stepData.instrument}`);
         
         if (note !== '' && note !== 'R') {
             // Check for sustain note
@@ -237,6 +410,8 @@ export function playStep() {
                 const instrument = instruments[instrumentIndex];
 
                 if (freq > 0 && instrument) {
+                    console.log(`playStep: Playing note ${note} on voice ${voice} at ${freq.toFixed(2)} Hz with instrument "${instrument.name}"`);
+                    
                     // Update voice state
                     currentVoiceState[voice].instrument = instrument;
                     currentVoiceState[voice].baseFrequency = freq;
@@ -253,8 +428,8 @@ export function playStep() {
                         arpeggioEngine.clearVoice(voice);
                     }
                     
-                    // Play the note with all parameters (LFO and arpeggio engines will handle modulation)
-                    playNote(voice, freq, tempoControl.stepDurationMs, instrument.waveform, instrument.ad, instrument.sr, instrument.pulseWidth, instrument.sync, instrument.ringMod);
+                    // Play the note with instrument (LFO and arpeggio engines will handle modulation)
+                    playNoteWithInstrument(voice, freq, tempoControl.stepDurationMs, instrumentIndex);
                 } else {
                     // Invalid note, treat as rest
                     currentVoiceState[voice].isPlaying = false;
@@ -270,10 +445,8 @@ export function playStep() {
                 
                 // Trigger release by clearing GATE bit but keeping waveform
                 const controlReg = (voice * 7) + 0x04;
-                if (sidPlayer && sidPlayer.synth) {
-                    sidPlayer.synth.poke(controlReg, instrument.waveform);
-                    console.log(`Voice ${voice}: Rest - triggering release phase (R=${release})`);
-                }
+                setGlobalSIDRegister(controlReg, instrument.waveform);
+                console.log(`Voice ${voice}: Rest - triggering release phase (R=${release})`);
                 
                 // Stop the voice after release time has elapsed
                 const releaseTimeMs = Math.max(50, release * 50); // Minimum 50ms, scale with release value

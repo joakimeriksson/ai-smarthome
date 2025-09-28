@@ -1,5 +1,5 @@
 // keyboard-input.js
-import { initSynth, sidPlayer, playNote, stopVoice, stopAllVoices, releaseVoice } from './synth.js';
+import { initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, releaseVoice, setGlobalSIDRegister, setSIDRegister, isWorkletActive, workletNoteOff } from './synth.js';
 import { instruments } from './synth.js';
 import { lfoEngine } from './lfo-engine.js';
 import { arpeggioEngine } from './arpeggio-engine.js';
@@ -222,8 +222,8 @@ class KeyboardInput {
         const note = keyboardMap[event.code];
         if (!note) return;
         
-        // Initialize audio if needed
-        if (!sidPlayer) {
+        // Initialize audio if needed (worklet or fallback)
+        if (!window.audioContext) {
             initSynth();
         }
         
@@ -249,23 +249,24 @@ class KeyboardInput {
         // Find an available voice or use the keyboard voice
         let voice = this.keyboardVoice;
         
-        // Set up LFO engine
-        lfoEngine.start();
-        lfoEngine.setVoice(voice, instrument, frequency, instrument.pulseWidth);
-        
-        // Set up arpeggio engine if enabled
-        if (instrument.arpeggio?.enabled) {
-            arpeggioEngine.start();
-            arpeggioEngine.setVoice(voice, true, frequency, instrument.arpeggio.notes, instrument.arpeggio.speed);
+        // If worklet engine is active, let it handle LFO/Arp
+        if (!(isWorkletActive && isWorkletActive())) {
+            // Set up LFO engine
+            lfoEngine.start();
+            lfoEngine.setVoice(voice, instrument, frequency, instrument.pulseWidth);
+            
+            // Set up arpeggio engine if enabled
+            if (instrument.arpeggio?.enabled) {
+                arpeggioEngine.start();
+                arpeggioEngine.setVoice(voice, true, frequency, instrument.arpeggio.notes, instrument.arpeggio.speed);
+            }
         }
         
         // Set master volume
-        if (sidPlayer && sidPlayer.synth) {
-            sidPlayer.synth.poke(0x18, 0x0F);
-        }
+        setGlobalSIDRegister(0x18, 0x0F);
         
-        // Play the note with new parameters
-        playNote(voice, frequency, 0, instrument.waveform, instrument.ad, instrument.sr, instrument.pulseWidth, instrument.sync, instrument.ringMod);
+        // Play the note with instrument (worklet-aware)
+        playNoteWithInstrument(voice, frequency, 0, this.currentInstrument);
         
         // Track the active voice
         this.activeVoices.set(event.code, voice);
@@ -292,16 +293,19 @@ class KeyboardInput {
             const instrument = instruments[this.currentInstrument];
             
             // Clear GATE bit to trigger release phase
-            if (sidPlayer && sidPlayer.synth) {
-                const controlReg = (voice * 7) + 0x04; // Voice control register
-                // Clear only the GATE bit while preserving waveform
-                const waveform = instrument ? instrument.waveform : 0x10;
-                sidPlayer.synth.poke(controlReg, waveform); // Waveform without GATE bit
-                console.log(`Voice ${voice} GATE cleared for release, waveform: 0x${waveform.toString(16)}`);
+            const controlReg = (voice * 7) + 0x04; // Voice control register
+            const waveform = instrument ? instrument.waveform : 0x10;
+            if (isWorkletActive && isWorkletActive()) {
+                workletNoteOff(voice, waveform);
+            } else {
+                setGlobalSIDRegister(controlReg, waveform);
             }
+            console.log(`Voice ${voice} GATE cleared for release, waveform: 0x${waveform.toString(16)}`);
             
-            // Clear arpeggio for this voice when note is released
-            arpeggioEngine.clearVoice(voice);
+            // Clear arpeggio when not using worklet engine
+            if (!(isWorkletActive && isWorkletActive())) {
+                arpeggioEngine.clearVoice(voice);
+            }
             
             this.activeVoices.delete(event.code);
         }

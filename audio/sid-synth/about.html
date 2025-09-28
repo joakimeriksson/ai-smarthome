@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>About — SID Synth Status</title>
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <style>
+    body { max-width: 920px; margin: 24px auto; }
+    .card { background: #111; border: 1px solid #333; padding: 14px; margin: 10px 0; border-radius: 6px; }
+    h1 { margin-bottom: 8px; }
+    .kv { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; }
+    .kv div { padding: 2px 0; }
+    .small { color: #aaa; font-size: 12px; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    button { padding: 6px 10px; }
+    a { color: #9cf; }
+  </style>
+  <!-- Load jsSID libs to allow fallback ScriptProcessor init if needed -->
+  <script src="jsSID/js/stream.js"></script>
+  <script src="jsSID/js/jssid.core.js"></script>
+  <script src="jsSID/js/jssid.tinysid.js"></script>
+  <script src="jsSID/js/jssid.fastsid.js"></script>
+  <script src="jsSID/js/jssid.mos6510.js"></script>
+  <script src="jsSID/js/jssid.sidplayer.js"></script>
+  <script src="jsSID/js/pico.dev.js"></script>
+</head>
+<body>
+  <h1>About / Status</h1>
+  <div class="row">
+    <a href="index.html">← Back to App</a>
+  </div>
+
+  <div class="card">
+    <h3>Audio Engine</h3>
+    <div class="kv">
+      <div>Mode</div><div id="engineMode">—</div>
+      <div>Sample Rate</div><div id="sampleRate">—</div>
+      <div>Buffer/Block Size</div><div id="bufferSize">—</div>
+      <div>AudioContext State</div><div id="acState">—</div>
+      <div>Worklet Ready</div><div id="workletReady">—</div>
+      <div>Warning Banner Shown</div><div id="warnShown">—</div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button id="resumeAudio">Resume Audio</button>
+      <button id="reinitAudio">Re‑init Audio</button>
+      <label style="margin-left:8px;"><input type="checkbox" id="dbgLfo"> LFO Debug</label>
+    </div>
+    <div class="small">If AudioWorklet is unavailable, the app falls back to ScriptProcessor with slightly looser timing.</div>
+  </div>
+
+  <div class="card">
+    <h3>Project</h3>
+    <div class="kv">
+      <div>Current BPM</div><div id="bpm">—</div>
+      <div>Current Pattern Length</div><div id="patLen">—</div>
+      <div>Voices</div><div id="voices">—</div>
+      <div>Browser</div><div id="ua">—</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { isWorkletActive, initSynth } from './synth.js';
+    import { tempoControl } from './tempo-control.js';
+    import { patternManager, NUM_VOICES } from './pattern-manager.js';
+
+    const $ = (id) => document.getElementById(id);
+
+    async function ensureInit() {
+      try {
+        // Initialize audio engine so status fields exist
+        initSynth();
+        // Give the worklet a brief moment to report ready
+        await new Promise(r => setTimeout(r, 50));
+      } catch (e) {
+        console.warn('Audio init on about page failed (will still show what is available):', e);
+      }
+    }
+
+    function update() {
+      const ac = window.audioContext;
+      const sr = ac ? ac.sampleRate : null;
+      const sp = window.scriptProcessor;
+      const wn = window.sidWorkletNode;
+      const wi = window.sidWorkletInfo;
+      const warned = sessionStorage.getItem('sidAudioWorkletWarned') === '1';
+
+      const mode = isWorkletActive() ? 'AudioWorklet' : (sp ? 'ScriptProcessor' : '—');
+      const buf = isWorkletActive() ? (wi && wi.blockSize ? wi.blockSize : 128) : (sp ? sp.bufferSize : '—');
+      const state = ac ? ac.state : '—';
+
+      $('engineMode').textContent = mode;
+      $('sampleRate').textContent = sr || '—';
+      $('bufferSize').textContent = buf;
+      $('acState').textContent = state;
+      $('workletReady').textContent = (!!wn).toString();
+      $('warnShown').textContent = warned ? 'Yes' : 'No';
+
+      $('bpm').textContent = tempoControl.bpm;
+      $('patLen').textContent = patternManager.getCurrentPattern().length;
+      $('voices').textContent = NUM_VOICES;
+      $('ua').textContent = navigator.userAgent;
+
+      // LFO debug display
+      const dbg = window.lfoDebug;
+      let dbgEl = document.getElementById('lfoDebugBlock');
+      if (!dbgEl) {
+        dbgEl = document.createElement('div');
+        dbgEl.id = 'lfoDebugBlock';
+        dbgEl.className = 'small';
+        document.body.appendChild(dbgEl);
+      }
+      if (dbg) {
+        const parts = (dbg.voices || []).map(v => `V${v.voice}: ${v.pw !== undefined ? 'PW='+v.pw : ''} ${v.hz !== undefined ? 'Hz='+v.hz : ''}`);
+        dbgEl.textContent = `LFO Debug — sample: ${dbg.sample}, ${parts.join(' | ')}`;
+      } else {
+        dbgEl.textContent = 'LFO Debug — (no data)';
+      }
+    }
+
+    $('resumeAudio').addEventListener('click', async () => {
+      if (window.audioContext && window.audioContext.state === 'suspended') {
+        await window.audioContext.resume();
+      }
+      update();
+    });
+
+    $('reinitAudio').addEventListener('click', () => {
+      try {
+        // Reload page to re-run initialization paths cleanly
+        location.reload();
+      } catch (e) {}
+    });
+
+    $('dbgLfo').addEventListener('change', (e) => {
+      try {
+        if (window.sidWorkletNode) {
+          window.sidWorkletNode.port.postMessage({ type: 'setDebug', payload: { enabled: e.target.checked } });
+        }
+      } catch (_) {}
+    });
+
+    document.addEventListener('visibilitychange', update);
+    window.addEventListener('focus', update);
+    // Kick off init + periodic updates (to reflect worklet readiness shortly after load)
+    (async () => {
+      await ensureInit();
+      update();
+      let tries = 0;
+      const t = setInterval(() => {
+        update();
+        if (++tries > 10) clearInterval(t);
+      }, 200);
+    })();
+  </script>
+</body>
+</html>

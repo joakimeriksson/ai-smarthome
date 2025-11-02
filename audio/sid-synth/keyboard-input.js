@@ -1,8 +1,6 @@
-// keyboard-input.js
+// keyboard-input.js - GT2-only version
 import { initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, releaseVoice, setGlobalSIDRegister, setSIDRegister, isWorkletActive, workletNoteOff } from './synth.js';
 import { instruments } from './synth.js';
-import { lfoEngine } from './lfo-engine.js';
-import { arpeggioEngine } from './arpeggio-engine.js';
 
 // Piano keyboard mapping - computer keyboard to musical notes
 const keyboardMap = {
@@ -248,29 +246,16 @@ class KeyboardInput {
         
         // Find an available voice or use the keyboard voice
         let voice = this.keyboardVoice;
-        
-        // If worklet engine is active, let it handle LFO/Arp
-        if (!(isWorkletActive && isWorkletActive())) {
-            // Set up LFO engine
-            lfoEngine.start();
-            lfoEngine.setVoice(voice, instrument, frequency, instrument.pulseWidth);
-            
-            // Set up arpeggio engine if enabled
-            if (instrument.arpeggio?.enabled) {
-                arpeggioEngine.start();
-                arpeggioEngine.setVoice(voice, true, frequency, instrument.arpeggio.notes, instrument.arpeggio.speed);
-            }
-        }
-        
+
         // Set master volume
         setGlobalSIDRegister(0x18, 0x0F);
-        
-        // Play the note with instrument (worklet-aware)
+
+        // Play the note with instrument (worklet-aware, will auto-trigger GT2 tables)
         playNoteWithInstrument(voice, frequency, 0, this.currentInstrument);
-        
+
         // Track the active voice
         this.activeVoices.set(event.code, voice);
-        
+
         console.log(`Playing ${note} (${frequency.toFixed(2)} Hz) on voice ${voice}`);
         
         // Trigger recording callback if it exists
@@ -301,12 +286,7 @@ class KeyboardInput {
                 setGlobalSIDRegister(controlReg, waveform);
             }
             console.log(`Voice ${voice} GATE cleared for release, waveform: 0x${waveform.toString(16)}`);
-            
-            // Clear arpeggio when not using worklet engine
-            if (!(isWorkletActive && isWorkletActive())) {
-                arpeggioEngine.clearVoice(voice);
-            }
-            
+
             this.activeVoices.delete(event.code);
         }
         

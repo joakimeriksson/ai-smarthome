@@ -31,21 +31,10 @@
     </div>
     
     <div class="control-section">
-        <h3>Pattern</h3>
-        <select id="patternSelect">
-            <option value="0">A</option>
-        </select>
-        <button id="clearButton">Clear</button>
-        <button id="copyPatternButton">Copy</button>
-        <button id="pastePatternButton">Paste</button>
-        <span id="patternLength">Length: 16</span>
-    </div>
-    
-    <div class="control-section">
-        <h3>Song</h3>
-        <button id="songModeButton">Pattern Mode</button>
-        <span id="songPosition">Pos: 1/1</span>
-        <button id="songEditorButton">Song Editor</button>
+        <h3>Song Info</h3>
+        <span id="songTitle">No song loaded</span>
+        <br>
+        <span id="songStats" style="font-size: 11px; color: #888;">0 patterns, 0 instruments</span>
     </div>
     
     <div class="control-section">
@@ -70,6 +59,7 @@
     <div class="control-section">
         <h3>Tools</h3>
         <button id="instrumentEditorButton">Instrument Editor</button>
+        <button id="tableEditorButton">Table Editor</button>
         <button id="keyboardToggleButton">Enable Keyboard</button>
         <button id="helpButton">Help</button>
         <a href="about.html"><button>About</button></a>
@@ -80,68 +70,98 @@
     </div>
 </div>
 
-<div id="tracker-container">
-    <!-- Track 0 -->
-    <div class="track" id="track-0">
-        <h2>Voice 0</h2>
-        <!-- Steps for Voice 0 -->
-    </div>
-    <!-- Track 1 -->
-    <div class="track" id="track-1">
-        <h2>Voice 1</h2>
-        <!-- Steps for Voice 1 -->
-    </div>
-    <!-- Track 2 -->
-    <div class="track" id="track-2">
-        <h2>Voice 2</h2>
-        <!-- Steps for Voice 2 -->
-    </div>
-</div>
+<!-- GT2 Pattern Editor -->
+<div id="gt2-pattern-editor-container"></div>
 
-<!-- Song Editor Modal -->
-<div id="songEditorModal" class="modal">
-    <div class="modal-content">
+<!-- GT2 Order Editor -->
+<div id="gt2-order-editor-container"></div>
+
+<!-- Table Editor Modal -->
+<div id="tableEditorModal" class="modal">
+    <div class="modal-content table-editor-content">
         <div class="modal-header">
-            <h2>Song Editor</h2>
-            <span class="close" id="closeSongEditor">&times;</span>
+            <h2>Table Editor</h2>
+            <span class="close" id="closeTableEditor">&times;</span>
         </div>
         <div class="modal-body">
-            <div class="song-info">
+            <div class="table-controls">
                 <div class="param-row">
-                    <label for="songTitle">Song Title:</label>
-                    <input type="text" id="songTitle" value="Untitled Song">
-                </div>
-                <div class="param-row">
-                    <label for="patternLengthSelect">Pattern Length:</label>
-                    <select id="patternLengthSelect">
-                        <option value="16">16 steps</option>
-                        <option value="32">32 steps</option>
-                        <option value="64">64 steps</option>
+                    <label for="tableTypeSelect">Table Type:</label>
+                    <select id="tableTypeSelect">
+                        <option value="wave">Wave Table</option>
+                        <option value="pulse">Pulse Table</option>
+                        <option value="filter">Filter Table</option>
+                        <option value="speed">Speed Table</option>
                     </select>
                 </div>
-            </div>
-            
-            <div class="song-sequence">
-                <h3>Song Sequence</h3>
-                <div id="sequenceList"></div>
-                <div class="sequence-controls">
-                    <select id="addPatternSelect">
-                        <option value="0">Pattern A</option>
+                <div class="param-row">
+                    <label for="tableIndexSelect">Table:</label>
+                    <select id="tableIndexSelect">
+                        <!-- Options populated by JavaScript -->
                     </select>
-                    <button id="addToSequenceButton">Add</button>
-                    <button id="removeFromSequenceButton">Remove</button>
-                    <button id="clearSequenceButton">Clear All</button>
+                </div>
+                <div class="param-row">
+                    <label for="tableLength">Length:</label>
+                    <input type="number" id="tableLength" min="1" max="255" value="16">
+                    <button id="resizeTableButton">Resize</button>
+                </div>
+                <div class="param-row">
+                    <label for="tableName">Name:</label>
+                    <input type="text" id="tableName" placeholder="Table name">
                 </div>
             </div>
-            
-            <div class="pattern-list">
-                <h3>Available Patterns</h3>
-                <div id="patternGrid"></div>
+
+            <div class="table-operations">
+                <button id="clearTableButton">Clear</button>
+                <button id="copyTableButton">Copy</button>
+                <button id="pasteTableButton">Paste</button>
+                <button id="newTableButton">New</button>
+            </div>
+
+            <div class="table-loop-controls">
+                <div class="param-row">
+                    <label for="tableLoopEnabled">
+                        <input type="checkbox" id="tableLoopEnabled"> Loop
+                    </label>
+                </div>
+                <div class="param-row">
+                    <label for="tableLoopStart">Start:</label>
+                    <input type="number" id="tableLoopStart" min="0" max="254" value="0">
+                    <label for="tableLoopEnd">End:</label>
+                    <input type="number" id="tableLoopEnd" min="0" max="254" value="15">
+                </div>
+            </div>
+
+            <div class="table-data-container">
+                <div class="table-data-header">
+                    <span class="table-step-header">Step</span>
+                    <span class="table-value-header">Left</span>
+                    <span class="table-hex-header">Right</span>
+                    <span class="table-desc-header">Description</span>
+                </div>
+                <div id="tableDataGrid" class="table-data-grid">
+                    <!-- Table data rows populated by JavaScript -->
+                </div>
+            </div>
+
+            <div id="hexReference" style="background: #111; border: 1px solid #333; border-radius: 4px; margin: 10px 0; max-height: 200px; overflow-y: auto;">
+                <!-- Hex reference populated by JavaScript -->
+            </div>
+
+            <div class="table-presets">
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button id="presetLinearButton">Linear</button>
+                    <button id="presetSineButton">Sine</button>
+                    <button id="presetTriangleButton">Triangle</button>
+                    <button id="presetSawButton">Sawtooth</button>
+                    <button id="presetRandomButton">Random</button>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button id="saveSongButton">Save Changes</button>
-            <button id="cancelSongButton">Cancel</button>
+            <button id="saveTableButton">Save Changes</button>
+            <button id="cancelTableButton">Cancel</button>
         </div>
     </div>
 </div>
@@ -212,40 +232,6 @@
                 </div>
 
                 <div class="param-section">
-                    <h3>PWM LFO</h3>
-                    <div class="param-row">
-                        <label for="pwmLFOEnabled">
-                            <input type="checkbox" id="pwmLFOEnabled"> Enable PWM LFO
-                        </label>
-                    </div>
-                    <div class="param-row">
-                        <label for="pwmLFOFreq">Frequency: <span id="pwmLFOFreqValue">0</span> Hz</label>
-                        <input type="range" id="pwmLFOFreq" min="0.1" max="20" step="0.1" value="0">
-                    </div>
-                    <div class="param-row">
-                        <label for="pwmLFODepth">Depth: <span id="pwmLFODepthValue">0</span>%</label>
-                        <input type="range" id="pwmLFODepth" min="0" max="100" value="0">
-                    </div>
-                </div>
-
-                <div class="param-section">
-                    <h3>FM LFO</h3>
-                    <div class="param-row">
-                        <label for="fmLFOEnabled">
-                            <input type="checkbox" id="fmLFOEnabled"> Enable FM LFO
-                        </label>
-                    </div>
-                    <div class="param-row">
-                        <label for="fmLFOFreq">Frequency: <span id="fmLFOFreqValue">0</span> Hz</label>
-                        <input type="range" id="fmLFOFreq" min="0.1" max="20" step="0.1" value="0">
-                    </div>
-                    <div class="param-row">
-                        <label for="fmLFODepth">Depth: <span id="fmLFODepthValue">0</span>%</label>
-                        <input type="range" id="fmLFODepth" min="0" max="100" value="0">
-                    </div>
-                </div>
-
-                <div class="param-section">
                     <h3>SID Features</h3>
                     <div class="param-row">
                         <label for="syncEnabled">
@@ -259,82 +245,38 @@
                     </div>
                 </div>
 
-                <div class="param-section">
-                    <h3>Arpeggio</h3>
+                <div class="param-section table-section">
+                    <h3>GoatTracker Tables</h3>
                     <div class="param-row">
-                        <label for="arpeggioEnabled">
-                            <input type="checkbox" id="arpeggioEnabled"> Enable Arpeggio
-                        </label>
-                    </div>
-                    <div class="param-row">
-                        <label for="arpeggioSpeed">Speed: <span id="arpeggioSpeedValue">4</span></label>
-                        <input type="range" id="arpeggioSpeed" min="1" max="16" value="4">
-                    </div>
-                    <div class="param-row">
-                        <label for="arpeggioPattern">Pattern:</label>
-                        <select id="arpeggioPattern">
-                            <option value="major">Major (0, 4, 7)</option>
-                            <option value="minor">Minor (0, 3, 7)</option>
-                            <option value="dim">Diminished (0, 3, 6)</option>
-                            <option value="aug">Augmented (0, 4, 8)</option>
-                            <option value="sus2">Sus2 (0, 2, 7)</option>
-                            <option value="sus4">Sus4 (0, 5, 7)</option>
-                            <option value="7th">7th (0, 4, 7, 10)</option>
-                            <option value="maj7">Maj7 (0, 4, 7, 11)</option>
-                            <option value="min7">Min7 (0, 3, 7, 10)</option>
-                            <option value="octave">Octave (0, 12)</option>
-                            <option value="fifth">Fifth (0, 7)</option>
-                            <option value="fourth">Fourth (0, 5)</option>
+                        <label for="waveTableSelect">Wave Table:</label>
+                        <select id="waveTableSelect">
+                            <option value="-1">None</option>
+                            <!-- Options populated by JavaScript -->
                         </select>
                     </div>
-                </div>
-                <div class="param-section filter-section">
-                    <h3>SID Filter</h3>
                     <div class="param-row">
-                        <label for="filterEnabled">
-                            <input type="checkbox" id="filterEnabled"> Enable Filter
-                        </label>
-                    </div>
-                    <div class="param-row">
-                        <label for="filterFrequency">Cutoff: <span id="filterFrequencyValue">1024</span></label>
-                        <input type="range" id="filterFrequency" min="0" max="2047" value="1024">
-                    </div>
-                    <div class="param-row">
-                        <label for="filterResonance">Resonance: <span id="filterResonanceValue">0</span></label>
-                        <input type="range" id="filterResonance" min="0" max="240" step="16" value="0">
-                    </div>
-                    <div class="param-row">
-                        <label for="filterType">Type:</label>
-                        <select id="filterType">
-                            <option value="16">Low-pass</option>
-                            <option value="32">Band-pass</option>
-                            <option value="64">High-pass</option>
-                            <option value="48">Low-pass + Band-pass</option>
-                            <option value="80">Low-pass + High-pass</option>
-                            <option value="96">Band-pass + High-pass</option>
-                            <option value="112">All-pass</option>
+                        <label for="pulseTableSelect">Pulse Table:</label>
+                        <select id="pulseTableSelect">
+                            <option value="-1">None</option>
+                            <!-- Options populated by JavaScript -->
                         </select>
                     </div>
-                </div>
-                <div class="param-section filterlfo-section">
-                    <h3>Filter LFO</h3>
                     <div class="param-row">
-                        <label for="filterLFOEnabled">
-                            <input type="checkbox" id="filterLFOEnabled"> Enable Filter LFO
-                        </label>
+                        <label for="filterTableSelect">Filter Table:</label>
+                        <select id="filterTableSelect">
+                            <option value="-1">None</option>
+                            <!-- Options populated by JavaScript -->
+                        </select>
                     </div>
                     <div class="param-row">
-                        <label for="filterLFOFreq">Frequency: <span id="filterLFOFreqValue">0</span> Hz</label>
-                        <input type="range" id="filterLFOFreq" min="0.1" max="10" step="0.1" value="0">
+                        <label for="speedTableSelect">Speed Table:</label>
+                        <select id="speedTableSelect">
+                            <option value="-1">None</option>
+                            <!-- Options populated by JavaScript -->
+                        </select>
                     </div>
                     <div class="param-row">
-                        <label for="filterLFODepth">Depth: <span id="filterLFODepthValue">0</span>%</label>
-                        <input type="range" id="filterLFODepth" min="0" max="100" value="0">
-                    </div>
-                    <div class="param-row">
-                        <label for="filterLFOContinuous">
-                            <input type="checkbox" id="filterLFOContinuous"> Continuous (no reset)
-                        </label>
+                        <button id="openTableEditorFromInstrument">Edit Tables</button>
                     </div>
                 </div>
             </div>
@@ -453,14 +395,21 @@
 <script type="module" src="lfo-engine.js"></script>
 <script type="module" src="arpeggio-engine.js"></script>
 <script type="module" src="pattern-manager.js"></script>
+<script type="module" src="table-manager.js"></script>
+<script type="module" src="table-manager-gt2.js"></script>
+<script type="module" src="gt2-frame-engine.js"></script>
+<script type="module" src="pattern-commands.js"></script>
 <script type="module" src="tempo-control.js"></script>
 <script type="module" src="keyboard-input.js"></script>
 <script type="module" src="record-mode.js"></script>
 <script type="module" src="sequencer.js"></script>
 <script type="module" src="instrument-editor.js"></script>
-<script type="module" src="song-editor.js"></script>
+<script type="module" src="table-editor.js"></script>
+<script type="module" src="table-editor-gt2.js"></script>
 <script type="module" src="sid-exporter.js"></script>
 <script type="module" src="sid-tester.js"></script>
+<script type="module" src="gt2-pattern-editor.js"></script>
+<script type="module" src="gt2-order-editor.js"></script>
 <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
-// instrument-editor.js
+// instrument-editor.js - GT2-only version
 import { instruments, initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, setGlobalSIDRegister, isWorkletActive, workletNoteOff, workletUpdateInstruments } from './synth.js';
-import { lfoEngine } from './lfo-engine.js';
-import { arpeggioEngine } from './arpeggio-engine.js';
 import { keyboardInput } from './keyboard-input.js';
+import { tableManager, TABLE_TYPES } from './table-manager.js';
+import { gt2TableManager } from './table-manager-gt2.js';
 
 let currentInstrumentIndex = 0;
 let originalInstruments = [];
@@ -55,14 +55,17 @@ function openInstrumentEditor() {
     const modal = document.getElementById('instrumentEditorModal');
     modal.style.display = 'block';
     isEditorOpen = true;
-    
+
     // Enable keyboard input for testing instruments
     keyboardInput.enable();
     keyboardInput.setInstrument(currentInstrumentIndex);
-    
+
     // Populate instrument selector
     populateInstrumentSelector();
-    
+
+    // Populate GT2 table selectors
+    populateGT2TableSelectors();
+
     // Load first instrument
     currentInstrumentIndex = 0;
     loadInstrumentToEditor();
@@ -82,15 +85,41 @@ function closeInstrumentEditor() {
 function populateInstrumentSelector() {
     const select = document.getElementById('editInstrumentSelect');
     select.innerHTML = '';
-    
+
     instruments.forEach((instrument, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.textContent = `${index}: ${instrument.name}`;
         select.appendChild(option);
     });
-    
+
     select.value = currentInstrumentIndex;
+}
+
+function populateGT2TableSelectors() {
+    const tableTypes = [
+        { id: 'waveTableSelect', type: 0, name: 'WTBL' },
+        { id: 'pulseTableSelect', type: 1, name: 'PTBL' },
+        { id: 'filterTableSelect', type: 2, name: 'FTBL' },
+        { id: 'speedTableSelect', type: 3, name: 'STBL' }
+    ];
+
+    tableTypes.forEach(({ id, type, name }) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+
+        // Keep "None" option
+        select.innerHTML = '<option value="-1">None</option>';
+
+        // Add GT2 table 0 option (we only have one table per type for now)
+        const table = gt2TableManager.getTable(type);
+        if (table) {
+            const option = document.createElement('option');
+            option.value = 0;
+            option.textContent = `${name} 0: ${table.name}`;
+            select.appendChild(option);
+        }
+    });
 }
 
 function loadInstrumentToEditor() {
@@ -120,61 +149,20 @@ function loadInstrumentToEditor() {
     // Pulse width
     document.getElementById('pulseWidthSlider').value = instrument.pulseWidth;
     updateSliderDisplay('pulseWidth', instrument.pulseWidth);
-    
-    // PWM LFO
-    document.getElementById('pwmLFOEnabled').checked = instrument.pwmLFO.enabled;
-    document.getElementById('pwmLFOFreq').value = instrument.pwmLFO.freq;
-    document.getElementById('pwmLFODepth').value = instrument.pwmLFO.depth * 100;
-    updateSliderDisplay('pwmLFOFreq', instrument.pwmLFO.freq);
-    updateSliderDisplay('pwmLFODepth', Math.round(instrument.pwmLFO.depth * 100));
-    
-    // FM LFO
-    document.getElementById('fmLFOEnabled').checked = instrument.fmLFO.enabled;
-    document.getElementById('fmLFOFreq').value = instrument.fmLFO.freq;
-    document.getElementById('fmLFODepth').value = instrument.fmLFO.depth * 100;
-    updateSliderDisplay('fmLFOFreq', instrument.fmLFO.freq);
-    updateSliderDisplay('fmLFODepth', Math.round(instrument.fmLFO.depth * 100));
-    
+
     // SID Features
     document.getElementById('syncEnabled').checked = instrument.sync || false;
     document.getElementById('ringModEnabled').checked = instrument.ringMod || false;
-    
-    // Arpeggio
-    document.getElementById('arpeggioEnabled').checked = instrument.arpeggio?.enabled || false;
-    document.getElementById('arpeggioSpeed').value = instrument.arpeggio?.speed || 4;
-    updateSliderDisplay('arpeggioSpeed', instrument.arpeggio?.speed || 4);
-    
-    // Set arpeggio pattern based on notes array
-    const notes = instrument.arpeggio?.notes || [0, 4, 7];
-    const patternSelect = document.getElementById('arpeggioPattern');
-    // Find matching pattern or default to major
-    let matchingPattern = 'major';
-    for (const option of patternSelect.options) {
-        const pattern = arpeggioEngine.constructor.getChordPattern(option.value);
-        if (JSON.stringify(pattern) === JSON.stringify(notes)) {
-            matchingPattern = option.value;
-            break;
-        }
-    }
-    patternSelect.value = matchingPattern;
-    
-    // Filter
-    const filter = instrument.filter || { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 };
-    document.getElementById('filterEnabled').checked = filter.enabled;
-    document.getElementById('filterFrequency').value = filter.frequency;
-    document.getElementById('filterResonance').value = filter.resonance;
-    document.getElementById('filterType').value = filter.type;
-    updateSliderDisplay('filterFrequency', filter.frequency);
-    updateSliderDisplay('filterResonance', filter.resonance);
-    
-    // Filter LFO
-    const filterLFO = instrument.filterLFO || { enabled: false, freq: 0, depth: 0, continuous: false };
-    document.getElementById('filterLFOEnabled').checked = filterLFO.enabled;
-    document.getElementById('filterLFOFreq').value = filterLFO.freq;
-    document.getElementById('filterLFODepth').value = filterLFO.depth * 100;
-    document.getElementById('filterLFOContinuous').checked = filterLFO.continuous || false;
-    updateSliderDisplay('filterLFOFreq', filterLFO.freq);
-    updateSliderDisplay('filterLFODepth', Math.round(filterLFO.depth * 100));
+
+    // Populate table selectors and load current values
+    populateTableSelectors();
+
+    // Tables
+    const tables = instrument.tables || { wave: -1, pulse: -1, filter: -1, speed: -1 };
+    document.getElementById('waveTableSelect').value = tables.wave;
+    document.getElementById('pulseTableSelect').value = tables.pulse;
+    document.getElementById('filterTableSelect').value = tables.filter;
+    document.getElementById('speedTableSelect').value = tables.speed;
 }
 
 function setupParameterHandlers() {
@@ -198,55 +186,22 @@ function setupParameterHandlers() {
         updateSliderDisplay('pulseWidth', e.target.value);
         updateCurrentInstrument();
     });
-    
-    // LFO controls
-    ['pwmLFOEnabled', 'pwmLFOFreq', 'pwmLFODepth', 'fmLFOEnabled', 'fmLFOFreq', 'fmLFODepth'].forEach(id => {
-        const element = document.getElementById(id);
-        element.addEventListener(element.type === 'checkbox' ? 'change' : 'input', (e) => {
-            if (id.includes('Freq') || id.includes('Depth')) {
-                const param = id.replace('LFO', '').replace('LFO', '');
-                updateSliderDisplay(id.replace('Slider', ''), e.target.value);
-            }
-            updateCurrentInstrument();
-        });
-    });
-    
+
     // SID Features
     ['syncEnabled', 'ringModEnabled'].forEach(id => {
         document.getElementById(id).addEventListener('change', updateCurrentInstrument);
     });
-    
-    // Arpeggio controls
-    document.getElementById('arpeggioEnabled').addEventListener('change', updateCurrentInstrument);
-    document.getElementById('arpeggioSpeed').addEventListener('input', (e) => {
-        updateSliderDisplay('arpeggioSpeed', e.target.value);
-        updateCurrentInstrument();
+
+    // Table selects
+    ['waveTableSelect', 'pulseTableSelect', 'filterTableSelect', 'speedTableSelect'].forEach(selectId => {
+        document.getElementById(selectId).addEventListener('change', updateCurrentInstrument);
     });
-    document.getElementById('arpeggioPattern').addEventListener('change', updateCurrentInstrument);
-    
-    // Filter controls
-    document.getElementById('filterEnabled').addEventListener('change', updateCurrentInstrument);
-    document.getElementById('filterFrequency').addEventListener('input', (e) => {
-        updateSliderDisplay('filterFrequency', e.target.value);
-        updateCurrentInstrument();
+
+    // Open table editor button
+    document.getElementById('openTableEditorFromInstrument').addEventListener('click', () => {
+        // This will open the table editor modal
+        document.getElementById('tableEditorButton').click();
     });
-    document.getElementById('filterResonance').addEventListener('input', (e) => {
-        updateSliderDisplay('filterResonance', e.target.value);
-        updateCurrentInstrument();
-    });
-    document.getElementById('filterType').addEventListener('change', updateCurrentInstrument);
-    
-    // Filter LFO controls
-    document.getElementById('filterLFOEnabled').addEventListener('change', updateCurrentInstrument);
-    document.getElementById('filterLFOFreq').addEventListener('input', (e) => {
-        updateSliderDisplay('filterLFOFreq', e.target.value);
-        updateCurrentInstrument();
-    });
-    document.getElementById('filterLFODepth').addEventListener('input', (e) => {
-        updateSliderDisplay('filterLFODepth', e.target.value);
-        updateCurrentInstrument();
-    });
-    document.getElementById('filterLFOContinuous').addEventListener('change', updateCurrentInstrument);
 }
 
 function updateSliderDisplay(param, value) {
@@ -281,50 +236,20 @@ function updateCurrentInstrument() {
     
     // Pulse width
     instrument.pulseWidth = parseInt(document.getElementById('pulseWidthSlider').value);
-    
-    // PWM LFO
-    instrument.pwmLFO.enabled = document.getElementById('pwmLFOEnabled').checked;
-    instrument.pwmLFO.freq = parseFloat(document.getElementById('pwmLFOFreq').value);
-    instrument.pwmLFO.depth = parseFloat(document.getElementById('pwmLFODepth').value) / 100;
-    
-    // FM LFO
-    instrument.fmLFO.enabled = document.getElementById('fmLFOEnabled').checked;
-    instrument.fmLFO.freq = parseFloat(document.getElementById('fmLFOFreq').value);
-    instrument.fmLFO.depth = parseFloat(document.getElementById('fmLFODepth').value) / 100;
-    
+
     // SID Features
     instrument.sync = document.getElementById('syncEnabled').checked;
     instrument.ringMod = document.getElementById('ringModEnabled').checked;
-    
-    // Arpeggio
-    if (!instrument.arpeggio) {
-        instrument.arpeggio = { enabled: false, notes: [0, 4, 7], speed: 4 };
+
+    // Tables
+    if (!instrument.tables) {
+        instrument.tables = { wave: -1, pulse: -1, filter: -1, speed: -1 };
     }
-    instrument.arpeggio.enabled = document.getElementById('arpeggioEnabled').checked;
-    instrument.arpeggio.speed = parseInt(document.getElementById('arpeggioSpeed').value);
-    
-    // Get notes from selected pattern
-    const pattern = document.getElementById('arpeggioPattern').value;
-    instrument.arpeggio.notes = arpeggioEngine.constructor.getChordPattern(pattern);
-    
-    // Filter
-    if (!instrument.filter) {
-        instrument.filter = { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 };
-    }
-    instrument.filter.enabled = document.getElementById('filterEnabled').checked;
-    instrument.filter.frequency = parseInt(document.getElementById('filterFrequency').value);
-    instrument.filter.resonance = parseInt(document.getElementById('filterResonance').value);
-    instrument.filter.type = parseInt(document.getElementById('filterType').value);
-    
-    // Filter LFO
-    if (!instrument.filterLFO) {
-        instrument.filterLFO = { enabled: false, freq: 0, depth: 0, continuous: false };
-    }
-    instrument.filterLFO.enabled = document.getElementById('filterLFOEnabled').checked;
-    instrument.filterLFO.freq = parseFloat(document.getElementById('filterLFOFreq').value);
-    instrument.filterLFO.depth = parseFloat(document.getElementById('filterLFODepth').value) / 100;
-    instrument.filterLFO.continuous = document.getElementById('filterLFOContinuous').checked;
-    
+    instrument.tables.wave = parseInt(document.getElementById('waveTableSelect').value);
+    instrument.tables.pulse = parseInt(document.getElementById('pulseTableSelect').value);
+    instrument.tables.filter = parseInt(document.getElementById('filterTableSelect').value);
+    instrument.tables.speed = parseInt(document.getElementById('speedTableSelect').value);
+
     // Update instrument selector display
     populateInstrumentSelector();
     
@@ -339,27 +264,53 @@ function updateCurrentInstrument() {
 }
 
 function createNewInstrument() {
+    // GT2-compatible instrument with only authentic GoatTracker2 parameters
     const newInstrument = {
         name: `Custom ${instruments.length}`,
-        waveform: 16, // Triangle
-        ad: 0x0F,
-        sr: 0xF0,
-        pulseWidth: 0x0800,
-        pwmLFO: { enabled: false, freq: 0, depth: 0 },
-        fmLFO: { enabled: false, freq: 0, depth: 0 },
-        sync: false,
-        ringMod: false,
-        arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }
+        waveform: 0x10,        // Triangle (0x10, 0x20=saw, 0x40=pulse, 0x80=noise)
+        ad: 0x0F,              // Attack=0, Decay=15
+        sr: 0xF0,              // Sustain=15, Release=0
+        pulseWidth: 0x0800,    // 50% duty cycle (12-bit value)
+        sync: false,           // Oscillator sync
+        ringMod: false,        // Ring modulation
+        tables: { wave: -1, pulse: -1, filter: -1, speed: -1 }  // GT2 table pointers
     };
-    
+
     instruments.push(newInstrument);
     currentInstrumentIndex = instruments.length - 1;
-    
+
     populateInstrumentSelector();
     loadInstrumentToEditor();
-    
+
     // Update all instrument dropdowns in the tracker
     updateTrackerInstrumentDropdowns();
+}
+
+function populateTableSelectors() {
+    // Populate all table selectors with available tables
+    const tableTypes = ['wave', 'pulse', 'filter', 'speed'];
+
+    tableTypes.forEach(type => {
+        const selectElement = document.getElementById(`${type}TableSelect`);
+        const currentValue = selectElement.value;
+
+        // Clear existing options except "None"
+        selectElement.innerHTML = '<option value="-1">None</option>';
+
+        // Add options for each table of this type
+        const tableNames = tableManager.getTableNames(type);
+        tableNames.forEach(({ index, name, length }) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `${index}: ${name} (${length})`;
+            selectElement.appendChild(option);
+        });
+
+        // Restore previous selection if still valid
+        if (currentValue !== null && currentValue !== '') {
+            selectElement.value = currentValue;
+        }
+    });
 }
 
 function duplicateInstrument() {
@@ -396,38 +347,29 @@ function deleteInstrument() {
 }
 
 async function testCurrentInstrument() {
-    // Ensure audio is initialized (worklet or fallback)
+    // Ensure audio is initialized
     if (!window.audioContext) {
         initSynth();
     }
-    
+
     // Ensure audio context is running
     if (window.audioContext && window.audioContext.state === 'suspended') {
         await window.audioContext.resume();
     }
-    
-    // Test note A-4 (440 Hz) for 2 seconds to hear LFO effects - this should sound like concert pitch A
+
+    // Test note A-4 (440 Hz) for 2 seconds
     const instrument = instruments[currentInstrumentIndex];
     const testFreq = 440.0; // A-4, standard concert pitch
-    
-    // Start LFO engine for testing
-    lfoEngine.start();
-    lfoEngine.setVoice(0, instrument, testFreq, instrument.pulseWidth);
-    
-    // Start arpeggio engine if needed
-    if (instrument.arpeggio?.enabled) {
-        arpeggioEngine.start();
-        arpeggioEngine.setVoice(0, true, testFreq, instrument.arpeggio.notes, instrument.arpeggio.speed);
-    }
-    
+
     // Set master volume to max
     setGlobalSIDRegister(0x18, 0x0F);
-    
-    // Play the note with current instrument (worklet-aware via playNote)
+
+    // Play the note with current instrument
+    // Tables will be triggered automatically if instrument has table pointers
     playNoteWithInstrument(0, testFreq, 2000, currentInstrumentIndex);
-    
-    console.log(`Testing instrument: ${instrument.name}`);
-    
+
+    console.log(`Testing GT2 instrument: ${instrument.name}`);
+
     // Stop the test note after duration
     setTimeout(() => {
         // Stop voice 0 properly
@@ -437,10 +379,6 @@ async function testCurrentInstrument() {
         } else {
             stopVoice(0);
         }
-        lfoEngine.clearVoice(0);
-        lfoEngine.stop();
-        arpeggioEngine.clearVoice(0);
-        arpeggioEngine.stop();
         console.log("Test note stopped");
     }, 2000);
 }

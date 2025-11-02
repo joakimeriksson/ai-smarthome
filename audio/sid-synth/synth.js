@@ -32,18 +32,19 @@ const CTRL_SYNC = 0x02;        // Sync bit
 const CTRL_RING_MOD = 0x04;    // Ring modulation bit
 const CTRL_TEST = 0x08;        // Test bit (usually not used)
 
-// Instrument Presets
+// GT2-compatible instrument presets - only authentic GoatTracker2 parameters
+// Format: name, waveform, ad (attack/decay), sr (sustain/release), pulseWidth, sync, ringMod, tables
 export const instruments = [
-    { name: "Lead (Tri)", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xFE, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "Bass (Pulse)", waveform: WAVE_PULSE, ad: 0x0F, sr: 0x8C, pulseWidth: 0x0400, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: false, frequency: 0x180, resonance: 0x40, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "Pad (Saw)", waveform: WAVE_SAWTOOTH, ad: 0x88, sr: 0xAF, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: true, frequency: 0x300, resonance: 0x20, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "Perc (Noise)", waveform: WAVE_NOISE, ad: 0x01, sr: 0x01, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: false, frequency: 0x600, resonance: 0x60, type: 0x40 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "PWM Test", waveform: WAVE_PULSE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, pwmLFO: { enabled: true, freq: 5, depth: 0.5 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "FM Test", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: true, freq: 3, depth: 0.1 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "Sync Lead", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: true, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: true, frequency: 0x500, resonance: 0x80, type: 0x20 }, filterLFO: { enabled: true, freq: 2, depth: 0.8, continuous: true } },
-    { name: "Ring Mod", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: true, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: true, frequency: 0x700, resonance: 0x30, type: 0x60 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "Arp Major", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: true, notes: [0, 4, 7], speed: 8 }, filter: { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
-    { name: "Custom", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, pwmLFO: { enabled: false, freq: 0, depth: 0 }, fmLFO: { enabled: false, freq: 0, depth: 0 }, sync: false, ringMod: false, arpeggio: { enabled: false, notes: [0, 4, 7], speed: 4 }, filter: { enabled: false, frequency: 0x400, resonance: 0, type: 0x10 }, filterLFO: { enabled: false, freq: 0, depth: 0, continuous: false } },
+    { name: "Lead (Tri)", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xFE, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Bass (Pulse)", waveform: WAVE_PULSE, ad: 0x0F, sr: 0x8C, pulseWidth: 0x0400, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Pad (Saw)", waveform: WAVE_SAWTOOTH, ad: 0x88, sr: 0xAF, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Perc (Noise)", waveform: WAVE_NOISE, ad: 0x01, sr: 0x01, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "GT2 Pulse", waveform: WAVE_PULSE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "GT2 Tri", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Sync Lead", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: true, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Ring Mod", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: true, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "GT2 Saw", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Custom", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
 ];
 
 export let sidPlayer; // AudioWorklet mode only: placeholder object
@@ -254,6 +255,22 @@ export function initSynth() {
                 } else if (type === 'stopped') {
                     console.log('Worklet sequencer confirmed stopped');
                 } else if (type === 'step') {
+                    // Update voiceState with position information from worklet
+                    if (payload.voicePositions && typeof window !== 'undefined' && window.voiceState) {
+                        try {
+                            payload.voicePositions.forEach((pos, voice) => {
+                                if (window.voiceState[voice] && pos) {
+                                    window.voiceState[voice].orderPosition = pos.orderPos;
+                                    window.voiceState[voice].patternIndex = pos.patternIndex;
+                                    window.voiceState[voice].patternRow = pos.patternRow;
+                                    window.voiceState[voice].isPlaying = true;
+                                }
+                            });
+                        } catch(e) {
+                            console.warn('Failed to update voiceState:', e);
+                        }
+                    }
+
                     // Optional UI update hook
                     if (typeof window !== 'undefined' && typeof window.updateWorkletStep === 'function') {
                         try { window.updateWorkletStep(payload.step); } catch(_) {}
@@ -278,6 +295,42 @@ export function initSynth() {
                             console.log('LFO Debug:', payload);
                         }
                     } catch (_) {}
+                } else if (type === 'triggerTables') {
+                    // Worklet wants to trigger GT2 frame engine tables
+                    if (typeof window !== 'undefined' && window.gt2FrameEngine) {
+                        try {
+                            // Extract from event data (payload might be undefined, data directly in ev.data)
+                            const voice = ev.data.voice !== undefined ? ev.data.voice : payload?.voice;
+                            const baseNote = ev.data.baseNote !== undefined ? ev.data.baseNote : payload?.baseNote;
+                            const instrument = ev.data.instrument || payload?.instrument;
+
+                            if (voice !== undefined && baseNote !== undefined && instrument) {
+                                window.gt2FrameEngine.triggerNoteTables(voice, baseNote, instrument);
+                            }
+                        } catch(e) {
+                            console.warn('Failed to trigger GT2 tables:', e);
+                        }
+                    }
+                } else if (type === 'executeCommand') {
+                    // Worklet wants to execute a pattern command
+                    try {
+                        const voice = ev.data.voice;
+                        const command = ev.data.command;
+                        const cmdData = ev.data.cmdData;
+                        const tick = ev.data.tick || 0;
+                        const frequency = ev.data.frequency || 0;
+
+                        // Import pattern command engine dynamically
+                        import('./pattern-commands.js').then(module => {
+                            const { patternCommandEngine } = module;
+                            patternCommandEngine.executeCommand(voice, command, cmdData, tick, frequency);
+                            console.log(`Command executed: V${voice} cmd=${command.toString(16)} data=${cmdData.toString(16)}`);
+                        }).catch(e => {
+                            console.warn('Failed to execute pattern command:', e);
+                        });
+                    } catch(e) {
+                        console.warn('Failed to execute pattern command:', e);
+                    }
                 } else if (type === 'error') {
                     console.error('SID Worklet error:', payload);
                     showAudioWorkletWarning('Worklet init error');
@@ -449,6 +502,12 @@ export function hzToSid(frequencyHz) {
 export function setSIDRegister(voice, register, value) {
     const regAddress = (voice * VOICE_OFFSET) + register;
     sidRegs[regAddress & 0x1F] = value & 0xFF;
+
+    // Debug GT2 waveform writes
+    if (register === 4) {
+        console.log(`📤 setSIDRegister: voice=${voice}, reg=${register}, addr=0x${regAddress.toString(16)}, value=0x${value.toString(16)}, useWorklet=${useWorklet}, hasWorkletNode=${!!sidWorkletNode}`);
+    }
+
     if (sidWorkletNode) {
         const payload = { address: regAddress, value: value & 0xFF };
         if (useWorklet) {
@@ -573,18 +632,19 @@ export function onWorkletReady(callback) {
     }
 }
 
-export function workletStartSequencer({ pattern, patternLength, instruments, bpm }) {
+export function workletStartSequencer({ allPatterns, orderLists, instruments, bpm }) {
     if (!sidWorkletNode) {
         console.warn('workletStartSequencer: sidWorkletNode is null');
         return;
     }
-    console.log(`workletStartSequencer: Starting worklet sequencer with pattern length ${patternLength}, bpm ${bpm}`);
-    console.log(`workletStartSequencer: Pattern preview:`, pattern.slice(0, 3).map(voice => voice.slice(0, 8)));
-    
-    sidWorkletNode.port.postMessage({ type: 'loadPattern', payload: { pattern, patternLength, instruments } });
+
+    console.log(`workletStartSequencer: Starting GT2 song mode with ${allPatterns.length} patterns`);
+    console.log(`workletStartSequencer: Order lists:`, orderLists.map((ol, i) => `V${i}:${ol.slice(0, 5).join(',')}`).join(' '));
+
+    sidWorkletNode.port.postMessage({ type: 'loadPattern', payload: { allPatterns, orderLists, instruments } });
     sidWorkletNode.port.postMessage({ type: 'setBPM', payload: { bpm } });
     sidWorkletNode.port.postMessage({ type: 'start' });
-    
+
     console.log(`workletStartSequencer: Sent loadPattern, setBPM, and start messages to worklet`);
 }
 
@@ -701,57 +761,65 @@ export function applyFilter(voice, filterSettings) {
     }
 }
 
-// New simplified function that takes an instrument ID or object
+// Clean API: Play note with instrument
+// instrumentIdOrObject can be:
+//   - number: index into instruments array
+//   - object: instrument object directly
 export function playNoteWithInstrument(voice, frequencyHz, duration, instrumentIdOrObject) {
-    console.log(`playNoteWithInstrument called: voice=${voice}, freq=${frequencyHz.toFixed(2)}Hz, duration=${duration}ms, instrument=${instrumentIdOrObject}`);
-    
     let instrument;
-    
+    let instrumentIndex = -1;
+
     // Handle both instrument ID (number) and instrument object
     if (typeof instrumentIdOrObject === 'number') {
-        instrument = instruments[instrumentIdOrObject];
+        instrumentIndex = instrumentIdOrObject;
+        instrument = instruments[instrumentIndex];
         if (!instrument) {
-            console.warn(`Invalid instrument ID: ${instrumentIdOrObject}`);
+            console.warn(`Invalid instrument ID: ${instrumentIndex}`);
             return;
-        }
-        console.log(`Using instrument: "${instrument.name}"`);
-        
-        // If worklet is active, use noteOn with index so LFO picks up live params
-        if (isWorkletActive && isWorkletActive()) {
-            console.log(`Using worklet engine for note playback`);
-            if (sidWorkletNode) {
-                const payload = { voice, frequencyHz, instrument, instrumentIndex: instrumentIdOrObject };
-                sidWorkletNode.port.postMessage({ type: 'noteOn', payload });
-                console.log(`Sent noteOn message to worklet`);
-                return;
-            } else {
-                console.warn(`Worklet active but sidWorkletNode is null`);
-            }
-        } else {
-            console.log(`Using main-thread engine for note playback`);
         }
     } else if (typeof instrumentIdOrObject === 'object' && instrumentIdOrObject !== null) {
         instrument = instrumentIdOrObject;
-        console.log(`Using instrument object: "${instrument.name}"`);
     } else {
         console.warn(`Invalid instrument parameter:`, instrumentIdOrObject);
         return;
     }
-    
-    // Call the detailed playNote function with instrument parameters
-    console.log(`Calling playNote with main-thread engine...`);
-    playNote(voice, frequencyHz, duration, instrument.waveform, instrument.ad, instrument.sr, 
-             instrument.pulseWidth, instrument.sync, instrument.ringMod, instrument.filter);
+
+    console.log(`🎵 Playing "${instrument.name}" on voice ${voice}, freq ${frequencyHz.toFixed(2)}Hz`);
+
+    // Trigger GT2 tables (main thread)
+    triggerTablesForInstrument(voice, frequencyHz, instrument, instrumentIndex);
+
+    // Send to worklet (all instrument parameters bundled)
+    if (sidWorkletNode) {
+        const payload = { voice, frequencyHz, instrument, instrumentIndex };
+        sidWorkletNode.port.postMessage({ type: 'noteOn', payload });
+    } else {
+        console.warn(`No worklet available - note not played`);
+    }
 }
 
-// AudioWorklet-only playNote function
-export function playNote(voice, frequencyHz, duration, waveform, attackDecay, sustainRelease, pulseWidth = 0x0800, sync = false, ringMod = false, filter = null) {
-    console.log(`playNote called: voice=${voice}, freq=${frequencyHz.toFixed(2)}Hz, waveform=0x${waveform?.toString(16)}`);
-    
-    // AudioWorklet only - create instrument object and send to worklet
-    const instrument = { waveform, ad: attackDecay, sr: sustainRelease, pulseWidth, sync, ringMod, filter };
-    console.log(`playNote: Using worklet engine with instrument`);
-    workletNoteOn(voice, frequencyHz, instrument);
+// Alias for cleaner code
+export const playNote = playNoteWithInstrument;
+
+// Helper function to trigger GT2 tables
+function triggerTablesForInstrument(voice, frequencyHz, instrument, instrumentIndex) {
+    if (!instrument?.tables) return;
+
+    console.log(`🔍 Checking tables for instrument ${instrumentIndex}:`, instrument.tables);
+
+    if (instrument.tables.wave >= 0 || instrument.tables.pulse >= 0 || instrument.tables.filter >= 0 || instrument.tables.speed >= 0) {
+        // Convert frequency to MIDI note number (approximate)
+        const noteNumber = Math.round(12 * Math.log2(frequencyHz / 440) + 69); // A4 = 440Hz = MIDI 69
+
+        console.log(`✨ GT2 Tables triggered for voice ${voice}, freq ${frequencyHz.toFixed(2)}Hz (MIDI ${noteNumber}), instr ${instrumentIndex}`);
+
+        // Import gt2FrameEngine (circular dependency safe since it's a runtime call)
+        import('./gt2-frame-engine.js').then(module => {
+            module.gt2FrameEngine.triggerNoteTables(voice, noteNumber, instrument);
+        });
+    } else {
+        console.log(`❌ No active tables for instrument ${instrumentIndex}`);
+    }
 }
 
 // AudioWorklet worklet functions

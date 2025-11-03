@@ -615,7 +615,8 @@ class SidProcessor extends AudioWorkletProcessor {
       activeCommand: 0,
       commandData: 0,
       currentFrequency: 0,
-      targetFrequency: 0
+      targetFrequency: 0,
+      transpose: 0  // GT2 transpose amount in halftones
     }));
     // LFO timing (approx 60Hz)
     this.lfoIntervalSamples = Math.max(1, Math.floor(sampleRate / 60));
@@ -644,9 +645,14 @@ class SidProcessor extends AudioWorkletProcessor {
         // GT2 order list mode (only mode)
         this.allPatterns = payload.allPatterns || [];
         this.orderLists = payload.orderLists || [[0], [0], [0]];
-        this.orderPositions = [0, 0, 0];
         this.patternRows = [0, 0, 0];
         this.instruments = payload.instruments || [];
+
+        // Initialize order positions to start of each orderlist
+        this.orderPositions = [0, 0, 0];
+        for (let voice = 0; voice < 3; voice++) {
+          this.voiceState[voice].transpose = 0;
+        }
 
         // Debug what we received
         console.log('Worklet: Loaded GT2 song');
@@ -766,12 +772,6 @@ class SidProcessor extends AudioWorkletProcessor {
           if (!(this.nextLfoSample > 0)) {
             this.nextLfoSample = this.sampleCounter + this.lfoIntervalSamples;
           }
-          // Emit a quick debug snapshot immediately
-          if (this.debug) {
-            const hz = Math.round(frequencyHz * 100) / 100;
-            const pwOut = pw & 0x0FFF;
-            this.port.postMessage({ type: 'lfoDebug', payload: { sample: this.sampleCounter, voices: [{ voice, pw: pwOut, hz }] } });
-          }
           // Track voice modulation state
           const vs = this.voiceState[voice];
           vs.active = true;
@@ -803,7 +803,48 @@ class SidProcessor extends AudioWorkletProcessor {
     };
   }
 
-  noteToHz(note) {
+  // Process GT2 orderlist commands to find pattern and transpose
+  processOrderlistCommands(orderList, startPos) {
+    const MAX_PATTERNS = 208;
+    let pos = startPos;
+    let transpose = 0;
+
+    while (pos < orderList.length) {
+      const entry = orderList[pos];
+
+      // 0xFF = ENDSONG, 0xFE = LOOPSONG - can't start here
+      if (entry === 0xFF || entry === 0xFE) {
+        return { patternIndex: 0, transpose: 0, nextPosition: 0 };
+      }
+      // 0xD0-0xDF = REPEAT command (skip command and parameter)
+      else if (entry >= 0xD0 && entry <= 0xDF) {
+        pos += 2; // Skip command and parameter byte
+      }
+      // 0xE0-0xEE = Transpose UP (+0 to +14 halftones)
+      else if (entry >= 0xE0 && entry <= 0xEE) {
+        transpose += (entry - 0xE0);
+        pos++;
+      }
+      // 0xEF-0xFD = Transpose DOWN (-1 to -15 halftones)
+      else if (entry >= 0xEF && entry <= 0xFD) {
+        transpose -= (entry - 0xEE);
+        pos++;
+      }
+      // Pattern number
+      else if (entry < MAX_PATTERNS) {
+        return { patternIndex: entry, transpose, nextPosition: pos };
+      }
+      // Unknown - skip
+      else {
+        pos++;
+      }
+    }
+
+    // Reached end without finding pattern
+    return { patternIndex: 0, transpose: 0, nextPosition: 0 };
+  }
+
+  noteToHz(note, transpose = 0) {
     if (!note || note === 'R' || note === '---') return 0;
     const n = note.toUpperCase();
 
@@ -817,16 +858,16 @@ class SidProcessor extends AudioWorkletProcessor {
     const [, noteName, sharp, , octave] = match;
     const noteMap = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
 
-    // Calculate MIDI note number
+    // Calculate MIDI note number and add transpose
     const noteInOctave = noteMap[noteName] + (sharp ? 1 : 0);
-    const midiNote = (parseInt(octave) + 1) * 12 + noteInOctave;
+    const midiNote = (parseInt(octave) + 1) * 12 + noteInOctave + transpose;
 
     // Convert MIDI note to frequency (A4 = 440 Hz = MIDI 69)
     const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
 
-    // Debug low notes
-    if (freq < 60) {
-      console.log(`noteToHz: "${note}" -> MIDI ${midiNote} -> ${freq.toFixed(2)} Hz`);
+    // Debug low notes or transposed notes
+    if (freq < 60 || transpose !== 0) {
+      console.log(`noteToHz: "${note}" + ${transpose} -> MIDI ${midiNote} -> ${freq.toFixed(2)} Hz`);
     }
 
     return freq;
@@ -904,10 +945,17 @@ class SidProcessor extends AudioWorkletProcessor {
         continue;
       }
 
-      // GT2 order list mode - get pattern from order list
+      // GT2 order list mode - process commands to get current pattern
       const orderList = this.orderLists[voice];
       const orderPos = this.orderPositions[voice];
-      const patternIndex = orderList[orderPos];
+      const vs = this.voiceState[voice];
+
+      // Process commands from current position to get pattern and transpose
+      const result = this.processOrderlistCommands(orderList, orderPos);
+      const patternIndex = result.patternIndex;
+
+      // Update transpose (don't update orderPosition yet - that happens when pattern ends)
+      vs.transpose = result.transpose;
 
       if (patternIndex >= this.allPatterns.length || patternIndex === 0xFF) {
         // End of song or invalid pattern
@@ -929,8 +977,6 @@ class SidProcessor extends AudioWorkletProcessor {
 
       // Execute pattern command if present
       if (step.command && step.command > 0) {
-        const vs = this.voiceState[voice];
-
         // Store realtime command state (1-4) for continuous execution
         if (step.command >= 1 && step.command <= 4) {
           vs.activeCommand = step.command;
@@ -955,17 +1001,24 @@ class SidProcessor extends AudioWorkletProcessor {
       // Advance pattern row
       this.patternRows[voice]++;
       if (this.patternRows[voice] >= pattern.length) {
-        // Pattern ended, advance order list
+        // Pattern ended, advance order list to next entry after current pattern
         this.patternRows[voice] = 0;
-        this.orderPositions[voice]++;
+        this.orderPositions[voice] = result.nextPosition + 1;
 
-        // Handle order list end/loop (0xFE = LOOPSONG)
-        if (this.orderPositions[voice] >= orderList.length || orderList[this.orderPositions[voice]] === 0xFF) {
-          this.orderPositions[voice] = 0;  // Loop to start
-        } else if (orderList[this.orderPositions[voice]] === 0xFE) {
-          // LOOPSONG marker - next byte is loop position
-          const loopPos = orderList[this.orderPositions[voice] + 1] || 0;
-          this.orderPositions[voice] = loopPos;
+        // Check for special commands at new position
+        if (this.orderPositions[voice] >= orderList.length) {
+          // End of orderlist - loop to start
+          this.orderPositions[voice] = 0;
+        } else {
+          const nextEntry = orderList[this.orderPositions[voice]];
+          if (nextEntry === 0xFF) {
+            // ENDSONG - loop to start
+            this.orderPositions[voice] = 0;
+          } else if (nextEntry === 0xFE) {
+            // LOOPSONG - jump to specified position
+            const loopPos = orderList[this.orderPositions[voice] + 1] || 0;
+            this.orderPositions[voice] = loopPos;
+          }
         }
       }
 
@@ -990,7 +1043,7 @@ class SidProcessor extends AudioWorkletProcessor {
         }
         continue;
       }
-      const freqHz = this.noteToHz(note);
+      const freqHz = this.noteToHz(note, vs.transpose);
       const inst = this.instruments[step.instrument | 0] || null;
       if (!inst) {
         console.log(`Step ${this.currentStep}: Voice ${voice} - NO INSTRUMENT at index ${step.instrument}`);
@@ -1027,7 +1080,6 @@ class SidProcessor extends AudioWorkletProcessor {
       const gateOnAt = (eventSample | 0) + this.retriggerGap;
       this.pendingGateOns.push({ sample: gateOnAt, voice, value: control });
       // Update voice LFO/Arp base state
-      const vs = this.voiceState[voice];
       vs.active = true;
       vs.instrument = inst;
       vs.instrumentIndex = (step.instrument | 0);
@@ -1176,10 +1228,6 @@ class SidProcessor extends AudioWorkletProcessor {
     // Stop LFO when no voices are active nor in release
     if (!this.voiceState.some(v => v && (v.active || (v.releaseUntilSample > this.sampleCounter)))) {
       this.nextLfoSample = 0;
-    }
-    if (this.debug && this.sampleCounter - this.lastDebugSample >= Math.floor(sampleRate / 4)) {
-      this.lastDebugSample = this.sampleCounter;
-      this.port.postMessage({ type: 'lfoDebug', payload: { sample: this.sampleCounter, voices: dbg } });
     }
   }
 

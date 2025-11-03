@@ -1,7 +1,7 @@
 // record-mode.js - Keyboard recording mode for step entry
-import { patternManager } from './pattern-manager.js';
+import { patternManager } from './pattern-manager-compat.js';
 import { keyboardInput } from './keyboard-input.js';
-import { currentStep as sequencerCurrentStep, playbackInterval } from './sequencer.js';
+import { currentStep as sequencerCurrentStep, isSequencePlaying } from './sequencer-gt2.js';
 
 class RecordMode {
     constructor() {
@@ -82,20 +82,20 @@ class RecordMode {
     
     recordNote(note) {
         const currentPattern = patternManager.getCurrentPattern();
-        
+
         // Use sequencer's current step if playing, otherwise use our own step
-        const stepToRecord = playbackInterval !== null ? sequencerCurrentStep : this.currentStep;
-        
+        const stepToRecord = isSequencePlaying ? sequencerCurrentStep : this.currentStep;
+
         // Record the note at the appropriate position
         currentPattern.setStepData(this.currentVoice, stepToRecord, note, this.currentInstrument);
-        
-        console.log(`🎵 Recorded ${note} at Voice ${this.currentVoice + 1}, Step ${stepToRecord + 1} ${playbackInterval !== null ? '(during playback)' : ''}`);
-        
+
+        console.log(`🎵 Recorded ${note} at Voice ${this.currentVoice + 1}, Step ${stepToRecord + 1} ${isSequencePlaying ? '(during playback)' : ''}`);
+
         // Update the UI to show the new note
         this.updateTrackerUI();
-        
+
         // Auto-advance to next step if enabled (only when not playing)
-        if (this.autoAdvance && playbackInterval === null) {
+        if (this.autoAdvance && !isSequencePlaying) {
             this.advanceStep();
         }
         
@@ -110,17 +110,17 @@ class RecordMode {
     
     recordRest() {
         const currentPattern = patternManager.getCurrentPattern();
-        
+
         // Use sequencer's current step if playing, otherwise use our own step
-        const stepToRecord = playbackInterval !== null ? sequencerCurrentStep : this.currentStep;
-        
+        const stepToRecord = isSequencePlaying ? sequencerCurrentStep : this.currentStep;
+
         currentPattern.setStepData(this.currentVoice, stepToRecord, 'R', this.currentInstrument);
-        
-        console.log(`🔇 Recorded REST at Voice ${this.currentVoice + 1}, Step ${stepToRecord + 1} ${playbackInterval !== null ? '(during playback)' : ''}`);
-        
+
+        console.log(`🔇 Recorded REST at Voice ${this.currentVoice + 1}, Step ${stepToRecord + 1} ${isSequencePlaying ? '(during playback)' : ''}`);
+
         this.updateTrackerUI();
-        
-        if (this.autoAdvance && playbackInterval === null) {
+
+        if (this.autoAdvance && !isSequencePlaying) {
             this.advanceStep();
         }
         
@@ -132,17 +132,17 @@ class RecordMode {
     
     recordSustain() {
         const currentPattern = patternManager.getCurrentPattern();
-        
+
         // Use sequencer's current step if playing, otherwise use our own step
-        const stepToRecord = playbackInterval !== null ? sequencerCurrentStep : this.currentStep;
-        
+        const stepToRecord = isSequencePlaying ? sequencerCurrentStep : this.currentStep;
+
         currentPattern.setStepData(this.currentVoice, stepToRecord, '---', this.currentInstrument);
-        
-        console.log(`🎵 Recorded SUSTAIN at Voice ${this.currentVoice + 1}, Step ${stepToRecord + 1} ${playbackInterval !== null ? '(during playback)' : ''}`);
-        
+
+        console.log(`🎵 Recorded SUSTAIN at Voice ${this.currentVoice + 1}, Step ${stepToRecord + 1} ${isSequencePlaying ? '(during playback)' : ''}`);
+
         this.updateTrackerUI();
-        
-        if (this.autoAdvance && playbackInterval === null) {
+
+        if (this.autoAdvance && !isSequencePlaying) {
             this.advanceStep();
         }
         
@@ -173,9 +173,9 @@ class RecordMode {
     }
     
     updateTrackerUI() {
-        // Update the tracker UI to show the new note
-        if (window.refreshTrackerFromPattern) {
-            window.refreshTrackerFromPattern();
+        // Update the GT2 pattern editor to show the new note
+        if (window.gt2PatternEditor && window.gt2PatternEditor.renderPattern) {
+            window.gt2PatternEditor.renderPattern();
         }
     }
     

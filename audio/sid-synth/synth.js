@@ -275,26 +275,6 @@ export function initSynth() {
                     if (typeof window !== 'undefined' && typeof window.updateWorkletStep === 'function') {
                         try { window.updateWorkletStep(payload.step); } catch(_) {}
                     }
-                } else if (type === 'lfoDebug') {
-                    try { window.lfoDebug = payload; } catch(_) {}
-                    // Update inline LFO debug line in main UI if present
-                    try {
-                        const el = document.getElementById('lfoDebugLine');
-                        if (el) {
-                            const parts = (payload.voices || []).map(v => {
-                                const fields = [];
-                                if (typeof v.pw === 'number') fields.push(`PW=${v.pw}`);
-                                if (typeof v.hz === 'number') fields.push(`Hz=${v.hz}`);
-                                return `V${v.voice}: ${fields.join(' ')}`;
-                            });
-                            el.textContent = `LFO: ${parts.join(' | ')}`;
-                        }
-                        // Also emit to console occasionally for visibility
-                        if (!window.__lastLfoLog || (performance.now() - window.__lastLfoLog) > 1000) {
-                            window.__lastLfoLog = performance.now();
-                            console.log('LFO Debug:', payload);
-                        }
-                    } catch (_) {}
                 } else if (type === 'triggerTables') {
                     // Worklet wants to trigger GT2 frame engine tables
                     if (typeof window !== 'undefined' && window.gt2FrameEngine) {

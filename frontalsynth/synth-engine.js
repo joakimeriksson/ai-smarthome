@@ -123,8 +123,9 @@ class SynthVoice {
 
         // Setup PWM after oscillators are started - always set up for square waves or when LFO2 PWM is active
         // Use LFO2 for PWM modulation (independent from LFO1)
-        if (params.osc1Waveform === 'square' || params.osc2Waveform === 'square' || params.modMatrix.lfoPWM > 0) {
-            this.setupPWM(frequency, params.pulseWidth, lfo2Node, params.modMatrix.lfoPWM, params);
+        if (params.osc1Waveform === 'square' || params.osc2Waveform === 'square' ||
+            params.modMatrix.lfo2Osc1PWM > 0 || params.modMatrix.lfo2Osc2PWM > 0) {
+            this.setupPWM(frequency, params.pulseWidth, lfo2Node, params.modMatrix, params);
         }
 
         // Apply envelope
@@ -158,11 +159,11 @@ class SynthVoice {
         syncDepth.connect(this.osc2.frequency);
     }
 
-    setupPWM(frequency, pulseWidth, lfoNode, lfoPWMAmount, params) {
+    setupPWM(frequency, pulseWidth, lfoNode, modMatrix, params) {
         // PWM using waveshaper comparator method
         // Sawtooth wave -> DC offset -> Comparator (waveshaper) -> Pulse wave
         // Pulse width from 0-100, where 50 is a square wave
-        // LFO modulates the DC offset for classic analog PWM sweep
+        // LFO2 modulates the DC offset for classic analog PWM sweep
 
         // Calculate DC offset from pulse width (0-100 maps to -1 to +1 offset)
         // offset = 2*(pulseWidth/100) - 1
@@ -195,13 +196,15 @@ class SynthVoice {
             dcSource1.start();
             this.dcSource1 = dcSource1; // Store for cleanup
 
-            // LFO modulation of PWM - modulates the DC offset
-            if (lfoNode && lfoPWMAmount > 0) {
+            // LFO2 modulation of OSC1 PWM - modulates the DC offset (per-oscillator amount)
+            if (lfoNode && modMatrix.lfo2Osc1PWM > 0) {
                 // Scale LFO to appropriate range for PWM modulation
-                const lfoScale = (lfoPWMAmount / 100) * 0.8; // Max ±0.8 offset modulation
-                this.lfoToPWMGain.gain.value = lfoScale;
-                lfoNode.connect(this.lfoToPWMGain);
-                this.lfoToPWMGain.connect(dcSource1.offset);
+                const lfoScale = (modMatrix.lfo2Osc1PWM / 100) * 0.8; // Max ±0.8 offset modulation
+                const lfo2Osc1PWMGain = this.context.createGain();
+                lfo2Osc1PWMGain.gain.value = lfoScale;
+                lfoNode.connect(lfo2Osc1PWMGain);
+                lfo2Osc1PWMGain.connect(dcSource1.offset);
+                this.lfo2Osc1PWMGain = lfo2Osc1PWMGain; // Store for cleanup
             }
         }
 
@@ -227,31 +230,40 @@ class SynthVoice {
             dcSource2.start();
             this.dcSource2 = dcSource2;
 
-            // LFO modulation of PWM
-            if (lfoNode && lfoPWMAmount > 0) {
-                const lfoScale = (lfoPWMAmount / 100) * 0.8;
-                // Reuse the same lfoToPWMGain if osc1 didn't use it
-                if (!this.dcSource1) {
-                    this.lfoToPWMGain.gain.value = lfoScale;
-                    lfoNode.connect(this.lfoToPWMGain);
-                }
-                this.lfoToPWMGain.connect(dcSource2.offset);
+            // LFO2 modulation of OSC2 PWM (per-oscillator amount)
+            if (lfoNode && modMatrix.lfo2Osc2PWM > 0) {
+                const lfoScale = (modMatrix.lfo2Osc2PWM / 100) * 0.8;
+                const lfo2Osc2PWMGain = this.context.createGain();
+                lfo2Osc2PWMGain.gain.value = lfoScale;
+                lfoNode.connect(lfo2Osc2PWMGain);
+                lfo2Osc2PWMGain.connect(dcSource2.offset);
+                this.lfo2Osc2PWMGain = lfo2Osc2PWMGain; // Store for cleanup
             }
         }
     }
 
     setupLFORouting(lfoNode, modMatrix) {
-        // LFO to Pitch modulation
-        if (modMatrix.lfoPitch > 0) {
-            this.lfoToPitchGain.gain.value = modMatrix.lfoPitch * 10; // Scale for cents
-            lfoNode.connect(this.lfoToPitchGain);
-            this.lfoToPitchGain.connect(this.osc1.detune);
-            this.lfoToPitchGain.connect(this.osc2.detune);
+        // LFO1 to OSC1 Pitch modulation
+        if (modMatrix.lfo1Osc1Pitch > 0) {
+            const lfo1Osc1PitchGain = this.context.createGain();
+            lfo1Osc1PitchGain.gain.value = modMatrix.lfo1Osc1Pitch * 10; // Scale for cents
+            lfoNode.connect(lfo1Osc1PitchGain);
+            lfo1Osc1PitchGain.connect(this.osc1.detune);
+            this.lfo1Osc1PitchGain = lfo1Osc1PitchGain; // Store for cleanup
         }
 
-        // LFO to Filter modulation
-        if (modMatrix.lfoFilter > 0) {
-            this.lfoToFilterGain.gain.value = modMatrix.lfoFilter * 50; // Scale for filter frequency
+        // LFO1 to OSC2 Pitch modulation
+        if (modMatrix.lfo1Osc2Pitch > 0) {
+            const lfo1Osc2PitchGain = this.context.createGain();
+            lfo1Osc2PitchGain.gain.value = modMatrix.lfo1Osc2Pitch * 10; // Scale for cents
+            lfoNode.connect(lfo1Osc2PitchGain);
+            lfo1Osc2PitchGain.connect(this.osc2.detune);
+            this.lfo1Osc2PitchGain = lfo1Osc2PitchGain; // Store for cleanup
+        }
+
+        // LFO1 to Filter modulation (global)
+        if (modMatrix.lfo1Filter > 0) {
+            this.lfoToFilterGain.gain.value = modMatrix.lfo1Filter * 50; // Scale for filter frequency
             lfoNode.connect(this.lfoToFilterGain);
             this.lfoToFilterGain.connect(this.filter.frequency);
         }
@@ -324,6 +336,10 @@ class SynthVoice {
                 this.lfoToPitchGain.disconnect();
                 this.lfoToFilterGain.disconnect();
                 this.lfoToPWMGain.disconnect();
+                if (this.lfo1Osc1PitchGain) this.lfo1Osc1PitchGain.disconnect();
+                if (this.lfo1Osc2PitchGain) this.lfo1Osc2PitchGain.disconnect();
+                if (this.lfo2Osc1PWMGain) this.lfo2Osc1PWMGain.disconnect();
+                if (this.lfo2Osc2PWMGain) this.lfo2Osc2PWMGain.disconnect();
                 this.pwm1Offset.disconnect();
                 this.pwm1Shaper.disconnect();
                 this.pwm1Output.disconnect();
@@ -571,10 +587,12 @@ class SynthEngine {
                 waveform: 'triangle'
             },
             modMatrix: {
-                lfoPitch: 0,
-                lfoFilter: 0,
-                lfoPWM: 0,
-                envFilter: 50
+                lfo1Osc1Pitch: 0,   // LFO1 modulation of OSC1 pitch
+                lfo1Osc2Pitch: 0,   // LFO1 modulation of OSC2 pitch
+                lfo1Filter: 0,       // LFO1 modulation of filter (global)
+                lfo2Osc1PWM: 0,      // LFO2 modulation of OSC1 PWM
+                lfo2Osc2PWM: 0,      // LFO2 modulation of OSC2 PWM
+                envFilter: 50        // Envelope modulation of filter
             },
             masterVolume: 0.5
         };
@@ -837,15 +855,21 @@ class SynthEngine {
                 }
                 break;
 
-            // Modulation Matrix
-            case 'modLfoPitch':
-                this.params.modMatrix.lfoPitch = parseFloat(value);
+            // Modulation Matrix - Per-Oscillator Controls
+            case 'modLfo1Osc1Pitch':
+                this.params.modMatrix.lfo1Osc1Pitch = parseFloat(value);
                 break;
-            case 'modLfoFilter':
-                this.params.modMatrix.lfoFilter = parseFloat(value);
+            case 'modLfo1Osc2Pitch':
+                this.params.modMatrix.lfo1Osc2Pitch = parseFloat(value);
                 break;
-            case 'modLfoPWM':
-                this.params.modMatrix.lfoPWM = parseFloat(value);
+            case 'modLfo1Filter':
+                this.params.modMatrix.lfo1Filter = parseFloat(value);
+                break;
+            case 'modLfo2Osc1PWM':
+                this.params.modMatrix.lfo2Osc1PWM = parseFloat(value);
+                break;
+            case 'modLfo2Osc2PWM':
+                this.params.modMatrix.lfo2Osc2PWM = parseFloat(value);
                 break;
             case 'modEnvFilter':
                 this.params.modMatrix.envFilter = parseFloat(value);

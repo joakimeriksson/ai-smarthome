@@ -137,20 +137,30 @@ class UIController {
             this.synth.setParameter('lfo2Waveform', value);
         });
 
-        // Modulation matrix
-        this.addListener('mod-lfo-pitch', (value) => {
-            this.synth.setParameter('modLfoPitch', value);
-            this.updateDisplay('mod-lfo-pitch-val', value + '%');
+        // Modulation matrix - Per-Oscillator Controls
+        this.addListener('mod-lfo1-osc1-pitch', (value) => {
+            this.synth.setParameter('modLfo1Osc1Pitch', value);
+            this.updateDisplay('mod-lfo1-osc1-pitch-val', value + '%');
         });
 
-        this.addListener('mod-lfo-filter', (value) => {
-            this.synth.setParameter('modLfoFilter', value);
-            this.updateDisplay('mod-lfo-filter-val', value + '%');
+        this.addListener('mod-lfo1-osc2-pitch', (value) => {
+            this.synth.setParameter('modLfo1Osc2Pitch', value);
+            this.updateDisplay('mod-lfo1-osc2-pitch-val', value + '%');
         });
 
-        this.addListener('mod-lfo-pwm', (value) => {
-            this.synth.setParameter('modLfoPWM', value);
-            this.updateDisplay('mod-lfo-pwm-val', value + '%');
+        this.addListener('mod-lfo1-filter', (value) => {
+            this.synth.setParameter('modLfo1Filter', value);
+            this.updateDisplay('mod-lfo1-filter-val', value + '%');
+        });
+
+        this.addListener('mod-lfo2-osc1-pwm', (value) => {
+            this.synth.setParameter('modLfo2Osc1PWM', value);
+            this.updateDisplay('mod-lfo2-osc1-pwm-val', value + '%');
+        });
+
+        this.addListener('mod-lfo2-osc2-pwm', (value) => {
+            this.synth.setParameter('modLfo2Osc2PWM', value);
+            this.updateDisplay('mod-lfo2-osc2-pwm-val', value + '%');
         });
 
         this.addListener('mod-env-filter', (value) => {
@@ -218,9 +228,11 @@ class UIController {
             ['env-release-val', '500 ms'],
             ['lfo-rate-val', '4.0 Hz'],
             ['lfo2-rate-val', '2.0 Hz'],
-            ['mod-lfo-pitch-val', '0%'],
-            ['mod-lfo-filter-val', '0%'],
-            ['mod-lfo-pwm-val', '0%'],
+            ['mod-lfo1-osc1-pitch-val', '0%'],
+            ['mod-lfo1-osc2-pitch-val', '0%'],
+            ['mod-lfo1-filter-val', '0%'],
+            ['mod-lfo2-osc1-pwm-val', '0%'],
+            ['mod-lfo2-osc2-pwm-val', '0%'],
             ['mod-env-filter-val', '50%'],
             ['arp-bpm-val', '120'],
             ['master-volume-val', '50%']

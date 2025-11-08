@@ -198,22 +198,32 @@
 
             <!-- Modulation Matrix -->
             <div class="section matrix-section">
-                <h2>MODULATION MATRIX</h2>
+                <h2>MODULATION MATRIX (Per-Oscillator)</h2>
                 <div class="matrix-grid">
                     <div class="matrix-row">
-                        <label>LFO1 → Pitch</label>
-                        <input type="range" id="mod-lfo-pitch" min="0" max="100" value="0" step="1">
-                        <span class="value-display" id="mod-lfo-pitch-val">0%</span>
+                        <label>LFO1 → OSC1 Pitch</label>
+                        <input type="range" id="mod-lfo1-osc1-pitch" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo1-osc1-pitch-val">0%</span>
+                    </div>
+                    <div class="matrix-row">
+                        <label>LFO1 → OSC2 Pitch</label>
+                        <input type="range" id="mod-lfo1-osc2-pitch" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo1-osc2-pitch-val">0%</span>
                     </div>
                     <div class="matrix-row">
                         <label>LFO1 → Filter</label>
-                        <input type="range" id="mod-lfo-filter" min="0" max="100" value="0" step="1">
-                        <span class="value-display" id="mod-lfo-filter-val">0%</span>
+                        <input type="range" id="mod-lfo1-filter" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo1-filter-val">0%</span>
                     </div>
                     <div class="matrix-row">
-                        <label>LFO2 → PWM</label>
-                        <input type="range" id="mod-lfo-pwm" min="0" max="100" value="0" step="1">
-                        <span class="value-display" id="mod-lfo-pwm-val">0%</span>
+                        <label>LFO2 → OSC1 PWM</label>
+                        <input type="range" id="mod-lfo2-osc1-pwm" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo2-osc1-pwm-val">0%</span>
+                    </div>
+                    <div class="matrix-row">
+                        <label>LFO2 → OSC2 PWM</label>
+                        <input type="range" id="mod-lfo2-osc2-pwm" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo2-osc2-pwm-val">0%</span>
                     </div>
                     <div class="matrix-row">
                         <label>ENV → Filter</label>

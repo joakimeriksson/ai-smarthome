@@ -36,14 +36,26 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
   - Rate Control: 0.1 to 20 Hz
   - Independent rate allows complex timbral movement
 
-### Modulation Matrix
-Route modulation sources to multiple destinations with adjustable amounts:
-- **LFO1 → Pitch**: Vibrato and pitch modulation effects (0-100%)
-- **LFO1 → Filter**: Wah-wah and filter sweep effects (0-100%)
-- **LFO2 → PWM**: Pulse width modulation sweep for classic analog string/pad textures (0-100%)
-- **Envelope → Filter**: Classic analog filter envelope control (0-100%)
+### Modulation Matrix (Per-Oscillator Control)
+Route modulation sources to specific oscillators with adjustable amounts:
 
-The dual LFO architecture allows independent modulation rates - for example, slow pitch vibrato (LFO1 at 5Hz) combined with fast PWM sweep (LFO2 at 0.3Hz) for evolving, complex timbres.
+**LFO1 Modulation:**
+- **LFO1 → OSC1 Pitch**: Independent vibrato/pitch modulation for oscillator 1 (0-100%)
+- **LFO1 → OSC2 Pitch**: Independent vibrato/pitch modulation for oscillator 2 (0-100%)
+- **LFO1 → Filter**: Wah-wah and filter sweep effects, global (0-100%)
+
+**LFO2 Modulation:**
+- **LFO2 → OSC1 PWM**: Pulse width sweep for oscillator 1 only (0-100%)
+- **LFO2 → OSC2 PWM**: Pulse width sweep for oscillator 2 only (0-100%)
+
+**Envelope Modulation:**
+- **ENV → Filter**: Classic analog filter envelope control, global (0-100%)
+
+**Per-Oscillator Benefits:**
+- Apply vibrato to only one oscillator while the other stays steady
+- Different PWM sweep depths create complex, moving timbres
+- OSC1 vibrato at 30% + OSC2 vibrato at 0% = subtle detuning effect
+- OSC1 PWM at 80% + OSC2 PWM at 20% = asymmetric pulse width movement
 
 ### Arpeggiator
 - **Multiple Patterns**: Up, Down, Up/Down, Random
@@ -107,15 +119,23 @@ Connect a MIDI keyboard - FrontalSynth will automatically detect and use it.
 4. LFO1 → Filter: 80%, LFO1 Rate: 4-8 Hz, Waveform: Square
 5. Envelope: Fast attack, short decay, low sustain
 
-#### PWM String Pad
+#### PWM String Pad (Per-Oscillator Modulation)
 1. OSC1: Square, Level 60%
 2. OSC2: Square, Detune -3, Offset +12 (octave up), Level 40%
 3. Pulse Width: 30-70% (experiment!)
-4. LFO2 → PWM: 60%, LFO2 Rate: 0.3 Hz, Waveform: Triangle
+4. LFO2 → OSC1 PWM: 80%, LFO2 → OSC2 PWM: 40%, LFO2 Rate: 0.3 Hz, Waveform: Triangle
 5. Filter Cutoff: 3000 Hz, Resonance: 2
 6. Envelope: Attack 800ms, Decay 600ms, Sustain 70%, Release 1200ms
-7. Chorus/detune effect from sweeping PWM creates lush analog texture
-8. Optional: Add LFO1 → Pitch: 10%, LFO1 Rate: 5 Hz for vibrato on top of PWM sweep
+7. Different PWM depths create complex, evolving chorusing effect
+8. Optional: Add LFO1 → OSC1 Pitch: 15%, LFO1 → OSC2 Pitch: 5%, LFO1 Rate: 5 Hz for subtle vibrato variation
+
+#### Detuned Lead with Vibrato
+1. OSC1: Sawtooth, Detune 0, Level 50%
+2. OSC2: Sawtooth, Detune 7, Level 50%
+3. LFO1 → OSC1 Pitch: 40%, LFO1 → OSC2 Pitch: 0%, LFO1 Rate: 6 Hz
+4. Filter Cutoff: 4000 Hz, Resonance: 3
+5. Envelope: Attack 5ms, Release 150ms
+6. Result: OSC1 has vibrato while OSC2 stays steady, creating a unique detuning effect
 
 ## Technical Details
 

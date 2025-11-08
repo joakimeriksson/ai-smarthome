@@ -28,9 +28,14 @@
                         </select>
                     </div>
                     <div class="control">
-                        <label>DETUNE</label>
+                        <label>DETUNE (cents)</label>
                         <input type="range" id="osc1-detune" min="-50" max="50" value="0" step="1">
                         <span class="value-display" id="osc1-detune-val">0</span>
+                    </div>
+                    <div class="control">
+                        <label>OFFSET (semi)</label>
+                        <input type="range" id="osc1-offset" min="-24" max="24" value="0" step="1">
+                        <span class="value-display" id="osc1-offset-val">0</span>
                     </div>
                     <div class="control">
                         <label>LEVEL</label>
@@ -54,9 +59,14 @@
                         </select>
                     </div>
                     <div class="control">
-                        <label>DETUNE</label>
+                        <label>DETUNE (cents)</label>
                         <input type="range" id="osc2-detune" min="-50" max="50" value="5" step="1">
                         <span class="value-display" id="osc2-detune-val">5</span>
+                    </div>
+                    <div class="control">
+                        <label>OFFSET (semi)</label>
+                        <input type="range" id="osc2-offset" min="-24" max="24" value="0" step="1">
+                        <span class="value-display" id="osc2-offset-val">0</span>
                     </div>
                     <div class="control">
                         <label>LEVEL</label>
@@ -70,6 +80,11 @@
             <div class="section mod-features-section">
                 <h2>OSCILLATOR MODULATION</h2>
                 <div class="controls-row">
+                    <div class="control">
+                        <label>PULSE WIDTH</label>
+                        <input type="range" id="pulse-width" min="0" max="100" value="50" step="1">
+                        <span class="value-display" id="pulse-width-val">50%</span>
+                    </div>
                     <div class="control">
                         <label>RING MOD</label>
                         <input type="range" id="ring-mod" min="0" max="1" value="0" step="0.01">
@@ -175,6 +190,11 @@
                         <span class="value-display" id="mod-lfo-filter-val">0%</span>
                     </div>
                     <div class="matrix-row">
+                        <label>LFO → PWM</label>
+                        <input type="range" id="mod-lfo-pwm" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo-pwm-val">0%</span>
+                    </div>
+                    <div class="matrix-row">
                         <label>ENV → Filter</label>
                         <input type="range" id="mod-env-filter" min="0" max="100" value="50" step="1">
                         <span class="value-display" id="mod-env-filter-val">50%</span>
@@ -242,8 +262,9 @@
 
             <div class="instructions">
                 <p>Use computer keyboard (A-L for white keys, W-U for black keys) or click keys to play</p>
-                <p>Dual oscillators with detune, ring modulation, and oscillator sync</p>
-                <p>LFO now modulates pitch and filter - adjust in modulation matrix</p>
+                <p>Dual oscillators with detune (cents), note offset (semitones), PWM, ring mod, and sync</p>
+                <p>LFO modulates pitch, filter, and PWM - adjust amounts in modulation matrix</p>
+                <p>Note offset: -12 = octave down, +12 = octave up, +7 = fifth, etc.</p>
             </div>
         </div>
     </div>

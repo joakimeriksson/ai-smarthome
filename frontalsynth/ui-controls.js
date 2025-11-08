@@ -30,6 +30,11 @@ class UIController {
             this.updateDisplay('osc1-detune-val', value);
         });
 
+        this.addListener('osc1-offset', (value) => {
+            this.synth.setParameter('osc1Offset', value);
+            this.updateDisplay('osc1-offset-val', value);
+        });
+
         this.addListener('osc1-level', (value) => {
             this.synth.setParameter('osc1Level', value);
             this.updateDisplay('osc1-level-val', Math.round(value * 100) + '%');
@@ -45,9 +50,20 @@ class UIController {
             this.updateDisplay('osc2-detune-val', value);
         });
 
+        this.addListener('osc2-offset', (value) => {
+            this.synth.setParameter('osc2Offset', value);
+            this.updateDisplay('osc2-offset-val', value);
+        });
+
         this.addListener('osc2-level', (value) => {
             this.synth.setParameter('osc2Level', value);
             this.updateDisplay('osc2-level-val', Math.round(value * 100) + '%');
+        });
+
+        // Pulse Width Modulation
+        this.addListener('pulse-width', (value) => {
+            this.synth.setParameter('pulseWidth', value);
+            this.updateDisplay('pulse-width-val', value + '%');
         });
 
         // Ring modulation and sync
@@ -122,6 +138,11 @@ class UIController {
             this.updateDisplay('mod-lfo-filter-val', value + '%');
         });
 
+        this.addListener('mod-lfo-pwm', (value) => {
+            this.synth.setParameter('modLfoPWM', value);
+            this.updateDisplay('mod-lfo-pwm-val', value + '%');
+        });
+
         this.addListener('mod-env-filter', (value) => {
             this.synth.setParameter('modEnvFilter', value);
             this.updateDisplay('mod-env-filter-val', value + '%');
@@ -171,9 +192,12 @@ class UIController {
         // Initialize all display values
         const displays = [
             ['osc1-detune-val', '0'],
+            ['osc1-offset-val', '0'],
             ['osc1-level-val', '50%'],
             ['osc2-detune-val', '5'],
+            ['osc2-offset-val', '0'],
             ['osc2-level-val', '50%'],
+            ['pulse-width-val', '50%'],
             ['ring-mod-val', '0%'],
             ['filter-cutoff-val', '2000 Hz'],
             ['filter-resonance-val', '1.0'],
@@ -185,6 +209,7 @@ class UIController {
             ['lfo-rate-val', '4.0 Hz'],
             ['mod-lfo-pitch-val', '0%'],
             ['mod-lfo-filter-val', '0%'],
+            ['mod-lfo-pwm-val', '0%'],
             ['mod-env-filter-val', '50%'],
             ['arp-bpm-val', '120'],
             ['master-volume-val', '50%']

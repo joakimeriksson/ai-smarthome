@@ -15,6 +15,16 @@ class SynthVoice {
         this.osc1Gain.gain.value = 0.5;
         this.osc2Gain.gain.value = 0.5;
 
+        // PWM oscillators (sawtooth pairs for pulse width modulation)
+        this.pwm1OscA = null;
+        this.pwm1OscB = null;
+        this.pwm1GainA = this.context.createGain();
+        this.pwm1GainB = this.context.createGain();
+        this.pwm2OscA = null;
+        this.pwm2OscB = null;
+        this.pwm2GainA = this.context.createGain();
+        this.pwm2GainB = this.context.createGain();
+
         // Ring modulator (uses waveshaper to multiply signals)
         this.ringMod = this.context.createWaveShaper();
         this.ringModGain = this.context.createGain();
@@ -29,6 +39,8 @@ class SynthVoice {
         this.lfoToPitchGain.gain.value = 0;
         this.lfoToFilterGain = this.context.createGain();
         this.lfoToFilterGain.gain.value = 0;
+        this.lfoToPWMGain = this.context.createGain();
+        this.lfoToPWMGain.gain.value = 0;
 
         // Filter
         this.filter = this.context.createBiquadFilter();
@@ -56,13 +68,17 @@ class SynthVoice {
         // Create oscillator 1
         this.osc1 = this.context.createOscillator();
         this.osc1.type = params.osc1Waveform;
-        this.osc1.frequency.value = frequency;
+        // Apply semitone offset: frequency * 2^(offset/12)
+        const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
+        this.osc1.frequency.value = osc1Freq;
         this.osc1.detune.value = params.osc1Detune;
 
         // Create oscillator 2
         this.osc2 = this.context.createOscillator();
         this.osc2.type = params.osc2Waveform;
-        this.osc2.frequency.value = frequency;
+        // Apply semitone offset: frequency * 2^(offset/12)
+        const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
+        this.osc2.frequency.value = osc2Freq;
         this.osc2.detune.value = params.osc2Detune;
 
         // Update oscillator levels
@@ -99,6 +115,11 @@ class SynthVoice {
         this.osc1.start(now);
         this.osc2.start(now);
 
+        // Setup PWM after oscillators are started
+        if (params.pulseWidth !== undefined && params.pulseWidth !== 50) {
+            this.setupPWM(frequency, params.pulseWidth, lfoNode, params.modMatrix.lfoPWM, params);
+        }
+
         // Apply envelope
         this.applyEnvelope(params.envelope, params.filterEnvAmount, params.modMatrix);
     }
@@ -128,6 +149,81 @@ class SynthVoice {
         syncDepth.gain.value = this.osc2.frequency.value;
         this.osc1.connect(syncDepth);
         syncDepth.connect(this.osc2.frequency);
+    }
+
+    setupPWM(frequency, pulseWidth, lfoNode, lfoPWMAmount, params) {
+        // PWM using dual sawtooth oscillators
+        // Pulse width from 0-100, where 50 is a square wave
+        // This creates variable pulse width that can be modulated by LFO
+
+        const now = this.context.currentTime;
+
+        // PWM for Oscillator 1 if it's set to square
+        if (this.osc1 && this.osc1.type === 'square') {
+            // Replace square wave with PWM sawtooth pair
+            this.osc1.type = 'sawtooth';
+
+            this.pwm1OscA = this.context.createOscillator();
+            this.pwm1OscA.type = 'sawtooth';
+            // Use the same frequency as osc1 (with offset already applied)
+            const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
+            this.pwm1OscA.frequency.value = osc1Freq;
+            this.pwm1OscA.detune.value = this.osc1.detune.value;
+
+            // Calculate gain based on pulse width (50 = square, <50 = narrow, >50 = wide)
+            const pwmBalance = (pulseWidth - 50) / 50; // -1 to 1
+            this.pwm1GainA.gain.value = 0.5;
+            this.pwm1GainB.gain.value = -0.5;
+
+            // Connect main osc1 through gainA
+            this.osc1.disconnect();
+            this.osc1.connect(this.pwm1GainA);
+            this.pwm1GainA.connect(this.osc1Gain);
+
+            // Connect inverted PWM oscillator through gainB
+            this.pwm1OscA.connect(this.pwm1GainB);
+            this.pwm1GainB.connect(this.osc1Gain);
+
+            this.pwm1OscA.start(now);
+
+            // LFO modulation of PWM - modulates the gain balance
+            if (lfoNode && lfoPWMAmount > 0) {
+                this.lfoToPWMGain.gain.value = lfoPWMAmount * 0.005; // Scale for subtle modulation
+                lfoNode.connect(this.lfoToPWMGain);
+                this.lfoToPWMGain.connect(this.pwm1GainA.gain);
+            }
+        }
+
+        // PWM for Oscillator 2 if it's set to square
+        if (this.osc2 && this.osc2.type === 'square') {
+            // Replace square wave with PWM sawtooth pair
+            this.osc2.type = 'sawtooth';
+
+            this.pwm2OscA = this.context.createOscillator();
+            this.pwm2OscA.type = 'sawtooth';
+            // Use the same frequency as osc2 (with offset already applied)
+            const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
+            this.pwm2OscA.frequency.value = osc2Freq;
+            this.pwm2OscA.detune.value = this.osc2.detune.value;
+
+            const pwmBalance = (pulseWidth - 50) / 50;
+            this.pwm2GainA.gain.value = 0.5;
+            this.pwm2GainB.gain.value = -0.5;
+
+            this.osc2.disconnect();
+            this.osc2.connect(this.pwm2GainA);
+            this.pwm2GainA.connect(this.osc2Gain);
+
+            this.pwm2OscA.connect(this.pwm2GainB);
+            this.pwm2GainB.connect(this.osc2Gain);
+
+            this.pwm2OscA.start(now);
+
+            // LFO modulation of PWM
+            if (lfoNode && lfoPWMAmount > 0) {
+                this.lfoToPWMGain.connect(this.pwm2GainA.gain);
+            }
+        }
     }
 
     setupLFORouting(lfoNode, modMatrix) {
@@ -198,10 +294,26 @@ class SynthVoice {
                 this.osc2.disconnect();
                 this.osc2 = null;
             }
+            // Clean up PWM oscillators
+            if (this.pwm1OscA) {
+                this.pwm1OscA.stop();
+                this.pwm1OscA.disconnect();
+                this.pwm1OscA = null;
+            }
+            if (this.pwm2OscA) {
+                this.pwm2OscA.stop();
+                this.pwm2OscA.disconnect();
+                this.pwm2OscA = null;
+            }
             // Disconnect LFO connections
             try {
                 this.lfoToPitchGain.disconnect();
                 this.lfoToFilterGain.disconnect();
+                this.lfoToPWMGain.disconnect();
+                this.pwm1GainA.disconnect();
+                this.pwm1GainB.disconnect();
+                this.pwm2GainA.disconnect();
+                this.pwm2GainB.disconnect();
             } catch(e) {}
 
             this.active = false;
@@ -414,10 +526,13 @@ class SynthEngine {
         this.params = {
             osc1Waveform: 'sawtooth',
             osc1Detune: 0,
+            osc1Offset: 0,  // Semitone offset (-24 to +24)
             osc1Level: 0.5,
             osc2Waveform: 'sawtooth',
             osc2Detune: 5,  // Slight detune by default
+            osc2Offset: 0,  // Semitone offset (-24 to +24)
             osc2Level: 0.5,
+            pulseWidth: 50,  // 50 = square wave, < 50 = narrow pulse, > 50 = wide pulse
             ringMod: 0,
             oscSync: false,
             filterCutoff: 2000,
@@ -437,6 +552,7 @@ class SynthEngine {
             modMatrix: {
                 lfoPitch: 0,
                 lfoFilter: 0,
+                lfoPWM: 0,
                 envFilter: 50
             },
             masterVolume: 0.5
@@ -515,10 +631,13 @@ class SynthEngine {
         voice.start(frequency, {
             osc1Waveform: this.params.osc1Waveform,
             osc1Detune: this.params.osc1Detune,
+            osc1Offset: this.params.osc1Offset,
             osc1Level: this.params.osc1Level,
             osc2Waveform: this.params.osc2Waveform,
             osc2Detune: this.params.osc2Detune,
+            osc2Offset: this.params.osc2Offset,
             osc2Level: this.params.osc2Level,
+            pulseWidth: this.params.pulseWidth,
             ringMod: this.params.ringMod,
             oscSync: this.params.oscSync,
             envelope: this.params.envelope,
@@ -560,10 +679,13 @@ class SynthEngine {
         voice.start(frequency, {
             osc1Waveform: this.params.osc1Waveform,
             osc1Detune: this.params.osc1Detune,
+            osc1Offset: this.params.osc1Offset,
             osc1Level: this.params.osc1Level,
             osc2Waveform: this.params.osc2Waveform,
             osc2Detune: this.params.osc2Detune,
+            osc2Offset: this.params.osc2Offset,
             osc2Level: this.params.osc2Level,
+            pulseWidth: this.params.pulseWidth,
             ringMod: this.params.ringMod,
             oscSync: this.params.oscSync,
             envelope: this.params.envelope,
@@ -589,6 +711,9 @@ class SynthEngine {
             case 'osc1Detune':
                 this.params.osc1Detune = parseFloat(value);
                 break;
+            case 'osc1Offset':
+                this.params.osc1Offset = parseFloat(value);
+                break;
             case 'osc1Level':
                 this.params.osc1Level = parseFloat(value);
                 break;
@@ -600,8 +725,16 @@ class SynthEngine {
             case 'osc2Detune':
                 this.params.osc2Detune = parseFloat(value);
                 break;
+            case 'osc2Offset':
+                this.params.osc2Offset = parseFloat(value);
+                break;
             case 'osc2Level':
                 this.params.osc2Level = parseFloat(value);
+                break;
+
+            // PWM
+            case 'pulseWidth':
+                this.params.pulseWidth = parseFloat(value);
                 break;
 
             // Ring mod and sync
@@ -670,6 +803,9 @@ class SynthEngine {
                 break;
             case 'modLfoFilter':
                 this.params.modMatrix.lfoFilter = parseFloat(value);
+                break;
+            case 'modLfoPWM':
+                this.params.modMatrix.lfoPWM = parseFloat(value);
                 break;
             case 'modEnvFilter':
                 this.params.modMatrix.envFilter = parseFloat(value);

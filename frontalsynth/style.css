@@ -1,0 +1,408 @@
+/* FrontalSynth - Analog Synthesizer Styling */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.synth-container {
+    max-width: 1200px;
+    width: 100%;
+}
+
+.synth-panel {
+    background: linear-gradient(145deg, #2a2a3e 0%, #1a1a2e 100%);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 2px solid #3a3a4e;
+}
+
+.synth-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #3a3a4e;
+}
+
+.synth-header h1 {
+    font-size: 2.5em;
+    letter-spacing: 8px;
+    color: #00d4ff;
+    text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    font-weight: bold;
+}
+
+.power-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #00ff00;
+    box-shadow:
+        0 0 10px #00ff00,
+        0 0 20px #00ff00,
+        inset 0 0 5px rgba(0, 0, 0, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Section Styling */
+.section {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #3a3a4e;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.section h2 {
+    font-size: 0.9em;
+    letter-spacing: 3px;
+    color: #00d4ff;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #3a3a4e;
+    padding-bottom: 8px;
+}
+
+.controls-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+}
+
+.control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control label {
+    font-size: 0.75em;
+    letter-spacing: 1px;
+    color: #aaa;
+    text-transform: uppercase;
+}
+
+/* Input Controls */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #00d4ff 0%, #0080ff 100%);
+    outline: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ffffff, #d0d0d0);
+    cursor: pointer;
+    box-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.3),
+        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    border: 2px solid #333;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ffffff, #d0d0d0);
+    cursor: pointer;
+    box-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.3),
+        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    border: 2px solid #333;
+}
+
+select {
+    padding: 8px 12px;
+    background: #1a1a2e;
+    color: #00d4ff;
+    border: 1px solid #3a3a4e;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    cursor: pointer;
+    outline: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+select:hover {
+    border-color: #00d4ff;
+}
+
+input[type="checkbox"] {
+    width: 40px;
+    height: 20px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #333;
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+    transition: background 0.3s;
+}
+
+input[type="checkbox"]:checked {
+    background: #00d4ff;
+}
+
+input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+input[type="checkbox"]:checked::before {
+    transform: translateX(20px);
+}
+
+.value-display {
+    font-size: 0.85em;
+    color: #00d4ff;
+    font-weight: bold;
+    text-align: center;
+    min-width: 60px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    border: 1px solid #3a3a4e;
+}
+
+/* Modulation Matrix */
+.matrix-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.matrix-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 80px;
+    gap: 15px;
+    align-items: center;
+}
+
+.matrix-row label {
+    font-size: 0.8em;
+    color: #aaa;
+    letter-spacing: 1px;
+}
+
+/* Voice Indicators */
+.voice-indicator {
+    display: flex;
+    gap: 10px;
+}
+
+.voice {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #333;
+    border: 2px solid #555;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    transition: all 0.2s;
+}
+
+.voice.active {
+    background: #00ff00;
+    border-color: #00ff00;
+    box-shadow:
+        0 0 10px #00ff00,
+        0 0 20px #00ff00,
+        inset 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Keyboard */
+.keyboard {
+    margin-top: 30px;
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 15px;
+    border: 1px solid #3a3a4e;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+}
+
+.octave {
+    position: relative;
+    display: flex;
+    height: 200px;
+}
+
+.key {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.1s;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.key.white {
+    width: 50px;
+    height: 200px;
+    background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 100%);
+    border: 1px solid #999;
+    z-index: 1;
+}
+
+.key.white:hover {
+    background: linear-gradient(to bottom, #f0f0f0 0%, #d0d0d0 100%);
+}
+
+.key.white.active {
+    background: linear-gradient(to bottom, #00d4ff 0%, #0080ff 100%);
+    box-shadow:
+        0 0 10px rgba(0, 212, 255, 0.8),
+        inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.key.black {
+    width: 30px;
+    height: 130px;
+    background: linear-gradient(to bottom, #2a2a2a 0%, #000000 100%);
+    border: 1px solid #000;
+    position: absolute;
+    z-index: 2;
+    margin-left: -15px;
+}
+
+.key.black:hover {
+    background: linear-gradient(to bottom, #3a3a3a 0%, #1a1a1a 100%);
+}
+
+.key.black.active {
+    background: linear-gradient(to bottom, #00d4ff 0%, #0080ff 100%);
+    box-shadow:
+        0 0 10px rgba(0, 212, 255, 0.8),
+        inset 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Instructions */
+.instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 212, 255, 0.1);
+    border-radius: 10px;
+    border: 1px solid #00d4ff;
+    text-align: center;
+}
+
+.instructions p {
+    font-size: 0.9em;
+    color: #aaa;
+    margin: 5px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .synth-panel {
+        padding: 20px;
+    }
+
+    .synth-header h1 {
+        font-size: 1.8em;
+        letter-spacing: 4px;
+    }
+
+    .controls-row {
+        grid-template-columns: 1fr;
+    }
+
+    .matrix-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .keyboard {
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+
+    .key.white {
+        width: 40px;
+        height: 160px;
+    }
+
+    .key.black {
+        width: 25px;
+        height: 110px;
+    }
+}
+
+/* Filter Section specific styling */
+.filter-section {
+    background: linear-gradient(135deg, rgba(255, 100, 0, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+/* LFO Section specific styling */
+.lfo-section {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+/* Arpeggiator Section specific styling */
+.arp-section {
+    background: linear-gradient(135deg, rgba(0, 255, 100, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+/* Master Section specific styling */
+.master-section {
+    background: linear-gradient(135deg, rgba(255, 255, 0, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+    border: 2px solid #3a3a4e;
+}
+
+/* Animations */
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+    }
+}
+
+.section:hover {
+    border-color: #00d4ff;
+    transition: border-color 0.3s;
+}

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FrontalSynth - Analog Modeling Synthesizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="synth-container">
+        <div class="synth-panel">
+            <div class="synth-header">
+                <h1>FRONTALSYNTH</h1>
+                <div class="power-indicator"></div>
+            </div>
+
+            <!-- Oscillator Section -->
+            <div class="section oscillator-section">
+                <h2>OSCILLATOR</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>WAVEFORM</label>
+                        <select id="osc-waveform">
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="square">Square</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="sine">Sine</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>DETUNE</label>
+                        <input type="range" id="osc-detune" min="-50" max="50" value="0" step="1">
+                        <span class="value-display" id="osc-detune-val">0</span>
+                    </div>
+                    <div class="control">
+                        <label>PULSE WIDTH</label>
+                        <input type="range" id="osc-pwm" min="0" max="100" value="50" step="1">
+                        <span class="value-display" id="osc-pwm-val">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="section filter-section">
+                <h2>FILTER</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>CUTOFF</label>
+                        <input type="range" id="filter-cutoff" min="20" max="20000" value="2000" step="1">
+                        <span class="value-display" id="filter-cutoff-val">2000 Hz</span>
+                    </div>
+                    <div class="control">
+                        <label>RESONANCE</label>
+                        <input type="range" id="filter-resonance" min="0" max="30" value="1" step="0.1">
+                        <span class="value-display" id="filter-resonance-val">1.0</span>
+                    </div>
+                    <div class="control">
+                        <label>TYPE</label>
+                        <select id="filter-type">
+                            <option value="lowpass">Lowpass</option>
+                            <option value="highpass">Highpass</option>
+                            <option value="bandpass">Bandpass</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>ENV AMT</label>
+                        <input type="range" id="filter-env" min="-10000" max="10000" value="4000" step="100">
+                        <span class="value-display" id="filter-env-val">4000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Envelope Section -->
+            <div class="section envelope-section">
+                <h2>ENVELOPE</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>ATTACK</label>
+                        <input type="range" id="env-attack" min="0" max="2000" value="10" step="1">
+                        <span class="value-display" id="env-attack-val">10 ms</span>
+                    </div>
+                    <div class="control">
+                        <label>DECAY</label>
+                        <input type="range" id="env-decay" min="0" max="2000" value="300" step="1">
+                        <span class="value-display" id="env-decay-val">300 ms</span>
+                    </div>
+                    <div class="control">
+                        <label>SUSTAIN</label>
+                        <input type="range" id="env-sustain" min="0" max="100" value="70" step="1">
+                        <span class="value-display" id="env-sustain-val">70%</span>
+                    </div>
+                    <div class="control">
+                        <label>RELEASE</label>
+                        <input type="range" id="env-release" min="0" max="3000" value="500" step="1">
+                        <span class="value-display" id="env-release-val">500 ms</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LFO Section -->
+            <div class="section lfo-section">
+                <h2>LFO</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>RATE</label>
+                        <input type="range" id="lfo-rate" min="0.1" max="20" value="4" step="0.1">
+                        <span class="value-display" id="lfo-rate-val">4.0 Hz</span>
+                    </div>
+                    <div class="control">
+                        <label>WAVEFORM</label>
+                        <select id="lfo-waveform">
+                            <option value="sine">Sine</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>DEPTH</label>
+                        <input type="range" id="lfo-depth" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="lfo-depth-val">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modulation Matrix -->
+            <div class="section matrix-section">
+                <h2>MODULATION MATRIX</h2>
+                <div class="matrix-grid">
+                    <div class="matrix-row">
+                        <label>LFO → Pitch</label>
+                        <input type="range" id="mod-lfo-pitch" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo-pitch-val">0%</span>
+                    </div>
+                    <div class="matrix-row">
+                        <label>LFO → Filter</label>
+                        <input type="range" id="mod-lfo-filter" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo-filter-val">0%</span>
+                    </div>
+                    <div class="matrix-row">
+                        <label>LFO → PWM</label>
+                        <input type="range" id="mod-lfo-pwm" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="mod-lfo-pwm-val">0%</span>
+                    </div>
+                    <div class="matrix-row">
+                        <label>ENV → Filter</label>
+                        <input type="range" id="mod-env-filter" min="0" max="100" value="50" step="1">
+                        <span class="value-display" id="mod-env-filter-val">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arpeggiator Section -->
+            <div class="section arp-section">
+                <h2>ARPEGGIATOR</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>ON/OFF</label>
+                        <input type="checkbox" id="arp-enabled">
+                    </div>
+                    <div class="control">
+                        <label>PATTERN</label>
+                        <select id="arp-pattern">
+                            <option value="up">Up</option>
+                            <option value="down">Down</option>
+                            <option value="updown">Up/Down</option>
+                            <option value="random">Random</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>RATE</label>
+                        <select id="arp-rate">
+                            <option value="4">1/16</option>
+                            <option value="8" selected>1/8</option>
+                            <option value="16">1/4</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>BPM</label>
+                        <input type="range" id="arp-bpm" min="60" max="200" value="120" step="1">
+                        <span class="value-display" id="arp-bpm-val">120</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Section -->
+            <div class="section master-section">
+                <h2>MASTER</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>VOLUME</label>
+                        <input type="range" id="master-volume" min="0" max="100" value="50" step="1">
+                        <span class="value-display" id="master-volume-val">50%</span>
+                    </div>
+                    <div class="control">
+                        <label>VOICES</label>
+                        <span class="voice-indicator">
+                            <span class="voice" id="voice-1"></span>
+                            <span class="voice" id="voice-2"></span>
+                            <span class="voice" id="voice-3"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyboard -->
+            <div class="keyboard" id="keyboard">
+                <!-- Keyboard will be generated by JavaScript -->
+            </div>
+
+            <div class="instructions">
+                <p>Use computer keyboard (A-L for white keys, W-U for black keys) or click keys to play</p>
+                <p>Hold notes and enable arpeggiator for sequences</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="synth-engine.js"></script>
+    <script src="ui-controls.js"></script>
+</body>
+</html>

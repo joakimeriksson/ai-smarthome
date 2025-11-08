@@ -12,7 +12,7 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
 - **Note Offset**: Per-oscillator semitone offset (-24 to +24) for intervals, octaves, and fifths
 - **Pulse Width Modulation (PWM)**: Variable pulse width for square waves (0-100%), LFO-modulatable for classic analog string sounds
 - **Ring Modulation**: Multiply oscillator 1 and 2 signals for metallic, bell-like tones
-- **Oscillator Sync**: TRUE hard sync with phase reset - oscillator 1 resets oscillator 2's phase for authentic analog sync sounds (using AudioWorklet processor)
+- **Oscillator Sync**: TRUE hard sync with phase reset - oscillator 1 resets oscillator 2's phase for authentic analog sync sounds (AudioWorklet processor with full integration: PWM, ring mod, and all LFO modulation work seamlessly with sync enabled)
 
 ### Filter
 - **Multi-Mode Filter**: Lowpass, Highpass, and Bandpass filter types
@@ -97,13 +97,15 @@ Connect a MIDI keyboard - FrontalSynth will automatically detect and use it.
 4. Envelope: Attack 1000ms, Decay 800ms, Sustain 60%, Release 1500ms
 5. LFO1 → Filter: 30%, LFO1 Rate: 0.5 Hz, Waveform: Sine
 
-#### Sync Lead Sound
+#### Sync Lead Sound (with PWM and Ring Mod)
 1. OSC1: Sawtooth, Detune 0, Level 40%
-2. OSC2: Square, Detune 12, Level 60%
-3. Enable OSC SYNC
-4. Filter Cutoff: 5000 Hz, Resonance: 4
-5. LFO1 → Pitch: 20% for vibrato, LFO1 Rate: 5 Hz
-6. Envelope: Attack 5ms, Release 200ms
+2. OSC2: Square, Detune 0, Offset +7 (fifth), Level 50%
+3. Enable OSC SYNC, Ring Mod: 20%
+4. Pulse Width: 40%, LFO2 → OSC2 PWM: 60%, LFO2 Rate: 0.8 Hz
+5. Filter Cutoff: 5000 Hz, Resonance: 4
+6. LFO1 → OSC2 Pitch: 30% for vibrato, LFO1 Rate: 5 Hz
+7. Envelope: Attack 5ms, Release 200ms
+8. Result: Classic sync with PWM sweep and subtle ring modulation - all features working together
 
 #### Bell/Metallic Tones
 1. OSC1: Sine, Level 40%

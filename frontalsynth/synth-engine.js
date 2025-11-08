@@ -75,7 +75,7 @@ class SynthVoice {
 
         // Use AudioWorklet for true hard sync if enabled and available
         if (params.oscSync && this.synthEngine.workletLoaded) {
-            this.setupSyncWorklet(frequency, params);
+            this.setupSyncWorklet(frequency, params, lfoNode, lfo2Node);
         } else {
             // Standard oscillator setup
             // Create oscillator 1
@@ -131,8 +131,9 @@ class SynthVoice {
 
         // Setup PWM after oscillators are started - always set up for square waves or when LFO2 PWM is active
         // Use LFO2 for PWM modulation (independent from LFO1)
-        if (params.osc1Waveform === 'square' || params.osc2Waveform === 'square' ||
-            params.modMatrix.lfo2Osc1PWM > 0 || params.modMatrix.lfo2Osc2PWM > 0) {
+        // Skip PWM setup if using worklet (worklet handles PWM internally)
+        if (!this.syncWorklet && (params.osc1Waveform === 'square' || params.osc2Waveform === 'square' ||
+            params.modMatrix.lfo2Osc1PWM > 0 || params.modMatrix.lfo2Osc2PWM > 0)) {
             this.setupPWM(frequency, params.pulseWidth, lfo2Node, params.modMatrix, params);
         }
 
@@ -173,9 +174,9 @@ class SynthVoice {
         this.syncDepth = syncDepth; // Store for cleanup
     }
 
-    setupSyncWorklet(frequency, params) {
+    setupSyncWorklet(frequency, params, lfoNode, lfo2Node) {
         // TRUE hard sync using AudioWorklet with phase reset
-        // The worklet generates both oscillators internally
+        // The worklet handles ALL synthesis: oscillators, PWM, ring mod, LFO modulation
         try {
             this.syncWorklet = new AudioWorkletNode(this.context, 'sync-processor');
 
@@ -191,7 +192,7 @@ class SynthVoice {
             const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
             const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
 
-            // Send initial parameters to worklet
+            // Send all parameters to worklet via message port
             this.syncWorklet.port.postMessage({
                 type: 'update',
                 masterFrequency: osc1Freq,
@@ -199,13 +200,36 @@ class SynthVoice {
                 masterWaveform: waveformMap[params.osc1Waveform] || 0,
                 slaveWaveform: waveformMap[params.osc2Waveform] || 0,
                 masterDetune: params.osc1Detune,
-                slaveDetune: params.osc2Detune
+                slaveDetune: params.osc2Detune,
+                masterOffset: params.osc1Offset,
+                slaveOffset: params.osc2Offset,
+                // Modulation matrix amounts
+                lfo1Osc1PitchAmount: params.modMatrix.lfo1Osc1Pitch,
+                lfo1Osc2PitchAmount: params.modMatrix.lfo1Osc2Pitch,
+                lfo2Osc1PWMAmount: params.modMatrix.lfo2Osc1PWM,
+                lfo2Osc2PWMAmount: params.modMatrix.lfo2Osc2PWM
             });
+
+            // Set AudioParam values for oscillator levels, ring mod, and pulse width
+            this.syncWorklet.parameters.get('osc1Level').value = params.osc1Level;
+            this.syncWorklet.parameters.get('osc2Level').value = params.osc2Level;
+            this.syncWorklet.parameters.get('ringModAmount').value = params.ringMod;
+            this.syncWorklet.parameters.get('pulseWidth').value = params.pulseWidth / 100; // Convert 0-100 to 0-1
+
+            // Connect LFO1 to pitch modulation input
+            if (lfoNode) {
+                lfoNode.connect(this.syncWorklet.parameters.get('lfo1Input'));
+            }
+
+            // Connect LFO2 to PWM modulation input
+            if (lfo2Node) {
+                lfo2Node.connect(this.syncWorklet.parameters.get('lfo2Input'));
+            }
 
             // Connect worklet directly to mixer (it outputs the mixed signal)
             this.syncWorklet.connect(this.oscMixer);
 
-            console.log('True hard sync active (AudioWorklet)');
+            console.log('True hard sync active with full feature integration (AudioWorklet)');
         } catch (error) {
             console.error('Failed to create sync worklet:', error);
             // Fall back to regular oscillators without sync

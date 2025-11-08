@@ -6,9 +6,11 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
 
 ### Core Synthesis
 - **3-Voice Polyphony**: Play up to 3 notes simultaneously with intelligent voice stealing
-- **Analog-Style Oscillators**: Sawtooth, Square, Triangle, and Sine waveforms
-- **Pulse Width Modulation**: Adjustable pulse width for square waves
-- **Detune Control**: Fine-tune oscillator pitch for thicker sounds
+- **Dual Oscillators per Voice**: Two independent oscillators with individual waveform, detune, and level controls
+- **Analog-Style Oscillators**: Sawtooth, Square, Triangle, and Sine waveforms for each oscillator
+- **Detune Control**: Independent detune for each oscillator creates rich chorus and unison effects
+- **Ring Modulation**: Multiply oscillator 1 and 2 signals for metallic, bell-like tones
+- **Oscillator Sync**: Hard sync where oscillator 1 drives oscillator 2 frequency for classic analog sync sounds
 
 ### Filter
 - **Multi-Mode Filter**: Lowpass, Highpass, and Bandpass filter types
@@ -25,14 +27,13 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
 ### LFO (Low Frequency Oscillator)
 - **Multiple Waveforms**: Sine, Triangle, Square, Sawtooth
 - **Rate Control**: 0.1 to 20 Hz
-- **Adjustable Depth**: 0-100%
+- **Always Running**: LFO is active and ready to modulate
 
 ### Modulation Matrix
-Route modulation sources to multiple destinations:
-- **LFO → Pitch**: Vibrato effects
-- **LFO → Filter**: Wah-wah and sweep effects
-- **LFO → PWM**: Pulse width modulation
-- **Envelope → Filter**: Classic filter envelope control
+Route modulation sources to multiple destinations with adjustable amounts:
+- **LFO → Pitch**: Vibrato and pitch modulation effects (0-100%)
+- **LFO → Filter**: Wah-wah and filter sweep effects (0-100%)
+- **Envelope → Filter**: Classic analog filter envelope control (0-100%)
 
 ### Arpeggiator
 - **Multiple Patterns**: Up, Down, Up/Down, Random
@@ -60,31 +61,41 @@ Connect a MIDI keyboard - FrontalSynth will automatically detect and use it.
 
 ### Creating Sounds
 
-#### Basic Bass Sound
-1. Waveform: Sawtooth
-2. Filter Cutoff: 500 Hz
-3. Filter Resonance: 5-10
-4. Envelope: Attack 10ms, Decay 200ms, Sustain 0%, Release 100ms
-5. Filter Env Amount: 2000
+#### Detuned Supersaw Bass
+1. OSC1: Sawtooth, Detune 0, Level 50%
+2. OSC2: Sawtooth, Detune 7-12, Level 50%
+3. Filter Cutoff: 800 Hz, Resonance: 8
+4. Envelope: Attack 10ms, Decay 300ms, Sustain 0%, Release 150ms
+5. Filter Env → 80%, ENV Amount: 3000
 
-#### Pad Sound
-1. Waveform: Square or Triangle
-2. Filter Cutoff: 2000 Hz
-3. Envelope: Attack 800ms, Decay 500ms, Sustain 70%, Release 1000ms
-4. Add LFO to Filter (slow rate, low depth)
+#### Warm Analog Pad
+1. OSC1: Triangle, Detune -5, Level 50%
+2. OSC2: Triangle, Detune 5, Level 50%
+3. Filter Cutoff: 1500 Hz
+4. Envelope: Attack 1000ms, Decay 800ms, Sustain 60%, Release 1500ms
+5. LFO → Filter: 30%, LFO Rate: 0.5 Hz, Waveform: Sine
 
-#### Lead Sound
-1. Waveform: Sawtooth
-2. Filter Cutoff: 4000 Hz
-3. Filter Resonance: 3-5
-4. Add LFO to Pitch for vibrato
-5. Envelope: Fast attack, medium release
+#### Sync Lead Sound
+1. OSC1: Sawtooth, Detune 0, Level 40%
+2. OSC2: Square, Detune 12, Level 60%
+3. Enable OSC SYNC
+4. Filter Cutoff: 5000 Hz, Resonance: 4
+5. LFO → Pitch: 20% for vibrato
+6. Envelope: Attack 5ms, Release 200ms
 
-#### Arpeggio Sequences
-1. Enable Arpeggiator
-2. Choose pattern (Up/Down works great)
-3. Set BPM to desired tempo
-4. Hold multiple keys to create sequences
+#### Bell/Metallic Tones
+1. OSC1: Sine, Level 40%
+2. OSC2: Sine, Detune 7, Level 40%
+3. Ring Mod: 60-80%
+4. Filter Cutoff: 8000 Hz
+5. Envelope: Attack 1ms, Decay 400ms, Sustain 0%, Release 600ms
+
+#### Wobble Bass (Dubstep style)
+1. OSC1: Sawtooth, Level 50%
+2. OSC2: Square, Detune 5, Level 50%
+3. Filter Cutoff: 2000 Hz, Resonance: 15
+4. LFO → Filter: 80%, LFO Rate: 4-8 Hz, Waveform: Square
+5. Envelope: Fast attack, short decay, low sustain
 
 ## Technical Details
 

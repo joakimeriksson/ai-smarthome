@@ -7,10 +7,28 @@ class SynthVoice {
         this.note = null;
         this.active = false;
 
-        // Oscillators
-        this.osc = null;
-        this.pwmOsc = null; // For pulse width modulation
-        this.pwmGain = null;
+        // Dual Oscillators
+        this.osc1 = null;
+        this.osc2 = null;
+        this.osc1Gain = this.context.createGain();
+        this.osc2Gain = this.context.createGain();
+        this.osc1Gain.gain.value = 0.5;
+        this.osc2Gain.gain.value = 0.5;
+
+        // Ring modulator (uses waveshaper to multiply signals)
+        this.ringMod = this.context.createWaveShaper();
+        this.ringModGain = this.context.createGain();
+        this.ringModGain.gain.value = 0;
+
+        // Oscillator mixer
+        this.oscMixer = this.context.createGain();
+        this.oscMixer.gain.value = 1.0;
+
+        // LFO modulation nodes
+        this.lfoToPitchGain = this.context.createGain();
+        this.lfoToPitchGain.gain.value = 0;
+        this.lfoToFilterGain = this.context.createGain();
+        this.lfoToFilterGain.gain.value = 0;
 
         // Filter
         this.filter = this.context.createBiquadFilter();
@@ -22,15 +40,12 @@ class SynthVoice {
         this.vca = this.context.createGain();
         this.vca.gain.value = 0;
 
-        // Filter envelope gain
-        this.filterEnvGain = this.context.createGain();
-        this.filterEnvGain.gain.value = 0;
-
-        // Connect: Filter -> VCA
+        // Connect: Mixer -> Filter -> VCA
+        this.oscMixer.connect(this.filter);
         this.filter.connect(this.vca);
     }
 
-    start(frequency, waveform, params) {
+    start(frequency, params, lfoNode) {
         if (this.active) {
             this.stop();
         }
@@ -38,49 +53,97 @@ class SynthVoice {
         const now = this.context.currentTime;
         this.active = true;
 
-        // Create main oscillator
-        this.osc = this.context.createOscillator();
-        this.osc.type = waveform;
-        this.osc.frequency.value = frequency;
+        // Create oscillator 1
+        this.osc1 = this.context.createOscillator();
+        this.osc1.type = params.osc1Waveform;
+        this.osc1.frequency.value = frequency;
+        this.osc1.detune.value = params.osc1Detune;
 
-        // Apply detune
-        if (params.detune) {
-            this.osc.detune.value = params.detune;
+        // Create oscillator 2
+        this.osc2 = this.context.createOscillator();
+        this.osc2.type = params.osc2Waveform;
+        this.osc2.frequency.value = frequency;
+        this.osc2.detune.value = params.osc2Detune;
+
+        // Update oscillator levels
+        this.osc1Gain.gain.value = params.osc1Level;
+        this.osc2Gain.gain.value = params.osc2Level;
+
+        // Connect oscillators to their gain nodes
+        this.osc1.connect(this.osc1Gain);
+        this.osc2.connect(this.osc2Gain);
+
+        // Setup ring modulation if enabled
+        if (params.ringMod > 0) {
+            this.setupRingMod(params.ringMod);
         }
 
-        // For square wave, implement PWM using two sawtooth waves
-        if (waveform === 'square' && params.pulseWidth !== 50) {
-            this.setupPWM(frequency, params.pulseWidth);
+        // Setup oscillator sync if enabled
+        if (params.oscSync) {
+            this.setupOscSync();
         }
 
-        // Connect oscillator to filter
-        this.osc.connect(this.filter);
+        // Connect oscillator gains to mixer
+        this.osc1Gain.connect(this.oscMixer);
+        this.osc2Gain.connect(this.oscMixer);
 
-        // Start oscillator
-        this.osc.start(now);
+        // Connect ring mod output to mixer
+        this.ringModGain.connect(this.oscMixer);
+
+        // Setup LFO modulation routing
+        if (lfoNode) {
+            this.setupLFORouting(lfoNode, params.modMatrix);
+        }
+
+        // Start oscillators
+        this.osc1.start(now);
+        this.osc2.start(now);
 
         // Apply envelope
         this.applyEnvelope(params.envelope, params.filterEnvAmount, params.modMatrix);
     }
 
-    setupPWM(frequency, pulseWidth) {
-        // PWM using two sawtooth oscillators with phase offset
-        const pwmAmount = (pulseWidth - 50) / 50; // -1 to 1
+    setupRingMod(amount) {
+        // Ring modulation: multiply osc1 and osc2
+        // Create a simple multiplier using waveshaper
+        const curve = new Float32Array(256);
+        for (let i = 0; i < 256; i++) {
+            const x = (i - 128) / 128;
+            curve[i] = x * x; // Simple multiplication approximation
+        }
+        this.ringMod.curve = curve;
 
-        if (Math.abs(pwmAmount) > 0.01) {
-            this.osc.type = 'sawtooth';
+        this.ringModGain.gain.value = amount;
 
-            this.pwmOsc = this.context.createOscillator();
-            this.pwmOsc.type = 'sawtooth';
-            this.pwmOsc.frequency.value = frequency;
-            this.pwmOsc.detune.value = 0;
+        // Connect both oscillators to ring mod
+        this.osc1.connect(this.ringMod);
+        this.osc2.connect(this.ringMod);
+        this.ringMod.connect(this.ringModGain);
+    }
 
-            this.pwmGain = this.context.createGain();
-            this.pwmGain.gain.value = -1; // Invert second oscillator
+    setupOscSync() {
+        // Hard sync: osc1 frequency controls osc2 frequency
+        // Use osc1 to modulate osc2's frequency
+        const syncDepth = this.context.createGain();
+        syncDepth.gain.value = this.osc2.frequency.value;
+        this.osc1.connect(syncDepth);
+        syncDepth.connect(this.osc2.frequency);
+    }
 
-            this.pwmOsc.connect(this.pwmGain);
-            this.pwmGain.connect(this.filter);
-            this.pwmOsc.start(this.context.currentTime);
+    setupLFORouting(lfoNode, modMatrix) {
+        // LFO to Pitch modulation
+        if (modMatrix.lfoPitch > 0) {
+            this.lfoToPitchGain.gain.value = modMatrix.lfoPitch * 10; // Scale for cents
+            lfoNode.connect(this.lfoToPitchGain);
+            this.lfoToPitchGain.connect(this.osc1.detune);
+            this.lfoToPitchGain.connect(this.osc2.detune);
+        }
+
+        // LFO to Filter modulation
+        if (modMatrix.lfoFilter > 0) {
+            this.lfoToFilterGain.gain.value = modMatrix.lfoFilter * 50; // Scale for filter frequency
+            lfoNode.connect(this.lfoToFilterGain);
+            this.lfoToFilterGain.connect(this.filter.frequency);
         }
     }
 
@@ -103,8 +166,8 @@ class SynthVoice {
         this.filter.frequency.cancelScheduledValues(now);
         const baseFreq = this.filter.frequency.value;
         this.filter.frequency.setValueAtTime(baseFreq, now);
-        this.filter.frequency.linearRampToValueAtTime(baseFreq + filterEnvAmt, now + attackTime);
-        this.filter.frequency.linearRampToValueAtTime(baseFreq + (filterEnvAmt * sustainLevel), now + attackTime + decayTime);
+        this.filter.frequency.linearRampToValueAtTime(Math.min(20000, baseFreq + filterEnvAmt), now + attackTime);
+        this.filter.frequency.linearRampToValueAtTime(Math.min(20000, baseFreq + (filterEnvAmt * sustainLevel)), now + attackTime + decayTime);
     }
 
     stop(releaseTime = 0.5) {
@@ -125,20 +188,22 @@ class SynthVoice {
 
         // Clean up oscillators
         setTimeout(() => {
-            if (this.osc) {
-                this.osc.stop();
-                this.osc.disconnect();
-                this.osc = null;
+            if (this.osc1) {
+                this.osc1.stop();
+                this.osc1.disconnect();
+                this.osc1 = null;
             }
-            if (this.pwmOsc) {
-                this.pwmOsc.stop();
-                this.pwmOsc.disconnect();
-                this.pwmOsc = null;
+            if (this.osc2) {
+                this.osc2.stop();
+                this.osc2.disconnect();
+                this.osc2 = null;
             }
-            if (this.pwmGain) {
-                this.pwmGain.disconnect();
-                this.pwmGain = null;
-            }
+            // Disconnect LFO connections
+            try {
+                this.lfoToPitchGain.disconnect();
+                this.lfoToFilterGain.disconnect();
+            } catch(e) {}
+
             this.active = false;
         }, releaseTime * 1000 + 100);
     }
@@ -159,11 +224,11 @@ class LFO {
         this.context = audioContext;
         this.osc = null;
         this.gain = this.context.createGain();
-        this.gain.gain.value = 0;
+        this.gain.gain.value = 1.0;
         this.running = false;
     }
 
-    start(rate, waveform, depth) {
+    start(rate, waveform) {
         if (this.running) {
             this.stop();
         }
@@ -172,8 +237,6 @@ class LFO {
         this.osc.type = waveform;
         this.osc.frequency.value = rate;
 
-        this.gain.gain.value = depth / 100;
-
         this.osc.connect(this.gain);
         this.osc.start();
         this.running = true;
@@ -181,8 +244,10 @@ class LFO {
 
     stop() {
         if (this.osc) {
-            this.osc.stop();
-            this.osc.disconnect();
+            try {
+                this.osc.stop();
+                this.osc.disconnect();
+            } catch(e) {}
             this.osc = null;
         }
         this.running = false;
@@ -194,12 +259,8 @@ class LFO {
         }
     }
 
-    setDepth(depth) {
-        this.gain.gain.value = depth / 100;
-    }
-
-    connect(destination) {
-        return this.gain.connect(destination);
+    getOutput() {
+        return this.gain;
     }
 }
 
@@ -351,9 +412,14 @@ class SynthEngine {
 
         // Synth parameters
         this.params = {
-            waveform: 'sawtooth',
-            detune: 0,
-            pulseWidth: 50,
+            osc1Waveform: 'sawtooth',
+            osc1Detune: 0,
+            osc1Level: 0.5,
+            osc2Waveform: 'sawtooth',
+            osc2Detune: 5,  // Slight detune by default
+            osc2Level: 0.5,
+            ringMod: 0,
+            oscSync: false,
             filterCutoff: 2000,
             filterResonance: 1,
             filterType: 'lowpass',
@@ -366,13 +432,11 @@ class SynthEngine {
             },
             lfo: {
                 rate: 4,
-                waveform: 'sine',
-                depth: 0
+                waveform: 'sine'
             },
             modMatrix: {
                 lfoPitch: 0,
                 lfoFilter: 0,
-                lfoPWM: 0,
                 envFilter: 50
             },
             masterVolume: 0.5
@@ -397,8 +461,9 @@ class SynthEngine {
             this.voices.push(voice);
         }
 
-        // Create LFO
+        // Create LFO - start it immediately
         this.lfo = new LFO(this.context);
+        this.lfo.start(this.params.lfo.rate, this.params.lfo.waveform);
 
         // Create arpeggiator
         this.arpeggiator = new Arpeggiator(this);
@@ -446,14 +511,20 @@ class SynthEngine {
             this.params.filterType
         );
 
-        // Start the voice
-        voice.start(frequency, this.params.waveform, {
-            detune: this.params.detune,
-            pulseWidth: this.params.pulseWidth,
+        // Start the voice with LFO
+        voice.start(frequency, {
+            osc1Waveform: this.params.osc1Waveform,
+            osc1Detune: this.params.osc1Detune,
+            osc1Level: this.params.osc1Level,
+            osc2Waveform: this.params.osc2Waveform,
+            osc2Detune: this.params.osc2Detune,
+            osc2Level: this.params.osc2Level,
+            ringMod: this.params.ringMod,
+            oscSync: this.params.oscSync,
             envelope: this.params.envelope,
             filterEnvAmount: this.params.filterEnvAmount,
             modMatrix: this.params.modMatrix
-        });
+        }, this.lfo.getOutput());
 
         this.updateVoiceIndicators();
     }
@@ -486,13 +557,19 @@ class SynthEngine {
             this.params.filterType
         );
 
-        voice.start(frequency, this.params.waveform, {
-            detune: this.params.detune,
-            pulseWidth: this.params.pulseWidth,
+        voice.start(frequency, {
+            osc1Waveform: this.params.osc1Waveform,
+            osc1Detune: this.params.osc1Detune,
+            osc1Level: this.params.osc1Level,
+            osc2Waveform: this.params.osc2Waveform,
+            osc2Detune: this.params.osc2Detune,
+            osc2Level: this.params.osc2Level,
+            ringMod: this.params.ringMod,
+            oscSync: this.params.oscSync,
             envelope: this.params.envelope,
             filterEnvAmount: this.params.filterEnvAmount,
             modMatrix: this.params.modMatrix
-        });
+        }, this.lfo.getOutput());
 
         setTimeout(() => {
             voice.stop(this.params.envelope.release / 1000);
@@ -505,30 +582,60 @@ class SynthEngine {
 
     setParameter(param, value) {
         switch(param) {
-            case 'waveform':
-                this.params.waveform = value;
+            // Oscillator 1
+            case 'osc1Waveform':
+                this.params.osc1Waveform = value;
                 break;
-            case 'detune':
-                this.params.detune = parseFloat(value);
+            case 'osc1Detune':
+                this.params.osc1Detune = parseFloat(value);
                 break;
-            case 'pulseWidth':
-                this.params.pulseWidth = parseFloat(value);
+            case 'osc1Level':
+                this.params.osc1Level = parseFloat(value);
                 break;
+
+            // Oscillator 2
+            case 'osc2Waveform':
+                this.params.osc2Waveform = value;
+                break;
+            case 'osc2Detune':
+                this.params.osc2Detune = parseFloat(value);
+                break;
+            case 'osc2Level':
+                this.params.osc2Level = parseFloat(value);
+                break;
+
+            // Ring mod and sync
+            case 'ringMod':
+                this.params.ringMod = parseFloat(value);
+                break;
+            case 'oscSync':
+                this.params.oscSync = value;
+                break;
+
+            // Filter
             case 'filterCutoff':
                 this.params.filterCutoff = parseFloat(value);
-                this.voices.forEach(v => v.filter.frequency.value = this.params.filterCutoff);
+                this.voices.forEach(v => {
+                    if (v.filter) v.filter.frequency.value = this.params.filterCutoff;
+                });
                 break;
             case 'filterResonance':
                 this.params.filterResonance = parseFloat(value);
-                this.voices.forEach(v => v.filter.Q.value = this.params.filterResonance);
+                this.voices.forEach(v => {
+                    if (v.filter) v.filter.Q.value = this.params.filterResonance;
+                });
                 break;
             case 'filterType':
                 this.params.filterType = value;
-                this.voices.forEach(v => v.filter.type = this.params.filterType);
+                this.voices.forEach(v => {
+                    if (v.filter) v.filter.type = this.params.filterType;
+                });
                 break;
             case 'filterEnvAmount':
                 this.params.filterEnvAmount = parseFloat(value);
                 break;
+
+            // Envelope
             case 'attack':
                 this.params.envelope.attack = parseFloat(value);
                 break;
@@ -541,6 +648,8 @@ class SynthEngine {
             case 'release':
                 this.params.envelope.release = parseFloat(value);
                 break;
+
+            // LFO
             case 'lfoRate':
                 this.params.lfo.rate = parseFloat(value);
                 if (this.lfo.running) {
@@ -551,34 +660,25 @@ class SynthEngine {
                 this.params.lfo.waveform = value;
                 if (this.lfo.running) {
                     this.lfo.stop();
-                    this.lfo.start(this.params.lfo.rate, this.params.lfo.waveform, this.params.lfo.depth);
+                    this.lfo.start(this.params.lfo.rate, this.params.lfo.waveform);
                 }
                 break;
-            case 'lfoDepth':
-                this.params.lfo.depth = parseFloat(value);
-                if (this.params.lfo.depth > 0 && !this.lfo.running) {
-                    this.lfo.start(this.params.lfo.rate, this.params.lfo.waveform, this.params.lfo.depth);
-                } else if (this.params.lfo.depth === 0 && this.lfo.running) {
-                    this.lfo.stop();
-                } else if (this.lfo.running) {
-                    this.lfo.setDepth(this.params.lfo.depth);
-                }
-                break;
-            case 'masterVolume':
-                this.params.masterVolume = parseFloat(value);
-                this.masterGain.gain.value = this.params.masterVolume;
-                break;
+
+            // Modulation Matrix
             case 'modLfoPitch':
                 this.params.modMatrix.lfoPitch = parseFloat(value);
                 break;
             case 'modLfoFilter':
                 this.params.modMatrix.lfoFilter = parseFloat(value);
                 break;
-            case 'modLfoPWM':
-                this.params.modMatrix.lfoPWM = parseFloat(value);
-                break;
             case 'modEnvFilter':
                 this.params.modMatrix.envFilter = parseFloat(value);
+                break;
+
+            // Master
+            case 'masterVolume':
+                this.params.masterVolume = parseFloat(value);
+                this.masterGain.gain.value = this.params.masterVolume;
                 break;
         }
     }

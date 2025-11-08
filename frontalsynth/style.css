@@ -371,6 +371,11 @@ input[type="checkbox"]:checked::before {
     }
 }
 
+/* Oscillator modulation section */
+.mod-features-section {
+    background: linear-gradient(135deg, rgba(255, 0, 255, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
 /* Filter Section specific styling */
 .filter-section {
     background: linear-gradient(135deg, rgba(255, 100, 0, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);

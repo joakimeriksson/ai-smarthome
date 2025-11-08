@@ -20,19 +20,44 @@ class UIController {
     }
 
     setupControlListeners() {
-        // Oscillator controls
-        this.addListener('osc-waveform', (value) => {
-            this.synth.setParameter('waveform', value);
+        // Oscillator 1 controls
+        this.addListener('osc1-waveform', (value) => {
+            this.synth.setParameter('osc1Waveform', value);
         });
 
-        this.addListener('osc-detune', (value) => {
-            this.synth.setParameter('detune', value);
-            this.updateDisplay('osc-detune-val', value);
+        this.addListener('osc1-detune', (value) => {
+            this.synth.setParameter('osc1Detune', value);
+            this.updateDisplay('osc1-detune-val', value);
         });
 
-        this.addListener('osc-pwm', (value) => {
-            this.synth.setParameter('pulseWidth', value);
-            this.updateDisplay('osc-pwm-val', value + '%');
+        this.addListener('osc1-level', (value) => {
+            this.synth.setParameter('osc1Level', value);
+            this.updateDisplay('osc1-level-val', Math.round(value * 100) + '%');
+        });
+
+        // Oscillator 2 controls
+        this.addListener('osc2-waveform', (value) => {
+            this.synth.setParameter('osc2Waveform', value);
+        });
+
+        this.addListener('osc2-detune', (value) => {
+            this.synth.setParameter('osc2Detune', value);
+            this.updateDisplay('osc2-detune-val', value);
+        });
+
+        this.addListener('osc2-level', (value) => {
+            this.synth.setParameter('osc2Level', value);
+            this.updateDisplay('osc2-level-val', Math.round(value * 100) + '%');
+        });
+
+        // Ring modulation and sync
+        this.addListener('ring-mod', (value) => {
+            this.synth.setParameter('ringMod', value);
+            this.updateDisplay('ring-mod-val', Math.round(value * 100) + '%');
+        });
+
+        document.getElementById('osc-sync').addEventListener('change', (e) => {
+            this.synth.setParameter('oscSync', e.target.checked);
         });
 
         // Filter controls
@@ -86,11 +111,6 @@ class UIController {
             this.synth.setParameter('lfoWaveform', value);
         });
 
-        this.addListener('lfo-depth', (value) => {
-            this.synth.setParameter('lfoDepth', value);
-            this.updateDisplay('lfo-depth-val', value + '%');
-        });
-
         // Modulation matrix
         this.addListener('mod-lfo-pitch', (value) => {
             this.synth.setParameter('modLfoPitch', value);
@@ -100,11 +120,6 @@ class UIController {
         this.addListener('mod-lfo-filter', (value) => {
             this.synth.setParameter('modLfoFilter', value);
             this.updateDisplay('mod-lfo-filter-val', value + '%');
-        });
-
-        this.addListener('mod-lfo-pwm', (value) => {
-            this.synth.setParameter('modLfoPWM', value);
-            this.updateDisplay('mod-lfo-pwm-val', value + '%');
         });
 
         this.addListener('mod-env-filter', (value) => {
@@ -155,8 +170,11 @@ class UIController {
     updateAllDisplays() {
         // Initialize all display values
         const displays = [
-            ['osc-detune-val', '0'],
-            ['osc-pwm-val', '50%'],
+            ['osc1-detune-val', '0'],
+            ['osc1-level-val', '50%'],
+            ['osc2-detune-val', '5'],
+            ['osc2-level-val', '50%'],
+            ['ring-mod-val', '0%'],
             ['filter-cutoff-val', '2000 Hz'],
             ['filter-resonance-val', '1.0'],
             ['filter-env-val', '4000'],
@@ -165,10 +183,8 @@ class UIController {
             ['env-sustain-val', '70%'],
             ['env-release-val', '500 ms'],
             ['lfo-rate-val', '4.0 Hz'],
-            ['lfo-depth-val', '0%'],
             ['mod-lfo-pitch-val', '0%'],
             ['mod-lfo-filter-val', '0%'],
-            ['mod-lfo-pwm-val', '0%'],
             ['mod-env-filter-val', '50%'],
             ['arp-bpm-val', '120'],
             ['master-volume-val', '50%']

@@ -14,14 +14,14 @@
                 <div class="power-indicator"></div>
             </div>
 
-            <!-- Oscillator Section -->
+            <!-- Oscillator 1 Section -->
             <div class="section oscillator-section">
-                <h2>OSCILLATOR</h2>
+                <h2>OSCILLATOR 1</h2>
                 <div class="controls-row">
                     <div class="control">
                         <label>WAVEFORM</label>
-                        <select id="osc-waveform">
-                            <option value="sawtooth">Sawtooth</option>
+                        <select id="osc1-waveform">
+                            <option value="sawtooth" selected>Sawtooth</option>
                             <option value="square">Square</option>
                             <option value="triangle">Triangle</option>
                             <option value="sine">Sine</option>
@@ -29,13 +29,55 @@
                     </div>
                     <div class="control">
                         <label>DETUNE</label>
-                        <input type="range" id="osc-detune" min="-50" max="50" value="0" step="1">
-                        <span class="value-display" id="osc-detune-val">0</span>
+                        <input type="range" id="osc1-detune" min="-50" max="50" value="0" step="1">
+                        <span class="value-display" id="osc1-detune-val">0</span>
                     </div>
                     <div class="control">
-                        <label>PULSE WIDTH</label>
-                        <input type="range" id="osc-pwm" min="0" max="100" value="50" step="1">
-                        <span class="value-display" id="osc-pwm-val">50%</span>
+                        <label>LEVEL</label>
+                        <input type="range" id="osc1-level" min="0" max="1" value="0.5" step="0.01">
+                        <span class="value-display" id="osc1-level-val">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Oscillator 2 Section -->
+            <div class="section oscillator-section">
+                <h2>OSCILLATOR 2</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>WAVEFORM</label>
+                        <select id="osc2-waveform">
+                            <option value="sawtooth" selected>Sawtooth</option>
+                            <option value="square">Square</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="sine">Sine</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>DETUNE</label>
+                        <input type="range" id="osc2-detune" min="-50" max="50" value="5" step="1">
+                        <span class="value-display" id="osc2-detune-val">5</span>
+                    </div>
+                    <div class="control">
+                        <label>LEVEL</label>
+                        <input type="range" id="osc2-level" min="0" max="1" value="0.5" step="0.01">
+                        <span class="value-display" id="osc2-level-val">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modulation Features Section -->
+            <div class="section mod-features-section">
+                <h2>OSCILLATOR MODULATION</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>RING MOD</label>
+                        <input type="range" id="ring-mod" min="0" max="1" value="0" step="0.01">
+                        <span class="value-display" id="ring-mod-val">0%</span>
+                    </div>
+                    <div class="control">
+                        <label>OSC SYNC</label>
+                        <input type="checkbox" id="osc-sync">
                     </div>
                 </div>
             </div>
@@ -115,11 +157,6 @@
                             <option value="sawtooth">Sawtooth</option>
                         </select>
                     </div>
-                    <div class="control">
-                        <label>DEPTH</label>
-                        <input type="range" id="lfo-depth" min="0" max="100" value="0" step="1">
-                        <span class="value-display" id="lfo-depth-val">0%</span>
-                    </div>
                 </div>
             </div>
 
@@ -136,11 +173,6 @@
                         <label>LFO → Filter</label>
                         <input type="range" id="mod-lfo-filter" min="0" max="100" value="0" step="1">
                         <span class="value-display" id="mod-lfo-filter-val">0%</span>
-                    </div>
-                    <div class="matrix-row">
-                        <label>LFO → PWM</label>
-                        <input type="range" id="mod-lfo-pwm" min="0" max="100" value="0" step="1">
-                        <span class="value-display" id="mod-lfo-pwm-val">0%</span>
                     </div>
                     <div class="matrix-row">
                         <label>ENV → Filter</label>
@@ -210,7 +242,8 @@
 
             <div class="instructions">
                 <p>Use computer keyboard (A-L for white keys, W-U for black keys) or click keys to play</p>
-                <p>Hold notes and enable arpeggiator for sequences</p>
+                <p>Dual oscillators with detune, ring modulation, and oscillator sync</p>
+                <p>LFO now modulates pitch and filter - adjust in modulation matrix</p>
             </div>
         </div>
     </div>

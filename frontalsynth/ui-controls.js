@@ -117,7 +117,7 @@ class UIController {
             this.updateDisplay('env-release-val', value + ' ms');
         });
 
-        // LFO controls
+        // LFO1 controls
         this.addListener('lfo-rate', (value) => {
             this.synth.setParameter('lfoRate', value);
             this.updateDisplay('lfo-rate-val', parseFloat(value).toFixed(1) + ' Hz');
@@ -125,6 +125,16 @@ class UIController {
 
         this.addListener('lfo-waveform', (value) => {
             this.synth.setParameter('lfoWaveform', value);
+        });
+
+        // LFO2 controls
+        this.addListener('lfo2-rate', (value) => {
+            this.synth.setParameter('lfo2Rate', value);
+            this.updateDisplay('lfo2-rate-val', parseFloat(value).toFixed(1) + ' Hz');
+        });
+
+        this.addListener('lfo2-waveform', (value) => {
+            this.synth.setParameter('lfo2Waveform', value);
         });
 
         // Modulation matrix
@@ -207,6 +217,7 @@ class UIController {
             ['env-sustain-val', '70%'],
             ['env-release-val', '500 ms'],
             ['lfo-rate-val', '4.0 Hz'],
+            ['lfo2-rate-val', '2.0 Hz'],
             ['mod-lfo-pitch-val', '0%'],
             ['mod-lfo-filter-val', '0%'],
             ['mod-lfo-pwm-val', '0%'],

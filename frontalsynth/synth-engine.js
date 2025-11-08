@@ -63,7 +63,7 @@ class SynthVoice {
         this.filter.connect(this.vca);
     }
 
-    start(frequency, params, lfoNode) {
+    start(frequency, params, lfoNode, lfo2Node) {
         if (this.active) {
             this.stop();
         }
@@ -121,9 +121,10 @@ class SynthVoice {
         this.osc1.start(now);
         this.osc2.start(now);
 
-        // Setup PWM after oscillators are started - always set up for square waves or when LFO PWM is active
+        // Setup PWM after oscillators are started - always set up for square waves or when LFO2 PWM is active
+        // Use LFO2 for PWM modulation (independent from LFO1)
         if (params.osc1Waveform === 'square' || params.osc2Waveform === 'square' || params.modMatrix.lfoPWM > 0) {
-            this.setupPWM(frequency, params.pulseWidth, lfoNode, params.modMatrix.lfoPWM, params);
+            this.setupPWM(frequency, params.pulseWidth, lfo2Node, params.modMatrix.lfoPWM, params);
         }
 
         // Apply envelope
@@ -533,6 +534,7 @@ class SynthEngine {
         this.context = null;
         this.voices = [];
         this.lfo = null;
+        this.lfo2 = null; // Second LFO for PWM modulation
         this.masterGain = null;
         this.arpeggiator = null;
         this.activeNotes = new Map(); // Map note to voice
@@ -564,6 +566,10 @@ class SynthEngine {
                 rate: 4,
                 waveform: 'sine'
             },
+            lfo2: {
+                rate: 2,
+                waveform: 'triangle'
+            },
             modMatrix: {
                 lfoPitch: 0,
                 lfoFilter: 0,
@@ -592,9 +598,13 @@ class SynthEngine {
             this.voices.push(voice);
         }
 
-        // Create LFO - start it immediately
+        // Create LFO1 - start it immediately
         this.lfo = new LFO(this.context);
         this.lfo.start(this.params.lfo.rate, this.params.lfo.waveform);
+
+        // Create LFO2 for PWM modulation - start it immediately
+        this.lfo2 = new LFO(this.context);
+        this.lfo2.start(this.params.lfo2.rate, this.params.lfo2.waveform);
 
         // Create arpeggiator
         this.arpeggiator = new Arpeggiator(this);
@@ -642,7 +652,7 @@ class SynthEngine {
             this.params.filterType
         );
 
-        // Start the voice with LFO
+        // Start the voice with LFO1 and LFO2
         voice.start(frequency, {
             osc1Waveform: this.params.osc1Waveform,
             osc1Detune: this.params.osc1Detune,
@@ -658,7 +668,7 @@ class SynthEngine {
             envelope: this.params.envelope,
             filterEnvAmount: this.params.filterEnvAmount,
             modMatrix: this.params.modMatrix
-        }, this.lfo.getOutput());
+        }, this.lfo.getOutput(), this.lfo2.getOutput());
 
         this.updateVoiceIndicators();
     }
@@ -706,7 +716,7 @@ class SynthEngine {
             envelope: this.params.envelope,
             filterEnvAmount: this.params.filterEnvAmount,
             modMatrix: this.params.modMatrix
-        }, this.lfo.getOutput());
+        }, this.lfo.getOutput(), this.lfo2.getOutput());
 
         setTimeout(() => {
             voice.stop(this.params.envelope.release / 1000);
@@ -797,7 +807,7 @@ class SynthEngine {
                 this.params.envelope.release = parseFloat(value);
                 break;
 
-            // LFO
+            // LFO1
             case 'lfoRate':
                 this.params.lfo.rate = parseFloat(value);
                 if (this.lfo.running) {
@@ -809,6 +819,21 @@ class SynthEngine {
                 if (this.lfo.running) {
                     this.lfo.stop();
                     this.lfo.start(this.params.lfo.rate, this.params.lfo.waveform);
+                }
+                break;
+
+            // LFO2 (PWM modulation)
+            case 'lfo2Rate':
+                this.params.lfo2.rate = parseFloat(value);
+                if (this.lfo2.running) {
+                    this.lfo2.setRate(this.params.lfo2.rate);
+                }
+                break;
+            case 'lfo2Waveform':
+                this.params.lfo2.waveform = value;
+                if (this.lfo2.running) {
+                    this.lfo2.stop();
+                    this.lfo2.start(this.params.lfo2.rate, this.params.lfo2.waveform);
                 }
                 break;
 

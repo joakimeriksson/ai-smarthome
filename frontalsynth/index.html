@@ -154,9 +154,9 @@
                 </div>
             </div>
 
-            <!-- LFO Section -->
+            <!-- LFO1 Section -->
             <div class="section lfo-section">
-                <h2>LFO</h2>
+                <h2>LFO 1 (Pitch/Filter)</h2>
                 <div class="controls-row">
                     <div class="control">
                         <label>RATE</label>
@@ -175,22 +175,43 @@
                 </div>
             </div>
 
+            <!-- LFO2 Section -->
+            <div class="section lfo-section">
+                <h2>LFO 2 (PWM)</h2>
+                <div class="controls-row">
+                    <div class="control">
+                        <label>RATE</label>
+                        <input type="range" id="lfo2-rate" min="0.1" max="20" value="2" step="0.1">
+                        <span class="value-display" id="lfo2-rate-val">2.0 Hz</span>
+                    </div>
+                    <div class="control">
+                        <label>WAVEFORM</label>
+                        <select id="lfo2-waveform">
+                            <option value="sine">Sine</option>
+                            <option value="triangle" selected>Triangle</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modulation Matrix -->
             <div class="section matrix-section">
                 <h2>MODULATION MATRIX</h2>
                 <div class="matrix-grid">
                     <div class="matrix-row">
-                        <label>LFO → Pitch</label>
+                        <label>LFO1 → Pitch</label>
                         <input type="range" id="mod-lfo-pitch" min="0" max="100" value="0" step="1">
                         <span class="value-display" id="mod-lfo-pitch-val">0%</span>
                     </div>
                     <div class="matrix-row">
-                        <label>LFO → Filter</label>
+                        <label>LFO1 → Filter</label>
                         <input type="range" id="mod-lfo-filter" min="0" max="100" value="0" step="1">
                         <span class="value-display" id="mod-lfo-filter-val">0%</span>
                     </div>
                     <div class="matrix-row">
-                        <label>LFO → PWM</label>
+                        <label>LFO2 → PWM</label>
                         <input type="range" id="mod-lfo-pwm" min="0" max="100" value="0" step="1">
                         <span class="value-display" id="mod-lfo-pwm-val">0%</span>
                     </div>
@@ -263,7 +284,7 @@
             <div class="instructions">
                 <p>Use computer keyboard (A-L for white keys, W-U for black keys) or click keys to play</p>
                 <p>Dual oscillators with detune (cents), note offset (semitones), PWM, ring mod, and sync</p>
-                <p>LFO modulates pitch, filter, and PWM - adjust amounts in modulation matrix</p>
+                <p>LFO1 modulates pitch and filter - LFO2 modulates PWM (independent rates!)</p>
                 <p>Note offset: -12 = octave down, +12 = octave up, +7 = fifth, etc.</p>
             </div>
         </div>

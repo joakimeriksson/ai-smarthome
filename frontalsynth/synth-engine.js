@@ -2,14 +2,16 @@
 // Web Audio API based synthesis engine with modulation matrix
 
 class SynthVoice {
-    constructor(audioContext) {
+    constructor(audioContext, synthEngine) {
         this.context = audioContext;
+        this.synthEngine = synthEngine; // Reference to parent for worklet access
         this.note = null;
         this.active = false;
 
         // Dual Oscillators
         this.osc1 = null;
         this.osc2 = null;
+        this.syncWorklet = null; // AudioWorklet for true hard sync
         this.osc1Gain = this.context.createGain();
         this.osc2Gain = this.context.createGain();
         this.osc1Gain.gain.value = 0.5;
@@ -71,55 +73,61 @@ class SynthVoice {
         const now = this.context.currentTime;
         this.active = true;
 
-        // Create oscillator 1
-        this.osc1 = this.context.createOscillator();
-        this.osc1.type = params.osc1Waveform;
-        // Apply semitone offset: frequency * 2^(offset/12)
-        const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
-        this.osc1.frequency.value = osc1Freq;
-        this.osc1.detune.value = params.osc1Detune;
+        // Use AudioWorklet for true hard sync if enabled and available
+        if (params.oscSync && this.synthEngine.workletLoaded) {
+            this.setupSyncWorklet(frequency, params);
+        } else {
+            // Standard oscillator setup
+            // Create oscillator 1
+            this.osc1 = this.context.createOscillator();
+            this.osc1.type = params.osc1Waveform;
+            // Apply semitone offset: frequency * 2^(offset/12)
+            const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
+            this.osc1.frequency.value = osc1Freq;
+            this.osc1.detune.value = params.osc1Detune;
 
-        // Create oscillator 2
-        this.osc2 = this.context.createOscillator();
-        this.osc2.type = params.osc2Waveform;
-        // Apply semitone offset: frequency * 2^(offset/12)
-        const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
-        this.osc2.frequency.value = osc2Freq;
-        this.osc2.detune.value = params.osc2Detune;
+            // Create oscillator 2
+            this.osc2 = this.context.createOscillator();
+            this.osc2.type = params.osc2Waveform;
+            // Apply semitone offset: frequency * 2^(offset/12)
+            const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
+            this.osc2.frequency.value = osc2Freq;
+            this.osc2.detune.value = params.osc2Detune;
 
-        // Update oscillator levels
-        this.osc1Gain.gain.value = params.osc1Level;
-        this.osc2Gain.gain.value = params.osc2Level;
+            // Update oscillator levels
+            this.osc1Gain.gain.value = params.osc1Level;
+            this.osc2Gain.gain.value = params.osc2Level;
 
-        // Connect oscillators to their gain nodes
-        this.osc1.connect(this.osc1Gain);
-        this.osc2.connect(this.osc2Gain);
+            // Connect oscillators to their gain nodes
+            this.osc1.connect(this.osc1Gain);
+            this.osc2.connect(this.osc2Gain);
 
-        // Setup ring modulation if enabled
-        if (params.ringMod > 0) {
-            this.setupRingMod(params.ringMod);
+            // Setup ring modulation if enabled
+            if (params.ringMod > 0) {
+                this.setupRingMod(params.ringMod);
+            }
+
+            // Setup FM-based sync fallback if worklet not available
+            if (params.oscSync && !this.synthEngine.workletLoaded) {
+                this.setupOscSync();
+            }
+
+            // Connect oscillator gains to mixer
+            this.osc1Gain.connect(this.oscMixer);
+            this.osc2Gain.connect(this.oscMixer);
+
+            // Connect ring mod output to mixer
+            this.ringModGain.connect(this.oscMixer);
+
+            // Setup LFO modulation routing
+            if (lfoNode) {
+                this.setupLFORouting(lfoNode, params.modMatrix);
+            }
+
+            // Start oscillators
+            this.osc1.start(now);
+            this.osc2.start(now);
         }
-
-        // Setup oscillator sync if enabled
-        if (params.oscSync) {
-            this.setupOscSync();
-        }
-
-        // Connect oscillator gains to mixer
-        this.osc1Gain.connect(this.oscMixer);
-        this.osc2Gain.connect(this.oscMixer);
-
-        // Connect ring mod output to mixer
-        this.ringModGain.connect(this.oscMixer);
-
-        // Setup LFO modulation routing
-        if (lfoNode) {
-            this.setupLFORouting(lfoNode, params.modMatrix);
-        }
-
-        // Start oscillators
-        this.osc1.start(now);
-        this.osc2.start(now);
 
         // Setup PWM after oscillators are started - always set up for square waves or when LFO2 PWM is active
         // Use LFO2 for PWM modulation (independent from LFO1)
@@ -163,6 +171,47 @@ class SynthVoice {
         this.osc1.connect(syncDepth);
         syncDepth.connect(this.osc2.frequency);
         this.syncDepth = syncDepth; // Store for cleanup
+    }
+
+    setupSyncWorklet(frequency, params) {
+        // TRUE hard sync using AudioWorklet with phase reset
+        // The worklet generates both oscillators internally
+        try {
+            this.syncWorklet = new AudioWorkletNode(this.context, 'sync-processor');
+
+            // Map waveform strings to worklet indices
+            const waveformMap = {
+                'sawtooth': 0,
+                'square': 1,
+                'triangle': 2,
+                'sine': 3
+            };
+
+            // Calculate frequencies with semitone offsets
+            const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
+            const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
+
+            // Send initial parameters to worklet
+            this.syncWorklet.port.postMessage({
+                type: 'update',
+                masterFrequency: osc1Freq,
+                slaveFrequency: osc2Freq,
+                masterWaveform: waveformMap[params.osc1Waveform] || 0,
+                slaveWaveform: waveformMap[params.osc2Waveform] || 0,
+                masterDetune: params.osc1Detune,
+                slaveDetune: params.osc2Detune
+            });
+
+            // Connect worklet directly to mixer (it outputs the mixed signal)
+            this.syncWorklet.connect(this.oscMixer);
+
+            console.log('True hard sync active (AudioWorklet)');
+        } catch (error) {
+            console.error('Failed to create sync worklet:', error);
+            // Fall back to regular oscillators without sync
+            this.synthEngine.workletLoaded = false;
+            // Note: would need to restart with regular oscillators
+        }
     }
 
     setupPWM(frequency, pulseWidth, lfoNode, modMatrix, params) {
@@ -325,6 +374,11 @@ class SynthVoice {
                 this.osc2.stop();
                 this.osc2.disconnect();
                 this.osc2 = null;
+            }
+            // Clean up sync worklet
+            if (this.syncWorklet) {
+                this.syncWorklet.disconnect();
+                this.syncWorklet = null;
             }
             // Clean up PWM DC sources
             if (this.dcSource1) {
@@ -561,6 +615,7 @@ class SynthEngine {
         this.masterGain = null;
         this.arpeggiator = null;
         this.activeNotes = new Map(); // Map note to voice
+        this.workletLoaded = false; // Flag for AudioWorklet availability
 
         // Synth parameters
         this.params = {
@@ -607,18 +662,28 @@ class SynthEngine {
         this.init();
     }
 
-    init() {
+    async init() {
         // Create audio context
         this.context = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Load AudioWorklet for true hard sync
+        try {
+            await this.context.audioWorklet.addModule('sync-processor.js');
+            this.workletLoaded = true;
+            console.log('AudioWorklet loaded: True hard sync available');
+        } catch (error) {
+            console.warn('AudioWorklet not available, using FM-based sync fallback:', error);
+            this.workletLoaded = false;
+        }
 
         // Create master gain
         this.masterGain = this.context.createGain();
         this.masterGain.gain.value = this.params.masterVolume;
         this.masterGain.connect(this.context.destination);
 
-        // Create 3 voices
+        // Create 3 voices (pass reference to this engine)
         for (let i = 0; i < 3; i++) {
-            const voice = new SynthVoice(this.context);
+            const voice = new SynthVoice(this.context, this);
             voice.connect(this.masterGain);
             this.voices.push(voice);
         }
@@ -910,4 +975,6 @@ class SynthEngine {
 }
 
 // Create global synth instance
+// Note: SynthEngine constructor calls async init(), but we don't await it here
+// The synth will be ready when the worklet loads (or immediately if it fails)
 window.synth = new SynthEngine();

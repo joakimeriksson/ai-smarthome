@@ -12,7 +12,7 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
 - **Note Offset**: Per-oscillator semitone offset (-24 to +24) for intervals, octaves, and fifths
 - **Pulse Width Modulation (PWM)**: Variable pulse width for square waves (0-100%), LFO-modulatable for classic analog string sounds
 - **Ring Modulation**: Multiply oscillator 1 and 2 signals for metallic, bell-like tones
-- **Oscillator Sync**: Hard sync where oscillator 1 drives oscillator 2 frequency for classic analog sync sounds
+- **Oscillator Sync**: TRUE hard sync with phase reset - oscillator 1 resets oscillator 2's phase for authentic analog sync sounds (using AudioWorklet processor)
 
 ### Filter
 - **Multi-Mode Filter**: Lowpass, Highpass, and Bandpass filter types
@@ -141,9 +141,11 @@ Connect a MIDI keyboard - FrontalSynth will automatically detect and use it.
 
 ### Architecture
 - **Web Audio API**: Low-latency audio processing
+- **AudioWorklet**: Custom oscillator processing for true hard sync with phase reset
 - **Modular Design**: Separate voice management, dual LFO system, and arpeggiator classes
 - **Real-time Parameter Updates**: All controls respond instantly
 - **Dual LFO Design**: Independent LFO1 (pitch/filter) and LFO2 (PWM) for complex modulation
+- **Graceful Fallback**: FM-based sync if AudioWorklet is unavailable
 
 ### Browser Compatibility
 - Chrome/Edge: Full support
@@ -162,6 +164,7 @@ Connect a MIDI keyboard - FrontalSynth will automatically detect and use it.
 frontalsynth/
 ├── index.html          # Main HTML interface
 ├── synth-engine.js     # Core synthesis engine
+├── sync-processor.js   # AudioWorklet processor for true hard sync
 ├── ui-controls.js      # UI and input handling
 ├── style.css           # Analog-style CSS styling
 └── README.md          # This file

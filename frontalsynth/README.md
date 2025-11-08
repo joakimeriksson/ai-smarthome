@@ -6,9 +6,11 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
 
 ### Core Synthesis
 - **3-Voice Polyphony**: Play up to 3 notes simultaneously with intelligent voice stealing
-- **Dual Oscillators per Voice**: Two independent oscillators with individual waveform, detune, and level controls
+- **Dual Oscillators per Voice**: Two independent oscillators with individual waveform, detune, offset, and level controls
 - **Analog-Style Oscillators**: Sawtooth, Square, Triangle, and Sine waveforms for each oscillator
-- **Detune Control**: Independent detune for each oscillator creates rich chorus and unison effects
+- **Detune Control**: Independent detune for each oscillator creates rich chorus and unison effects (±50 cents)
+- **Note Offset**: Per-oscillator semitone offset (-24 to +24) for intervals, octaves, and fifths
+- **Pulse Width Modulation (PWM)**: Variable pulse width for square waves (0-100%), LFO-modulatable for classic analog string sounds
 - **Ring Modulation**: Multiply oscillator 1 and 2 signals for metallic, bell-like tones
 - **Oscillator Sync**: Hard sync where oscillator 1 drives oscillator 2 frequency for classic analog sync sounds
 
@@ -33,6 +35,7 @@ A professional-grade analog modeling synthesizer built with Web Audio API and Ja
 Route modulation sources to multiple destinations with adjustable amounts:
 - **LFO → Pitch**: Vibrato and pitch modulation effects (0-100%)
 - **LFO → Filter**: Wah-wah and filter sweep effects (0-100%)
+- **LFO → PWM**: Pulse width modulation sweep for classic analog string/pad textures (0-100%)
 - **Envelope → Filter**: Classic analog filter envelope control (0-100%)
 
 ### Arpeggiator
@@ -96,6 +99,15 @@ Connect a MIDI keyboard - FrontalSynth will automatically detect and use it.
 3. Filter Cutoff: 2000 Hz, Resonance: 15
 4. LFO → Filter: 80%, LFO Rate: 4-8 Hz, Waveform: Square
 5. Envelope: Fast attack, short decay, low sustain
+
+#### PWM String Pad
+1. OSC1: Square, Level 60%
+2. OSC2: Square, Detune -3, Offset +12 (octave up), Level 40%
+3. Pulse Width: 30-70% (experiment!)
+4. LFO → PWM: 60%, LFO Rate: 0.3 Hz, Waveform: Triangle
+5. Filter Cutoff: 3000 Hz, Resonance: 2
+6. Envelope: Attack 800ms, Decay 600ms, Sustain 70%, Release 1200ms
+7. Chorus/detune effect from sweeping PWM creates lush analog texture
 
 ## Technical Details
 

@@ -15,15 +15,21 @@ class SynthVoice {
         this.osc1Gain.gain.value = 0.5;
         this.osc2Gain.gain.value = 0.5;
 
-        // PWM oscillators (sawtooth pairs for pulse width modulation)
-        this.pwm1OscA = null;
-        this.pwm1OscB = null;
-        this.pwm1GainA = this.context.createGain();
-        this.pwm1GainB = this.context.createGain();
-        this.pwm2OscA = null;
-        this.pwm2OscB = null;
-        this.pwm2GainA = this.context.createGain();
-        this.pwm2GainB = this.context.createGain();
+        // PWM components (using waveshaper comparator method)
+        this.pwm1Offset = this.context.createGain(); // DC offset for PWM
+        this.pwm1Shaper = this.context.createWaveShaper();
+        this.pwm1Output = this.context.createGain();
+        this.pwm2Offset = this.context.createGain();
+        this.pwm2Shaper = this.context.createWaveShaper();
+        this.pwm2Output = this.context.createGain();
+
+        // Create comparator waveshaper curve (hard clipping to create square/pulse wave)
+        const shaperCurve = new Float32Array(256);
+        for (let i = 0; i < 256; i++) {
+            shaperCurve[i] = (i < 128) ? -1 : 1; // If input < 0, output -1, else output 1
+        }
+        this.pwm1Shaper.curve = shaperCurve;
+        this.pwm2Shaper.curve = shaperCurve;
 
         // Ring modulator (uses waveshaper to multiply signals)
         this.ringMod = this.context.createWaveShaper();
@@ -152,88 +158,83 @@ class SynthVoice {
     }
 
     setupPWM(frequency, pulseWidth, lfoNode, lfoPWMAmount, params) {
-        // PWM using dual sawtooth oscillators
+        // PWM using waveshaper comparator method
+        // Sawtooth wave -> DC offset -> Comparator (waveshaper) -> Pulse wave
         // Pulse width from 0-100, where 50 is a square wave
-        // This creates variable pulse width that can be modulated by LFO
+        // LFO modulates the DC offset for classic analog PWM sweep
 
-        const now = this.context.currentTime;
+        // Calculate DC offset from pulse width (0-100 maps to -1 to +1 offset)
+        // offset = 2*(pulseWidth/100) - 1
+        // PW=50 -> offset=0 (square), PW=100 -> offset=1 (wide), PW=0 -> offset=-1 (narrow)
+        const dcOffset = 2 * (pulseWidth / 100) - 1;
 
         // PWM for Oscillator 1 if it's set to square
         if (this.osc1 && this.osc1.type === 'square') {
-            // Replace square wave with PWM sawtooth pair
+            // Replace square wave with PWM-capable sawtooth
             this.osc1.type = 'sawtooth';
 
-            this.pwm1OscA = this.context.createOscillator();
-            this.pwm1OscA.type = 'sawtooth';
-            // Use the same frequency as osc1 (with offset already applied)
-            const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
-            this.pwm1OscA.frequency.value = osc1Freq;
-            this.pwm1OscA.detune.value = this.osc1.detune.value;
-
-            // Calculate gain based on pulse width (50 = square, <50 = narrow, >50 = wide)
-            // Map 0-100 to gain values that create pulse width effect
-            const pwmAmount = (pulseWidth / 100); // 0 to 1
-            this.pwm1GainA.gain.value = pwmAmount;
-            this.pwm1GainB.gain.value = -(1 - pwmAmount);
-
-            // Connect main osc1 through gainA
+            // Disconnect from direct connection and route through PWM chain
             this.osc1.disconnect();
-            this.osc1.connect(this.pwm1GainA);
-            this.pwm1GainA.connect(this.osc1Gain);
 
-            // Connect inverted PWM oscillator through gainB
-            this.pwm1OscA.connect(this.pwm1GainB);
-            this.pwm1GainB.connect(this.osc1Gain);
+            // Set up PWM chain: osc1 -> offset -> comparator -> output -> osc1Gain
+            this.pwm1Offset.gain.value = 1; // Pass-through gain
+            this.pwm1Output.gain.value = 1;
 
-            this.pwm1OscA.start(now);
+            // Create constant source for DC offset
+            const dcSource1 = this.context.createConstantSource();
+            dcSource1.offset.value = dcOffset;
 
-            // LFO modulation of PWM - modulates the gain balance
+            // Connect the PWM chain
+            this.osc1.connect(this.pwm1Offset);
+            dcSource1.connect(this.pwm1Offset);
+            this.pwm1Offset.connect(this.pwm1Shaper);
+            this.pwm1Shaper.connect(this.pwm1Output);
+            this.pwm1Output.connect(this.osc1Gain);
+
+            dcSource1.start();
+            this.dcSource1 = dcSource1; // Store for cleanup
+
+            // LFO modulation of PWM - modulates the DC offset
             if (lfoNode && lfoPWMAmount > 0) {
-                // Create a bipolar modulation that affects both gains
-                this.lfoToPWMGain.gain.value = (lfoPWMAmount / 100) * 0.5; // Scale to ±0.5
+                // Scale LFO to appropriate range for PWM modulation
+                const lfoScale = (lfoPWMAmount / 100) * 0.8; // Max ±0.8 offset modulation
+                this.lfoToPWMGain.gain.value = lfoScale;
                 lfoNode.connect(this.lfoToPWMGain);
-                this.lfoToPWMGain.connect(this.pwm1GainA.gain);
-                // Also create inverse connection for second gain
-                const inverseLFOGain = this.context.createGain();
-                inverseLFOGain.gain.value = -(lfoPWMAmount / 100) * 0.5;
-                lfoNode.connect(inverseLFOGain);
-                inverseLFOGain.connect(this.pwm1GainB.gain);
+                this.lfoToPWMGain.connect(dcSource1.offset);
             }
         }
 
         // PWM for Oscillator 2 if it's set to square
         if (this.osc2 && this.osc2.type === 'square') {
-            // Replace square wave with PWM sawtooth pair
+            // Replace square wave with PWM-capable sawtooth
             this.osc2.type = 'sawtooth';
 
-            this.pwm2OscA = this.context.createOscillator();
-            this.pwm2OscA.type = 'sawtooth';
-            // Use the same frequency as osc2 (with offset already applied)
-            const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
-            this.pwm2OscA.frequency.value = osc2Freq;
-            this.pwm2OscA.detune.value = this.osc2.detune.value;
-
-            // Calculate gain based on pulse width
-            const pwmAmount = (pulseWidth / 100);
-            this.pwm2GainA.gain.value = pwmAmount;
-            this.pwm2GainB.gain.value = -(1 - pwmAmount);
-
             this.osc2.disconnect();
-            this.osc2.connect(this.pwm2GainA);
-            this.pwm2GainA.connect(this.osc2Gain);
 
-            this.pwm2OscA.connect(this.pwm2GainB);
-            this.pwm2GainB.connect(this.osc2Gain);
+            this.pwm2Offset.gain.value = 1;
+            this.pwm2Output.gain.value = 1;
 
-            this.pwm2OscA.start(now);
+            const dcSource2 = this.context.createConstantSource();
+            dcSource2.offset.value = dcOffset;
+
+            this.osc2.connect(this.pwm2Offset);
+            dcSource2.connect(this.pwm2Offset);
+            this.pwm2Offset.connect(this.pwm2Shaper);
+            this.pwm2Shaper.connect(this.pwm2Output);
+            this.pwm2Output.connect(this.osc2Gain);
+
+            dcSource2.start();
+            this.dcSource2 = dcSource2;
 
             // LFO modulation of PWM
             if (lfoNode && lfoPWMAmount > 0) {
-                this.lfoToPWMGain.connect(this.pwm2GainA.gain);
-                const inverseLFOGain = this.context.createGain();
-                inverseLFOGain.gain.value = -(lfoPWMAmount / 100) * 0.5;
-                lfoNode.connect(inverseLFOGain);
-                inverseLFOGain.connect(this.pwm2GainB.gain);
+                const lfoScale = (lfoPWMAmount / 100) * 0.8;
+                // Reuse the same lfoToPWMGain if osc1 didn't use it
+                if (!this.dcSource1) {
+                    this.lfoToPWMGain.gain.value = lfoScale;
+                    lfoNode.connect(this.lfoToPWMGain);
+                }
+                this.lfoToPWMGain.connect(dcSource2.offset);
             }
         }
     }
@@ -306,26 +307,28 @@ class SynthVoice {
                 this.osc2.disconnect();
                 this.osc2 = null;
             }
-            // Clean up PWM oscillators
-            if (this.pwm1OscA) {
-                this.pwm1OscA.stop();
-                this.pwm1OscA.disconnect();
-                this.pwm1OscA = null;
+            // Clean up PWM DC sources
+            if (this.dcSource1) {
+                this.dcSource1.stop();
+                this.dcSource1.disconnect();
+                this.dcSource1 = null;
             }
-            if (this.pwm2OscA) {
-                this.pwm2OscA.stop();
-                this.pwm2OscA.disconnect();
-                this.pwm2OscA = null;
+            if (this.dcSource2) {
+                this.dcSource2.stop();
+                this.dcSource2.disconnect();
+                this.dcSource2 = null;
             }
-            // Disconnect LFO connections
+            // Disconnect LFO and PWM connections
             try {
                 this.lfoToPitchGain.disconnect();
                 this.lfoToFilterGain.disconnect();
                 this.lfoToPWMGain.disconnect();
-                this.pwm1GainA.disconnect();
-                this.pwm1GainB.disconnect();
-                this.pwm2GainA.disconnect();
-                this.pwm2GainB.disconnect();
+                this.pwm1Offset.disconnect();
+                this.pwm1Shaper.disconnect();
+                this.pwm1Output.disconnect();
+                this.pwm2Offset.disconnect();
+                this.pwm2Shaper.disconnect();
+                this.pwm2Output.disconnect();
             } catch(e) {}
 
             this.active = false;

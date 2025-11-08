@@ -178,7 +178,12 @@ class SynthVoice {
         // TRUE hard sync using AudioWorklet with phase reset
         // The worklet handles ALL synthesis: oscillators, PWM, ring mod, LFO modulation
         try {
-            this.syncWorklet = new AudioWorkletNode(this.context, 'sync-processor');
+            // Create worklet node with stereo input for LFOs (channel 0 = LFO1, channel 1 = LFO2)
+            this.syncWorklet = new AudioWorkletNode(this.context, 'sync-processor', {
+                numberOfInputs: 1,
+                numberOfOutputs: 1,
+                outputChannelCount: [1]
+            });
 
             // Map waveform strings to worklet indices
             const waveformMap = {
@@ -192,7 +197,7 @@ class SynthVoice {
             const osc1Freq = frequency * Math.pow(2, params.osc1Offset / 12);
             const osc2Freq = frequency * Math.pow(2, params.osc2Offset / 12);
 
-            // Send all parameters to worklet via message port
+            // Send ALL parameters to worklet via message port (Safari-compatible)
             this.syncWorklet.port.postMessage({
                 type: 'update',
                 masterFrequency: osc1Freq,
@@ -203,6 +208,11 @@ class SynthVoice {
                 slaveDetune: params.osc2Detune,
                 masterOffset: params.osc1Offset,
                 slaveOffset: params.osc2Offset,
+                // Oscillator levels and effects
+                osc1Level: params.osc1Level,
+                osc2Level: params.osc2Level,
+                ringModAmount: params.ringMod,
+                pulseWidth: params.pulseWidth / 100, // Convert 0-100 to 0-1
                 // Modulation matrix amounts
                 lfo1Osc1PitchAmount: params.modMatrix.lfo1Osc1Pitch,
                 lfo1Osc2PitchAmount: params.modMatrix.lfo1Osc2Pitch,
@@ -210,23 +220,24 @@ class SynthVoice {
                 lfo2Osc2PWMAmount: params.modMatrix.lfo2Osc2PWM
             });
 
-            // Set AudioParam values for oscillator levels, ring mod, and pulse width
-            this.syncWorklet.parameters.get('osc1Level').value = params.osc1Level;
-            this.syncWorklet.parameters.get('osc2Level').value = params.osc2Level;
-            this.syncWorklet.parameters.get('ringModAmount').value = params.ringMod;
-            this.syncWorklet.parameters.get('pulseWidth').value = params.pulseWidth / 100; // Convert 0-100 to 0-1
+            // Create a channel merger to combine LFO1 and LFO2 into stereo input
+            const lfoMerger = this.context.createChannelMerger(2);
 
-            // Connect LFO1 to pitch modulation input
+            // Connect LFO1 to channel 0 (left)
             if (lfoNode) {
-                lfoNode.connect(this.syncWorklet.parameters.get('lfo1Input'));
+                lfoNode.connect(lfoMerger, 0, 0);
             }
 
-            // Connect LFO2 to PWM modulation input
+            // Connect LFO2 to channel 1 (right)
             if (lfo2Node) {
-                lfo2Node.connect(this.syncWorklet.parameters.get('lfo2Input'));
+                lfo2Node.connect(lfoMerger, 0, 1);
             }
 
-            // Connect worklet directly to mixer (it outputs the mixed signal)
+            // Connect merged LFO signals to worklet input
+            lfoMerger.connect(this.syncWorklet);
+            this.lfoMerger = lfoMerger; // Store for cleanup
+
+            // Connect worklet output to mixer
             this.syncWorklet.connect(this.oscMixer);
 
             console.log('True hard sync active with full feature integration (AudioWorklet)');
@@ -403,6 +414,11 @@ class SynthVoice {
             if (this.syncWorklet) {
                 this.syncWorklet.disconnect();
                 this.syncWorklet = null;
+            }
+            // Clean up LFO merger
+            if (this.lfoMerger) {
+                this.lfoMerger.disconnect();
+                this.lfoMerger = null;
             }
             // Clean up PWM DC sources
             if (this.dcSource1) {

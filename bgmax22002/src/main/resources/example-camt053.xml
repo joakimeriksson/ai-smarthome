@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <BkToCstmrStmt>
+        <GrpHdr>
+            <MsgId>STMT20251108001</MsgId>
+            <CreDtTm>2025-11-08T08:30:00</CreDtTm>
+        </GrpHdr>
+        <Stmt>
+            <Id>STMT202511080001</Id>
+            <ElctrncSeqNb>1</ElctrncSeqNb>
+            <CreDtTm>2025-11-08T08:30:00</CreDtTm>
+            <FrToDt>
+                <FrDtTm>2025-11-07T00:00:00</FrDtTm>
+                <ToDtTm>2025-11-08T00:00:00</ToDtTm>
+            </FrToDt>
+            <Acct>
+                <Id>
+                    <IBAN>SE1234567890123456789012</IBAN>
+                </Id>
+                <Ccy>SEK</Ccy>
+                <Nm>Företagskonto AB</Nm>
+                <Ownr>
+                    <Nm>Test Företag AB</Nm>
+                </Ownr>
+            </Acct>
+            <Bal>
+                <Tp>
+                    <CdOrPrtry>
+                        <Cd>OPBD</Cd>
+                    </CdOrPrtry>
+                </Tp>
+                <Amt Ccy="SEK">50000.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Dt>
+                    <Dt>2025-11-07</Dt>
+                </Dt>
+            </Bal>
+            <Bal>
+                <Tp>
+                    <CdOrPrtry>
+                        <Cd>CLBD</Cd>
+                    </CdOrPrtry>
+                </Tp>
+                <Amt Ccy="SEK">52450.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Dt>
+                    <Dt>2025-11-08</Dt>
+                </Dt>
+            </Bal>
+            <Ntry>
+                <Amt Ccy="SEK">1500.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Sts>BOOK</Sts>
+                <BookgDt>
+                    <Dt>2025-11-08</Dt>
+                </BookgDt>
+                <ValDt>
+                    <Dt>2025-11-08</Dt>
+                </ValDt>
+                <AcctSvcrRef>REF20251108001</AcctSvcrRef>
+                <BkTxCd>
+                    <Prtry>
+                        <Cd>PMNT-RCDT-ESCT</Cd>
+                    </Prtry>
+                </BkTxCd>
+                <NtryDtls>
+                    <TxDtls>
+                        <Refs>
+                            <TxId>TXN20251108001</TxId>
+                            <EndToEndId>E2E20251108001</EndToEndId>
+                        </Refs>
+                        <RltdPties>
+                            <Dbtr>
+                                <Nm>Kund Andersson AB</Nm>
+                            </Dbtr>
+                            <DbtrAcct>
+                                <Id>
+                                    <IBAN>SE9876543210987654321098</IBAN>
+                                </Id>
+                            </DbtrAcct>
+                            <Cdtr>
+                                <Nm>Test Företag AB</Nm>
+                            </Cdtr>
+                            <CdtrAcct>
+                                <Id>
+                                    <IBAN>SE1234567890123456789012</IBAN>
+                                </Id>
+                            </CdtrAcct>
+                        </RltdPties>
+                        <RmtInf>
+                            <Strd>
+                                <CdtrRefInf>
+                                    <Ref>1234567890123</Ref>
+                                </CdtrRefInf>
+                            </Strd>
+                            <Ustrd>Betalning faktura 2025-001</Ustrd>
+                        </RmtInf>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+            <Ntry>
+                <Amt Ccy="SEK">2950.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Sts>BOOK</Sts>
+                <BookgDt>
+                    <Dt>2025-11-08</Dt>
+                </BookgDt>
+                <ValDt>
+                    <Dt>2025-11-08</Dt>
+                </ValDt>
+                <AcctSvcrRef>REF20251108002</AcctSvcrRef>
+                <BkTxCd>
+                    <Prtry>
+                        <Cd>PMNT-RCDT-ESCT</Cd>
+                    </Prtry>
+                </BkTxCd>
+                <NtryDtls>
+                    <TxDtls>
+                        <Refs>
+                            <TxId>TXN20251108002</TxId>
+                            <EndToEndId>E2E20251108002</EndToEndId>
+                        </Refs>
+                        <RltdPties>
+                            <Dbtr>
+                                <Nm>Pettersson Handel AB</Nm>
+                            </Dbtr>
+                            <DbtrAcct>
+                                <Id>
+                                    <IBAN>SE5555666677778888999900</IBAN>
+                                </Id>
+                            </DbtrAcct>
+                            <Cdtr>
+                                <Nm>Test Företag AB</Nm>
+                            </Cdtr>
+                            <CdtrAcct>
+                                <Id>
+                                    <IBAN>SE1234567890123456789012</IBAN>
+                                </Id>
+                            </CdtrAcct>
+                        </RltdPties>
+                        <RmtInf>
+                            <Strd>
+                                <CdtrRefInf>
+                                    <Ref>9876543210987</Ref>
+                                </CdtrRefInf>
+                            </Strd>
+                            <Ustrd>Betalning för tjänster november</Ustrd>
+                        </RmtInf>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+            <Ntry>
+                <Amt Ccy="SEK">1000.00</Amt>
+                <CdtDbtInd>DBIT</CdtDbtInd>
+                <Sts>BOOK</Sts>
+                <BookgDt>
+                    <Dt>2025-11-08</Dt>
+                </BookgDt>
+                <ValDt>
+                    <Dt>2025-11-08</Dt>
+                </ValDt>
+                <AcctSvcrRef>REF20251108003</AcctSvcrRef>
+                <BkTxCd>
+                    <Prtry>
+                        <Cd>PMNT-MCOP</Cd>
+                    </Prtry>
+                </BkTxCd>
+                <NtryDtls>
+                    <TxDtls>
+                        <Refs>
+                            <TxId>TXN20251108003</TxId>
+                            <EndToEndId>E2E20251108003</EndToEndId>
+                        </Refs>
+                        <RltdPties>
+                            <Dbtr>
+                                <Nm>Test Företag AB</Nm>
+                            </Dbtr>
+                            <DbtrAcct>
+                                <Id>
+                                    <IBAN>SE1234567890123456789012</IBAN>
+                                </Id>
+                            </DbtrAcct>
+                            <Cdtr>
+                                <Nm>Leverantör Service AB</Nm>
+                            </Cdtr>
+                            <CdtrAcct>
+                                <Id>
+                                    <IBAN>SE1111222233334444555566</IBAN>
+                                </Id>
+                            </CdtrAcct>
+                        </RltdPties>
+                        <RmtInf>
+                            <Ustrd>Hyra november 2025</Ustrd>
+                        </RmtInf>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+        </Stmt>
+    </BkToCstmrStmt>
+</Document>

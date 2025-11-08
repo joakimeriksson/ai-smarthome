@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <BkToCstmrDbtCdtNtfctn>
+        <GrpHdr>
+            <MsgId>NTFCTN20251108001</MsgId>
+            <CreDtTm>2025-11-08T14:25:00</CreDtTm>
+        </GrpHdr>
+        <Ntfctn>
+            <Id>NTFY202511080001</Id>
+            <CreDtTm>2025-11-08T14:25:00</CreDtTm>
+            <Acct>
+                <Id>
+                    <IBAN>SE1234567890123456789012</IBAN>
+                </Id>
+                <Ccy>SEK</Ccy>
+                <Nm>Företagskonto AB</Nm>
+            </Acct>
+            <Ntry>
+                <Amt Ccy="SEK">3500.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Sts>BOOK</Sts>
+                <BookgDt>
+                    <Dt>2025-11-08</Dt>
+                </BookgDt>
+                <ValDt>
+                    <Dt>2025-11-08</Dt>
+                </ValDt>
+                <AcctSvcrRef>REF20251108004</AcctSvcrRef>
+                <BkTxCd>
+                    <Prtry>
+                        <Cd>PMNT-RCDT-ESCT</Cd>
+                    </Prtry>
+                </BkTxCd>
+                <NtryDtls>
+                    <TxDtls>
+                        <Refs>
+                            <TxId>TXN20251108004</TxId>
+                            <EndToEndId>E2E20251108004</EndToEndId>
+                        </Refs>
+                        <RltdPties>
+                            <Dbtr>
+                                <Nm>Ny Kund Sverige AB</Nm>
+                            </Dbtr>
+                            <DbtrAcct>
+                                <Id>
+                                    <IBAN>SE7777888899990000111122</IBAN>
+                                </Id>
+                            </DbtrAcct>
+                            <Cdtr>
+                                <Nm>Test Företag AB</Nm>
+                            </Cdtr>
+                            <CdtrAcct>
+                                <Id>
+                                    <IBAN>SE1234567890123456789012</IBAN>
+                                </Id>
+                            </CdtrAcct>
+                        </RltdPties>
+                        <RmtInf>
+                            <Strd>
+                                <CdtrRefInf>
+                                    <Ref>5555444433332222</Ref>
+                                </CdtrRefInf>
+                            </Strd>
+                            <Ustrd>Första betalning - välkommen som kund!</Ustrd>
+                        </RmtInf>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+        </Ntfctn>
+    </BkToCstmrDbtCdtNtfctn>
+</Document>

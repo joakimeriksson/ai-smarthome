@@ -151,12 +151,18 @@ class SynthVoice {
     }
 
     setupOscSync() {
-        // Hard sync: osc1 frequency controls osc2 frequency
-        // Use osc1 to modulate osc2's frequency
+        // Oscillator sync approximation using frequency modulation
+        // OSC1 modulates OSC2's frequency to create sync-like timbres
+        // Classic sync resets slave oscillator phase, but Web Audio doesn't support phase reset
+        // This FM-based approach creates similar harmonic-rich tones
+
         const syncDepth = this.context.createGain();
-        syncDepth.gain.value = this.osc2.frequency.value;
+        // Use moderate FM depth for sync-like sound (not extreme FM)
+        // Depth scaled to ~30-50% of osc2 frequency creates classic sync sweep tones
+        syncDepth.gain.value = this.osc2.frequency.value * 0.4;
         this.osc1.connect(syncDepth);
         syncDepth.connect(this.osc2.frequency);
+        this.syncDepth = syncDepth; // Store for cleanup
     }
 
     setupPWM(frequency, pulseWidth, lfoNode, modMatrix, params) {
@@ -331,7 +337,7 @@ class SynthVoice {
                 this.dcSource2.disconnect();
                 this.dcSource2 = null;
             }
-            // Disconnect LFO and PWM connections
+            // Disconnect LFO, PWM, and sync connections
             try {
                 this.lfoToPitchGain.disconnect();
                 this.lfoToFilterGain.disconnect();
@@ -340,6 +346,7 @@ class SynthVoice {
                 if (this.lfo1Osc2PitchGain) this.lfo1Osc2PitchGain.disconnect();
                 if (this.lfo2Osc1PWMGain) this.lfo2Osc1PWMGain.disconnect();
                 if (this.lfo2Osc2PWMGain) this.lfo2Osc2PWMGain.disconnect();
+                if (this.syncDepth) this.syncDepth.disconnect();
                 this.pwm1Offset.disconnect();
                 this.pwm1Shaper.disconnect();
                 this.pwm1Output.disconnect();

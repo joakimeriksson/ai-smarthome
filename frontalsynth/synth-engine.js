@@ -115,8 +115,8 @@ class SynthVoice {
         this.osc1.start(now);
         this.osc2.start(now);
 
-        // Setup PWM after oscillators are started
-        if (params.pulseWidth !== undefined && params.pulseWidth !== 50) {
+        // Setup PWM after oscillators are started - always set up for square waves or when LFO PWM is active
+        if (params.osc1Waveform === 'square' || params.osc2Waveform === 'square' || params.modMatrix.lfoPWM > 0) {
             this.setupPWM(frequency, params.pulseWidth, lfoNode, params.modMatrix.lfoPWM, params);
         }
 
@@ -171,9 +171,10 @@ class SynthVoice {
             this.pwm1OscA.detune.value = this.osc1.detune.value;
 
             // Calculate gain based on pulse width (50 = square, <50 = narrow, >50 = wide)
-            const pwmBalance = (pulseWidth - 50) / 50; // -1 to 1
-            this.pwm1GainA.gain.value = 0.5;
-            this.pwm1GainB.gain.value = -0.5;
+            // Map 0-100 to gain values that create pulse width effect
+            const pwmAmount = (pulseWidth / 100); // 0 to 1
+            this.pwm1GainA.gain.value = pwmAmount;
+            this.pwm1GainB.gain.value = -(1 - pwmAmount);
 
             // Connect main osc1 through gainA
             this.osc1.disconnect();
@@ -188,9 +189,15 @@ class SynthVoice {
 
             // LFO modulation of PWM - modulates the gain balance
             if (lfoNode && lfoPWMAmount > 0) {
-                this.lfoToPWMGain.gain.value = lfoPWMAmount * 0.005; // Scale for subtle modulation
+                // Create a bipolar modulation that affects both gains
+                this.lfoToPWMGain.gain.value = (lfoPWMAmount / 100) * 0.5; // Scale to ±0.5
                 lfoNode.connect(this.lfoToPWMGain);
                 this.lfoToPWMGain.connect(this.pwm1GainA.gain);
+                // Also create inverse connection for second gain
+                const inverseLFOGain = this.context.createGain();
+                inverseLFOGain.gain.value = -(lfoPWMAmount / 100) * 0.5;
+                lfoNode.connect(inverseLFOGain);
+                inverseLFOGain.connect(this.pwm1GainB.gain);
             }
         }
 
@@ -206,9 +213,10 @@ class SynthVoice {
             this.pwm2OscA.frequency.value = osc2Freq;
             this.pwm2OscA.detune.value = this.osc2.detune.value;
 
-            const pwmBalance = (pulseWidth - 50) / 50;
-            this.pwm2GainA.gain.value = 0.5;
-            this.pwm2GainB.gain.value = -0.5;
+            // Calculate gain based on pulse width
+            const pwmAmount = (pulseWidth / 100);
+            this.pwm2GainA.gain.value = pwmAmount;
+            this.pwm2GainB.gain.value = -(1 - pwmAmount);
 
             this.osc2.disconnect();
             this.osc2.connect(this.pwm2GainA);
@@ -222,6 +230,10 @@ class SynthVoice {
             // LFO modulation of PWM
             if (lfoNode && lfoPWMAmount > 0) {
                 this.lfoToPWMGain.connect(this.pwm2GainA.gain);
+                const inverseLFOGain = this.context.createGain();
+                inverseLFOGain.gain.value = -(lfoPWMAmount / 100) * 0.5;
+                lfoNode.connect(inverseLFOGain);
+                inverseLFOGain.connect(this.pwm2GainB.gain);
             }
         }
     }

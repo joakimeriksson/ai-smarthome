@@ -1,0 +1,24 @@
+[project]
+name = "gestura"
+version = "0.1.0"
+description = "Hand-controlled MIDI interface using MediaPipe"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64"]
+
+[tasks]
+start = "python src/main.py"
+test = "pytest tests/"
+demo = "python src/main.py --demo"
+midi-help = "python src/main.py --midi-help"
+
+[dependencies]
+python = ">=3.10,<3.13"
+numpy = ">=1.24"
+opencv = ">=4.8"
+pip = ">=23.0"
+pytest = ">=7.0"
+
+[pypi-dependencies]
+mediapipe = ">=0.10"
+python-rtmidi = ">=1.5"
+tomli = ">=2.0"  # TOML parser for Python <3.11

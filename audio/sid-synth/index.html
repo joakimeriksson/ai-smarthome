@@ -1,411 +1,432 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8" />
-<title>SID Tracker</title>
-<link href="style.css" rel="stylesheet" type="text/css">
+    <meta charset="utf-8" />
+    <title>SID Tracker</title>
+    <link href="style.css" rel="stylesheet" type="text/css">
 </head>
+
 <body>
-<h1>SID Tracker</h1>
-<div class="controls">
-    <div class="control-section">
-        <h3>Transport</h3>
-        <button id="playButton">Play</button>
-        <button id="stopButton">Stop</button>
-        <button id="pauseButton">Pause</button>
-    </div>
-    
-    <div class="control-section">
-        <h3>Record</h3>
-        <button id="recordButton">Record</button>
-        <select id="recordVoiceSelect">
-            <option value="0">Voice 1</option>
-            <option value="1">Voice 2</option>
-            <option value="2">Voice 3</option>
-        </select>
-        <select id="recordInstrumentSelect">
-            <option value="0">Lead (Tri)</option>
-        </select>
-        <label><input type="checkbox" id="autoAdvanceCheck" checked> Auto-advance</label>
-        <span id="recordStatus" style="display: none;">REC: Voice 1, Step 1</span>
-    </div>
-    
-    <div class="control-section">
-        <h3>Song Info</h3>
-        <span id="songTitle">No song loaded</span>
-        <br>
-        <span id="songStats" style="font-size: 11px; color: #888;">0 patterns, 0 instruments</span>
-    </div>
-    
-    <div class="control-section">
-        <h3>Tempo</h3>
-        <input type="range" id="bpmSlider" min="60" max="200" value="120">
-        <span id="bpmDisplay">120 BPM</span>
-        <button id="tapTempoButton">Tap</button>
-    </div>
-    
-    <div class="control-section">
-        <h3>Project</h3>
-        <button id="saveButton">Save</button>
-        <button id="loadButton">Load</button>
-        <button id="exportButton">Export JSON</button>
-        <button id="exportSIDButton">Export SID</button>
-        <button id="testSIDButton">Test SID Player</button>
-        <button id="importButton">Import</button>
-        <input type="file" id="importFileInput" accept=".json,.sid" style="display: none;">
-        <span id="testSIDStatus" style="display: none; font-size: 10px; color: #0A0;">Testing SID...</span>
-    </div>
-    
-    <div class="control-section">
-        <h3>Tools</h3>
-        <button id="instrumentEditorButton">Instrument Editor</button>
-        <button id="tableEditorButton">Table Editor</button>
-        <button id="keyboardToggleButton">Enable Keyboard</button>
-        <button id="helpButton">Help</button>
-        <a href="about.html"><button>About</button></a>
-    </div>
-</div>
-
-<!-- GT2 Pattern Editor -->
-<div id="gt2-pattern-editor-container"></div>
-
-<!-- GT2 Order Editor -->
-<div id="gt2-order-editor-container"></div>
-
-<!-- Table Editor Modal -->
-<div id="tableEditorModal" class="modal">
-    <div class="modal-content table-editor-content">
-        <div class="modal-header">
-            <h2>Table Editor</h2>
-            <span class="close" id="closeTableEditor">&times;</span>
+    <h1>SID Tracker</h1>
+    <div class="controls">
+        <div class="control-section">
+            <h3>Transport</h3>
+            <button id="playButton">Play</button>
+            <button id="stopButton">Stop</button>
+            <button id="pauseButton">Pause</button>
         </div>
-        <div class="modal-body">
-            <div class="table-controls">
-                <div class="param-row">
-                    <label for="tableTypeSelect">Table Type:</label>
-                    <select id="tableTypeSelect">
-                        <option value="wave">Wave Table</option>
-                        <option value="pulse">Pulse Table</option>
-                        <option value="filter">Filter Table</option>
-                        <option value="speed">Speed Table</option>
-                    </select>
-                </div>
-                <div class="param-row">
-                    <label for="tableIndexSelect">Table:</label>
-                    <select id="tableIndexSelect">
-                        <!-- Options populated by JavaScript -->
-                    </select>
-                </div>
-                <div class="param-row">
-                    <label for="tableLength">Length:</label>
-                    <input type="number" id="tableLength" min="1" max="255" value="16">
-                    <button id="resizeTableButton">Resize</button>
-                </div>
-                <div class="param-row">
-                    <label for="tableName">Name:</label>
-                    <input type="text" id="tableName" placeholder="Table name">
-                </div>
-            </div>
 
-            <div class="table-operations">
-                <button id="clearTableButton">Clear</button>
-                <button id="copyTableButton">Copy</button>
-                <button id="pasteTableButton">Paste</button>
-                <button id="newTableButton">New</button>
-            </div>
-
-            <div class="table-loop-controls">
-                <div class="param-row">
-                    <label for="tableLoopEnabled">
-                        <input type="checkbox" id="tableLoopEnabled"> Loop
-                    </label>
-                </div>
-                <div class="param-row">
-                    <label for="tableLoopStart">Start:</label>
-                    <input type="number" id="tableLoopStart" min="0" max="254" value="0">
-                    <label for="tableLoopEnd">End:</label>
-                    <input type="number" id="tableLoopEnd" min="0" max="254" value="15">
-                </div>
-            </div>
-
-            <div class="table-data-container">
-                <div class="table-data-header">
-                    <span class="table-step-header">Step</span>
-                    <span class="table-value-header">Left</span>
-                    <span class="table-hex-header">Right</span>
-                    <span class="table-desc-header">Description</span>
-                </div>
-                <div id="tableDataGrid" class="table-data-grid">
-                    <!-- Table data rows populated by JavaScript -->
-                </div>
-            </div>
-
-            <div id="hexReference" style="background: #111; border: 1px solid #333; border-radius: 4px; margin: 10px 0; max-height: 200px; overflow-y: auto;">
-                <!-- Hex reference populated by JavaScript -->
-            </div>
-
-            <div class="table-presets">
-                <h3>Presets</h3>
-                <div class="preset-buttons">
-                    <button id="presetLinearButton">Linear</button>
-                    <button id="presetSineButton">Sine</button>
-                    <button id="presetTriangleButton">Triangle</button>
-                    <button id="presetSawButton">Sawtooth</button>
-                    <button id="presetRandomButton">Random</button>
-                </div>
-            </div>
+        <div class="control-section">
+            <h3>Record</h3>
+            <button id="recordButton">Record</button>
+            <select id="recordVoiceSelect">
+                <option value="0">Voice 1</option>
+                <option value="1">Voice 2</option>
+                <option value="2">Voice 3</option>
+            </select>
+            <select id="recordInstrumentSelect">
+                <option value="0">Lead (Tri)</option>
+            </select>
+            <label><input type="checkbox" id="autoAdvanceCheck" checked> Auto-advance</label>
+            <span id="recordStatus" style="display: none;">REC: Voice 1, Step 1</span>
         </div>
-        <div class="modal-footer">
-            <button id="saveTableButton">Save Changes</button>
-            <button id="cancelTableButton">Cancel</button>
+
+        <div class="control-section">
+            <h3>Song Info</h3>
+            <span id="songTitle">No song loaded</span>
+            <br>
+            <span id="songStats" style="font-size: 11px; color: #888;">0 patterns, 0 instruments</span>
+            <div id="speedDisplay"
+                style="display: none; font-size: 11px; color: #4f4; margin-top: 4px; font-weight: bold;"></div>
+        </div>
+
+        <div class="control-section">
+            <h3>Project</h3>
+            <button id="saveButton">Save</button>
+            <button id="loadButton">Load</button>
+            <button id="exportButton">Export JSON</button>
+            <button id="exportSIDButton">Export SID</button>
+            <button id="testSIDButton">Test SID Player</button>
+            <button id="importButton">Import</button>
+            <input type="file" id="importFileInput" accept=".json,.sid" style="display: none;">
+            <span id="testSIDStatus" style="display: none; font-size: 10px; color: #0A0;">Testing SID...</span>
+        </div>
+
+        <div class="control-section">
+            <h3>Tools</h3>
+            <button id="instrumentEditorButton">Instrument Editor</button>
+            <button id="tableEditorButton">Table Editor</button>
+            <button id="keyboardToggleButton">Enable Keyboard</button>
+            <button id="helpButton">Help</button>
+            <a href="about.html"><button>About</button></a>
         </div>
     </div>
-</div>
 
-<!-- Instrument Editor Modal -->
-<div id="instrumentEditorModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Instrument Editor</h2>
-            <span class="close" id="closeInstrumentEditor">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="instrument-selector">
-                <label for="editInstrumentSelect">Edit Instrument:</label>
-                <select id="editInstrumentSelect"></select>
-                <button id="newInstrumentButton">New Instrument</button>
-                <button id="duplicateInstrumentButton">Duplicate</button>
-                <button id="deleteInstrumentButton">Delete</button>
+    <!-- GT2 Pattern Editor -->
+    <div id="gt2-pattern-editor-container"></div>
+
+    <!-- GT2 Order Editor -->
+    <div id="gt2-order-editor-container"></div>
+
+    <!-- Oscilloscope Visualization -->
+    <div id="oscilloscope-container" style="margin: 20px; padding: 10px; background: #111; border: 1px solid #333;">
+        <h3 style="color: #0f0; margin: 0 0 10px 0;">Voice Oscilloscopes</h3>
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <div style="color: #0f0; font-size: 11px; margin-bottom: 4px;">Voice 1</div>
+                <canvas id="scope1" width="300" height="100" style="background: #000; border: 1px solid #0f0;"></canvas>
             </div>
-            
-            <div class="instrument-params">
-                <div class="param-section">
-                    <h3>Basic Parameters</h3>
+            <div style="flex: 1;">
+                <div style="color: #0ff; font-size: 11px; margin-bottom: 4px;">Voice 2</div>
+                <canvas id="scope2" width="300" height="100" style="background: #000; border: 1px solid #0ff;"></canvas>
+            </div>
+            <div style="flex: 1;">
+                <div style="color: #f0f; font-size: 11px; margin-bottom: 4px;">Voice 3</div>
+                <canvas id="scope3" width="300" height="100" style="background: #000; border: 1px solid #f0f;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Editor Modal -->
+    <div id="tableEditorModal" class="modal">
+        <div class="modal-content table-editor-content">
+            <div class="modal-header">
+                <h2>Table Editor</h2>
+                <span class="close" id="closeTableEditor">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="table-controls">
                     <div class="param-row">
-                        <label for="instrumentName">Name:</label>
-                        <input type="text" id="instrumentName" maxlength="20">
-                    </div>
-                    <div class="param-row">
-                        <label for="waveformSelect">Waveform:</label>
-                        <select id="waveformSelect">
-                            <option value="16">Triangle</option>
-                            <option value="32">Sawtooth</option>
-                            <option value="64">Pulse</option>
-                            <option value="128">Noise</option>
-                            <option value="48">Pulse + Sawtooth</option>
-                            <option value="80">Pulse + Triangle</option>
-                            <option value="144">Noise + Triangle</option>
+                        <label for="tableTypeSelect">Table Type:</label>
+                        <select id="tableTypeSelect">
+                            <option value="wave">Wave Table</option>
+                            <option value="pulse">Pulse Table</option>
+                            <option value="filter">Filter Table</option>
+                            <option value="speed">Speed Table</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="param-section">
-                    <h3>ADSR Envelope</h3>
                     <div class="param-row">
-                        <label for="attackSlider">Attack: <span id="attackValue">0</span></label>
-                        <input type="range" id="attackSlider" min="0" max="15" value="0">
+                        <label for="tableIndexSelect">Table:</label>
+                        <select id="tableIndexSelect">
+                            <!-- Options populated by JavaScript -->
+                        </select>
                     </div>
                     <div class="param-row">
-                        <label for="decaySlider">Decay: <span id="decayValue">0</span></label>
-                        <input type="range" id="decaySlider" min="0" max="15" value="0">
+                        <label for="tableLength">Length:</label>
+                        <input type="number" id="tableLength" min="1" max="255" value="16">
+                        <button id="resizeTableButton">Resize</button>
                     </div>
                     <div class="param-row">
-                        <label for="sustainSlider">Sustain: <span id="sustainValue">0</span></label>
-                        <input type="range" id="sustainSlider" min="0" max="15" value="0">
-                    </div>
-                    <div class="param-row">
-                        <label for="releaseSlider">Release: <span id="releaseValue">0</span></label>
-                        <input type="range" id="releaseSlider" min="0" max="15" value="0">
+                        <label for="tableName">Name:</label>
+                        <input type="text" id="tableName" placeholder="Table name">
                     </div>
                 </div>
 
-                <div class="param-section">
-                    <h3>Pulse Width</h3>
-                    <div class="param-row">
-                        <label for="pulseWidthSlider">Width: <span id="pulseWidthValue">2048</span></label>
-                        <input type="range" id="pulseWidthSlider" min="0" max="4095" value="2048">
-                    </div>
+                <div class="table-operations">
+                    <button id="clearTableButton">Clear</button>
+                    <button id="copyTableButton">Copy</button>
+                    <button id="pasteTableButton">Paste</button>
+                    <button id="newTableButton">New</button>
                 </div>
 
-                <div class="param-section">
-                    <h3>SID Features</h3>
+                <div class="table-loop-controls">
                     <div class="param-row">
-                        <label for="syncEnabled">
-                            <input type="checkbox" id="syncEnabled"> Oscillator Sync
+                        <label for="tableLoopEnabled">
+                            <input type="checkbox" id="tableLoopEnabled"> Loop
                         </label>
                     </div>
                     <div class="param-row">
-                        <label for="ringModEnabled">
-                            <input type="checkbox" id="ringModEnabled"> Ring Modulation
-                        </label>
+                        <label for="tableLoopStart">Start:</label>
+                        <input type="number" id="tableLoopStart" min="0" max="254" value="0">
+                        <label for="tableLoopEnd">End:</label>
+                        <input type="number" id="tableLoopEnd" min="0" max="254" value="15">
                     </div>
                 </div>
 
-                <div class="param-section table-section">
-                    <h3>GoatTracker Tables</h3>
-                    <div class="param-row">
-                        <label for="waveTableSelect">Wave Table:</label>
-                        <select id="waveTableSelect">
-                            <option value="-1">None</option>
-                            <!-- Options populated by JavaScript -->
-                        </select>
+                <div class="table-data-container">
+                    <div class="table-data-header">
+                        <span class="table-step-header">Step</span>
+                        <span class="table-value-header">Left</span>
+                        <span class="table-hex-header">Right</span>
+                        <span class="table-desc-header">Description</span>
                     </div>
-                    <div class="param-row">
-                        <label for="pulseTableSelect">Pulse Table:</label>
-                        <select id="pulseTableSelect">
-                            <option value="-1">None</option>
-                            <!-- Options populated by JavaScript -->
-                        </select>
+                    <div id="tableDataGrid" class="table-data-grid">
+                        <!-- Table data rows populated by JavaScript -->
                     </div>
-                    <div class="param-row">
-                        <label for="filterTableSelect">Filter Table:</label>
-                        <select id="filterTableSelect">
-                            <option value="-1">None</option>
-                            <!-- Options populated by JavaScript -->
-                        </select>
-                    </div>
-                    <div class="param-row">
-                        <label for="speedTableSelect">Speed Table:</label>
-                        <select id="speedTableSelect">
-                            <option value="-1">None</option>
-                            <!-- Options populated by JavaScript -->
-                        </select>
-                    </div>
-                    <div class="param-row">
-                        <button id="openTableEditorFromInstrument">Edit Tables</button>
+                </div>
+
+                <div id="hexReference"
+                    style="background: #111; border: 1px solid #333; border-radius: 4px; margin: 10px 0; max-height: 200px; overflow-y: auto;">
+                    <!-- Hex reference populated by JavaScript -->
+                </div>
+
+                <div class="table-presets">
+                    <h3>Presets</h3>
+                    <div class="preset-buttons">
+                        <button id="presetLinearButton">Linear</button>
+                        <button id="presetSineButton">Sine</button>
+                        <button id="presetTriangleButton">Triangle</button>
+                        <button id="presetSawButton">Sawtooth</button>
+                        <button id="presetRandomButton">Random</button>
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer">
-                <button id="testInstrumentButton">Test Note</button>
-                <button id="saveInstrumentButton">Save Changes</button>
-                <button id="cancelInstrumentButton">Cancel</button>
+                <button id="saveTableButton">Save Changes</button>
+                <button id="cancelTableButton">Cancel</button>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Help Modal -->
-<div id="helpModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>SID Tracker Help</h2>
-            <span class="close" id="closeHelp">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="help-section">
-                <h3>🎵 Note Entry</h3>
-                <p><strong>Note Formats:</strong></p>
-                <ul>
-                    <li><code>C-4, D#5, F-3</code> → Play note (note + octave)</li>
-                    <li><code>R</code> → Rest (silence)</li>
-                    <li><code>---</code> → Sustain (continue previous note)</li>
-                    <li><code>(empty)</code> → Silence</li>
-                </ul>
-                <p><strong>Examples:</strong></p>
-                <ul>
-                    <li><code>C-4, ---, ---, E-4</code> → C-4 plays for 3 steps, then E-4</li>
-                    <li><code>C-3, R, D-3, ---</code> → C-3, silence, D-3 for 2 steps</li>
-                </ul>
+    <!-- Instrument Editor Modal -->
+    <div id="instrumentEditorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Instrument Editor</h2>
+                <span class="close" id="closeInstrumentEditor">&times;</span>
             </div>
-
-            <div class="help-section">
-                <h3>🎹 Keyboard Input</h3>
-                <p><strong>Piano Layout:</strong></p>
-                <div class="keyboard-layout">
-                    <p><strong>Lower octave (C-3 to B-3):</strong><br>
-                    <code>Z S X D C V G B H N J M</code><br>
-                    <code>C C# D D# E F F# G G# A A# B</code></p>
-                    
-                    <p><strong>Higher octave (C-4 to B-4):</strong><br>
-                    <code>Q 2 W 3 E R 5 T 6 Y 7 U</code><br>
-                    <code>C C# D D# E F F# G G# A A# B</code></p>
-                    
-                    <p><strong>Even higher (C-5 to D#5):</strong><br>
-                    <code>I 9 O 0 P</code><br>
-                    <code>C C# D D# E</code></p>
+            <div class="modal-body">
+                <div class="instrument-selector">
+                    <label for="editInstrumentSelect">Edit Instrument:</label>
+                    <select id="editInstrumentSelect"></select>
+                    <button id="newInstrumentButton">New Instrument</button>
+                    <button id="duplicateInstrumentButton">Duplicate</button>
+                    <button id="deleteInstrumentButton">Delete</button>
                 </div>
-                <p><strong>💡 Tip:</strong> Click outside input fields to play, click in input fields to type</p>
-            </div>
 
-            <div class="help-section">
-                <h3>🔴 Recording Mode</h3>
-                <p>Click "Record" to start recording notes from the keyboard:</p>
-                <ul>
-                    <li><code>Space</code> → Record Rest</li>
-                    <li><code>Enter</code> → Record Sustain</li>
-                    <li><code>←→</code> → Switch voices</li>
-                    <li><code>↑↓</code> → Move between steps</li>
-                    <li><code>Escape</code> → Stop recording</li>
-                </ul>
-            </div>
+                <div class="instrument-params">
+                    <div class="param-section">
+                        <h3>Basic Parameters</h3>
+                        <div class="param-row">
+                            <label for="instrumentName">Name:</label>
+                            <input type="text" id="instrumentName" maxlength="20">
+                        </div>
+                        <div class="param-row">
+                            <label for="waveformSelect">Waveform:</label>
+                            <select id="waveformSelect">
+                                <option value="16">Triangle</option>
+                                <option value="32">Sawtooth</option>
+                                <option value="64">Pulse</option>
+                                <option value="128">Noise</option>
+                                <option value="48">Pulse + Sawtooth</option>
+                                <option value="80">Pulse + Triangle</option>
+                                <option value="144">Noise + Triangle</option>
+                            </select>
+                        </div>
+                    </div>
 
-            <div class="help-section">
-                <h3>🎛️ Transport Controls</h3>
-                <ul>
-                    <li><strong>Play:</strong> Start playback</li>
-                    <li><strong>Stop:</strong> Stop playback</li>
-                    <li><strong>Record:</strong> Enable recording mode</li>
-                </ul>
-            </div>
+                    <div class="param-section">
+                        <h3>ADSR Envelope</h3>
+                        <div class="param-row">
+                            <label for="attackSlider">Attack: <span id="attackValue">0</span></label>
+                            <input type="range" id="attackSlider" min="0" max="15" value="0">
+                        </div>
+                        <div class="param-row">
+                            <label for="decaySlider">Decay: <span id="decayValue">0</span></label>
+                            <input type="range" id="decaySlider" min="0" max="15" value="0">
+                        </div>
+                        <div class="param-row">
+                            <label for="sustainSlider">Sustain: <span id="sustainValue">0</span></label>
+                            <input type="range" id="sustainSlider" min="0" max="15" value="0">
+                        </div>
+                        <div class="param-row">
+                            <label for="releaseSlider">Release: <span id="releaseValue">0</span></label>
+                            <input type="range" id="releaseSlider" min="0" max="15" value="0">
+                        </div>
+                    </div>
 
-            <div class="help-section">
-                <h3>🎼 Pattern Management</h3>
-                <ul>
-                    <li><strong>Pattern Select:</strong> Choose which pattern to edit (A, B, C, etc.)</li>
-                    <li><strong>Copy/Paste:</strong> Copy pattern to clipboard and paste elsewhere</li>
-                    <li><strong>Clear:</strong> Clear current pattern</li>
-                    <li><strong>Song Editor:</strong> Arrange patterns into songs</li>
-                </ul>
-            </div>
+                    <div class="param-section">
+                        <h3>Pulse Width</h3>
+                        <div class="param-row">
+                            <label for="pulseWidthSlider">Width: <span id="pulseWidthValue">2048</span></label>
+                            <input type="range" id="pulseWidthSlider" min="0" max="4095" value="2048">
+                        </div>
+                    </div>
 
-            <div class="help-section">
-                <h3>💾 Project Management</h3>
-                <ul>
-                    <li><strong>Save:</strong> Save to browser storage</li>
-                    <li><strong>Load:</strong> Load from browser storage</li>
-                    <li><strong>Export:</strong> Download as JSON file</li>
-                    <li><strong>Import:</strong> Load JSON file</li>
-                </ul>
+                    <div class="param-section">
+                        <h3>SID Features</h3>
+                        <div class="param-row">
+                            <label for="syncEnabled">
+                                <input type="checkbox" id="syncEnabled"> Oscillator Sync
+                            </label>
+                        </div>
+                        <div class="param-row">
+                            <label for="ringModEnabled">
+                                <input type="checkbox" id="ringModEnabled"> Ring Modulation
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="param-section table-section">
+                        <h3>GoatTracker Tables</h3>
+                        <div class="param-row">
+                            <label for="waveTableSelect">Wave Table:</label>
+                            <select id="waveTableSelect">
+                                <option value="-1">None</option>
+                                <!-- Options populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="param-row">
+                            <label for="pulseTableSelect">Pulse Table:</label>
+                            <select id="pulseTableSelect">
+                                <option value="-1">None</option>
+                                <!-- Options populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="param-row">
+                            <label for="filterTableSelect">Filter Table:</label>
+                            <select id="filterTableSelect">
+                                <option value="-1">None</option>
+                                <!-- Options populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="param-row">
+                            <label for="speedTableSelect">Speed Table:</label>
+                            <select id="speedTableSelect">
+                                <option value="-1">None</option>
+                                <!-- Options populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="param-row">
+                            <button id="openTableEditorFromInstrument">Edit Tables</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="testInstrumentButton">Test Note</button>
+                    <button id="saveInstrumentButton">Save Changes</button>
+                    <button id="cancelInstrumentButton">Cancel</button>
+                </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button id="closeHelpButton">Close</button>
         </div>
     </div>
-</div>
 
-<!-- jsSID library (loaded as regular scripts to create global variables) -->
-<script src="jsSID/js/stream.js"></script>
-<script src="jsSID/js/jssid.core.js"></script>
-<script src="jsSID/js/jssid.tinysid.js"></script>
-<script src="jsSID/js/jssid.fastsid.js"></script>
-<script src="jsSID/js/jssid.mos6510.js"></script>
-<script src="jsSID/js/jssid.sidplayer.js"></script>
-<script src="jsSID/js/pico.dev.js"></script>
-<script type="module" src="jsSID/js/6502parser.js"></script>
-<script type="module" src="jsSID/js/6502asm.js"></script>
-<script type="module" src="synth.js"></script>
-<script type="module" src="preload-audio.js"></script>
-<script type="module" src="lfo-engine.js"></script>
-<script type="module" src="arpeggio-engine.js"></script>
-<script type="module" src="pattern-manager.js"></script>
-<script type="module" src="table-manager.js"></script>
-<script type="module" src="table-manager-gt2.js"></script>
-<script type="module" src="gt2-frame-engine.js"></script>
-<script type="module" src="pattern-commands.js"></script>
-<script type="module" src="tempo-control.js"></script>
-<script type="module" src="keyboard-input.js"></script>
-<script type="module" src="record-mode.js"></script>
-<script type="module" src="sequencer.js"></script>
-<script type="module" src="instrument-editor.js"></script>
-<script type="module" src="table-editor.js"></script>
-<script type="module" src="table-editor-gt2.js"></script>
-<script type="module" src="sid-exporter.js"></script>
-<script type="module" src="sid-tester.js"></script>
-<script type="module" src="gt2-pattern-editor.js"></script>
-<script type="module" src="gt2-order-editor.js"></script>
-<script type="module" src="main.js"></script>
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>SID Tracker Help</h2>
+                <span class="close" id="closeHelp">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h3>🎵 Note Entry</h3>
+                    <p><strong>Note Formats:</strong></p>
+                    <ul>
+                        <li><code>C-4, D#5, F-3</code> → Play note (note + octave)</li>
+                        <li><code>R</code> → Rest (silence)</li>
+                        <li><code>---</code> → Sustain (continue previous note)</li>
+                        <li><code>(empty)</code> → Silence</li>
+                    </ul>
+                    <p><strong>Examples:</strong></p>
+                    <ul>
+                        <li><code>C-4, ---, ---, E-4</code> → C-4 plays for 3 steps, then E-4</li>
+                        <li><code>C-3, R, D-3, ---</code> → C-3, silence, D-3 for 2 steps</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>🎹 Keyboard Input</h3>
+                    <p><strong>Piano Layout:</strong></p>
+                    <div class="keyboard-layout">
+                        <p><strong>Lower octave (C-3 to B-3):</strong><br>
+                            <code>Z S X D C V G B H N J M</code><br>
+                            <code>C C# D D# E F F# G G# A A# B</code>
+                        </p>
+
+                        <p><strong>Higher octave (C-4 to B-4):</strong><br>
+                            <code>Q 2 W 3 E R 5 T 6 Y 7 U</code><br>
+                            <code>C C# D D# E F F# G G# A A# B</code>
+                        </p>
+
+                        <p><strong>Even higher (C-5 to D#5):</strong><br>
+                            <code>I 9 O 0 P</code><br>
+                            <code>C C# D D# E</code>
+                        </p>
+                    </div>
+                    <p><strong>💡 Tip:</strong> Click outside input fields to play, click in input fields to type</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>🔴 Recording Mode</h3>
+                    <p>Click "Record" to start recording notes from the keyboard:</p>
+                    <ul>
+                        <li><code>Space</code> → Record Rest</li>
+                        <li><code>Enter</code> → Record Sustain</li>
+                        <li><code>←→</code> → Switch voices</li>
+                        <li><code>↑↓</code> → Move between steps</li>
+                        <li><code>Escape</code> → Stop recording</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>🎛️ Transport Controls</h3>
+                    <ul>
+                        <li><strong>Play:</strong> Start playback</li>
+                        <li><strong>Stop:</strong> Stop playback</li>
+                        <li><strong>Record:</strong> Enable recording mode</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>🎼 Pattern Management</h3>
+                    <ul>
+                        <li><strong>Pattern Select:</strong> Choose which pattern to edit (A, B, C, etc.)</li>
+                        <li><strong>Copy/Paste:</strong> Copy pattern to clipboard and paste elsewhere</li>
+                        <li><strong>Clear:</strong> Clear current pattern</li>
+                        <li><strong>Song Editor:</strong> Arrange patterns into songs</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>💾 Project Management</h3>
+                    <ul>
+                        <li><strong>Save:</strong> Save to browser storage</li>
+                        <li><strong>Load:</strong> Load from browser storage</li>
+                        <li><strong>Export:</strong> Download as JSON file</li>
+                        <li><strong>Import:</strong> Load JSON file</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="closeHelpButton">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jsSID library (loaded as regular scripts to create global variables) -->
+    <script src="jsSID/js/stream.js"></script>
+    <script src="jsSID/js/jssid.core.js"></script>
+    <script src="jsSID/js/jssid.tinysid.js"></script>
+    <script src="jsSID/js/jssid.fastsid.js"></script>
+    <script src="jsSID/js/jssid.mos6510.js"></script>
+    <script src="jsSID/js/jssid.sidplayer.js"></script>
+    <script src="jsSID/js/pico.dev.js"></script>
+    <script type="module" src="jsSID/js/6502parser.js"></script>
+    <script type="module" src="jsSID/js/6502asm.js"></script>
+    <script type="module" src="synth.js"></script>
+    <script type="module" src="preload-audio.js"></script>
+    <script type="module" src="lfo-engine.js"></script>
+    <script type="module" src="arpeggio-engine.js"></script>
+    <script type="module" src="pattern-manager.js"></script>
+    <script type="module" src="table-manager.js"></script>
+    <script type="module" src="table-manager-gt2.js"></script>
+    <script type="module" src="gt2-frame-engine.js"></script>
+    <script type="module" src="pattern-commands.js"></script>
+    <script type="module" src="tempo-control.js"></script>
+    <script type="module" src="keyboard-input.js"></script>
+    <script type="module" src="record-mode.js"></script>
+    <script type="module" src="sequencer.js"></script>
+    <script type="module" src="instrument-editor.js"></script>
+    <script type="module" src="table-editor.js"></script>
+    <script type="module" src="table-editor-gt2.js"></script>
+    <script type="module" src="sid-exporter.js"></script>
+    <script type="module" src="sid-tester.js"></script>
+    <script type="module" src="gt2-pattern-editor.js"></script>
+    <script type="module" src="gt2-order-editor.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
+
 </html>

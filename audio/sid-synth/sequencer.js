@@ -4,7 +4,9 @@ import { instruments, hzToSid, setSIDRegister, playNote, playNoteWithInstrument,
 import { lfoEngine } from './lfo-engine.js';
 import { arpeggioEngine } from './arpeggio-engine.js';
 import { patternManager, NUM_VOICES, MAX_PATTERN_LENGTH } from './pattern-manager.js';
+import { tableManager, TablePlaybackState } from './table-manager.js';
 import { tempoControl } from './tempo-control.js';
+import { gt2FrameEngine } from './gt2-frame-engine.js';
 
 export { NUM_VOICES };
 export const MAX_STEPS = MAX_PATTERN_LENGTH;
@@ -22,7 +24,8 @@ export let currentVoiceState = Array(3).fill(null).map(() => ({
     instrument: null,
     baseFrequency: 0,
     isPlaying: false,
-    startTime: 0
+    startTime: 0,
+    tableState: new TablePlaybackState()
 }));
 
 export const noteFrequencies = {
@@ -135,6 +138,20 @@ export function noteToHz(noteString) {
         return 0;
     }
     return freq;
+}
+
+// Convert note name to MIDI-style note number (C-0 = 0, C-4 = 48, etc.)
+function noteNameToNumber(noteName) {
+    const noteMap = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 };
+
+    // Parse note like "C-4" or "C#5"
+    const match = noteName.match(/^([A-G]#?)[-]?(\d)$/);
+    if (!match) return 48; // Default to C-4
+
+    const note = match[1];
+    const octave = parseInt(match[2]);
+
+    return octave * 12 + (noteMap[note] || 0);
 }
 
 export function stopPlayback() {
@@ -428,8 +445,21 @@ export function playStep() {
                         arpeggioEngine.clearVoice(voice);
                     }
                     
+                    // Initialize table playback for this instrument
+                    initializeInstrumentTables(voice, instrument);
+
                     // Play the note with instrument (LFO and arpeggio engines will handle modulation)
                     playNoteWithInstrument(voice, freq, tempoControl.stepDurationMs, instrumentIndex);
+
+                    // Trigger GoatTracker2 tables if instrument has them assigned
+                    console.log(`🔍 Checking tables for instrument ${instrumentIndex}:`, instrument.tables);
+                    if (instrument.tables && (instrument.tables.wave >= 0 || instrument.tables.pulse >= 0 || instrument.tables.filter >= 0 || instrument.tables.speed >= 0)) {
+                        const noteNumber = noteNameToNumber(note);
+                        console.log(`✨ GT2 Tables triggered for voice ${voice}, note ${note} (${noteNumber}), instr ${instrumentIndex}`);
+                        gt2FrameEngine.triggerNoteTables(voice, noteNumber, instrument);
+                    } else {
+                        console.log(`❌ No active tables for instrument ${instrumentIndex}`);
+                    }
                 } else {
                     // Invalid note, treat as rest
                     currentVoiceState[voice].isPlaying = false;
@@ -467,12 +497,103 @@ export function playStep() {
         }
     }
 
+    // Advance table playback for all active voices
+    advanceTablePlayback();
+
     // Move to next step, handle pattern/song progression
     currentStep = (currentStep + 1) % patternLength;
     
     // If we completed a pattern and we're in song mode, advance to next pattern
     if (currentStep === 0 && songMode) {
         advanceToNextPatternInSong();
+    }
+}
+
+// Table management functions
+function initializeInstrumentTables(voice, instrument) {
+    const tableState = currentVoiceState[voice].tableState;
+    tableState.reset();
+
+    // Initialize tables based on instrument configuration
+    if (instrument.tables) {
+        if (instrument.tables.wave >= 0) {
+            tableState.setTable('wave', instrument.tables.wave);
+        }
+        if (instrument.tables.pulse >= 0) {
+            tableState.setTable('pulse', instrument.tables.pulse);
+        }
+        if (instrument.tables.filter >= 0) {
+            tableState.setTable('filter', instrument.tables.filter);
+        }
+        if (instrument.tables.speed >= 0) {
+            tableState.setTable('speed', instrument.tables.speed);
+        }
+    }
+
+    console.log(`Voice ${voice}: Initialized tables - wave:${instrument.tables?.wave}, pulse:${instrument.tables?.pulse}, filter:${instrument.tables?.filter}, speed:${instrument.tables?.speed}`);
+}
+
+function advanceTablePlayback() {
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        if (!currentVoiceState[voice].isPlaying) continue;
+
+        const tableState = currentVoiceState[voice].tableState;
+        const instrument = currentVoiceState[voice].instrument;
+
+        if (!tableState.active) continue;
+
+        // Advance table positions
+        tableState.advance(tableManager);
+
+        // Apply current table values to the voice
+        const currentValues = tableState.getCurrentValues(tableManager);
+        applyTableValues(voice, currentValues, instrument);
+    }
+}
+
+function applyTableValues(voice, tableValues, instrument) {
+    const voiceOffset = voice * 7;
+
+    // Apply waveform from wave table
+    if (tableValues.waveform !== undefined) {
+        const controlReg = voiceOffset + 0x04;
+        let controlValue = tableValues.waveform;
+
+        // Add sync and ring mod flags if enabled in instrument
+        if (instrument.sync) controlValue |= 0x02;
+        if (instrument.ringMod) controlValue |= 0x04;
+
+        // Always set gate bit for playing notes
+        controlValue |= 0x01;
+
+        setGlobalSIDRegister(controlReg, controlValue);
+        console.log(`Voice ${voice}: Applied wave table value $${tableValues.waveform.toString(16).padStart(2, '0')}`);
+    }
+
+    // Apply pulse width from pulse table
+    if (tableValues.pulseWidth !== undefined) {
+        const pulseLowReg = voiceOffset + 0x02;
+        const pulseHighReg = voiceOffset + 0x03;
+
+        setGlobalSIDRegister(pulseLowReg, tableValues.pulseWidth & 0xFF);
+        setGlobalSIDRegister(pulseHighReg, (tableValues.pulseWidth >> 8) & 0xFF);
+        console.log(`Voice ${voice}: Applied pulse table value $${tableValues.pulseWidth.toString(16).padStart(3, '0')}`);
+    }
+
+    // Apply filter frequency from filter table
+    if (tableValues.filterFreq !== undefined) {
+        const filterLowReg = 0x15; // Global filter registers
+        const filterHighReg = 0x16;
+
+        setGlobalSIDRegister(filterLowReg, tableValues.filterFreq & 0xFF);
+        setGlobalSIDRegister(filterHighReg, (tableValues.filterFreq >> 8) & 0x07);
+        console.log(`Voice ${voice}: Applied filter table value $${tableValues.filterFreq.toString(16).padStart(3, '0')}`);
+    }
+
+    // Speed table affects tempo (could be applied globally or per-voice)
+    if (tableValues.speed !== undefined && tableValues.speed > 0) {
+        // For now, we'll just log it - speed tables would need more complex tempo integration
+        console.log(`Voice ${voice}: Speed table value ${tableValues.speed} (not yet implemented)`);
     }
 }
 

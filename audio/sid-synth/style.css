@@ -18,8 +18,11 @@ h1 {
     gap: 15px;
     margin-bottom: 20px;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: center; /* Keep centered for main block look, but handle wrapping better? */
+    /* Actually standard left-align is cleaner for mixed rows */
+    justify-content: flex-start; 
     align-items: flex-start;
+    max-width: 1200px; /* Prevent it from getting too wide on huge screens */
 }
 
 .control-section {
@@ -710,6 +713,203 @@ body.keyboard-input-active textarea {
     }
     
     .keyboard-layout code {
+        font-size: 10px;
+    }
+}
+
+/* Table Editor Styles */
+.table-editor-content {
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.table-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background-color: #2a2a2a;
+    border-radius: 5px;
+}
+
+.table-operations {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    justify-content: center;
+}
+
+.table-operations button {
+    background-color: #444;
+    color: #0F0;
+    border: 1px solid #666;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.table-operations button:hover {
+    background-color: #555;
+}
+
+.table-loop-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border-radius: 5px;
+}
+
+.table-loop-controls .param-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.table-loop-controls input[type="number"] {
+    width: 50px;
+}
+
+.table-data-container {
+    background-color: #1a1a1a;
+    border: 2px solid #555;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.table-data-header {
+    display: grid;
+    grid-template-columns: 50px 80px 80px 1fr;
+    gap: 1px;
+    background-color: #444;
+    padding: 8px;
+    font-weight: bold;
+    color: #0F0;
+    border-bottom: 2px solid #666;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.table-data-grid {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: 50px 80px 80px 1fr;
+    gap: 1px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #333;
+    align-items: center;
+}
+
+.table-row:hover {
+    background-color: #2a2a2a;
+}
+
+.table-row.loop-start {
+    border-left: 3px solid #0A0;
+}
+
+.table-row.loop-end {
+    border-right: 3px solid #A00;
+}
+
+.table-step {
+    font-weight: bold;
+    color: #888;
+    text-align: center;
+}
+
+.table-value input {
+    width: 70px;
+    background-color: #333;
+    color: #0F0;
+    border: 1px solid #555;
+    padding: 2px 4px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.table-value input:focus {
+    border-color: #0F0;
+    outline: none;
+}
+
+.table-hex {
+    font-family: monospace;
+    color: #AAA;
+    font-size: 11px;
+    text-align: center;
+}
+
+.table-desc {
+    color: #BBB;
+    font-size: 11px;
+    padding-left: 5px;
+}
+
+.table-presets {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.table-presets h3 {
+    color: #0F0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 5px;
+}
+
+.preset-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.preset-buttons button {
+    background-color: #444;
+    color: #0F0;
+    border: 1px solid #666;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.preset-buttons button:hover {
+    background-color: #555;
+}
+
+/* Responsive table editor */
+@media (max-width: 600px) {
+    .table-editor-content {
+        width: 95%;
+    }
+
+    .table-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .table-data-header,
+    .table-row {
+        grid-template-columns: 40px 60px 60px 1fr;
+        font-size: 11px;
+    }
+
+    .table-value input {
+        width: 50px;
         font-size: 10px;
     }
 }

@@ -34,17 +34,18 @@ const CTRL_TEST = 0x08;        // Test bit (usually not used)
 
 // GT2-compatible instrument presets - only authentic GoatTracker2 parameters
 // Format: name, waveform, ad (attack/decay), sr (sustain/release), pulseWidth, sync, ringMod, tables
+// GT2 table pointers: 0 = no table, 1+ = table position (1-based)
 export const instruments = [
-    { name: "Lead (Tri)", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xFE, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "Bass (Pulse)", waveform: WAVE_PULSE, ad: 0x0F, sr: 0x8C, pulseWidth: 0x0400, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "Pad (Saw)", waveform: WAVE_SAWTOOTH, ad: 0x88, sr: 0xAF, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "Perc (Noise)", waveform: WAVE_NOISE, ad: 0x01, sr: 0x01, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "GT2 Pulse", waveform: WAVE_PULSE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "GT2 Tri", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "Sync Lead", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: true, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "Ring Mod", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: true, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "GT2 Saw", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
-    { name: "Custom", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: -1, pulse: -1, filter: -1, speed: -1 } },
+    { name: "Lead (Tri)", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xFE, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Bass (Pulse)", waveform: WAVE_PULSE, ad: 0x0F, sr: 0x8C, pulseWidth: 0x0400, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Pad (Saw)", waveform: WAVE_SAWTOOTH, ad: 0x88, sr: 0xAF, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Perc (Noise)", waveform: WAVE_NOISE, ad: 0x01, sr: 0x01, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "GT2 Pulse", waveform: WAVE_PULSE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "GT2 Tri", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Sync Lead", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: true, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Ring Mod", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: true, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "GT2 Saw", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Custom", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
 ];
 
 export let sidPlayer; // AudioWorklet mode only: placeholder object
@@ -102,7 +103,7 @@ function showAudioWorkletWarning(detail) {
 
         const actions = document.createElement('div');
         actions.style.marginTop = '8px';
-        
+
         const close = document.createElement('button');
         close.textContent = 'Dismiss';
         close.style.padding = '4px 8px';
@@ -123,7 +124,7 @@ function showAudioWorkletWarning(detail) {
         document.body.appendChild(overlay);
     } catch (e) {
         // As a last resort, fall back to alert (rare)
-        try { alert('AudioWorklet unavailable — using fallback audio engine. Timing may be less tight.'); } catch(_) {}
+        try { alert('AudioWorklet unavailable — using fallback audio engine. Timing may be less tight.'); } catch (_) { }
     }
 }
 
@@ -184,20 +185,20 @@ jsSID.synth.tinysid = {
 
 export function initSynth() {
     console.log("Attempting to initialize jsSID.SIDPlayer and AudioContext...");
-    
+
     // Check if AudioContext already exists and is working
     if (audioContext && audioContext.state !== 'closed') {
         console.log(`AudioContext already exists (state: ${audioContext.state}), skipping initialization`);
         return;
     }
-    
+
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
+
     // Make audioContext globally available
     window.audioContext = audioContext;
-    
+
     console.log(`Audio context sample rate: ${audioContext.sampleRate} Hz`);
-    
+
     // Prefer AudioWorklet if available, but only create one
     if (ENABLE_AUDIO_WORKLET && audioContext.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
         // Check if worklet is already being initialized or exists
@@ -205,7 +206,7 @@ export function initSynth() {
             console.log('AudioWorklet already initialized or in progress, skipping');
             return;
         }
-        
+
         console.log('Trying AudioWorklet SID path...');
         // Prefer the bundled worklet (no importScripts needed); fall back to source for dev
         const tryUrls = ['sid-processor.bundle.js', 'sid-processor.js'];
@@ -225,7 +226,7 @@ export function initSynth() {
                 console.log('AudioWorklet created while async operation was in progress, skipping duplicate');
                 return;
             }
-            
+
             sidWorkletNode = new AudioWorkletNode(audioContext, 'sid-processor');
             sidWorkletNode.port.onmessage = (ev) => {
                 const { type, payload } = ev.data || {};
@@ -235,7 +236,7 @@ export function initSynth() {
                     window.sidWorkletNode = sidWorkletNode;
                     console.log(`SID Worklet ready (sr=${payload.sampleRate}, block=${payload.blockSize})`);
                     // Expose info for status pages
-                    try { window.sidWorkletInfo = payload; } catch(_) {}
+                    try { window.sidWorkletInfo = payload; } catch (_) { }
                     // Default master volume
                     setGlobalSIDRegister(0x18, 0x0F);
                     // Flush any pending pokes queued before readiness
@@ -266,14 +267,18 @@ export function initSynth() {
                                     window.voiceState[voice].isPlaying = true;
                                 }
                             });
-                        } catch(e) {
+                        } catch (e) {
                             console.warn('Failed to update voiceState:', e);
                         }
                     }
 
-                    // Optional UI update hook
                     if (typeof window !== 'undefined' && typeof window.updateWorkletStep === 'function') {
-                        try { window.updateWorkletStep(payload.step); } catch(_) {}
+                        try { window.updateWorkletStep(payload); } catch (_) { }
+                    }
+                } else if (type === 'telemetry') {
+                    // Update Oscilloscopes / Register Visualization
+                    if (typeof window !== 'undefined' && typeof window.updateWorkletTelemetry === 'function') {
+                        try { window.updateWorkletTelemetry(payload); } catch (_) { }
                     }
                 } else if (type === 'triggerTables') {
                     // Worklet wants to trigger GT2 frame engine tables
@@ -287,7 +292,7 @@ export function initSynth() {
                             if (voice !== undefined && baseNote !== undefined && instrument) {
                                 window.gt2FrameEngine.triggerNoteTables(voice, baseNote, instrument);
                             }
-                        } catch(e) {
+                        } catch (e) {
                             console.warn('Failed to trigger GT2 tables:', e);
                         }
                     }
@@ -308,14 +313,14 @@ export function initSynth() {
                         }).catch(e => {
                             console.warn('Failed to execute pattern command:', e);
                         });
-                    } catch(e) {
+                    } catch (e) {
                         console.warn('Failed to execute pattern command:', e);
                     }
                 } else if (type === 'error') {
                     console.error('SID Worklet error:', payload);
                     showAudioWorkletWarning('Worklet init error');
                     // Fallback to ScriptProcessor if worklet cannot init
-                    try { sidWorkletNode.disconnect(); } catch(e) {}
+                    try { sidWorkletNode.disconnect(); } catch (e) { }
                     sidWorkletNode = null;
                     useWorklet = false;
                     pendingPokes.length = 0;
@@ -344,17 +349,17 @@ function initScriptProcessorPath() {
         console.log("ScriptProcessor already initialized, skipping");
         return;
     }
-    
+
     // Disconnect any existing scriptProcessor to prevent multiple instances
     if (scriptProcessor) {
         try {
             scriptProcessor.disconnect();
             console.log("Disconnected existing ScriptProcessor");
-        } catch(e) {
+        } catch (e) {
             console.warn("Error disconnecting existing ScriptProcessor:", e);
         }
     }
-    
+
     sidPlayer = new jsSID.SIDPlayer({
         quality: jsSID.quality.low,
         clock: jsSID.chip.clock.PAL,
@@ -612,7 +617,7 @@ export function onWorkletReady(callback) {
     }
 }
 
-export function workletStartSequencer({ allPatterns, orderLists, instruments, bpm }) {
+export function workletStartSequencer({ allPatterns, orderLists, instruments, tables, bpm }) {
     if (!sidWorkletNode) {
         console.warn('workletStartSequencer: sidWorkletNode is null');
         return;
@@ -620,8 +625,19 @@ export function workletStartSequencer({ allPatterns, orderLists, instruments, bp
 
     console.log(`workletStartSequencer: Starting GT2 song mode with ${allPatterns.length} patterns`);
     console.log(`workletStartSequencer: Order lists:`, orderLists.map((ol, i) => `V${i}:${ol.slice(0, 5).join(',')}`).join(' '));
+    if (tables) {
+        console.log(`workletStartSequencer: Tables included - WTBL has ${tables.ltable[0].filter(x => x !== 0).length} non-zero entries`);
+        // Debug dump first 10 WTBL entries to verify gate bits
+        console.log(`📊 WTBL first 10 entries being sent to worklet:`);
+        for (let i = 0; i < 10; i++) {
+            const L = tables.ltable[0][i] || 0;
+            const R = tables.rtable[0][i] || 0;
+            const hasGate = (L >= 0x10 && L <= 0xDF) ? ((L & 0x01) ? '+gate' : 'NO-gate') : '';
+            console.log(`  [${i}] L=0x${L.toString(16).padStart(2,'0')} R=0x${R.toString(16).padStart(2,'0')} ${hasGate}`);
+        }
+    }
 
-    sidWorkletNode.port.postMessage({ type: 'loadPattern', payload: { allPatterns, orderLists, instruments } });
+    sidWorkletNode.port.postMessage({ type: 'loadPattern', payload: { allPatterns, orderLists, instruments, tables } });
     sidWorkletNode.port.postMessage({ type: 'setBPM', payload: { bpm } });
     sidWorkletNode.port.postMessage({ type: 'start' });
 
@@ -643,10 +659,19 @@ export function workletSetBPM(bpm) {
     sidWorkletNode.port.postMessage({ type: 'setBPM', payload: { bpm } });
 }
 
+export function workletSetGT2Tempo(speed, tempo) {
+    if (!sidWorkletNode) return;
+    sidWorkletNode.port.postMessage({ type: 'setGT2Tempo', payload: { speed, tempo } });
+}
+
+if (typeof window !== 'undefined') {
+    window.setGT2Tempo = workletSetGT2Tempo;
+}
+
 export function stopVoice(voice) {
     // Prefer synchronized gate control in the AudioWorklet
     if (isWorkletActive && isWorkletActive()) {
-        try { workletNoteOff(voice); } catch (_) {}
+        try { workletNoteOff(voice); } catch (_) { }
         console.log(`Voice ${voice} stopped via worklet (GATE cleared)`);
         return;
     }
@@ -661,7 +686,7 @@ export function stopVoice(voice) {
 export function releaseVoice(voice, waveform = 0x10) {
     // Prefer synchronized gate control in the AudioWorklet
     if (isWorkletActive && isWorkletActive()) {
-        try { workletNoteOff(voice, waveform); } catch (_) {}
+        try { workletNoteOff(voice, waveform); } catch (_) { }
         console.log(`Voice ${voice} released via worklet with waveform 0x${waveform.toString(16)}`);
         return;
     }
@@ -684,10 +709,10 @@ let voiceFilterStates = [false, false, false];
 // Function to update global filter state based on active voices
 function updateGlobalFilterState() {
     if (!(useWorklet || (sidPlayer && sidPlayer.synth))) return;
-    
+
     // Check if any voice is using the filter
     const anyVoiceFiltered = voiceFilterStates.some(state => state);
-    
+
     if (!anyVoiceFiltered) {
         // No voices using filter - completely disable it
         setGlobalSIDRegister(23, 0x00); // Clear all voice routing and resonance
@@ -699,24 +724,24 @@ function updateGlobalFilterState() {
 // Function to apply filter settings to a voice
 export function applyFilter(voice, filterSettings) {
     if (!filterSettings) return;
-    
+
     if (filterSettings.enabled) {
         // Mark this voice as using filter
         voiceFilterStates[voice] = true;
-        
+
         // Set filter frequency (11-bit value split across two 8-bit registers)
         const ffreqlo = filterSettings.frequency & 0x07;
         const ffreqhi = (filterSettings.frequency >> 3) & 0xFF;
-        
+
         setGlobalSIDRegister(21, ffreqlo); // Low 3 bits of frequency
         setGlobalSIDRegister(22, ffreqhi); // High 8 bits of frequency
-        
+
         // Set resonance and voice routing - need to preserve other voices' routing
         const currentRouting = sidRegs[23] & 0x07;
         const voiceRouting = currentRouting | (1 << voice); // Add this voice to filter routing
         const resonanceAndRouting = ((filterSettings.resonance & 0xF0)) | voiceRouting;
         setGlobalSIDRegister(23, resonanceAndRouting);
-        
+
         // Set filter type and volume
         // Bits 4-6: Filter type (LP/BP/HP), Bit 7: Voice 3 off, Bits 0-3: Volume
         const volReg = sidRegs[24];
@@ -724,18 +749,18 @@ export function applyFilter(voice, filterSettings) {
         const clampedVolume = Math.min(currentVolume, 0x0F); // Ensure volume doesn't exceed 15
         const filterTypeAndVolume = (filterSettings.type & 0x70) | clampedVolume;
         setGlobalSIDRegister(24, filterTypeAndVolume);
-        
+
         console.log(`Filter applied to voice ${voice}: freq=0x${filterSettings.frequency.toString(16)}, res=${filterSettings.resonance} (0x${filterSettings.resonance.toString(16)}) -> reg23=0x${resonanceAndRouting.toString(16)}, type=0x${filterSettings.type.toString(16)}`);
     } else {
         // Mark this voice as not using filter
         voiceFilterStates[voice] = false;
-        
+
         // Disable filter for this voice by clearing its routing bit
         const currentRouting2 = sidRegs[23];
         const newRouting = currentRouting2 & ~(1 << voice); // Clear this voice's routing bit
         setGlobalSIDRegister(23, newRouting);
         console.log(`Filter disabled for voice ${voice}`);
-        
+
         // Check if we should completely disable the filter
         updateGlobalFilterState();
     }
@@ -787,7 +812,8 @@ function triggerTablesForInstrument(voice, frequencyHz, instrument, instrumentIn
 
     console.log(`🔍 Checking tables for instrument ${instrumentIndex}:`, instrument.tables);
 
-    if (instrument.tables.wave >= 0 || instrument.tables.pulse >= 0 || instrument.tables.filter >= 0 || instrument.tables.speed >= 0) {
+    // GT2 uses 1-based pointers: 0 = no table, 1+ = table position
+    if (instrument.tables.wave > 0 || instrument.tables.pulse > 0 || instrument.tables.filter > 0 || instrument.tables.speed > 0) {
         // Convert frequency to MIDI note number (approximate)
         const noteNumber = Math.round(12 * Math.log2(frequencyHz / 440) + 69); // A4 = 440Hz = MIDI 69
 

@@ -1,13 +1,18 @@
 import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister } from './synth.js';
-import { NUM_VOICES, MAX_STEPS, playbackInterval, currentStep, noteToHz, stopPlayback, startPlayback, playStep, initialPattern, setSongMode, selectPattern, getCurrentPatternLength } from './sequencer.js';
-import { patternManager, MAX_PATTERNS } from './pattern-manager.js';
+import { NUM_VOICES, currentStep, noteToHz, stopPlayback, startPlayback, getPlaybackState, voiceState } from './sequencer-gt2.js';
+import { patternManager, MAX_PATTERNS, MAX_PATTERN_LENGTH as MAX_STEPS, getCurrentPatternLength, setSongMode, selectPattern } from './pattern-manager-compat.js';
+import { gt2PatternManager } from './pattern-manager-gt2.js';
 import { tempoControl } from './tempo-control.js';
 import { initInstrumentEditor } from './instrument-editor.js';
-import { initSongEditor } from './song-editor.js';
+import { initGT2TableEditor } from './table-editor-gt2.js';
 import { recordMode } from './record-mode.js';
 import { keyboardInput } from './keyboard-input.js';
 import { sidExporter } from './sid-exporter.js';
 import { sidTester } from './sid-tester.js';
+import { gt2FrameEngine } from './gt2-frame-engine.js';
+import { setupGT2ImportUI } from './gt2-importer.js';
+import { initGT2PatternEditor } from './gt2-pattern-editor.js';
+import { initGT2OrderEditor } from './gt2-order-editor.js';
 
 // Transport controls
 const playButton = document.getElementById('playButton');
@@ -21,22 +26,8 @@ const recordInstrumentSelect = document.getElementById('recordInstrumentSelect')
 const autoAdvanceCheck = document.getElementById('autoAdvanceCheck');
 const recordStatus = document.getElementById('recordStatus');
 
-// Pattern controls
-const patternSelect = document.getElementById('patternSelect');
-const clearButton = document.getElementById('clearButton');
-const copyPatternButton = document.getElementById('copyPatternButton');
-const pastePatternButton = document.getElementById('pastePatternButton');
-const patternLength = document.getElementById('patternLength');
-
-// Song controls
-const songModeButton = document.getElementById('songModeButton');
-const songPosition = document.getElementById('songPosition');
-const songEditorButton = document.getElementById('songEditorButton');
-
-// Tempo controls
-const bpmSlider = document.getElementById('bpmSlider');
-const bpmDisplay = document.getElementById('bpmDisplay');
-const tapTempoButton = document.getElementById('tapTempoButton');
+// (Pattern and song controls removed - now handled by GT2 editors)
+// (Tempo controls removed - GT2 uses tempo from imported songs)
 
 // Project controls
 const saveButton = document.getElementById('saveButton');
@@ -59,107 +50,46 @@ let currentPatternIndex = 0;
 window.onload = () => {
     // Initialize editors
     initInstrumentEditor();
-    initSongEditor();
-    
+    initGT2TableEditor();
+    setupGT2ImportUI(); // GoatTracker2 .sng import
+    initGT2PatternEditor(); // GoatTracker2 pattern editor
+    initGT2OrderEditor(); // GoatTracker2 order list editor
+
     // Initialize pattern manager and UI
     initializePatternUI();
     initializeTempoControls();
     initializeRecordingControls();
-    
-    // Dynamically create tracker UI
-    const trackerContainer = document.getElementById('tracker-container');
 
-    // Create step number column
-    const stepNumbersColumn = document.createElement('div');
-    stepNumbersColumn.classList.add('step-numbers-column');
-    const stepNumbersHeader = document.createElement('div');
-    stepNumbersHeader.classList.add('step-label');
-    stepNumbersHeader.textContent = 'Step';
-    stepNumbersColumn.appendChild(stepNumbersHeader);
+    // Update song info for default song
+    updateDefaultSongInfo();
 
-    for (let step = 0; step < MAX_STEPS; step++) {
-        const stepLabel = document.createElement('div');
-        stepLabel.textContent = step.toString().padStart(2, '0');
-        stepLabel.classList.add('step-number');
-        stepLabel.style.display = step < getCurrentPatternLength() ? 'block' : 'none';
-        stepNumbersColumn.appendChild(stepLabel);
-    }
-    trackerContainer.prepend(stepNumbersColumn); // Add to the beginning of the container
-
-    for (let voice = 0; voice < NUM_VOICES; voice++) {
-        const trackDiv = document.getElementById(`track-${voice}`);
-        // Add column headers for each track
-        const trackHeader = document.createElement('div');
-        trackHeader.classList.add('track-column-header');
-        trackHeader.innerHTML = `
-            <div class="note-label">Note</div>
-            <div class="instrument-label">Inst</div>
-        `;
-        trackDiv.prepend(trackHeader);
-
-        for (let step = 0; step < MAX_STEPS; step++) {
-            const stepDiv = document.createElement('div');
-            stepDiv.classList.add('step');
-            stepDiv.style.display = step < getCurrentPatternLength() ? 'block' : 'none';
-
-            const noteInput = document.createElement('input');
-            noteInput.type = 'text';
-            noteInput.placeholder = 'Note';
-            noteInput.id = `note-${voice}-${step}`;
-            noteInput.addEventListener('input', () => updatePatternData(voice, step));
-            stepDiv.appendChild(noteInput);
-
-            const instrumentSelect = document.createElement('select');
-            instrumentSelect.id = `instrument-${voice}-${step}`;
-            instrumentSelect.addEventListener('change', () => updatePatternData(voice, step));
-            instruments.forEach((inst, index) => {
-                const option = document.createElement('option');
-                option.value = index; // Store index as value
-                option.textContent = inst.name;
-                instrumentSelect.appendChild(option);
-            });
-            stepDiv.appendChild(instrumentSelect);
-
-            trackDiv.appendChild(stepDiv);
-        }
-    }
-
-    // Load current pattern data into UI
-    refreshTrackerFromPattern();
-
-    // Show note entry help
+    // Show GT2 help
     console.log(`
-🎵 SID TRACKER - NOTE ENTRY HELP 🎵
+🎵 SID TRACKER - GoatTracker2 Mode 🎵
 
-Note Entry Formats:
-• C-4, D#5, F-3  → Play note (note + octave)
-• R              → Rest (silence)
-• ---            → Sustain (continue previous note)
-• (empty)        → Silence
+GT2 Pattern System:
+• 208 single-voice patterns (0-207)
+• 3 independent order lists (one per voice)
+• Pattern format: Note | Inst | Cmd | Data
+
+GT2 Notes:
+• C-0 to B-7  → Play note
+• R--         → Rest (silence)
+• ===         → Key off
+• ...         → Empty
 
 🎹 RECORDING MODE:
 • Click "Record" to start recording
 • Play piano keyboard to record notes
-• Use arrow keys to navigate: ←→ (voices), ↑↓ (steps)
+• Use arrow keys to navigate
 • Press Space for Rest, Enter for Sustain
 • Press Escape to stop recording
-
-Recording Shortcuts:
-• Space          → Record Rest
-• Enter          → Record Sustain
-• ←→             → Switch voices
-• ↑↓             → Move between steps
-• Escape         → Stop recording
-
-Examples:
-• C-4, ---, ---, E-4  → C-4 plays for 3 steps, then E-4
-• C-3, R, D-3, ---    → C-3, silence, D-3 for 2 steps
     `);
 
     // Transport controls
     playButton.addEventListener('click', async () => {
         console.log('Play button clicked - initializing audio...');
-        
+
         // Always initialize synth on each play to ensure it's ready
         try {
             initSynth();
@@ -168,16 +98,16 @@ Examples:
             console.error('Synth initialization failed:', e);
             return;
         }
-        
+
         // Ensure AudioContext is running
         if (window.audioContext) {
             console.log('AudioContext state:', window.audioContext.state);
             if (window.audioContext.state === 'suspended') {
-                try { 
-                    await window.audioContext.resume(); 
+                try {
+                    await window.audioContext.resume();
                     console.log('AudioContext resumed');
-                } catch (e) { 
-                    console.error('Audio resume failed:', e); 
+                } catch (e) {
+                    console.error('Audio resume failed:', e);
                     return;
                 }
             }
@@ -185,7 +115,7 @@ Examples:
             console.error('No AudioContext available');
             return;
         }
-        
+
         // Set master volume
         try {
             setGlobalSIDRegister(0x18, 0x0F);
@@ -193,14 +123,14 @@ Examples:
         } catch (e) {
             console.error('Failed to set master volume:', e);
         }
-        
+
         // Start playback
         console.log('Starting playback...');
         startPlayback();
     });
 
     stopButton.addEventListener('click', stopPlayback);
-    
+
     pauseButton.addEventListener('click', () => {
         // TODO: Implement pause functionality
         console.log('Pause functionality coming soon!');
@@ -225,61 +155,14 @@ Examples:
         recordMode.setAutoAdvance(e.target.checked);
     });
 
-    // Pattern controls
-    patternSelect.addEventListener('change', (e) => {
-        const patternIndex = parseInt(e.target.value);
-        selectPattern(patternIndex);
-        currentPatternIndex = patternIndex;
-    });
-
-    copyPatternButton.addEventListener('click', () => {
-        copiedPattern = patternManager.copyPattern();
-        console.log(`Pattern ${String.fromCharCode(65 + currentPatternIndex)} copied to clipboard`);
-    });
-
-    pastePatternButton.addEventListener('click', () => {
-        if (copiedPattern) {
-            patternManager.pastePattern(copiedPattern, currentPatternIndex);
-            refreshTrackerFromPattern();
-            console.log(`Pattern pasted to ${String.fromCharCode(65 + currentPatternIndex)}`);
-        } else {
-            console.log('No pattern in clipboard');
-        }
-    });
-
-    // Song controls
-    songModeButton.addEventListener('click', () => {
-        const currentMode = songModeButton.textContent;
-        const newSongMode = currentMode === 'Pattern Mode';
-        setSongMode(newSongMode);
-    });
-
-    // Song Editor button is now handled by initSongEditor()
-
-    // Tempo controls
-    bpmSlider.addEventListener('input', (e) => {
-        const bpm = parseInt(e.target.value);
-        tempoControl.setBPM(bpm);
-        bpmDisplay.textContent = `${bpm} BPM`;
-    });
-
-    tapTempoButton.addEventListener('click', () => {
-        tempoControl.tapTempo();
-        bpmSlider.value = tempoControl.bpm;
-        bpmDisplay.textContent = `${tempoControl.bpm} BPM`;
-    });
-
-    clearButton.addEventListener('click', () => {
-        stopPlayback();
-        patternManager.clearCurrentPattern();
-        refreshTrackerFromPattern();
-        console.log(`Pattern ${String.fromCharCode(65 + currentPatternIndex)} cleared.`);
-    });
+    // (Pattern and song controls removed - now handled by GT2 editors)
+    // (Tempo controls removed - GT2 uses tempo from imported songs)
+    // (Clear button removed - use GT2 pattern editor)
 
     saveButton.addEventListener('click', () => {
         // Save current UI data to pattern manager first
         saveCurrentPatternFromUI();
-        
+
         // Save complete project data
         const saveData = {
             songData: patternManager.exportSong(),
@@ -291,37 +174,37 @@ Examples:
             },
             version: '2.0'
         };
-        
+
         localStorage.setItem('sidTrackerData', JSON.stringify(saveData));
         console.log("Complete project saved to local storage.");
     });
 
     loadButton.addEventListener('click', () => {
         stopPlayback();
-        
+
         const savedData = localStorage.getItem('sidTrackerData');
         if (savedData) {
             try {
                 const data = JSON.parse(savedData);
-                
+
                 if (data.version === '2.0' && data.songData) {
                     // Load new format with full song data
                     patternManager.importSong(data.songData);
-                    
+
                     // Load instruments
                     if (data.instruments) {
                         instruments.length = 0;
                         instruments.push(...data.instruments);
                         updateAllInstrumentDropdowns();
                     }
-                    
+
                     // Load tempo settings
                     if (data.tempo) {
                         tempoControl.setBPM(data.tempo.bpm);
                         tempoControl.setStepResolution(data.tempo.stepResolution);
                         tempoControl.setSwing(data.tempo.swing);
                     }
-                    
+
                     // Refresh UI
                     refreshTrackerFromPattern();
                     console.log(`Loaded complete project (version ${data.version})`);
@@ -329,7 +212,7 @@ Examples:
                     // Handle legacy formats
                     handleLegacyLoad(data);
                 }
-                
+
             } catch (e) {
                 console.error("Failed to load data:", e);
             }
@@ -342,7 +225,7 @@ Examples:
     exportButton.addEventListener('click', () => {
         // Save current UI data first
         saveCurrentPatternFromUI();
-        
+
         // Create complete export data
         const exportData = {
             songData: patternManager.exportSong(),
@@ -360,11 +243,11 @@ Examples:
                 application: "SID Tracker"
             }
         };
-        
+
         // Create filename with timestamp
         const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
         const filename = `sid-tracker-${timestamp}.json`;
-        
+
         // Create and download file
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -375,7 +258,7 @@ Examples:
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         console.log(`Exported complete project as ${filename}`);
     });
 
@@ -383,13 +266,13 @@ Examples:
     exportSIDButton.addEventListener('click', () => {
         // Save current UI data first
         saveCurrentPatternFromUI();
-        
+
         // Get song title from song editor or use default
         const songTitle = patternManager.song.title || "SID Tracker Song";
-        
+
         // Export as SID file
         sidExporter.downloadSID(songTitle);
-        
+
         console.log(`Exported SID file: ${songTitle}`);
     });
 
@@ -397,7 +280,7 @@ Examples:
     testSIDButton.addEventListener('click', () => {
         // Save current UI data first
         saveCurrentPatternFromUI();
-        
+
         // Toggle test playback
         sidTester.toggleTest();
     });
@@ -415,7 +298,7 @@ Examples:
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
-                
+
                 // Validate the imported data
                 if (!importedData.pattern || !importedData.instruments) {
                     alert('Invalid file format. Please select a valid SID Tracker export file.');
@@ -435,7 +318,7 @@ Examples:
                         const select = document.getElementById(`instrument-${voice}-${step}`);
                         if (select) {
                             select.innerHTML = '';
-                            
+
                             instruments.forEach((inst, index) => {
                                 const option = document.createElement('option');
                                 option.value = index;
@@ -480,7 +363,7 @@ Examples:
         };
 
         reader.readAsText(file);
-        
+
         // Clear the input so the same file can be imported again
         event.target.value = '';
     });
@@ -489,12 +372,12 @@ Examples:
     let keyboardEnabled = false;
     keyboardToggleButton.addEventListener('click', () => {
         keyboardEnabled = !keyboardEnabled;
-        
+
         if (keyboardEnabled) {
             keyboardInput.enable();
             keyboardToggleButton.textContent = 'Disable Keyboard';
             keyboardToggleButton.style.backgroundColor = '#0A0';
-            
+
             // Set current instrument from first instrument select
             const firstInstrumentSelect = document.getElementById('instrument-0-0');
             if (firstInstrumentSelect) {
@@ -541,40 +424,23 @@ Examples:
 
 // Helper functions for pattern management
 function initializePatternUI() {
-    // Populate pattern selector
-    for (let i = 0; i < MAX_PATTERNS; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = String.fromCharCode(65 + i); // A, B, C, etc.
-        patternSelect.appendChild(option);
-    }
-    
-    // Set initial pattern length display
-    updatePatternLengthDisplay();
+    // Pattern UI is now handled by GT2 editors - no-op for compatibility
 }
 
 function initializeTempoControls() {
-    // Set initial tempo display
-    bpmDisplay.textContent = `${tempoControl.bpm} BPM`;
-    bpmSlider.value = tempoControl.bpm;
-    
-    // Listen for tempo changes from other sources
-    tempoControl.onTempoChange((bpm, stepDuration, resolution) => {
-        bpmDisplay.textContent = `${bpm} BPM`;
-        bpmSlider.value = bpm;
-    });
+    // Tempo controls removed - GT2 uses tempo from imported songs
 }
 
 function initializeRecordingControls() {
     // Setup recording shortcuts
     recordMode.setupRecordingShortcuts();
-    
+
     // Initialize record instrument selector
     updateRecordInstrumentSelector();
-    
+
     // Set initial instrument for recording
     recordMode.setInstrument(0);
-    
+
     // Listen for recording events
     recordMode.onRecordingEvent((eventType, data) => {
         if (eventType === 'noteRecorded') {
@@ -583,68 +449,25 @@ function initializeRecordingControls() {
     });
 }
 
+// Legacy tracker UI functions (stubbed - GT2 editors are now used)
 function updatePatternData(voice, step) {
-    const noteElement = document.getElementById(`note-${voice}-${step}`);
-    const instElement = document.getElementById(`instrument-${voice}-${step}`);
-    
-    if (noteElement && instElement) {
-        const currentPattern = patternManager.getCurrentPattern();
-        currentPattern.setStepData(voice, step, noteElement.value.trim(), parseInt(instElement.value));
-    }
+    // GT2 pattern editor handles this now
 }
 
 function saveCurrentPatternFromUI() {
-    const currentPattern = patternManager.getCurrentPattern();
-    for (let voice = 0; voice < NUM_VOICES; voice++) {
-        for (let step = 0; step < currentPattern.length; step++) {
-            const noteElement = document.getElementById(`note-${voice}-${step}`);
-            const instElement = document.getElementById(`instrument-${voice}-${step}`);
-            
-            if (noteElement && instElement) {
-                currentPattern.setStepData(voice, step, noteElement.value.trim(), parseInt(instElement.value));
-            }
-        }
-    }
+    // GT2 pattern editor handles this now
 }
 
 function refreshTrackerFromPattern() {
-    const currentPattern = patternManager.getCurrentPattern();
-    const patternLength = currentPattern.length;
-    
-    // Update step visibility
-    for (let step = 0; step < MAX_STEPS; step++) {
-        const isVisible = step < patternLength;
-        
-        // Update step numbers
-        const stepElement = document.querySelector(`.step-number:nth-child(${step + 2})`);
-        if (stepElement) {
-            stepElement.style.display = isVisible ? 'block' : 'none';
-        }
-        
-        // Update tracker inputs
-        for (let voice = 0; voice < NUM_VOICES; voice++) {
-            const stepDiv = document.getElementById(`note-${voice}-${step}`).parentElement;
-            stepDiv.style.display = isVisible ? 'block' : 'none';
-            
-            if (isVisible) {
-                const stepData = currentPattern.getStepData(voice, step);
-                document.getElementById(`note-${voice}-${step}`).value = stepData.note;
-                document.getElementById(`instrument-${voice}-${step}`).value = stepData.instrument;
-            }
-        }
-    }
-    
-    updatePatternLengthDisplay();
-    updatePatternSelector();
+    // GT2 pattern editor handles this now - no-op for compatibility
 }
 
 function updatePatternLengthDisplay() {
-    const length = getCurrentPatternLength();
-    patternLength.textContent = `Length: ${length}`;
+    // No longer used - GT2 pattern editor handles this
 }
 
 function updatePatternSelector() {
-    patternSelect.value = patternManager.currentPatternIndex;
+    // No longer used - GT2 pattern editor handles this
 }
 
 function updateAllInstrumentDropdowns() {
@@ -655,14 +478,14 @@ function updateAllInstrumentDropdowns() {
             if (select) {
                 const currentValue = select.value;
                 select.innerHTML = '';
-                
+
                 instruments.forEach((inst, index) => {
                     const option = document.createElement('option');
                     option.value = index;
                     option.textContent = inst.name;
                     select.appendChild(option);
                 });
-                
+
                 // Restore selection if still valid
                 if (currentValue < instruments.length) {
                     select.value = currentValue;
@@ -670,24 +493,24 @@ function updateAllInstrumentDropdowns() {
             }
         }
     }
-    
+
     // Update record instrument dropdown
     updateRecordInstrumentSelector();
-    
+
     console.log(`Updated ${instruments.length} instruments in all dropdowns.`);
 }
 
 function updateRecordInstrumentSelector() {
     const currentValue = recordInstrumentSelect.value;
     recordInstrumentSelect.innerHTML = '';
-    
+
     instruments.forEach((inst, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.textContent = inst.name;
         recordInstrumentSelect.appendChild(option);
     });
-    
+
     // Restore selection if still valid
     if (currentValue < instruments.length) {
         recordInstrumentSelect.value = currentValue;
@@ -701,7 +524,7 @@ function handleLegacyLoad(data) {
         instruments.push(...data.instruments);
         updateAllInstrumentDropdowns();
     }
-    
+
     if (data.pattern) {
         // Load into Pattern A
         const patternA = patternManager.patterns[0];
@@ -728,31 +551,176 @@ function updateSongPositionDisplay() {
 window.refreshTrackerFromPattern = refreshTrackerFromPattern;
 window.updateSongPositionDisplay = updateSongPositionDisplay;
 
-// Optional: step highlight updater for AudioWorklet-driven sequencing
-window.updateWorkletStep = (function() {
+// Optional: step highlight updater for AudioWorklet-driven sequencing (GT2 version)
+window.updateWorkletStep = (function () {
     let lastStep = null;
-    return function(step) {
-        const currentPattern = patternManager.getCurrentPattern();
-        const length = currentPattern.length;
-        if (lastStep !== null) {
-            const prev = ((step - 1 + length) % length);
-            const stepElement = document.querySelector(`.step-number:nth-child(${prev + 2})`);
-            if (stepElement) stepElement.classList.remove('highlight');
-            for (let voice = 0; voice < NUM_VOICES; voice++) {
-                const noteElement = document.getElementById(`note-${voice}-${prev}`);
-                const instElement = document.getElementById(`instrument-${voice}-${prev}`);
-                if (noteElement) noteElement.classList.remove('highlight');
-                if (instElement) instElement.classList.remove('highlight');
+    return function (payload) {
+        // Handle both old (step number only) and new (object) formats
+        const step = (typeof payload === 'number') ? payload : payload.step;
+
+        // Update Tempo Display if available
+        if (payload && payload.isGT2) {
+            const speedEl = document.getElementById('speedDisplay');
+            if (speedEl) {
+                // GT2: 1 tick = 1/50th sec. (Note: standard PAL C64)
+                // BPM approx = 750 / ticks.
+                const ticks = payload.ticks || 6;
+                const approxBPM = Math.round(750 / ticks);
+
+                speedEl.style.display = 'block';
+                speedEl.textContent = `GT2 Speed: ${ticks} (${approxBPM} BPM)`;
             }
         }
-        const stepElement = document.querySelector(`.step-number:nth-child(${step + 2})`);
-        if (stepElement) stepElement.classList.add('highlight');
-        for (let voice = 0; voice < NUM_VOICES; voice++) {
-            const noteElement = document.getElementById(`note-${voice}-${step}`);
-            const instElement = document.getElementById(`instrument-${voice}-${step}`);
-            if (noteElement) noteElement.classList.add('highlight');
-            if (instElement) instElement.classList.add('highlight');
+        // Update GT2 voice states with current playback position
+        if (payload && payload.isGT2 && payload.voicePositions) {
+            for (let voice = 0; voice < Math.min(NUM_VOICES, payload.voicePositions.length); voice++) {
+                const pos = payload.voicePositions[voice];
+                if (pos) {
+                    const state = voiceState[voice];
+                    state.patternIndex = pos.patternIndex;
+                    state.patternRow = pos.patternRow;
+                    state.orderPosition = pos.orderPos;
+
+                    // Update isPlaying based on current row
+                    const pattern = gt2PatternManager.patterns[state.patternIndex];
+                    if (pattern) {
+                        const rowData = pattern.getRow(state.patternRow);
+                        if (rowData && rowData.note > 0 && rowData.note < 0xBD) {
+                            state.isPlaying = true;
+                        } else if (rowData && (rowData.note >= 0xBD)) {
+                            state.isPlaying = false;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Fallback for non-GT2 or legacy
+            for (let voice = 0; voice < NUM_VOICES; voice++) {
+                const state = voiceState[voice];
+                const pattern = gt2PatternManager.patterns[state.patternIndex];
+                if (pattern) {
+                    state.patternRow = step % pattern.length;
+                }
+            }
         }
         lastStep = step;
     };
 })();
+
+// --- Oscilloscope Visualization ---
+window.updateWorkletTelemetry = (function () {
+    const scopes = [
+        { canvas: document.getElementById('scope1'), color: '#0f0' },
+        { canvas: document.getElementById('scope2'), color: '#0ff' },
+        { canvas: document.getElementById('scope3'), color: '#f0f' }
+    ];
+
+    return function (payload) {
+        if (!payload || !payload.regs) return;
+        const regs = payload.regs;
+
+        scopes.forEach((scope, v) => {
+            if (!scope.canvas) return;
+            const ctx = scope.canvas.getContext('2d');
+            const w = scope.canvas.width;
+            const h = scope.canvas.height;
+            const base = v * 7;
+
+            // Freq from regs 0,1
+            const freq = regs[base + 0] | (regs[base + 1] << 8);
+            // Control from reg 4
+            const control = regs[base + 4];
+            const gate = control & 0x01;
+            const waveform = control & 0xF0; // Pulse=0x40, Saw=0x20, Tri=0x10, Noise=0x80
+
+            // Clear
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw status info
+            ctx.fillStyle = scope.color;
+            ctx.font = '10px monospace';
+            let label = `F:${freq.toString(16).padStart(4, '0')} W:${waveform.toString(16).padStart(2, '0')} G:${gate}`;
+
+            if (payload.filterConfig) {
+                const f = payload.filterConfig;
+                let fType = '';
+                if (f.type & 0x01) fType += 'L';
+                if (f.type & 0x02) fType += 'B';
+                if (f.type & 0x04) fType += 'H';
+                if (fType) label += ` [${fType} R:${f.res}]`;
+            }
+
+            ctx.fillText(label, 5, 12);
+
+            if (gate === 0) {
+                // Draw flat line if gate is off
+                ctx.beginPath();
+                ctx.strokeStyle = '#444';
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
+                ctx.stroke();
+                return;
+            }
+
+            // Draw simple representative waveform
+            ctx.beginPath();
+            ctx.strokeStyle = scope.color;
+            ctx.lineWidth = 1;
+
+            const scale = 30; // Amplitude
+            const period = Math.max(10, 400 - (freq / 100)); // Visual period
+
+            for (let x = 0; x < w; x++) {
+                let y = 0;
+                const phase = (x / period) % 1;
+
+                if (waveform === 0x40) { // Pulse
+                    y = phase < 0.5 ? -1 : 1;
+                } else if (waveform === 0x20) { // Saw
+                    y = phase * 2 - 1;
+                } else if (waveform === 0x10) { // Triangle
+                    y = Math.abs(phase * 4 - 2) - 1;
+                } else if (waveform === 0x80) { // Noise
+                    y = Math.random() * 2 - 1;
+                } else {
+                    y = 0;
+                }
+
+                const screenY = h / 2 + y * scale;
+                if (x === 0) ctx.moveTo(x, screenY);
+                else ctx.lineTo(x, screenY);
+            }
+            ctx.stroke();
+        });
+    };
+})();
+
+// Update song info display for default/current song
+function updateDefaultSongInfo() {
+    const songTitleEl = document.getElementById('songTitle');
+    const songStatsEl = document.getElementById('songStats');
+
+    if (songTitleEl) {
+        songTitleEl.textContent = 'Default Demo Song';
+    }
+
+    if (songStatsEl) {
+        // Count used patterns (patterns with actual note data)
+        let usedPatterns = 0;
+        for (let i = 0; i < 208; i++) {
+            const pattern = gt2PatternManager.patterns[i];
+            let hasNotes = false;
+            for (let row = 0; row < pattern.length; row++) {
+                const rowData = pattern.getRow(row);
+                if (rowData.note > 0) {
+                    hasNotes = true;
+                    break;
+                }
+            }
+            if (hasNotes) usedPatterns++;
+        }
+
+        songStatsEl.textContent = `${usedPatterns} patterns, ${instruments.length} instruments`;
+    }
+}

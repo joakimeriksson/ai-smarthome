@@ -3,6 +3,7 @@
 
 import { instruments, playNoteWithInstrument, stopVoice, stopAllVoices, setGlobalSIDRegister, isWorkletActive, workletStartSequencer, workletStopSequencer, workletSetBPM, onWorkletReady, workletPanic, stopAudioDrivenTiming, getJSTimerStatus } from './synth.js';
 import { gt2PatternManager, NUM_VOICES, MAX_PATTERNS, NOTE_EMPTY, NOTE_REST, NOTE_KEYOFF, LOOPSONG, ENDSONG } from './pattern-manager-gt2.js';
+import { gt2TableManager } from './table-manager-gt2.js';
 import { tempoControl } from './tempo-control.js';
 import { gt2FrameEngine } from './gt2-frame-engine.js';
 import { patternCommandEngine } from './pattern-commands.js';
@@ -87,13 +88,13 @@ export function stopPlayback() {
     stopAudioDrivenTiming();
 
     // Stop worklet and frame engine
-    try { workletStopSequencer && workletStopSequencer(); } catch(e) {}
-    try { workletPanic && workletPanic(); } catch(e) {}
+    try { workletStopSequencer && workletStopSequencer(); } catch (e) { }
+    try { workletPanic && workletPanic(); } catch (e) { }
     gt2FrameEngine.stop();
 
     // Remove tempo change handler
     if (tempoChangeHandler) {
-        try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch(e) {}
+        try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch (e) { }
         tempoChangeHandler = null;
     }
 
@@ -101,7 +102,7 @@ export function stopPlayback() {
     stopAllVoices();
 
     // Restore master volume
-    try { setGlobalSIDRegister(0x18, 0x0F); } catch(_) {}
+    try { setGlobalSIDRegister(0x18, 0x0F); } catch (_) { }
 
     // Reset voice states
     for (let voice = 0; voice < NUM_VOICES; voice++) {
@@ -112,7 +113,7 @@ export function stopPlayback() {
     // Remove step highlights
     try {
         removeAllStepHighlights();
-    } catch(e) {}
+    } catch (e) { }
 
     console.log("GT2 playback stopped.");
 }
@@ -129,8 +130,8 @@ export function startPlayback() {
         playbackInterval = null;
     }
     stopAudioDrivenTiming();
-    try { workletStopSequencer && workletStopSequencer(); } catch(_) {}
-    try { workletPanic && workletPanic(); } catch(_) {}
+    try { workletStopSequencer && workletStopSequencer(); } catch (_) { }
+    try { workletPanic && workletPanic(); } catch (_) { }
     if (workletStartWatch) {
         clearTimeout(workletStartWatch);
         workletStartWatch = null;
@@ -156,7 +157,8 @@ export function startPlayback() {
     }
 
     // Start GT2 frame engine for table execution
-    gt2FrameEngine.start();
+    // DISABLED: Logic moved to AudioWorklet (SidProcessor)
+    // gt2FrameEngine.start();
 
     if (isWorkletActive()) {
         startWorkletPlayback();
@@ -207,10 +209,11 @@ function startWorkletPlayback() {
 
         for (let step = 0; step < pat.length; step++) {
             const rowData = pat.getRow(step);
-            const noteName = gt2PatternManager.noteNumberToName(rowData.note);
             rows.push({
-                note: noteName || '',
-                instrument: rowData.instrument !== undefined ? rowData.instrument : 0
+                note: rowData.note,  // Keep as raw byte
+                instrument: rowData.instrument !== undefined ? rowData.instrument : 0,
+                command: rowData.command || 0,
+                cmdData: rowData.cmdData || 0
             });
         }
 
@@ -218,8 +221,11 @@ function startWorkletPlayback() {
 
         // Debug first few patterns
         if (p < 3) {
-            const preview = rows.slice(0, 4).map(r => `${r.note || '...'}:${r.instrument}`).join(' ');
-            const hasNotes = rows.some(r => r.note && r.note !== '');
+            const preview = rows.slice(0, 4).map(r => {
+                const noteName = gt2PatternManager.noteNumberToName(r.note);
+                return `${noteName || '...'}:${r.instrument}`;
+            }).join(' ');
+            const hasNotes = rows.some(r => r.note && r.note !== 0);
             console.log(`Pattern ${p} (${pat.length} rows, ${hasNotes ? 'HAS NOTES' : 'EMPTY'}): ${preview}`);
         }
     }
@@ -237,11 +243,15 @@ function startWorkletPlayback() {
         allPatterns,           // All patterns in the song
         orderLists,            // Per-voice order lists
         instruments,
+        tables: {
+            ltable: gt2TableManager.ltable,
+            rtable: gt2TableManager.rtable
+        },
         bpm: tempoControl.bpm
     });
 
     if (tempoChangeHandler) {
-        try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch(_) {}
+        try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch (_) { }
     }
     tempoChangeHandler = (bpm) => {
         if (isSequencePlaying) workletSetBPM(bpm);
@@ -316,14 +326,18 @@ function playVoiceStep(voice) {
         stopVoice(voice);
         state.isPlaying = false;
         state.sustain = false;
+        patternCommandEngine.stopRealtimeEffects(voice);
     } else if (note === NOTE_KEYOFF) {
         // Key off - release note
         stopVoice(voice);
         state.isPlaying = false;
         state.sustain = false;
+        patternCommandEngine.stopRealtimeEffects(voice);
     } else {
         // Play note
-        const freq = noteNumberToHz(note + state.transpose);
+        // Calculate base frequency (used for pitch slides)
+        const noteNum = note + state.transpose;
+        const freq = noteNumberToHz(noteNum);
 
         // Update instrument if specified
         if (instrument >= 0 && instrument < instruments.length) {
@@ -333,24 +347,43 @@ function playVoiceStep(voice) {
         // Play note with instrument
         if (freq > 0 && state.instrument >= 0 && state.instrument < instruments.length) {
             const instr = instruments[state.instrument];
-            playNoteWithInstrument(voice, freq, 1000, state.instrument);
 
-            // Trigger GT2 tables if instrument has them
-            if (instr && instr.tables) {
-                const noteNum = note + state.transpose;
-                gt2FrameEngine.triggerNoteTables(voice, noteNum, instr);
+            // Register note start with command engine (for portamento base)
+            patternCommandEngine.setBaseFrequency(voice, freq);
+            // Default: stop old effects unless portamento will take over
+            if (command !== 0x3) { // 3 = Toneportamento (keeps effects running potentially)
+                patternCommandEngine.stopRealtimeEffects(voice);
             }
 
-            state.isPlaying = true;
-            state.sustain = true;
+            // Normal note trigger (unless toneportamento is active, handled by executeCommand)
+            // But we trigger it anyway, and let the engine modify frequency on next frame?
+            // GT2 usually keys on unless it's a tie-note.
+            // For now, trigger standard note, but if Toneportamento (3xx), we might suppress attack?
+            // Simple integration: Play note, then let command engine modify pitch immediately if needed.
+
+            if (command === 0x3 && cmdData !== 0) {
+                // Toneportamento start: Don't re-trigger attack/voice if we are sliding
+                // (This is a simplified view; real GT2 checking is more complex)
+            } else {
+                playNoteWithInstrument(voice, freq, 1000, state.instrument);
+
+                // Trigger GT2 tables if instrument has them
+                if (instr && instr.tables) {
+                    gt2FrameEngine.triggerNoteTables(voice, noteNum, instr);
+                }
+
+                state.isPlaying = true;
+                state.sustain = true;
+            }
         }
     }
 
-    // Handle commands (TODO: implement GT2 commands)
-    // 0x0F = Set tempo
-    // 0x0C = Set volume
-    // 0x03 = Portamento
-    // etc.
+    // Handle commands
+    if (command !== undefined) {
+        // Pass current frequency for Toneportamento reference
+        const currentFreq = noteNumberToHz(note + state.transpose);
+        patternCommandEngine.executeCommand(voice, command, cmdData || 0, 0, currentFreq);
+    }
 
     // Advance row
     state.patternRow++;
@@ -448,14 +481,14 @@ function highlightStep(step) {
     try {
         const stepElements = document.querySelectorAll(`.pattern-step[data-step="${step}"]`);
         stepElements.forEach(el => el.classList.add('playing'));
-    } catch(e) {}
+    } catch (e) { }
 }
 
 function removeAllStepHighlights() {
     try {
         const stepElements = document.querySelectorAll('.pattern-step.playing');
         stepElements.forEach(el => el.classList.remove('playing'));
-    } catch(e) {}
+    } catch (e) { }
 }
 
 // Export state for UI

@@ -11,6 +11,7 @@ import { patternCommandEngine } from './pattern-commands.js';
 export { NUM_VOICES };
 
 export let isSequencePlaying = false;
+export let isPaused = false;
 export let songMode = false; // Pattern mode vs Song mode (order list playback)
 export let currentStep = 0;
 
@@ -66,6 +67,12 @@ export function noteToHz(noteString) {
 export function stopPlayback() {
     const wasPlaying = isSequencePlaying;
     isSequencePlaying = false;
+    isPaused = false;
+
+    // Resume audio context if it was suspended (paused)
+    if (window.audioContext && window.audioContext.state === 'suspended') {
+        window.audioContext.resume();
+    }
 
     if (!wasPlaying && !playbackInterval && !workletStartWatch) {
         console.log("Playback already stopped.");
@@ -116,6 +123,58 @@ export function stopPlayback() {
     } catch (e) { }
 
     console.log("GT2 playback stopped.");
+}
+
+export function pausePlayback() {
+    if (!isSequencePlaying) {
+        console.log("Not playing, cannot pause.");
+        return;
+    }
+
+    if (isPaused) {
+        console.log("Already paused.");
+        return;
+    }
+
+    console.log("Pausing GT2 playback...");
+    isPaused = true;
+
+    // Suspend audio context - this pauses all audio processing including worklet
+    if (window.audioContext && window.audioContext.state === 'running') {
+        window.audioContext.suspend().then(() => {
+            console.log("Audio context suspended - playback paused.");
+        });
+    }
+}
+
+export function resumePlayback() {
+    if (!isSequencePlaying) {
+        console.log("Not playing, cannot resume. Use play instead.");
+        return;
+    }
+
+    if (!isPaused) {
+        console.log("Not paused, nothing to resume.");
+        return;
+    }
+
+    console.log("Resuming GT2 playback...");
+    isPaused = false;
+
+    // Resume audio context - this resumes all audio processing
+    if (window.audioContext && window.audioContext.state === 'suspended') {
+        window.audioContext.resume().then(() => {
+            console.log("Audio context resumed - playback resumed.");
+        });
+    }
+}
+
+export function togglePause() {
+    if (isPaused) {
+        resumePlayback();
+    } else {
+        pausePlayback();
+    }
 }
 
 export function startPlayback() {

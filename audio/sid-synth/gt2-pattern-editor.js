@@ -3,7 +3,7 @@
 
 import { gt2PatternManager, MAX_PATTERNS, NOTE_EMPTY, NOTE_REST, NOTE_KEYOFF } from './pattern-manager-gt2.js';
 import { instruments, setGlobalSIDRegister } from './synth.js';
-import { voiceState, getPlaybackState } from './sequencer-gt2.js';
+import { voiceState, getPlaybackState, startPlayback, stopPlayback, togglePause, isPaused } from './sequencer-gt2.js';
 
 export class GT2PatternEditor {
     constructor() {
@@ -26,6 +26,10 @@ export class GT2PatternEditor {
         // Update playback position every 50ms
         this.playbackInterval = setInterval(() => {
             const playbackState = getPlaybackState();
+
+            // Update transport button states
+            this.updateTransportButtons();
+
             if (playbackState.isPlaying) {
                 // Check if any playing pattern has changed
                 let patternsChanged = false;
@@ -116,6 +120,20 @@ export class GT2PatternEditor {
         const editorDiv = document.createElement('div');
         editorDiv.id = 'gt2-pattern-editor';
         editorDiv.innerHTML = `
+            <div class="gt2-song-info">
+                <div class="gt2-song-info-left">
+                    <div class="gt2-transport-buttons">
+                        <button class="gt2-transport-btn" id="gt2-play-btn" title="Play">▶</button>
+                        <button class="gt2-transport-btn" id="gt2-pause-btn" title="Pause">⏸</button>
+                        <button class="gt2-transport-btn" id="gt2-stop-btn" title="Stop">⏹</button>
+                    </div>
+                    <div class="gt2-song-title" id="gt2-song-title">Untitled</div>
+                </div>
+                <div class="gt2-song-meta">
+                    <span id="gt2-song-author">Author: Unknown</span>
+                    <span id="gt2-song-stats">| Patterns: 0 | Speed: 6</span>
+                </div>
+            </div>
             <div class="gt2-editor-header">
                 <h3>Track View</h3>
                 <div class="pattern-controls">
@@ -159,7 +177,48 @@ export class GT2PatternEditor {
     }
 
     setupEventHandlers() {
-        // No pattern selector - just shows current song position
+        // Transport buttons
+        const playBtn = document.getElementById('gt2-play-btn');
+        const pauseBtn = document.getElementById('gt2-pause-btn');
+        const stopBtn = document.getElementById('gt2-stop-btn');
+
+        if (playBtn) {
+            playBtn.addEventListener('click', () => {
+                startPlayback();
+                this.updateTransportButtons();
+            });
+        }
+
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => {
+                togglePause();
+                this.updateTransportButtons();
+            });
+        }
+
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => {
+                stopPlayback();
+                this.updateTransportButtons();
+            });
+        }
+    }
+
+    updateTransportButtons() {
+        const playBtn = document.getElementById('gt2-play-btn');
+        const pauseBtn = document.getElementById('gt2-pause-btn');
+        const stopBtn = document.getElementById('gt2-stop-btn');
+        const playbackState = getPlaybackState();
+
+        if (playBtn) {
+            playBtn.classList.toggle('active', playbackState.isPlaying && !isPaused);
+        }
+        if (pauseBtn) {
+            pauseBtn.classList.toggle('active', isPaused);
+        }
+        if (stopBtn) {
+            stopBtn.classList.toggle('active', !playbackState.isPlaying);
+        }
     }
 
     renderPattern() {
@@ -655,6 +714,43 @@ export class GT2PatternEditor {
         document.querySelectorAll('.gt2-pattern-row').forEach(el => el.classList.remove('gt2-playing-row'));
     }
 
+    updateSongInfo(title, author, stats) {
+        const titleEl = document.getElementById('gt2-song-title');
+        const authorEl = document.getElementById('gt2-song-author');
+        const statsEl = document.getElementById('gt2-song-stats');
+
+        if (titleEl) {
+            titleEl.textContent = title || 'Untitled';
+        }
+        if (authorEl) {
+            authorEl.textContent = `Author: ${author || 'Unknown'}`;
+        }
+        if (statsEl) {
+            statsEl.textContent = stats || '';
+        }
+    }
+
+    setSongTitle(title) {
+        const titleEl = document.getElementById('gt2-song-title');
+        if (titleEl) {
+            titleEl.textContent = title || 'Untitled';
+        }
+    }
+
+    setSongAuthor(author) {
+        const authorEl = document.getElementById('gt2-song-author');
+        if (authorEl) {
+            authorEl.textContent = `Author: ${author || 'Unknown'}`;
+        }
+    }
+
+    setSongStats(patternCount, speed) {
+        const statsEl = document.getElementById('gt2-song-stats');
+        if (statsEl) {
+            statsEl.textContent = `| Patterns: ${patternCount} | Speed: ${speed}`;
+        }
+    }
+
     formatNote(noteNum) {
         if (noteNum === NOTE_EMPTY || noteNum === 0 || noteNum === undefined || noteNum === null) return '...';
         if (noteNum === NOTE_REST) return 'R--';
@@ -682,6 +778,85 @@ export class GT2PatternEditor {
                 color: #00ff00;
                 font-family: 'Courier New', monospace;
                 font-size: 14px;
+            }
+
+            .gt2-song-info {
+                padding: 8px 15px;
+                background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+                border: 1px solid #00aa00;
+                border-bottom: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .gt2-song-info-left {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .gt2-transport-buttons {
+                display: flex;
+                gap: 4px;
+            }
+
+            .gt2-transport-btn {
+                width: 28px;
+                height: 28px;
+                border: 1px solid #00aa00;
+                background: #1a1a1a;
+                color: #00ff00;
+                cursor: pointer;
+                font-size: 12px;
+                border-radius: 3px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.1s;
+            }
+
+            .gt2-transport-btn:hover {
+                background: #003300;
+                border-color: #00ff00;
+            }
+
+            .gt2-transport-btn.active {
+                background: #00aa00;
+                color: #000;
+                border-color: #00ff00;
+                box-shadow: 0 0 8px #00ff00;
+            }
+
+            #gt2-play-btn.active {
+                background: #00cc00;
+            }
+
+            #gt2-pause-btn.active {
+                background: #ccaa00;
+                color: #000;
+                border-color: #ffcc00;
+                box-shadow: 0 0 8px #ffcc00;
+            }
+
+            #gt2-stop-btn.active {
+                background: #333;
+            }
+
+            .gt2-song-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #00ff00;
+                text-shadow: 0 0 8px #00ff00;
+            }
+
+            .gt2-song-meta {
+                font-size: 11px;
+                color: #00aa00;
+            }
+
+            .gt2-song-meta span {
+                margin-left: 12px;
             }
 
             .gt2-editor-header {

@@ -14,7 +14,15 @@
             <h3>Transport</h3>
             <button id="playButton">Play</button>
             <button id="stopButton">Stop</button>
-            <button id="pauseButton">Pause</button>
+            <button id="pauseButton">⏸ Pause</button>
+        </div>
+
+        <div class="control-section">
+            <h3>SID Chip</h3>
+            <select id="sidModelSelect">
+                <option value="6581">MOS 6581</option>
+                <option value="8580">MOS 8580</option>
+            </select>
         </div>
 
         <div class="control-section">
@@ -33,24 +41,10 @@
         </div>
 
         <div class="control-section">
-            <h3>Song Info</h3>
-            <span id="songTitle">No song loaded</span>
-            <br>
-            <span id="songStats" style="font-size: 11px; color: #888;">0 patterns, 0 instruments</span>
-            <div id="speedDisplay"
-                style="display: none; font-size: 11px; color: #4f4; margin-top: 4px; font-weight: bold;"></div>
-        </div>
-
-        <div class="control-section">
             <h3>Project</h3>
             <button id="saveButton">Save</button>
             <button id="loadButton">Load</button>
             <button id="exportButton">Export JSON</button>
-            <button id="exportSIDButton">Export SID</button>
-            <button id="testSIDButton">Test SID Player</button>
-            <button id="importButton">Import</button>
-            <input type="file" id="importFileInput" accept=".json,.sid" style="display: none;">
-            <span id="testSIDStatus" style="display: none; font-size: 10px; color: #0A0;">Testing SID...</span>
         </div>
 
         <div class="control-section">
@@ -202,17 +196,29 @@
                             <label for="instrumentName">Name:</label>
                             <input type="text" id="instrumentName" maxlength="20">
                         </div>
+                    </div>
+
+                    <div class="param-section">
+                        <h3>GT2 Voice Parameters</h3>
                         <div class="param-row">
-                            <label for="waveformSelect">Waveform:</label>
-                            <select id="waveformSelect">
-                                <option value="16">Triangle</option>
-                                <option value="32">Sawtooth</option>
-                                <option value="64">Pulse</option>
-                                <option value="128">Noise</option>
-                                <option value="48">Pulse + Sawtooth</option>
-                                <option value="80">Pulse + Triangle</option>
-                                <option value="144">Noise + Triangle</option>
-                            </select>
+                            <label for="firstWaveInput">First Wave (hex):</label>
+                            <input type="text" id="firstWaveInput" maxlength="2" style="width:40px; font-family:monospace;" placeholder="09">
+                            <span class="param-hint">Gate+Wave (01=gate, 10=tri, 20=saw, 40=pulse, 80=noise)</span>
+                        </div>
+                        <div class="param-row">
+                            <label for="gateTimerInput">Gate Timer:</label>
+                            <input type="number" id="gateTimerInput" min="0" max="63" style="width:50px;" value="2">
+                            <label style="margin-left:10px;">
+                                <input type="checkbox" id="noHardRestartCheck"> No HR
+                            </label>
+                            <label style="margin-left:10px;">
+                                <input type="checkbox" id="noGateOffCheck"> No Gate-Off
+                            </label>
+                        </div>
+                        <div class="param-row">
+                            <label for="vibratoDelayInput">Vibrato Delay:</label>
+                            <input type="number" id="vibratoDelayInput" min="0" max="255" style="width:50px;" value="0">
+                            <span class="param-hint">frames before vibrato starts</span>
                         </div>
                     </div>
 
@@ -236,57 +242,23 @@
                         </div>
                     </div>
 
-                    <div class="param-section">
-                        <h3>Pulse Width</h3>
-                        <div class="param-row">
-                            <label for="pulseWidthSlider">Width: <span id="pulseWidthValue">2048</span></label>
-                            <input type="range" id="pulseWidthSlider" min="0" max="4095" value="2048">
-                        </div>
-                    </div>
-
-                    <div class="param-section">
-                        <h3>SID Features</h3>
-                        <div class="param-row">
-                            <label for="syncEnabled">
-                                <input type="checkbox" id="syncEnabled"> Oscillator Sync
-                            </label>
-                        </div>
-                        <div class="param-row">
-                            <label for="ringModEnabled">
-                                <input type="checkbox" id="ringModEnabled"> Ring Modulation
-                            </label>
-                        </div>
-                    </div>
-
                     <div class="param-section table-section">
-                        <h3>GoatTracker Tables</h3>
+                        <h3>GT2 Table Pointers (1-255, 0=none)</h3>
                         <div class="param-row">
-                            <label for="waveTableSelect">Wave Table:</label>
-                            <select id="waveTableSelect">
-                                <option value="-1">None</option>
-                                <!-- Options populated by JavaScript -->
-                            </select>
+                            <label for="waveTableInput">Wave Table:</label>
+                            <input type="number" id="waveTableInput" min="0" max="255" style="width:50px;" value="0">
                         </div>
                         <div class="param-row">
-                            <label for="pulseTableSelect">Pulse Table:</label>
-                            <select id="pulseTableSelect">
-                                <option value="-1">None</option>
-                                <!-- Options populated by JavaScript -->
-                            </select>
+                            <label for="pulseTableInput">Pulse Table:</label>
+                            <input type="number" id="pulseTableInput" min="0" max="255" style="width:50px;" value="0">
                         </div>
                         <div class="param-row">
-                            <label for="filterTableSelect">Filter Table:</label>
-                            <select id="filterTableSelect">
-                                <option value="-1">None</option>
-                                <!-- Options populated by JavaScript -->
-                            </select>
+                            <label for="filterTableInput">Filter Table:</label>
+                            <input type="number" id="filterTableInput" min="0" max="255" style="width:50px;" value="0">
                         </div>
                         <div class="param-row">
-                            <label for="speedTableSelect">Speed Table:</label>
-                            <select id="speedTableSelect">
-                                <option value="-1">None</option>
-                                <!-- Options populated by JavaScript -->
-                            </select>
+                            <label for="speedTableInput">Speed Table:</label>
+                            <input type="number" id="speedTableInput" min="0" max="255" style="width:50px;" value="0">
                         </div>
                         <div class="param-row">
                             <button id="openTableEditorFromInstrument">Edit Tables</button>

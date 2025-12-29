@@ -120,6 +120,81 @@ export class GT2Importer {
             const tableNames = ['WTBL', 'PTBL', 'FTBL', 'STBL'];
             console.log(`📊 ${tableNames[tableType]}: ${tableSize} entries`);
 
+            // Debug: dump PTBL entries for pulse width analysis
+            if (tableType === 1 && tableSize > 0) {
+                console.log(`📊 PTBL dump (all ${tableSize} entries):`);
+                for (let i = 0; i < tableSize; i++) {
+                    const L = leftData[i];
+                    const R = rightData[i];
+                    let desc = '';
+                    if (L >= 0x01 && L <= 0x7F) {
+                        const speed = (R & 0x80) ? (R - 256) : R;
+                        desc = `MODULATE ${L} ticks, speed=${speed}`;
+                    }
+                    else if (L >= 0x80 && L <= 0xFE) {
+                        const pulseVal = ((L & 0x0F) << 8) | R;
+                        desc = `SET PULSE = 0x${pulseVal.toString(16)} (${pulseVal})`;
+                    }
+                    else if (L === 0xFF) desc = `JUMP → ${R}`;
+                    else if (L === 0x00) desc = `NOP`;
+                    else desc = `??? 0x${L.toString(16)}`;
+                    console.log(`  [${i}] L=0x${L.toString(16).padStart(2,'0')} R=0x${R.toString(16).padStart(2,'0')} | ${desc}`);
+                }
+
+                // Show what pulsetable entries each instrument points to
+                console.log(`📌 Instrument pulsetable start positions:`);
+                for (let i = 0; i < importedInstruments.length; i++) {
+                    const inst = importedInstruments[i];
+                    if (inst.pulseTablePtr > 0) {
+                        const ptr = inst.pulseTablePtr;
+                        const idx = ptr - 1;
+                        if (idx >= 0 && idx < leftData.length) {
+                            const L = leftData[idx];
+                            const R = rightData[idx];
+                            console.log(`  Inst ${i+1} "${inst.name.trim()}" → PTBL[${ptr}] = L:0x${L.toString(16).padStart(2,'0')} R:0x${R.toString(16).padStart(2,'0')}`);
+                        }
+                    }
+                }
+            }
+
+            // Debug: dump FTBL entries for filter analysis
+            if (tableType === 2 && tableSize > 0) {
+                console.log(`📊 FTBL dump (all ${tableSize} entries):`);
+                for (let i = 0; i < tableSize; i++) {
+                    const L = leftData[i];
+                    const R = rightData[i];
+                    let desc = '';
+                    if (L === 0x00) desc = `SET CUTOFF = 0x${R.toString(16)}`;
+                    else if (L >= 0x01 && L <= 0x7F) {
+                        const speed = (R & 0x80) ? (R - 256) : R;
+                        desc = `MODULATE ${L} ticks, speed=${speed}`;
+                    }
+                    else if (L >= 0x80 && L <= 0xFE) {
+                        const type = L & 0x70;
+                        const typeName = type === 0x10 ? 'LOW' : type === 0x20 ? 'BAND' : type === 0x40 ? 'HIGH' : type === 0x30 ? 'LOW+BAND' : type === 0x50 ? 'LOW+HIGH' : type === 0x60 ? 'BAND+HIGH' : type === 0x70 ? 'ALL' : 'NONE';
+                        desc = `SET FILTER type=${typeName}(0x${type.toString(16)}), ctrl=0x${R.toString(16)}`;
+                    }
+                    else if (L === 0xFF) desc = `JUMP → ${R}`;
+                    else desc = `??? 0x${L.toString(16)}`;
+                    console.log(`  [${i}] L=0x${L.toString(16).padStart(2,'0')} R=0x${R.toString(16).padStart(2,'0')} | ${desc}`);
+                }
+
+                // Show what filtertable entries each instrument points to
+                console.log(`📌 Instrument filtertable start positions:`);
+                for (let i = 0; i < importedInstruments.length; i++) {
+                    const inst = importedInstruments[i];
+                    if (inst.filterTablePtr > 0) {
+                        const ptr = inst.filterTablePtr;
+                        const idx = ptr - 1;  // Convert 1-based to 0-based
+                        if (idx >= 0 && idx < leftData.length) {
+                            const L = leftData[idx];
+                            const R = rightData[idx];
+                            console.log(`  Inst ${i+1} "${inst.name.trim()}" → FTBL[${ptr}] = L:0x${L.toString(16).padStart(2,'0')} R:0x${R.toString(16).padStart(2,'0')}`);
+                        }
+                    }
+                }
+            }
+
             // Debug: dump ALL WTBL entries to check for delays
             if (tableType === 0 && tableSize > 0) {
                 console.log(`📊 WTBL dump (all ${tableSize} entries):`);
@@ -273,15 +348,22 @@ export class GT2Importer {
         }
 
         // GT2-pure instrument format - no LFO/arpeggio fields
+        // Debug: show gateTimer for each instrument
+        const gateTimerValue = gtInstr.gateTimer & 0x3F;
+        const noHR = (gtInstr.gateTimer & 0x40) !== 0;
+        const noHRADSR = (gtInstr.gateTimer & 0x80) !== 0;
+        console.log(`  Instrument "${gtInstr.name}": gateTimer=0x${(gtInstr.gateTimer || 0).toString(16)} (value=${gateTimerValue}, noHR=${noHR}, noHRADSR=${noHRADSR}), AD=0x${gtInstr.ad.toString(16)}, SR=0x${gtInstr.sr.toString(16)}, FTBL=${gtInstr.filterTablePtr}`);
+
         return {
             name: gtInstr.name.trim() || 'GT2 Import',
             waveform: waveform,
+            firstWave: gtInstr.firstWave,  // Full GT2 firstWave byte for first frame
             ad: gtInstr.ad,
             sr: gtInstr.sr,
             pulseWidth: 0x0800, // Default, will be set by PTBL if used
             sync: false,
             ringMod: false,
-            gateTimer: gtInstr.gateTimer || 2,  // Hard restart duration (frames)
+            gateTimer: gtInstr.gateTimer,  // Full byte: bits 0-5 = timer, bit 6 = no HR, bit 7 = no HR ADSR
             // GT2 table pointers (0 = no table, 1+ = table position)
             tables: {
                 wave: gtInstr.waveTablePtr,
@@ -499,10 +581,10 @@ export const gt2Importer = new GT2Importer();
 
 // File input handler for UI
 export function setupGT2ImportUI() {
-    // Find the existing import button and add GT2 import button next to it
-    const existingImportButton = document.getElementById('importButton');
-    if (!existingImportButton) {
-        console.warn('Import button not found, cannot add GT2 import');
+    // Find the export button to insert GT2 import after it
+    const exportButton = document.getElementById('exportButton');
+    if (!exportButton || !exportButton.parentNode) {
+        console.warn('Export button not found, cannot add GT2 import');
         return;
     }
 
@@ -696,32 +778,43 @@ export function setupGT2ImportUI() {
         gt2FileInput.click();
     };
 
-    // Insert GT2 button right after the existing import button
-    existingImportButton.parentNode.insertBefore(gt2ImportButton, existingImportButton.nextSibling);
+    // Insert GT2 button right after the export button
+    exportButton.parentNode.insertBefore(gt2ImportButton, exportButton.nextSibling);
     // Also insert the file input
-    existingImportButton.parentNode.insertBefore(gt2FileInput, gt2ImportButton.nextSibling);
+    exportButton.parentNode.insertBefore(gt2FileInput, gt2ImportButton.nextSibling);
 
     console.log('✅ GT2 Import button added to UI');
 }
 
 // Update song info display
 function updateSongInfo(importedData) {
-    const songTitleEl = document.getElementById('songTitle');
-    const songStatsEl = document.getElementById('songStats');
+    const title = importedData.songName || 'Imported GT2 Song';
+    const author = importedData.authorName || 'Unknown';
+    const numPatterns = importedData.patterns.filter(p => p && p.length > 0).length;
+    const numInstruments = importedData.instruments.filter(i => i && i.name).length;
+    const speed = importedData.initialSpeed || 6;
 
+    // Update GT2 Pattern Editor song info section
+    if (window.gt2PatternEditor) {
+        window.gt2PatternEditor.updateSongInfo(
+            title,
+            author,
+            `| Patterns: ${numPatterns} | Instruments: ${numInstruments} | Speed: ${speed}`
+        );
+    }
+
+    // Also update legacy elements if they exist
+    const songTitleEl = document.getElementById('songTitle');
     if (songTitleEl) {
-        const title = importedData.songName || 'Imported GT2 Song';
         songTitleEl.textContent = title;
     }
 
+    const songStatsEl = document.getElementById('songStats');
     if (songStatsEl) {
-        const numPatterns = importedData.patterns.filter(p => p && p.length > 0).length;
-        const numInstruments = importedData.instruments.filter(i => i && i.name).length;
-        const numTables = importedData.tables ? Object.values(importedData.tables).flat().filter(t => t && t.length > 0).length : 0;
-        songStatsEl.textContent = `${numPatterns} patterns, ${numInstruments} instruments, ${numTables} tables`;
+        songStatsEl.textContent = `${numPatterns} patterns, ${numInstruments} instruments`;
     }
 
-    console.log(`✅ Song info updated: ${importedData.songName}`);
+    console.log(`✅ Song info updated: ${title} by ${author}`);
 }
 
 // Export for use by other modules

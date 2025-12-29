@@ -36,16 +36,19 @@ const CTRL_TEST = 0x08;        // Test bit (usually not used)
 // Format: name, waveform, ad (attack/decay), sr (sustain/release), pulseWidth, sync, ringMod, tables
 // GT2 table pointers: 0 = no table, 1+ = table position (1-based)
 export const instruments = [
-    { name: "Lead (Tri)", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xFE, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "Bass (Pulse)", waveform: WAVE_PULSE, ad: 0x0F, sr: 0x8C, pulseWidth: 0x0400, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "Pad (Saw)", waveform: WAVE_SAWTOOTH, ad: 0x88, sr: 0xAF, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "Perc (Noise)", waveform: WAVE_NOISE, ad: 0x01, sr: 0x01, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "GT2 Pulse", waveform: WAVE_PULSE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "GT2 Tri", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "Sync Lead", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: true, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "Ring Mod", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: true, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "GT2 Saw", waveform: WAVE_SAWTOOTH, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
-    { name: "Custom", waveform: WAVE_TRIANGLE, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    // GT2-compatible instruments with firstWave, gateTimer, vibratoDelay
+    // firstWave: waveform|gate|sync|ringmod bits (0x11=tri+gate, 0x21=saw+gate, 0x41=pulse+gate, 0x81=noise+gate)
+    // gateTimer: bits 0-5=timer, bit 6=no gate-off, bit 7=no hard restart
+    { name: "Lead (Tri)", waveform: WAVE_TRIANGLE, firstWave: 0x11, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xFE, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Bass (Pulse)", waveform: WAVE_PULSE, firstWave: 0x41, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0x8C, pulseWidth: 0x0400, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Pad (Saw)", waveform: WAVE_SAWTOOTH, firstWave: 0x21, gateTimer: 0x02, vibratoDelay: 0, ad: 0x88, sr: 0xAF, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Perc (Noise)", waveform: WAVE_NOISE, firstWave: 0x81, gateTimer: 0x02, vibratoDelay: 0, ad: 0x01, sr: 0x01, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "GT2 Pulse", waveform: WAVE_PULSE, firstWave: 0x41, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "GT2 Tri", waveform: WAVE_TRIANGLE, firstWave: 0x11, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Sync Lead", waveform: WAVE_SAWTOOTH, firstWave: 0x23, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: true, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Ring Mod", waveform: WAVE_TRIANGLE, firstWave: 0x15, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: true, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "GT2 Saw", waveform: WAVE_SAWTOOTH, firstWave: 0x21, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
+    { name: "Custom", waveform: WAVE_TRIANGLE, firstWave: 0x11, gateTimer: 0x02, vibratoDelay: 0, ad: 0x0F, sr: 0xF8, pulseWidth: 0x0800, sync: false, ringMod: false, tables: { wave: 0, pulse: 0, filter: 0, speed: 0 } },
 ];
 
 export let sidPlayer; // AudioWorklet mode only: placeholder object
@@ -281,21 +284,9 @@ export function initSynth() {
                         try { window.updateWorkletTelemetry(payload); } catch (_) { }
                     }
                 } else if (type === 'triggerTables') {
-                    // Worklet wants to trigger GT2 frame engine tables
-                    if (typeof window !== 'undefined' && window.gt2FrameEngine) {
-                        try {
-                            // Extract from event data (payload might be undefined, data directly in ev.data)
-                            const voice = ev.data.voice !== undefined ? ev.data.voice : payload?.voice;
-                            const baseNote = ev.data.baseNote !== undefined ? ev.data.baseNote : payload?.baseNote;
-                            const instrument = ev.data.instrument || payload?.instrument;
-
-                            if (voice !== undefined && baseNote !== undefined && instrument) {
-                                window.gt2FrameEngine.triggerNoteTables(voice, baseNote, instrument);
-                            }
-                        } catch (e) {
-                            console.warn('Failed to trigger GT2 tables:', e);
-                        }
-                    }
+                    // DISABLED: Worklet now handles all table execution internally
+                    // Main thread gt2FrameEngine was causing conflicts/double-updates with worklet
+                    // The worklet has sample-accurate timing, so it should be the only executor
                 } else if (type === 'executeCommand') {
                     // Worklet wants to execute a pattern command
                     try {
@@ -791,8 +782,8 @@ export function playNoteWithInstrument(voice, frequencyHz, duration, instrumentI
 
     console.log(`🎵 Playing "${instrument.name}" on voice ${voice}, freq ${frequencyHz.toFixed(2)}Hz`);
 
-    // Trigger GT2 tables (main thread)
-    triggerTablesForInstrument(voice, frequencyHz, instrument, instrumentIndex);
+    // DISABLED: Main thread table triggering - worklet handles tables now
+    // triggerTablesForInstrument(voice, frequencyHz, instrument, instrumentIndex);
 
     // Send to worklet (all instrument parameters bundled)
     if (sidWorkletNode) {
@@ -830,10 +821,19 @@ function triggerTablesForInstrument(voice, frequencyHz, instrument, instrumentIn
 
 // AudioWorklet worklet functions
 
-export function workletNoteOn(voice, frequencyHz, instrument) {
+export function workletNoteOn(voice, frequencyHz, instrument, tables = null) {
     if (!sidWorkletNode) return;
+    // If tables provided, send them first so worklet has table data for this note
+    if (tables) {
+        sidWorkletNode.port.postMessage({ type: 'loadTables', payload: { tables } });
+    }
     const payload = { voice, frequencyHz, instrument };
     sidWorkletNode.port.postMessage({ type: 'noteOn', payload });
+}
+
+export function workletLoadTables(tables) {
+    if (!sidWorkletNode) return;
+    sidWorkletNode.port.postMessage({ type: 'loadTables', payload: { tables } });
 }
 
 export function workletNoteOff(voice, waveform = 0x10) {
@@ -844,6 +844,13 @@ export function workletNoteOff(voice, waveform = 0x10) {
 export function workletUpdateInstruments(instrumentsArray) {
     if (!sidWorkletNode) return;
     sidWorkletNode.port.postMessage({ type: 'updateInstruments', payload: { instruments: instrumentsArray } });
+}
+
+export function workletSetSidModel(model) {
+    if (!sidWorkletNode) return;
+    // model should be 6581 or 8580
+    sidWorkletNode.port.postMessage({ type: 'setSidModel', payload: { model: model } });
+    console.log(`Setting SID model to ${model}`);
 }
 
 export function calculateTriangleLFO(phase, depth) {

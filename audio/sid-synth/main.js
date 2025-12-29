@@ -1,5 +1,5 @@
-import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister } from './synth.js';
-import { NUM_VOICES, currentStep, noteToHz, stopPlayback, startPlayback, getPlaybackState, voiceState } from './sequencer-gt2.js';
+import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister, workletSetSidModel } from './synth.js';
+import { NUM_VOICES, currentStep, noteToHz, stopPlayback, startPlayback, togglePause, isPaused, getPlaybackState, voiceState } from './sequencer-gt2.js';
 import { patternManager, MAX_PATTERNS, MAX_PATTERN_LENGTH as MAX_STEPS, getCurrentPatternLength, setSongMode, selectPattern } from './pattern-manager-compat.js';
 import { gt2PatternManager } from './pattern-manager-gt2.js';
 import { tempoControl } from './tempo-control.js';
@@ -7,8 +7,6 @@ import { initInstrumentEditor } from './instrument-editor.js';
 import { initGT2TableEditor } from './table-editor-gt2.js';
 import { recordMode } from './record-mode.js';
 import { keyboardInput } from './keyboard-input.js';
-import { sidExporter } from './sid-exporter.js';
-import { sidTester } from './sid-tester.js';
 import { gt2FrameEngine } from './gt2-frame-engine.js';
 import { setupGT2ImportUI } from './gt2-importer.js';
 import { initGT2PatternEditor } from './gt2-pattern-editor.js';
@@ -33,10 +31,6 @@ const recordStatus = document.getElementById('recordStatus');
 const saveButton = document.getElementById('saveButton');
 const loadButton = document.getElementById('loadButton');
 const exportButton = document.getElementById('exportButton');
-const exportSIDButton = document.getElementById('exportSIDButton');
-const testSIDButton = document.getElementById('testSIDButton');
-const importButton = document.getElementById('importButton');
-const importFileInput = document.getElementById('importFileInput');
 
 // Tool controls
 const instrumentEditorButton = document.getElementById('instrumentEditorButton');
@@ -127,14 +121,28 @@ GT2 Notes:
         // Start playback
         console.log('Starting playback...');
         startPlayback();
+        pauseButton.textContent = '⏸ Pause';
     });
 
-    stopButton.addEventListener('click', stopPlayback);
+    stopButton.addEventListener('click', () => {
+        stopPlayback();
+        pauseButton.textContent = '⏸ Pause';
+    });
 
     pauseButton.addEventListener('click', () => {
-        // TODO: Implement pause functionality
-        console.log('Pause functionality coming soon!');
+        togglePause();
+        // Update button text to show state
+        pauseButton.textContent = isPaused ? '▶ Resume' : '⏸ Pause';
     });
+
+    // SID chip model selector
+    const sidModelSelect = document.getElementById('sidModelSelect');
+    if (sidModelSelect) {
+        sidModelSelect.addEventListener('change', (e) => {
+            const model = parseInt(e.target.value);
+            workletSetSidModel(model);
+        });
+    }
 
     // Recording controls
     recordButton.addEventListener('click', () => {
@@ -260,112 +268,6 @@ GT2 Notes:
         URL.revokeObjectURL(url);
 
         console.log(`Exported complete project as ${filename}`);
-    });
-
-    // Export SID functionality
-    exportSIDButton.addEventListener('click', () => {
-        // Save current UI data first
-        saveCurrentPatternFromUI();
-
-        // Get song title from song editor or use default
-        const songTitle = patternManager.song.title || "SID Tracker Song";
-
-        // Export as SID file
-        sidExporter.downloadSID(songTitle);
-
-        console.log(`Exported SID file: ${songTitle}`);
-    });
-
-    // Test SID functionality
-    testSIDButton.addEventListener('click', () => {
-        // Save current UI data first
-        saveCurrentPatternFromUI();
-
-        // Toggle test playback
-        sidTester.toggleTest();
-    });
-
-    // Import functionality
-    importButton.addEventListener('click', () => {
-        importFileInput.click();
-    });
-
-    importFileInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedData = JSON.parse(e.target.result);
-
-                // Validate the imported data
-                if (!importedData.pattern || !importedData.instruments) {
-                    alert('Invalid file format. Please select a valid SID Tracker export file.');
-                    return;
-                }
-
-                // Stop any current playback
-                stopPlayback();
-
-                // Load instruments
-                instruments.length = 0;
-                instruments.push(...importedData.instruments);
-
-                // Update all instrument dropdowns
-                for (let voice = 0; voice < NUM_VOICES; voice++) {
-                    for (let step = 0; step < NUM_STEPS; step++) {
-                        const select = document.getElementById(`instrument-${voice}-${step}`);
-                        if (select) {
-                            select.innerHTML = '';
-
-                            instruments.forEach((inst, index) => {
-                                const option = document.createElement('option');
-                                option.value = index;
-                                option.textContent = inst.name;
-                                select.appendChild(option);
-                            });
-                        }
-                    }
-                }
-
-                // Load pattern
-                // Clear existing pattern first
-                for (let voice = 0; voice < NUM_VOICES; voice++) {
-                    for (let step = 0; step < NUM_STEPS; step++) {
-                        document.getElementById(`note-${voice}-${step}`).value = '';
-                        document.getElementById(`instrument-${voice}-${step}`).value = 0;
-                    }
-                }
-
-                // Load imported pattern
-                importedData.pattern.forEach(item => {
-                    if (item.voice < NUM_VOICES && item.step < NUM_STEPS) {
-                        document.getElementById(`note-${item.voice}-${item.step}`).value = item.note || '';
-                        document.getElementById(`instrument-${item.voice}-${item.step}`).value = item.instrument || 0;
-                    }
-                });
-
-                // Show metadata if available
-                if (importedData.metadata) {
-                    console.log(`Imported: ${importedData.metadata.title || 'Untitled'}`);
-                    console.log(`Author: ${importedData.metadata.author || 'Unknown'}`);
-                    console.log(`Created: ${importedData.metadata.created || 'Unknown'}`);
-                }
-
-                console.log(`Successfully imported ${importedData.instruments.length} instruments and pattern.`);
-                alert(`Successfully imported "${importedData.metadata?.title || 'SID Tracker Song'}"!`);
-
-            } catch (error) {
-                console.error('Import failed:', error);
-                alert('Failed to import file. Please check the file format.');
-            }
-        };
-
-        reader.readAsText(file);
-
-        // Clear the input so the same file can be imported again
-        event.target.value = '';
     });
 
     // Keyboard input toggle

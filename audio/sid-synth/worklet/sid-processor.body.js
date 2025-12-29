@@ -220,6 +220,19 @@ class SidProcessor extends AudioWorkletProcessor {
       } else if (type === 'updateInstruments') {
         // Replace instruments array on the fly for live GT2 playback
         this.instruments = payload && payload.instruments ? payload.instruments : this.instruments;
+      } else if (type === 'loadTables') {
+        // Load tables for instrument testing (without starting sequencer)
+        if (payload && payload.tables) {
+          this.tables = payload.tables;
+          console.log('Worklet: Loaded tables for testing');
+        }
+      } else if (type === 'setSidModel') {
+        // Change SID chip model (6581 or 8580)
+        if (this.synth && payload && payload.model !== undefined) {
+          const model = payload.model === 8580 ? jsSID.chip.model.MOS8580 : jsSID.chip.model.MOS6581;
+          this.synth.set_chip_model(model);
+          console.log(`Worklet: SID chip model set to ${payload.model === 8580 ? 'MOS8580' : 'MOS6581'}`);
+        }
       } else if (type === 'start') {
         this.currentStep = 0;
         // Reset pattern positions to start of each pattern/orderlist
@@ -378,6 +391,58 @@ class SidProcessor extends AudioWorkletProcessor {
           vs.instrumentIndex = (payload && typeof payload.instrumentIndex === 'number') ? payload.instrumentIndex : -1;
           vs.baseHz = frequencyHz;
           vs.basePW = pw;
+
+          // Calculate baseNote from frequency for table arpeggios
+          // MIDI formula: note = 12 * log2(freq/440) + 69
+          vs.baseNote = Math.round(12 * Math.log2(frequencyHz / 440) + 69) - 12; // -12 for GT2 offset
+
+          // Initialize tables if instrument has them (GT2: 1-based pointers, 0 = no table)
+          if (instrument.tables && this.tables) {
+            const t = instrument.tables;
+            console.log(`🎹 V${voice} noteOn TABLES: wave=${t.wave}, pulse=${t.pulse}, filter=${t.filter}, speed=${t.speed}`);
+
+            // Reset all table states for this voice
+            vs.ptr = [0, 0, 0, 0];
+            vs.wavetime = 0;
+            vs.pulsetime = 0;
+            vs.filtertime = 0;
+            vs.speedtime = 0;
+            vs.waveActive = false;
+            vs.pulseActive = false;
+            vs.speedActive = false;
+
+            // Initialize wave and gate for table execution
+            vs.wave = control;  // Initial waveform (will be modified by wavetable)
+            vs.gate = 0xFF;     // Gate mask (0xFF = pass all bits)
+
+            if (t.wave > 0) {
+              console.log(`🎹 V${voice} WTBL ACTIVATED via noteOn: ptr=${t.wave}`);
+              vs.ptr[0] = t.wave;
+              vs.waveActive = true;
+            }
+            if (t.pulse > 0) {
+              vs.ptr[1] = t.pulse;
+              vs.pulseActive = true;
+              vs.tablePulse = pw || 0x800;
+            }
+            if (t.filter > 0) {
+              // GT2: Filter is GLOBAL - set global filter pointer
+              this.globalFilter.ptr = t.filter;
+              this.globalFilter.time = 0;
+              this.globalFilter.triggerVoice = voice;
+              console.log(`🎛️ V${voice} FTBL INIT via noteOn: ptr=${t.filter}`);
+            }
+            if (t.speed > 0) {
+              vs.ptr[3] = t.speed;
+              vs.speedActive = true;
+            }
+
+            // CRITICAL: Start tick timer if not running so tables execute even when sequencer is stopped
+            if (!this.nextTickSample || this.nextTickSample === 0) {
+              this.nextTickSample = this.sampleCounter + this.tickIntervalSamples;
+              console.log(`⏱️ Started tick timer for noteOn table execution, nextTick=${this.nextTickSample}`);
+            }
+          }
         }
       } else if (type === 'noteOff') {
         if (this.synth) {
@@ -877,7 +942,9 @@ class SidProcessor extends AudioWorkletProcessor {
           // Initialize tables if instrument has them (1-based pointers, 0 = no table)
           if (inst.tables) {
             const t = inst.tables;
+            console.log(`🎹 V${voice} TABLES CHECK: wave=${t.wave}, pulse=${t.pulse}, filter=${t.filter}, speed=${t.speed}`);
             if (t.wave > 0) {
+              console.log(`🎹 V${voice} WTBL ACTIVATED: ptr=${t.wave}`);
               vs.ptr[0] = t.wave;
               vs.waveActive = true;
             }

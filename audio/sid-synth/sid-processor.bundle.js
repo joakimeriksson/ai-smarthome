@@ -2342,7 +2342,10 @@ class SidProcessor extends AudioWorkletProcessor {
           this.setVoiceReg(voice, 0x05, instrument.ad & 0xFF);
           this.setVoiceReg(voice, 0x06, instrument.sr & 0xFF);
           this.applyFilterIfNeeded(voice, instrument);
+          // Clear gate first for retriggering (reSID needs to see 0->1 transition)
           this.setVoiceReg(voice, 0x04, 0x00);
+          // Generate a few samples so reSID processes the gate-off
+          this.synth.generate(8);
           let control = (instrument.waveform & 0xF0) | 0x01;
           if (instrument.sync) control |= 0x02;
           if (instrument.ringMod) control |= 0x04;
@@ -2945,6 +2948,10 @@ class SidProcessor extends AudioWorkletProcessor {
             // Ensure ADSR values are defined and non-zero (0x00 = instant attack/decay/sustain/release = silent)
             const ad = (inst.ad !== undefined && inst.ad !== null) ? (inst.ad & 0xFF) : 0x0F;  // Default: fast attack, moderate decay
             const sr = (inst.sr !== undefined && inst.sr !== null) ? (inst.sr & 0xFF) : 0xF0;  // Default: high sustain, slow release
+
+            // Clear gate first for retriggering (reSID needs to see 0->1 transition)
+            this.setVoiceReg(voice, 0x04, 0x00);
+            this.synth.generate(8);  // Let reSID process the gate-off
 
             this.setVoiceReg(voice, 0x02, pw & 0xFF);
             this.setVoiceReg(voice, 0x03, (pw >> 8) & 0xFF);

@@ -3,7 +3,7 @@
 
 import { gt2PatternManager, MAX_PATTERNS, NOTE_EMPTY, NOTE_REST, NOTE_KEYOFF } from './pattern-manager-gt2.js';
 import { instruments, setGlobalSIDRegister } from './synth.js';
-import { voiceState, getPlaybackState, startPlayback, stopPlayback, togglePause, isPaused } from './sequencer-gt2.js';
+import { voiceState, getPlaybackState, startPlayback, stopPlayback, togglePause, isPaused, startTrackPlayback } from './sequencer-gt2.js';
 
 export class GT2PatternEditor {
     constructor() {
@@ -123,7 +123,8 @@ export class GT2PatternEditor {
             <div class="gt2-song-info">
                 <div class="gt2-song-info-left">
                     <div class="gt2-transport-buttons">
-                        <button class="gt2-transport-btn" id="gt2-play-btn" title="Play">▶</button>
+                        <button class="gt2-transport-btn" id="gt2-play-btn" title="Play Song">▶</button>
+                        <button class="gt2-transport-btn gt2-play-track-btn" id="gt2-play-track-btn" title="Play Track (loop current position)">⟳</button>
                         <button class="gt2-transport-btn" id="gt2-pause-btn" title="Pause">⏸</button>
                         <button class="gt2-transport-btn" id="gt2-stop-btn" title="Stop">⏹</button>
                     </div>
@@ -134,10 +135,31 @@ export class GT2PatternEditor {
                     <span id="gt2-song-stats">| Patterns: 0 | Speed: 6</span>
                 </div>
             </div>
+            <div class="gt2-oscilloscopes">
+                <div class="gt2-oscilloscope">
+                    <canvas id="scope1" width="260" height="80"></canvas>
+                    <span class="gt2-scope-label">V1</span>
+                </div>
+                <div class="gt2-oscilloscope">
+                    <canvas id="scope2" width="260" height="80"></canvas>
+                    <span class="gt2-scope-label">V2</span>
+                </div>
+                <div class="gt2-oscilloscope">
+                    <canvas id="scope3" width="260" height="80"></canvas>
+                    <span class="gt2-scope-label">V3</span>
+                </div>
+            </div>
             <div class="gt2-editor-header">
                 <h3>Track View</h3>
                 <div class="pattern-controls">
-                    <span id="gt2-song-position">Song Position: 00</span>
+                    <div class="gt2-position-nav">
+                        <button class="gt2-nav-btn" id="gt2-pos-prev" title="Previous Position">◀</button>
+                        <span id="gt2-song-position" class="gt2-position-display">Pos: 00 00 00</span>
+                        <button class="gt2-nav-btn" id="gt2-pos-next" title="Next Position">▶</button>
+                        <button class="gt2-nav-btn gt2-loop-btn" id="gt2-loop-pos" title="Loop Current Position">⟳</button>
+                    </div>
+                    <span id="gt2-current-speed" class="gt2-speed-display">Speed: 06</span>
+                    <button class="gt2-nav-btn gt2-slowmo-btn" id="gt2-slowmo" title="10x Slow Motion (Debug)">🐢</button>
                 </div>
             </div>
             <div class="gt2-pattern-view">
@@ -179,12 +201,27 @@ export class GT2PatternEditor {
     setupEventHandlers() {
         // Transport buttons
         const playBtn = document.getElementById('gt2-play-btn');
+        const playTrackBtn = document.getElementById('gt2-play-track-btn');
         const pauseBtn = document.getElementById('gt2-pause-btn');
         const stopBtn = document.getElementById('gt2-stop-btn');
 
         if (playBtn) {
             playBtn.addEventListener('click', () => {
                 startPlayback();
+                this.updateTransportButtons();
+            });
+        }
+
+        if (playTrackBtn) {
+            playTrackBtn.addEventListener('click', () => {
+                // Get current order positions from voiceState
+                const orderPositions = [
+                    voiceState[0].orderPosition,
+                    voiceState[1].orderPosition,
+                    voiceState[2].orderPosition
+                ];
+                console.log(`🔄 Play Track at positions: ${orderPositions.join(', ')}`);
+                startTrackPlayback(orderPositions);
                 this.updateTransportButtons();
             });
         }
@@ -201,6 +238,119 @@ export class GT2PatternEditor {
                 stopPlayback();
                 this.updateTransportButtons();
             });
+        }
+
+        // Position navigation buttons
+        const prevBtn = document.getElementById('gt2-pos-prev');
+        const nextBtn = document.getElementById('gt2-pos-next');
+        const loopBtn = document.getElementById('gt2-loop-pos');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                this.navigatePosition(-1);
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                this.navigatePosition(1);
+            });
+        }
+
+        if (loopBtn) {
+            loopBtn.addEventListener('click', () => {
+                // Get current order positions from voiceState
+                const orderPositions = [
+                    voiceState[0].orderPosition,
+                    voiceState[1].orderPosition,
+                    voiceState[2].orderPosition
+                ];
+                console.log(`🔄 Loop position: ${orderPositions.join(', ')}`);
+                startTrackPlayback(orderPositions);
+                this.updateTransportButtons();
+            });
+        }
+
+        // Slow motion debug button
+        const slowmoBtn = document.getElementById('gt2-slowmo');
+        if (slowmoBtn) {
+            slowmoBtn.addEventListener('click', () => {
+                this.slowMotion = !this.slowMotion;
+                slowmoBtn.classList.toggle('active', this.slowMotion);
+
+                // Send slowmo message to worklet (wrap in payload to match worklet API)
+                if (window.sidWorkletNode) {
+                    window.sidWorkletNode.port.postMessage({
+                        type: 'setSlowMotion',
+                        payload: {
+                            enabled: this.slowMotion,
+                            factor: 10  // 10x slower
+                        }
+                    });
+                }
+
+                console.log(`🐢 Slow motion: ${this.slowMotion ? 'ON (10x slower)' : 'OFF'}`);
+            });
+        }
+    }
+
+    // Navigate to previous/next song position
+    navigatePosition(delta) {
+        // Stop playback when navigating
+        const wasPlaying = getPlaybackState().isPlaying;
+        if (wasPlaying) {
+            stopPlayback();
+        }
+
+        // Update all voice positions
+        for (let voice = 0; voice < 3; voice++) {
+            const orderList = gt2PatternManager.song.orderLists[voice];
+            let newPos = voiceState[voice].orderPosition + delta;
+
+            // Clamp to valid range (skip LOOP/END commands)
+            newPos = Math.max(0, newPos);
+
+            // Find next valid pattern position
+            while (newPos < orderList.length) {
+                const entry = orderList[newPos];
+                if (entry < 208) {  // Valid pattern number
+                    break;
+                } else if (entry === 0xFE || entry === 0xFF) {
+                    // LOOPSONG or ENDSONG - stop here
+                    if (delta > 0) {
+                        newPos = voiceState[voice].orderPosition; // Stay at current
+                    }
+                    break;
+                }
+                newPos += delta > 0 ? 1 : -1;
+            }
+
+            // Update voice state
+            voiceState[voice].orderPosition = Math.max(0, Math.min(newPos, orderList.length - 1));
+            voiceState[voice].patternRow = 0;
+
+            // Update patternIndex from order list
+            const entry = orderList[voiceState[voice].orderPosition];
+            if (entry < 208) {
+                voiceState[voice].patternIndex = entry;
+            }
+        }
+
+        // Re-render the pattern view
+        this.renderPattern();
+        this.updatePositionDisplay();
+    }
+
+    // Update position display
+    updatePositionDisplay() {
+        const songPosEl = document.getElementById('gt2-song-position');
+        if (songPosEl) {
+            const pos0 = voiceState[0].orderPosition.toString(16).toUpperCase().padStart(2, '0');
+            const pos1 = voiceState[1].orderPosition.toString(16).toUpperCase().padStart(2, '0');
+            const pos2 = voiceState[2].orderPosition.toString(16).toUpperCase().padStart(2, '0');
+            const isPlaying = getPlaybackState().isPlaying;
+            const playSymbol = isPlaying ? '▶' : '■';
+            songPosEl.textContent = `${playSymbol} ${pos0} ${pos1} ${pos2}`;
         }
     }
 
@@ -268,15 +418,7 @@ export class GT2PatternEditor {
         );
 
         // Update song position display
-        const songPosEl = document.getElementById('gt2-song-position');
-        if (songPosEl) {
-            const pos0 = voiceState[0].orderPosition.toString(16).toUpperCase().padStart(2, '0');
-            const pos1 = voiceState[1].orderPosition.toString(16).toUpperCase().padStart(2, '0');
-            const pos2 = voiceState[2].orderPosition.toString(16).toUpperCase().padStart(2, '0');
-            const isPlaying = getPlaybackState().isPlaying;
-            const playSymbol = isPlaying ? '▶' : '■';
-            songPosEl.textContent = `${playSymbol} Pos: ${pos0} ${pos1} ${pos2}`;
-        }
+        this.updatePositionDisplay();
 
         // Update fixed voice headers to show pattern numbers and mute buttons
         for (let voice = 0; voice < 3; voice++) {
@@ -649,15 +791,7 @@ export class GT2PatternEditor {
         document.querySelectorAll('.gt2-row-number').forEach(el => el.classList.remove('playing'));
 
         // Update song position display
-        const songPosEl = document.getElementById('gt2-song-position');
-        if (songPosEl) {
-            const pos0 = voiceState[0].orderPosition.toString(16).toUpperCase().padStart(2, '0');
-            const pos1 = voiceState[1].orderPosition.toString(16).toUpperCase().padStart(2, '0');
-            const pos2 = voiceState[2].orderPosition.toString(16).toUpperCase().padStart(2, '0');
-            const isPlaying = getPlaybackState().isPlaying;
-            const playSymbol = isPlaying ? '▶' : '■';
-            songPosEl.textContent = `${playSymbol} Pos: ${pos0} ${pos1} ${pos2}`;
-        }
+        this.updatePositionDisplay();
 
         // Track which rows are playing for row number highlighting
         const playingRows = new Set();
@@ -832,6 +966,24 @@ export class GT2PatternEditor {
                 background: #00cc00;
             }
 
+            .gt2-play-track-btn {
+                background: #1a1a2a !important;
+                border-color: #6666ff !important;
+                color: #aaaaff !important;
+            }
+
+            .gt2-play-track-btn:hover {
+                background: #2a2a4a !important;
+                border-color: #aaaaff !important;
+            }
+
+            .gt2-play-track-btn.active {
+                background: #4444aa !important;
+                color: #fff !important;
+                border-color: #aaaaff !important;
+                box-shadow: 0 0 8px #6666ff !important;
+            }
+
             #gt2-pause-btn.active {
                 background: #ccaa00;
                 color: #000;
@@ -857,6 +1009,39 @@ export class GT2PatternEditor {
 
             .gt2-song-meta span {
                 margin-left: 12px;
+            }
+
+            .gt2-oscilloscopes {
+                display: flex;
+                gap: 8px;
+                padding: 6px 15px;
+                background: #0a0a0a;
+                border: 1px solid #00aa00;
+                border-top: none;
+                border-bottom: none;
+            }
+
+            .gt2-oscilloscope {
+                flex: 1;
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .gt2-oscilloscope canvas {
+                width: 100%;
+                height: 60px;
+                background: #000;
+                border: 1px solid #333;
+                border-radius: 2px;
+            }
+
+            .gt2-scope-label {
+                font-size: 10px;
+                font-weight: bold;
+                color: #00ff00;
+                min-width: 20px;
             }
 
             .gt2-editor-header {
@@ -897,6 +1082,94 @@ export class GT2PatternEditor {
 
             .pattern-controls button:hover {
                 background: #005500;
+            }
+
+            .gt2-speed-display {
+                background: #001a00;
+                border: 1px solid #00aa00;
+                padding: 2px 8px;
+                border-radius: 3px;
+                font-family: monospace;
+                font-weight: bold;
+                color: #00ff00;
+            }
+
+            .gt2-position-nav {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                background: #1a1a1a;
+                border: 1px solid #00aa00;
+                border-radius: 4px;
+                padding: 2px 6px;
+            }
+
+            .gt2-position-display {
+                font-family: monospace;
+                font-weight: bold;
+                color: #ffff00;
+                min-width: 90px;
+                text-align: center;
+            }
+
+            .gt2-nav-btn {
+                width: 24px;
+                height: 24px;
+                border: 1px solid #00aa00;
+                background: #002200;
+                color: #00ff00;
+                cursor: pointer;
+                font-size: 12px;
+                border-radius: 3px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.1s;
+            }
+
+            .gt2-nav-btn:hover {
+                background: #004400;
+                border-color: #00ff00;
+            }
+
+            .gt2-nav-btn:active {
+                background: #006600;
+            }
+
+            .gt2-loop-btn {
+                background: #1a1a2a;
+                border-color: #6666ff;
+                color: #aaaaff;
+                margin-left: 4px;
+            }
+
+            .gt2-loop-btn:hover {
+                background: #2a2a4a;
+                border-color: #aaaaff;
+            }
+
+            .gt2-loop-btn:active {
+                background: #4444aa;
+            }
+
+            .gt2-slowmo-btn {
+                background: #2a1a1a;
+                border-color: #aa6600;
+                color: #ffaa00;
+                margin-left: 8px;
+                font-size: 14px;
+            }
+
+            .gt2-slowmo-btn:hover {
+                background: #3a2a1a;
+                border-color: #ffaa00;
+            }
+
+            .gt2-slowmo-btn.active {
+                background: #aa6600;
+                color: #fff;
+                border-color: #ffcc00;
+                box-shadow: 0 0 8px #ffaa00;
             }
 
             .gt2-pattern-view {

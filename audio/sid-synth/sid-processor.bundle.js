@@ -2044,6 +2044,15 @@ class SidProcessor extends AudioWorkletProcessor {
       triggerVoice: -1  // Which voice triggered the filter (-1 = none)
     };
 
+    // Audio sample buffer for oscilloscope (captures real output with filter/envelope)
+    this.scopeBufferSize = 512;
+    this.scopeBuffer = new Float32Array(this.scopeBufferSize);
+    // Per-voice buffers (pre-filter, shows ADSR envelope)
+    this.scopeBufferV1 = new Float32Array(this.scopeBufferSize);
+    this.scopeBufferV2 = new Float32Array(this.scopeBufferSize);
+    this.scopeBufferV3 = new Float32Array(this.scopeBufferSize);
+    this.scopeWriteIndex = 0;
+
     // GT2 voice state (no LFO - use PTBL/STBL/WTBL instead)
     this.voiceState = [0, 1, 2].map(() => ({
       active: false,
@@ -2119,12 +2128,19 @@ class SidProcessor extends AudioWorkletProcessor {
       speedActive: false,
 
       // Hard restart flag - prevents wavetable register writes until gate-on fires
-      pendingGateOn: false
+      pendingGateOn: false,
+
+      // GT2 newnote flag - skip WAVEEXEC on first tick after new note (gplay.c lines 512-515)
+      // In GT2, wavetable execution is skipped on TICK0 when there's a new note
+      skipWaveOnce: false
     }));
     // REMOVED: Old LFO timing - GT2 uses tables instead
     // GT2 tempo and tick timing
     this.tempo = 6; // Default GT2 tempo (in ticks per row)
-    this.tickIntervalSamples = Math.floor(sampleRate / 50); // 50Hz PAL timing
+    this.baseTickInterval = Math.floor(sampleRate / 50); // 50Hz PAL timing (normal speed)
+    this.tickIntervalSamples = this.baseTickInterval;
+    this.slowMotion = false;
+    this.slowMotionFactor = 10;
     // Debug (enabled by default to help diagnose GT2 playback)
     this.debug = true;
     this.lastDebugSample = 0;
@@ -2284,6 +2300,23 @@ class SidProcessor extends AudioWorkletProcessor {
           }
         }
         this.port.postMessage({ type: 'stopped' });
+      } else if (type === 'setSlowMotion') {
+        // Debug slow motion: multiply ALL timing to slow down playback uniformly
+        const enabled = payload?.enabled ?? false;
+        const factor = payload?.factor ?? 10;
+        this.slowMotion = enabled;
+        this.slowMotionFactor = factor;
+        if (enabled) {
+          this.tickIntervalSamples = this.baseTickInterval * factor;
+          // Also slow down step timing so notes and tables stay synchronized
+          this.stepDurationSamples = (this.globalTempo || 6) * this.tickIntervalSamples;
+          console.log(`🐢 Slow motion ON: tick=${this.tickIntervalSamples}, step=${this.stepDurationSamples} (${factor}x slower)`);
+        } else {
+          this.tickIntervalSamples = this.baseTickInterval;
+          // Restore step timing to normal
+          this.stepDurationSamples = (this.globalTempo || 6) * this.tickIntervalSamples;
+          console.log(`🐢 Slow motion OFF: tick=${this.tickIntervalSamples}, step=${this.stepDurationSamples}`);
+        }
       } else if (type === 'panic') {
         // Hard stop: clear sequencer timing and mute output
         this.nextStepSample = 0;
@@ -2359,9 +2392,20 @@ class SidProcessor extends AudioWorkletProcessor {
           this.setVoiceReg(voice, 0x04, 0x00);
           // Generate a few samples so reSID processes the gate-off
           this.synth.generate(8);
-          let control = (instrument.waveform & 0xF0) | 0x01;
-          if (instrument.sync) control |= 0x02;
-          if (instrument.ringMod) control |= 0x04;
+
+          // GT2 style: use firstWave if available (contains full waveform + gate + sync/ring bits)
+          // This matches the sequencer behavior for consistent sound
+          let control;
+          if (instrument.firstWave !== undefined && instrument.firstWave !== 0) {
+            control = instrument.firstWave;
+            console.log(`🎹 noteOn V${voice} using firstWave: 0x${control.toString(16)}`);
+          } else {
+            // Fallback: construct control from waveform + sync/ring
+            control = (instrument.waveform & 0xF0) | 0x01;
+            if (instrument.sync) control |= 0x02;
+            if (instrument.ringMod) control |= 0x04;
+          }
+
           // For GT2 tables, set initial waveform then let table engine take over
           // GT2 uses 1-based pointers: 0 = no table, 1+ = table position
           const hasWavetable = instrument.tables && instrument.tables.wave > 0;
@@ -2407,6 +2451,8 @@ class SidProcessor extends AudioWorkletProcessor {
               console.log(`🎹 V${voice} WTBL ACTIVATED via noteOn: ptr=${t.wave}`);
               vs.ptr[0] = t.wave;
               vs.waveActive = true;
+              // GT2: Skip WAVEEXEC on TICK0 when there's a new note (gplay.c lines 512-515)
+              vs.skipWaveOnce = true;
             }
             if (t.pulse > 0) {
               vs.ptr[1] = t.pulse;
@@ -2761,34 +2807,43 @@ class SidProcessor extends AudioWorkletProcessor {
       }
 
       // Execute pattern command if present
-      if (step.command && step.command > 0) {
+      // GT2 behavior from gplay.c lines 406-424:
+      // - CMD_DONOTHING (0): clears command
+      // - Realtime commands (1-4): sets command
+      // - One-shot commands (5-F): do NOT clear command, it keeps running!
+      if (step.command === 0) {
+        // CMD_DONOTHING - clear realtime effects
+        vs.activeCommand = 0;
+        vs.commandData = 0;
+        vs.vibratoPhase = 0;
+      } else if (step.command >= 1 && step.command <= 4) {
         // Store realtime command state (1-4) for continuous execution
-        if (step.command >= 1 && step.command <= 4) {
-          vs.activeCommand = step.command;
-          vs.commandData = step.cmdData;
-        } else if (step.command === 0) {
-          // Command 0 stops realtime effects
-          vs.activeCommand = 0;
-          vs.commandData = 0;
-          vs.vibratoPhase = 0; // Reset vibrato phase
-        } else if (step.command === 0x0F) {
-          // Set Tempo (Ticks per Row)
-          if (step.cmdData < 0x80) {
-            this.globalTempo = step.cmdData;
-            this.stepDurationSamples = this.globalTempo * this.tickIntervalSamples;
-          }
-        } else if (step.command === 0x0E) {
-          // Funktempo (Swing)
-          if (step.cmdData === 0) {
-            this.funktempo = { active: false };
-          } else {
-            const entry = this.readSpeedtableDual(step.cmdData);
-            this.funktempo = { active: true, left: entry.left, right: entry.right, state: 0 };
-          }
+        vs.activeCommand = step.command;
+        vs.commandData = step.cmdData;
+        if (step.command === 1 || step.command === 2) {
+          vs.vibratoPhase = 0; // Reset vibrato on portamento (GT2 line 415)
         }
-
-        // Note: Command 3 (Toneportamento) setup happens below with Note
       }
+      // One-shot commands (5-F) do NOT modify activeCommand - it keeps running!
+
+      // Process one-shot commands (5-F)
+      if (step.command === 0x0F) {
+        // Set Tempo (Ticks per Row)
+        // Safety: tempo must be at least 1 to prevent infinite loops
+        if (step.cmdData > 0 && step.cmdData < 0x80) {
+          this.globalTempo = step.cmdData;
+          this.stepDurationSamples = this.globalTempo * this.tickIntervalSamples;
+        }
+      } else if (step.command === 0x0E) {
+        // Funktempo (Swing)
+        if (step.cmdData === 0) {
+          this.funktempo = { active: false };
+        } else {
+          const entry = this.readSpeedtableDual(step.cmdData);
+          this.funktempo = { active: true, left: entry.left, right: entry.right, state: 0 };
+        }
+      }
+      // Note: Command 3 (Toneportamento) setup happens below with Note
 
       // Advance pattern row
       this.patternRows[voice]++;
@@ -2854,6 +2909,13 @@ class SidProcessor extends AudioWorkletProcessor {
         }
       } else {
         // Normal Note
+        // GT2 behavior (gplay.c lines 350-356): New note clears command
+        // UNLESS the new command is toneportamento (0x03)
+        if (step.command !== 0x03) {
+          vs.activeCommand = 0;
+          vs.commandData = 0;
+          vs.vibratoPhase = 0;
+        }
         const freqHz = this.noteToHz(noteInput, vs.transpose);
         // GT2: instrument 0 = "no change" (use current), 1+ = actual instrument
         const instNum = step.instrument | 0;
@@ -2935,6 +2997,8 @@ class SidProcessor extends AudioWorkletProcessor {
               console.log(`🎹 V${voice} WTBL ACTIVATED: ptr=${t.wave}`);
               vs.ptr[0] = t.wave;
               vs.waveActive = true;
+              // GT2: Skip WAVEEXEC on TICK0 when there's a new note (gplay.c lines 512-515)
+              vs.skipWaveOnce = true;
             }
             if (t.pulse > 0) {
               vs.ptr[1] = t.pulse;
@@ -3113,8 +3177,14 @@ class SidProcessor extends AudioWorkletProcessor {
     });
 
     this.stepDurationSamples = ticks * this.tickIntervalSamples;
+
+    // CRITICAL FIX: Recalculate next step time from THIS step's position
+    // This ensures tempo changes take effect immediately, not on the step after
+    // (Previously, next step was pre-scheduled with OLD tempo before this step ran)
+    this.nextStepSample = eventSample + this.stepDurationSamples;
+
     if (this.debug && this.currentStep % 16 === 0) {
-      console.log(`Step ${this.currentStep}: Tempo=${this.globalTempo}, Ticks=${ticks}, Dur=${this.stepDurationSamples}`);
+      console.log(`Step ${this.currentStep}: Tempo=${this.globalTempo}, Ticks=${ticks}, Dur=${this.stepDurationSamples}, NextStep=${this.nextStepSample}`);
     }
   }
 
@@ -3162,7 +3232,26 @@ class SidProcessor extends AudioWorkletProcessor {
     }
     let writeIndex = 0;
     const writeChunk = (chunk, start) => {
-      for (let i = 0; i < chunk.length; i++) { left[start + i] = chunk[i]; right[start + i] = chunk[i]; }
+      // Get per-voice output ONCE after generation (reSID batches samples)
+      // These represent the final voice state after this chunk was generated
+      let v1Out = 0, v2Out = 0, v3Out = 0;
+      if (this.synth && this.synth.voice) {
+        const scale = 1.0 / (0x800 * 0xff);
+        v1Out = (this.synth.voice[0].output() - this.synth.voice[0].voice_DC) * scale;
+        v2Out = (this.synth.voice[1].output() - this.synth.voice[1].voice_DC) * scale;
+        v3Out = (this.synth.voice[2].output() - this.synth.voice[2].voice_DC) * scale;
+      }
+      for (let i = 0; i < chunk.length; i++) {
+        left[start + i] = chunk[i];
+        right[start + i] = chunk[i];
+        // Capture mixed output for oscilloscope (per-sample - this is accurate)
+        this.scopeBuffer[this.scopeWriteIndex] = chunk[i];
+        // Capture per-voice outputs (approximation - same value for whole chunk)
+        this.scopeBufferV1[this.scopeWriteIndex] = v1Out;
+        this.scopeBufferV2[this.scopeWriteIndex] = v2Out;
+        this.scopeBufferV3[this.scopeWriteIndex] = v3Out;
+        this.scopeWriteIndex = (this.scopeWriteIndex + 1) % this.scopeBufferSize;
+      }
     };
     let idx = 0;
     let genCount = 0;
@@ -3194,7 +3283,19 @@ class SidProcessor extends AudioWorkletProcessor {
             this.tickDebugCount++;
           }
           this.executeRealtimeCommands();
-          // Telemetry for Oscilloscope (50Hz)
+          // Telemetry for Oscilloscope (50Hz) - includes real audio samples
+          // Create ordered sample arrays from circular buffers
+          const orderedSamples = new Float32Array(this.scopeBufferSize);
+          const orderedV1 = new Float32Array(this.scopeBufferSize);
+          const orderedV2 = new Float32Array(this.scopeBufferSize);
+          const orderedV3 = new Float32Array(this.scopeBufferSize);
+          for (let i = 0; i < this.scopeBufferSize; i++) {
+            const idx = (this.scopeWriteIndex + i) % this.scopeBufferSize;
+            orderedSamples[i] = this.scopeBuffer[idx];
+            orderedV1[i] = this.scopeBufferV1[idx];
+            orderedV2[i] = this.scopeBufferV2[idx];
+            orderedV3[i] = this.scopeBufferV3[idx];
+          }
           this.port.postMessage({
             type: 'telemetry',
             payload: {
@@ -3202,8 +3303,11 @@ class SidProcessor extends AudioWorkletProcessor {
               sampleCounter: this.sampleCounter + off,
               filterConfig: {
                 res: (this.regs[0x17] >> 4) & 0x0F,
-                type: (this.regs[0x18] >> 4) & 0x07 // LP: 0x10, BP: 0x20, HP: 0x40
-              }
+                type: (this.regs[0x18] >> 4) & 0x07, // LP: 0x10, BP: 0x20, HP: 0x40
+                routing: this.regs[0x17] & 0x07
+              },
+              audioSamples: Array.from(orderedSamples),
+              voiceSamples: [Array.from(orderedV1), Array.from(orderedV2), Array.from(orderedV3)]
             }
           });
         }
@@ -3667,8 +3771,19 @@ class SidProcessor extends AudioWorkletProcessor {
       }
 
       // 1. Wavetable Execution (updates vs.wave directly)
-      let waveResult = this.executeWavetable(voice);
-      if (waveResult) {
+      // GT2: Skip WAVEEXEC on TICK0 when there's a new note (gplay.c lines 512-515)
+      // This matches GT2 behavior where wavetable starts executing on TICK1, not TICK0
+      // BUT we still need to write the firstWave to the SID register on TICK0!
+      let waveResult = null;
+      let writeFirstWave = false;
+      if (vs.skipWaveOnce) {
+        vs.skipWaveOnce = false;
+        writeFirstWave = true;  // Need to write initial waveform even though we skip table
+        console.log(`🔄 V${voice} SKIP WAVEEXEC on TICK0 (GT2 newnote behavior) - will write firstWave=0x${vs.wave.toString(16)}`);
+      } else {
+        waveResult = this.executeWavetable(voice);
+      }
+      if (waveResult || writeFirstWave) {
         // Write updated waveform to SID using gate mask
         // During hard restart: vs.gate = 0xFE clears gate bit
         // After hard restart: vs.gate = 0xFF passes gate bit

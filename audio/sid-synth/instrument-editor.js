@@ -1,7 +1,6 @@
 // instrument-editor.js - GT2-only version
-import { instruments, initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, setGlobalSIDRegister, isWorkletActive, workletNoteOff, workletUpdateInstruments } from './synth.js';
+import { instruments, initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, setGlobalSIDRegister, isWorkletActive, workletNoteOff, workletUpdateInstruments, workletLoadTables } from './synth.js';
 import { keyboardInput } from './keyboard-input.js';
-import { tableManager, TABLE_TYPES } from './table-manager.js';
 import { gt2TableManager } from './table-manager-gt2.js';
 
 let currentInstrumentIndex = 0;
@@ -63,14 +62,11 @@ function openInstrumentEditor() {
     // Populate instrument selector
     populateInstrumentSelector();
 
-    // Populate GT2 table selectors
-    populateGT2TableSelectors();
-
     // Load first instrument
     currentInstrumentIndex = 0;
     loadInstrumentToEditor();
-    
-    console.log('🎹 Instrument Editor opened - Use keyboard to test instruments!');
+
+    console.log('Instrument Editor opened - Use keyboard to test instruments!');
 }
 
 function closeInstrumentEditor() {
@@ -96,112 +92,96 @@ function populateInstrumentSelector() {
     select.value = currentInstrumentIndex;
 }
 
-function populateGT2TableSelectors() {
-    const tableTypes = [
-        { id: 'waveTableSelect', type: 0, name: 'WTBL' },
-        { id: 'pulseTableSelect', type: 1, name: 'PTBL' },
-        { id: 'filterTableSelect', type: 2, name: 'FTBL' },
-        { id: 'speedTableSelect', type: 3, name: 'STBL' }
-    ];
-
-    tableTypes.forEach(({ id, type, name }) => {
-        const select = document.getElementById(id);
-        if (!select) return;
-
-        // Keep "None" option
-        select.innerHTML = '<option value="-1">None</option>';
-
-        // Add GT2 table 0 option (we only have one table per type for now)
-        const table = gt2TableManager.getTable(type);
-        if (table) {
-            const option = document.createElement('option');
-            option.value = 0;
-            option.textContent = `${name} 0: ${table.name}`;
-            select.appendChild(option);
-        }
-    });
-}
 
 function loadInstrumentToEditor() {
     const instrument = instruments[currentInstrumentIndex];
     if (!instrument) return;
-    
+
     // Basic parameters
     document.getElementById('instrumentName').value = instrument.name;
-    document.getElementById('waveformSelect').value = instrument.waveform;
-    
+
+    // GT2 Voice Parameters
+    const firstWave = instrument.firstWave || 0x09; // Default: gate + no waveform
+    document.getElementById('firstWaveInput').value = firstWave.toString(16).toUpperCase().padStart(2, '0');
+
+    // Gate Timer: bits 0-5 = timer, bit 6 = no gate-off, bit 7 = no hard restart
+    const gateTimer = instrument.gateTimer || 0x02;
+    document.getElementById('gateTimerInput').value = gateTimer & 0x3F;
+    document.getElementById('noHardRestartCheck').checked = (gateTimer & 0x80) !== 0;
+    document.getElementById('noGateOffCheck').checked = (gateTimer & 0x40) !== 0;
+
+    // Vibrato delay
+    document.getElementById('vibratoDelayInput').value = instrument.vibratoDelay || 0;
+
     // ADSR (decode from combined values)
     const attack = (instrument.ad >> 4) & 0x0F;
     const decay = instrument.ad & 0x0F;
     const sustain = (instrument.sr >> 4) & 0x0F;
     const release = instrument.sr & 0x0F;
-    
+
     document.getElementById('attackSlider').value = attack;
     document.getElementById('decaySlider').value = decay;
     document.getElementById('sustainSlider').value = sustain;
     document.getElementById('releaseSlider').value = release;
-    
+
     updateSliderDisplay('attack', attack);
     updateSliderDisplay('decay', decay);
     updateSliderDisplay('sustain', sustain);
     updateSliderDisplay('release', release);
-    
-    // Pulse width
-    document.getElementById('pulseWidthSlider').value = instrument.pulseWidth;
-    updateSliderDisplay('pulseWidth', instrument.pulseWidth);
 
-    // SID Features
-    document.getElementById('syncEnabled').checked = instrument.sync || false;
-    document.getElementById('ringModEnabled').checked = instrument.ringMod || false;
-
-    // Populate table selectors and load current values
-    populateTableSelectors();
-
-    // Tables
-    const tables = instrument.tables || { wave: -1, pulse: -1, filter: -1, speed: -1 };
-    document.getElementById('waveTableSelect').value = tables.wave;
-    document.getElementById('pulseTableSelect').value = tables.pulse;
-    document.getElementById('filterTableSelect').value = tables.filter;
-    document.getElementById('speedTableSelect').value = tables.speed;
+    // GT2 Table Pointers (0 = none, 1-255 = position)
+    const tables = instrument.tables || { wave: 0, pulse: 0, filter: 0, speed: 0 };
+    document.getElementById('waveTableInput').value = tables.wave || 0;
+    document.getElementById('pulseTableInput').value = tables.pulse || 0;
+    document.getElementById('filterTableInput').value = tables.filter || 0;
+    document.getElementById('speedTableInput').value = tables.speed || 0;
 }
 
 function setupParameterHandlers() {
+    // Helper to safely add event listener
+    const addListener = (id, event, handler) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener(event, handler);
+        } else {
+            console.warn(`Element not found: ${id}`);
+        }
+    };
+
     // Name input
-    document.getElementById('instrumentName').addEventListener('input', updateCurrentInstrument);
-    
-    // Waveform select
-    document.getElementById('waveformSelect').addEventListener('change', updateCurrentInstrument);
-    
+    addListener('instrumentName', 'input', updateCurrentInstrument);
+
+    // GT2 Voice Parameters
+    addListener('firstWaveInput', 'input', updateCurrentInstrument);
+    addListener('gateTimerInput', 'input', updateCurrentInstrument);
+    addListener('noHardRestartCheck', 'change', updateCurrentInstrument);
+    addListener('noGateOffCheck', 'change', updateCurrentInstrument);
+    addListener('vibratoDelayInput', 'input', updateCurrentInstrument);
+
     // ADSR sliders
     ['attack', 'decay', 'sustain', 'release'].forEach(param => {
         const slider = document.getElementById(`${param}Slider`);
-        slider.addEventListener('input', (e) => {
-            updateSliderDisplay(param, e.target.value);
-            updateCurrentInstrument();
-        });
-    });
-    
-    // Pulse width slider
-    document.getElementById('pulseWidthSlider').addEventListener('input', (e) => {
-        updateSliderDisplay('pulseWidth', e.target.value);
-        updateCurrentInstrument();
+        if (slider) {
+            slider.addEventListener('input', (e) => {
+                updateSliderDisplay(param, e.target.value);
+                updateCurrentInstrument();
+            });
+        }
     });
 
-    // SID Features
-    ['syncEnabled', 'ringModEnabled'].forEach(id => {
-        document.getElementById(id).addEventListener('change', updateCurrentInstrument);
-    });
-
-    // Table selects
-    ['waveTableSelect', 'pulseTableSelect', 'filterTableSelect', 'speedTableSelect'].forEach(selectId => {
-        document.getElementById(selectId).addEventListener('change', updateCurrentInstrument);
+    // GT2 Table pointer inputs
+    ['waveTableInput', 'pulseTableInput', 'filterTableInput', 'speedTableInput'].forEach(inputId => {
+        addListener(inputId, 'input', updateCurrentInstrument);
     });
 
     // Open table editor button
-    document.getElementById('openTableEditorFromInstrument').addEventListener('click', () => {
-        // This will open the table editor modal
-        document.getElementById('tableEditorButton').click();
-    });
+    const tableEditorBtn = document.getElementById('openTableEditorFromInstrument');
+    const mainTableBtn = document.getElementById('tableEditorButton');
+    if (tableEditorBtn && mainTableBtn) {
+        tableEditorBtn.addEventListener('click', () => {
+            mainTableBtn.click();
+        });
+    }
 }
 
 function updateSliderDisplay(param, value) {
@@ -220,40 +200,50 @@ function updateSliderDisplay(param, value) {
 function updateCurrentInstrument() {
     const instrument = instruments[currentInstrumentIndex];
     if (!instrument) return;
-    
+
     // Update instrument properties from UI
     instrument.name = document.getElementById('instrumentName').value;
-    instrument.waveform = parseInt(document.getElementById('waveformSelect').value);
-    
+
+    // GT2 Voice Parameters
+    const firstWaveHex = document.getElementById('firstWaveInput').value;
+    instrument.firstWave = parseInt(firstWaveHex, 16) || 0x09;
+
+    // Derive waveform from firstWave for compatibility
+    instrument.waveform = instrument.firstWave & 0xF0;
+    instrument.sync = (instrument.firstWave & 0x02) !== 0;
+    instrument.ringMod = (instrument.firstWave & 0x04) !== 0;
+
+    // Gate Timer: bits 0-5 = timer, bit 6 = no gate-off, bit 7 = no hard restart
+    let gateTimer = parseInt(document.getElementById('gateTimerInput').value) & 0x3F;
+    if (document.getElementById('noHardRestartCheck').checked) gateTimer |= 0x80;
+    if (document.getElementById('noGateOffCheck').checked) gateTimer |= 0x40;
+    instrument.gateTimer = gateTimer;
+
+    // Vibrato delay
+    instrument.vibratoDelay = parseInt(document.getElementById('vibratoDelayInput').value) || 0;
+
     // Combine ADSR values
     const attack = parseInt(document.getElementById('attackSlider').value);
     const decay = parseInt(document.getElementById('decaySlider').value);
     const sustain = parseInt(document.getElementById('sustainSlider').value);
     const release = parseInt(document.getElementById('releaseSlider').value);
-    
+
     instrument.ad = (attack << 4) | decay;
     instrument.sr = (sustain << 4) | release;
-    
-    // Pulse width
-    instrument.pulseWidth = parseInt(document.getElementById('pulseWidthSlider').value);
 
-    // SID Features
-    instrument.sync = document.getElementById('syncEnabled').checked;
-    instrument.ringMod = document.getElementById('ringModEnabled').checked;
-
-    // Tables
+    // GT2 Table Pointers (0 = none, 1-255 = position)
     if (!instrument.tables) {
-        instrument.tables = { wave: -1, pulse: -1, filter: -1, speed: -1 };
+        instrument.tables = { wave: 0, pulse: 0, filter: 0, speed: 0 };
     }
-    instrument.tables.wave = parseInt(document.getElementById('waveTableSelect').value);
-    instrument.tables.pulse = parseInt(document.getElementById('pulseTableSelect').value);
-    instrument.tables.filter = parseInt(document.getElementById('filterTableSelect').value);
-    instrument.tables.speed = parseInt(document.getElementById('speedTableSelect').value);
+    instrument.tables.wave = parseInt(document.getElementById('waveTableInput').value) || 0;
+    instrument.tables.pulse = parseInt(document.getElementById('pulseTableInput').value) || 0;
+    instrument.tables.filter = parseInt(document.getElementById('filterTableInput').value) || 0;
+    instrument.tables.speed = parseInt(document.getElementById('speedTableInput').value) || 0;
 
     // Update instrument selector display
     populateInstrumentSelector();
-    
-    // Push live instruments to worklet so LFO/Arp updates reflect changes during playback
+
+    // Push live instruments to worklet so updates reflect changes during playback
     try { workletUpdateInstruments(instruments); } catch(_) {}
 
     // Notify keyboard input to use updated instrument
@@ -264,16 +254,25 @@ function updateCurrentInstrument() {
 }
 
 function createNewInstrument() {
-    // GT2-compatible instrument with only authentic GoatTracker2 parameters
+    // GT2-compatible instrument with authentic GoatTracker2 parameters
     const newInstrument = {
         name: `Custom ${instruments.length}`,
+        // GT2 Voice Parameters
+        firstWave: 0x09,       // Gate bit set, no waveform (0x09 = testbit+gate)
+        gateTimer: 0x02,       // 2 frames gate timer, no HR, no gate-off
+        vibratoDelay: 0x00,    // No vibrato delay
+        // Legacy waveform (used if firstWave is 0x00)
         waveform: 0x10,        // Triangle (0x10, 0x20=saw, 0x40=pulse, 0x80=noise)
+        // ADSR
         ad: 0x0F,              // Attack=0, Decay=15
         sr: 0xF0,              // Sustain=15, Release=0
+        // Pulse width
         pulseWidth: 0x0800,    // 50% duty cycle (12-bit value)
-        sync: false,           // Oscillator sync
-        ringMod: false,        // Ring modulation
-        tables: { wave: -1, pulse: -1, filter: -1, speed: -1 }  // GT2 table pointers
+        // Legacy SID features (can also be set via firstWave bits)
+        sync: false,           // Oscillator sync (bit 1 of firstWave)
+        ringMod: false,        // Ring modulation (bit 2 of firstWave)
+        // GT2 table pointers (0 = none, 1-255 = table position)
+        tables: { wave: 0, pulse: 0, filter: 0, speed: 0 }
     };
 
     instruments.push(newInstrument);
@@ -286,32 +285,6 @@ function createNewInstrument() {
     updateTrackerInstrumentDropdowns();
 }
 
-function populateTableSelectors() {
-    // Populate all table selectors with available tables
-    const tableTypes = ['wave', 'pulse', 'filter', 'speed'];
-
-    tableTypes.forEach(type => {
-        const selectElement = document.getElementById(`${type}TableSelect`);
-        const currentValue = selectElement.value;
-
-        // Clear existing options except "None"
-        selectElement.innerHTML = '<option value="-1">None</option>';
-
-        // Add options for each table of this type
-        const tableNames = tableManager.getTableNames(type);
-        tableNames.forEach(({ index, name, length }) => {
-            const option = document.createElement('option');
-            option.value = index;
-            option.textContent = `${index}: ${name} (${length})`;
-            selectElement.appendChild(option);
-        });
-
-        // Restore previous selection if still valid
-        if (currentValue !== null && currentValue !== '') {
-            selectElement.value = currentValue;
-        }
-    });
-}
 
 function duplicateInstrument() {
     const source = instruments[currentInstrumentIndex];
@@ -361,6 +334,13 @@ async function testCurrentInstrument() {
     const instrument = instruments[currentInstrumentIndex];
     const testFreq = 440.0; // A-4, standard concert pitch
 
+    // Load tables to worklet before testing (so instrument tables work)
+    const tables = {
+        ltable: gt2TableManager.ltable,
+        rtable: gt2TableManager.rtable
+    };
+    workletLoadTables(tables);
+
     // Set master volume to max
     setGlobalSIDRegister(0x18, 0x0F);
 
@@ -368,7 +348,7 @@ async function testCurrentInstrument() {
     // Tables will be triggered automatically if instrument has table pointers
     playNoteWithInstrument(0, testFreq, 2000, currentInstrumentIndex);
 
-    console.log(`Testing GT2 instrument: ${instrument.name}`);
+    console.log(`Testing GT2 instrument: ${instrument.name} (tables loaded)`);
 
     // Stop the test note after duration
     setTimeout(() => {

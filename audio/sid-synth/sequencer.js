@@ -451,9 +451,9 @@ export function playStep() {
                     // Play the note with instrument (LFO and arpeggio engines will handle modulation)
                     playNoteWithInstrument(voice, freq, tempoControl.stepDurationMs, instrumentIndex);
 
-                    // Trigger GoatTracker2 tables if instrument has them assigned
+                    // Trigger GoatTracker2 tables if instrument has them assigned (0 = no table, 1+ = table position)
                     console.log(`🔍 Checking tables for instrument ${instrumentIndex}:`, instrument.tables);
-                    if (instrument.tables && (instrument.tables.wave >= 0 || instrument.tables.pulse >= 0 || instrument.tables.filter >= 0 || instrument.tables.speed >= 0)) {
+                    if (instrument.tables && (instrument.tables.wave > 0 || instrument.tables.pulse > 0 || instrument.tables.filter > 0 || instrument.tables.speed > 0)) {
                         const noteNumber = noteNameToNumber(note);
                         console.log(`✨ GT2 Tables triggered for voice ${voice}, note ${note} (${noteNumber}), instr ${instrumentIndex}`);
                         gt2FrameEngine.triggerNoteTables(voice, noteNumber, instrument);
@@ -514,18 +514,18 @@ function initializeInstrumentTables(voice, instrument) {
     const tableState = currentVoiceState[voice].tableState;
     tableState.reset();
 
-    // Initialize tables based on instrument configuration
+    // Initialize tables based on instrument configuration (0 = no table, 1+ = table position)
     if (instrument.tables) {
-        if (instrument.tables.wave >= 0) {
+        if (instrument.tables.wave > 0) {
             tableState.setTable('wave', instrument.tables.wave);
         }
-        if (instrument.tables.pulse >= 0) {
+        if (instrument.tables.pulse > 0) {
             tableState.setTable('pulse', instrument.tables.pulse);
         }
-        if (instrument.tables.filter >= 0) {
+        if (instrument.tables.filter > 0) {
             tableState.setTable('filter', instrument.tables.filter);
         }
-        if (instrument.tables.speed >= 0) {
+        if (instrument.tables.speed > 0) {
             tableState.setTable('speed', instrument.tables.speed);
         }
     }

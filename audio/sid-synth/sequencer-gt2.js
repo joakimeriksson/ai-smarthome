@@ -64,6 +64,36 @@ export function noteToHz(noteString) {
     return noteNumberToHz(noteNum);
 }
 
+// Reset voice state after import or to sync with pattern manager
+export function resetVoiceState() {
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        voiceState[voice].patternRow = 0;
+        voiceState[voice].isPlaying = false;
+        voiceState[voice].sustain = false;
+        voiceState[voice].transpose = 0;
+
+        // Get starting pattern from order list
+        const orderList = gt2PatternManager.song.orderLists[voice];
+        if (orderList && orderList.length > 0) {
+            // Find first actual pattern in order list (skip any commands)
+            let patIdx = 0;
+            for (let i = 0; i < orderList.length; i++) {
+                const entry = orderList[i];
+                if (entry < 0xD0) {  // Valid pattern index (0-207)
+                    patIdx = entry;
+                    voiceState[voice].orderPosition = i;
+                    break;
+                }
+            }
+            voiceState[voice].patternIndex = patIdx;
+        } else {
+            voiceState[voice].orderPosition = 0;
+            voiceState[voice].patternIndex = 0;
+        }
+    }
+    console.log('Voice state reset:', voiceState.map(v => ({ orderPos: v.orderPosition, patIdx: v.patternIndex })));
+}
+
 export function stopPlayback() {
     const wasPlaying = isSequencePlaying;
     isSequencePlaying = false;
@@ -325,6 +355,101 @@ function startWorkletPlayback() {
     }, 10);
 }
 
+// Play just the current track position (patterns at given order positions) in a loop
+// This is useful for debugging specific sounds without hearing the whole song
+export function startTrackPlayback(orderPositions) {
+    // Get the pattern indices at the specified order positions
+    const patternIndices = [];
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        const orderList = gt2PatternManager.song.orderLists[voice];
+        const pos = orderPositions ? orderPositions[voice] : voiceState[voice].orderPosition;
+
+        // Find the pattern at this position (skip transpose commands)
+        let patIdx = 0;
+        let p = pos;
+        while (p < orderList.length) {
+            const entry = orderList[p];
+            if (entry < MAX_PATTERNS) {
+                patIdx = entry;
+                break;
+            } else if (entry >= 0xD0 && entry <= 0xDF) {
+                // Transpose command - skip to next
+                p++;
+            } else {
+                break;
+            }
+        }
+        patternIndices.push(patIdx);
+    }
+
+    console.log(`🎵 Starting track playback at patterns: ${patternIndices.join(', ')}`);
+
+    // Stop any existing playback
+    if (isSequencePlaying) {
+        stopPlayback();
+    }
+
+    isSequencePlaying = true;
+    isPaused = false;
+    songMode = true;
+    currentStep = 0;
+
+    // Reset voice state
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        voiceState[voice].orderPosition = 0;
+        voiceState[voice].patternIndex = patternIndices[voice];
+        voiceState[voice].patternRow = 0;
+        voiceState[voice].transpose = 0;
+        voiceState[voice].isPlaying = true;
+    }
+
+    // Build all patterns array (same as startPlayback)
+    const allPatterns = [];
+    for (let p = 0; p < MAX_PATTERNS; p++) {
+        const pat = gt2PatternManager.patterns[p];
+        const rows = [];
+        for (let step = 0; step < pat.length; step++) {
+            const rowData = pat.getRow(step);
+            rows.push({
+                note: rowData.note,
+                instrument: rowData.instrument !== undefined ? rowData.instrument : 0,
+                command: rowData.command || 0,
+                cmdData: rowData.cmdData || 0
+            });
+        }
+        allPatterns.push(rows);
+    }
+
+    // Create simple order lists that just loop the current patterns
+    // Format: [patternIndex, LOOPSONG, 0] = play pattern, then loop to position 0
+    const trackOrderLists = [
+        [patternIndices[0], LOOPSONG, 0],
+        [patternIndices[1], LOOPSONG, 0],
+        [patternIndices[2], LOOPSONG, 0]
+    ];
+
+    console.log(`Track order lists:`, trackOrderLists);
+
+    workletStartSequencer({
+        allPatterns,
+        orderLists: trackOrderLists,
+        instruments,
+        tables: {
+            ltable: gt2TableManager.ltable,
+            rtable: gt2TableManager.rtable
+        },
+        bpm: tempoControl.bpm
+    });
+
+    if (tempoChangeHandler) {
+        try { tempoControl.removeTempoChangeCallback(tempoChangeHandler); } catch (_) { }
+    }
+    tempoChangeHandler = (bpm) => {
+        if (isSequencePlaying) workletSetBPM(bpm);
+    };
+    tempoControl.onTempoChange(tempoChangeHandler);
+}
+
 // Play a single step (called by worklet or timer)
 export function playStep() {
     if (!isSequencePlaying) return;
@@ -463,18 +588,14 @@ function processOrderlistCommands(orderList, startPos) {
             // Can't start here, return default
             return { patternIndex: 0, transpose: 0, nextPosition: 0 };
         } else if (entry >= 0xD0 && entry <= 0xDF) {
-            // REPEAT command - get parameter byte
-            pos++; // Skip to parameter
-            const param = orderList[pos] || 0;
-            repeatCount = param === 0 ? 16 : param;
-            pos++; // Move to next entry
-        } else if (entry >= 0xE0 && entry <= 0xEE) {
-            // Transpose UP (+0 to +14 halftones)
-            transpose += (entry - 0xE0);
-            pos++;
-        } else if (entry >= 0xEF && entry <= 0xFD) {
-            // Transpose DOWN (-1 to -15 halftones)
-            transpose -= (entry - 0xEE);
+            // REPEAT command (GT2 gplay.c lines 979-982)
+            // repeat count = entry - 0xD0 (0 = play once, 1+ = additional plays)
+            repeatCount = entry - 0xD0;
+            pos++; // Advance past REPEAT to pattern number
+        } else if (entry >= 0xE0 && entry <= 0xFD) {
+            // Transpose (GT2 gplay.c line 975: trans = entry - TRANSUP)
+            // 0xE0 = -16, 0xEF = -1, 0xF0 = 0, 0xF1 = +1, 0xFD = +13
+            transpose = entry - 0xF0;  // Signed: -16 to +13
             pos++;
         } else if (entry < MAX_PATTERNS) {
             // Found a pattern!

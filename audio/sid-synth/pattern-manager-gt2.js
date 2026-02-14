@@ -10,13 +10,14 @@ export const MAX_ORDER_LEN = 254;  // GT2 max order list length
 export const LOOPSONG = 0xFE;     // Loop marker (next byte = loop position)
 export const ENDSONG = 0xFF;      // End of song marker
 export const REPEAT = 0xD0;       // Repeat marker (0xD0-0xDF, +1 to get count)
-export const TRANSDOWN = 0xE0;    // Transpose down (0xE0-0xEF)
-export const TRANSUP = 0xF0;      // Transpose up (0xF0-0xFD)
+export const TRANSDOWN = 0xE0;    // Transpose down (0xE0-0xEF, formula: entry - 0xF0 = -16 to -1)
+export const TRANSUP = 0xF0;      // Transpose up (0xF0-0xFD, formula: entry - 0xF0 = 0 to +13)
 
-// GT2 note values
+// GT2 note values (must match GT2 encoding used by the worklet)
 export const NOTE_EMPTY = 0;
-export const NOTE_REST = 254;
-export const NOTE_KEYOFF = 255;
+export const NOTE_REST = 0xBD;     // 189 - sustain previous note, no gate change
+export const NOTE_KEYOFF = 0xBE;   // 190 - clear gate bit, trigger release
+export const NOTE_KEYON = 0xBF;    // 191 - set gate bit (retrigger without new note)
 
 // GT2-style Pattern (single voice data)
 export class GT2Pattern {
@@ -200,17 +201,19 @@ class GT2PatternManager {
 
     loadInitialPatterns() {
         // Pattern 0: Lead melody (16 rows)
+        // GT2 note encoding: C-4 = 0x84, E-4 = 0x88, G-4 = 0x8B, etc.
+        // Formula: (octave - 1) * 12 + noteIndex + 0x60
         const leadPattern = this.patterns[0];
         leadPattern.length = 16;
         const leadNotes = [
-            48, 0, 52, 0, 55, 0, 60, 254,  // C-4, E-4, G-4, C-5, rest
-            57, 0, 53, 0, 55, 0, 52, 254   // A-4, F-4, G-4, E-4, rest
+            0x84, 0, 0x88, 0, 0x8B, 0, 0x90, NOTE_KEYOFF,  // C-4, E-4, G-4, C-5, keyoff
+            0x8D, 0, 0x89, 0, 0x8B, 0, 0x88, NOTE_KEYOFF    // A-4, F-4, G-4, E-4, keyoff
         ];
         leadNotes.forEach((note, row) => {
             if (note === 0) {
                 leadPattern.setRow(row, NOTE_EMPTY, 0);
             } else {
-                leadPattern.setRow(row, note, 0);  // Instrument 0 (Lead Tri)
+                leadPattern.setRow(row, note, 1);  // Instrument 1 (Lead Tri)
             }
         });
 
@@ -218,14 +221,14 @@ class GT2PatternManager {
         const bassPattern = this.patterns[1];
         bassPattern.length = 16;
         const bassNotes = [
-            24, 0, 28, 0, 31, 0, 36, 254,  // C-2, E-2, G-2, C-3, rest
-            33, 0, 29, 0, 31, 0, 28, 254   // A-2, F-2, G-2, E-2, rest
+            0x6C, 0, 0x70, 0, 0x73, 0, 0x78, NOTE_KEYOFF,  // C-2, E-2, G-2, C-3, keyoff
+            0x75, 0, 0x71, 0, 0x73, 0, 0x70, NOTE_KEYOFF    // A-2, F-2, G-2, E-2, keyoff
         ];
         bassNotes.forEach((note, row) => {
             if (note === 0) {
                 bassPattern.setRow(row, NOTE_EMPTY, 0);
             } else {
-                bassPattern.setRow(row, note, 1);  // Instrument 1 (Bass Pulse)
+                bassPattern.setRow(row, note, 2);  // Instrument 2 (Bass Pulse)
             }
         });
 
@@ -234,9 +237,9 @@ class GT2PatternManager {
         rhythmPattern.length = 16;
         for (let row = 0; row < 16; row++) {
             if (row % 2 === 0) {
-                rhythmPattern.setRow(row, 36, 3);  // C-3, Instrument 3 (Perc Noise)
+                rhythmPattern.setRow(row, 0x78, 4);  // C-3, Instrument 4 (Perc Noise)
             } else {
-                rhythmPattern.setRow(row, NOTE_REST, 0);
+                rhythmPattern.setRow(row, NOTE_KEYOFF, 0);
             }
         }
 

@@ -1,16 +1,18 @@
 import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister, workletSetSidModel } from './synth.js';
-import { NUM_VOICES, currentStep, noteToHz, stopPlayback, startPlayback, togglePause, isPaused, getPlaybackState, voiceState } from './sequencer-gt2.js';
+import { NUM_VOICES, currentStep, noteToHz, stopPlayback, startPlayback, togglePause, isPaused, getPlaybackState, voiceState, resetVoiceState } from './sequencer-gt2.js';
 import { patternManager, MAX_PATTERNS, MAX_PATTERN_LENGTH as MAX_STEPS, getCurrentPatternLength, setSongMode, selectPattern } from './pattern-manager-compat.js';
 import { gt2PatternManager } from './pattern-manager-gt2.js';
 import { tempoControl } from './tempo-control.js';
 import { initInstrumentEditor } from './instrument-editor.js';
 import { initGT2TableEditor } from './table-editor-gt2.js';
+import { gt2TableManager } from './table-manager-gt2.js';
 import { recordMode } from './record-mode.js';
 import { keyboardInput } from './keyboard-input.js';
 import { gt2FrameEngine } from './gt2-frame-engine.js';
 import { setupGT2ImportUI } from './gt2-importer.js';
 import { initGT2PatternEditor } from './gt2-pattern-editor.js';
 import { initGT2OrderEditor } from './gt2-order-editor.js';
+import { downloadSIDFile } from './exporters/gt2/sid-exporter-gt2.js';
 
 // Transport controls
 const playButton = document.getElementById('playButton');
@@ -270,6 +272,30 @@ GT2 Notes:
         console.log(`Exported complete project as ${filename}`);
     });
 
+    // Export .SID file
+    const exportSidButton = document.getElementById('exportSidButton');
+    if (exportSidButton) {
+        exportSidButton.addEventListener('click', () => {
+            try {
+                const songTitle = gt2PatternManager.song.title || 'SID Export';
+                const songAuthor = gt2PatternManager.song.author || 'sid-synth';
+
+                downloadSIDFile({
+                    title: songTitle,
+                    author: songAuthor,
+                    instruments: instruments,
+                    patternManager: gt2PatternManager,
+                    tableManager: gt2TableManager,
+                });
+
+                console.log(`Exported .SID file: ${songTitle}`);
+            } catch (e) {
+                console.error('SID export failed:', e);
+                alert('SID export failed: ' + e.message);
+            }
+        });
+    }
+
     // Keyboard input toggle
     let keyboardEnabled = false;
     keyboardToggleButton.addEventListener('click', () => {
@@ -322,7 +348,219 @@ GT2 Notes:
             helpModal.style.display = 'none';
         }
     });
+
+    // Check for SID Ripper import
+    checkSIDRipperImport();
+
+    // Manual SID Rip import button
+    const importSidRipButton = document.getElementById('importSidRipButton');
+    if (importSidRipButton) {
+        importSidRipButton.addEventListener('click', () => {
+            importSIDRipperData();
+        });
+    }
+
+    // Listen for storage events (when SID Ripper adds data from another tab)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'sidRipperData' && e.newValue) {
+            console.log('📡 Detected SID Ripper data from another tab');
+            if (confirm('SID Ripper data detected! Import now?')) {
+                importSIDRipperData();
+            }
+        }
+    });
 };
+
+/**
+ * Check for URL-based SID Ripper import on page load
+ */
+function checkSIDRipperImport() {
+    const urlParams = new URLSearchParams(window.location.search);
+    console.log('🔍 Checking for SID Ripper import, URL params:', urlParams.toString());
+
+    if (urlParams.get('import') === 'sidrip') {
+        // Clear the URL parameter first
+        window.history.replaceState({}, document.title, window.location.pathname);
+        importSIDRipperData();
+    } else {
+        console.log('No sidrip import parameter');
+    }
+}
+
+/**
+ * Import SID Ripper data from localStorage
+ */
+function importSIDRipperData() {
+    const dataStr = localStorage.getItem('sidRipperData');
+    if (!dataStr) {
+        console.log('❌ No SID Ripper data found in localStorage');
+        alert('No SID Ripper data found. Please convert a SID file in the SID Ripper first.');
+        return;
+    }
+
+    console.log('📦 Found SID Ripper data in localStorage, length:', dataStr.length);
+
+    try {
+        const data = JSON.parse(dataStr);
+        console.log('📀 Importing SID Ripper data:', data);
+        console.log('  Name:', data.name);
+        console.log('  Patterns:', data.patterns?.length);
+        console.log('  Instruments:', data.instruments?.length);
+        console.log('  Orders:', data.orders);
+
+        // Clear the local storage after reading
+        localStorage.removeItem('sidRipperData');
+
+        // Import instruments - extend array if needed
+        if (data.instruments && data.instruments.length > 0) {
+            console.log(`Importing ${data.instruments.length} instruments...`);
+
+            // Extend instruments array if needed
+            while (instruments.length < data.instruments.length) {
+                instruments.push({
+                    name: `Inst ${instruments.length}`,
+                    waveform: 0x41,
+                    ad: 0x0A,
+                    sr: 0xA0,
+                    pulseWidth: 0x0800,
+                    sync: false,
+                    ringMod: false,
+                    tables: { wave: 0, pulse: 0, filter: 0, speed: 0 }
+                });
+            }
+
+            data.instruments.forEach((inst, i) => {
+                const newInst = {
+                    name: inst.name || `Inst ${i}`,
+                    waveform: inst.waveform || 0x41,
+                    ad: inst.ad || 0x0A,
+                    sr: inst.sr || 0xA0,
+                    pulseWidth: inst.pulseWidth || 0x0800,
+                    sync: false,
+                    ringMod: false,
+                    tables: inst.tables || { wave: 0, pulse: 0, filter: 0, speed: 0 }
+                };
+                instruments[i] = newInst;
+                console.log(`  [${i}] ${newInst.name}: wave=$${newInst.waveform.toString(16)}, AD=$${newInst.ad.toString(16)}, SR=$${newInst.sr.toString(16)}`);
+            });
+            console.log(`Imported ${data.instruments.length} instruments`);
+        }
+
+        // Validate patterns array exists
+        if (!data.patterns || !Array.isArray(data.patterns) || data.patterns.length === 0) {
+            throw new Error('No valid patterns found in SID Ripper data');
+        }
+
+        // Convert SID Ripper format to GT2 pattern manager format
+        const songData = {
+            version: 'GT2',
+            title: data.name || 'Ripped Song',
+            author: data.author || 'SID Ripper',
+            copyright: '',
+            patterns: data.patterns.map((pat, patIdx) => {
+                if (!pat || !pat.data) {
+                    console.warn(`Pattern ${patIdx} has no data, creating empty pattern`);
+                    return { length: 32, data: Array(32).fill({ note: 0, instrument: 0, command: 0, cmdData: 0 }) };
+                }
+                return {
+                    length: pat.length || pat.data.length || 32,
+                    data: pat.data.map(row => ({
+                        note: row.note || 0,
+                        instrument: row.inst || 0,
+                        command: row.cmd || 0,
+                        cmdData: row.cmdData || 0
+                    }))
+                };
+            }),
+            orderLists: data.orders || [[0, 0xFF], [0, 0xFF], [0, 0xFF]],
+            currentPatternIndex: 0,
+            currentVoice: 0
+        };
+
+        console.log('Importing song data to GT2 pattern manager...');
+        console.log('  Patterns:', songData.patterns.length);
+        console.log('  Order lists:', songData.orderLists);
+
+        // Debug: Show first pattern's first few rows
+        if (songData.patterns.length > 0 && songData.patterns[0].data) {
+            console.log('  First pattern sample:');
+            songData.patterns[0].data.slice(0, 4).forEach((row, i) => {
+                console.log(`    Row ${i}: note=${row.note}, inst=${row.instrument}`);
+            });
+        }
+
+        // Use GT2PatternManager's importSong method
+        gt2PatternManager.importSong(songData);
+        console.log('Song data imported successfully');
+
+        // Verify import worked - check first pattern
+        const verifyPat = gt2PatternManager.patterns[0];
+        console.log('Verification - Pattern 0:');
+        console.log(`  Length: ${verifyPat.length}`);
+        if (verifyPat.data) {
+            verifyPat.data.slice(0, 4).forEach((row, i) => {
+                console.log(`    Row ${i}: note=${row.note}, inst=${row.instrument}`);
+            });
+        }
+        console.log('Verification - Order lists:');
+        gt2PatternManager.song.orderLists.forEach((ol, v) => {
+            console.log(`  Voice ${v}: [${ol.slice(0, 5).join(', ')}${ol.length > 5 ? '...' : ''}]`);
+        });
+
+        // Reset voice state to reflect new order lists
+        resetVoiceState();
+        console.log('Voice state reset for new song');
+
+        // Import wavetables if present
+        if (data.wavetables && data.wavetables.length > 0 && window.gt2TableManager) {
+            console.log(`Importing ${data.wavetables.length} wavetables...`);
+            const TABLE_WAVE = 0;  // WTBL
+
+            // Each wavetable needs contiguous space in the table
+            // GT2 pointer = array index + 1 (pointer 1 = array[0])
+            // Pattern command 8XY uses pointer value, so cmdData=1 means array[0]
+            let nextPos = 0;  // Next available position in the wavetable array
+
+            data.wavetables.forEach((wt, wtIdx) => {
+                const startPos = nextPos;
+                const gtPointer = startPos + 1;  // GT2 uses 1-based pointers
+                console.log(`  Wavetable ${wtIdx + 1} (voice ${wt.voice + 1}): ${wt.entries.length} entries at pos ${startPos} (pointer $${gtPointer.toString(16).toUpperCase().padStart(2, '0')})`);
+
+                wt.entries.forEach((entry, entryIdx) => {
+                    const pos = startPos + entryIdx;
+                    if (pos < 255) {
+                        window.gt2TableManager.setEntry(TABLE_WAVE, pos, entry.left, entry.right);
+                    }
+                });
+
+                nextPos = startPos + wt.entries.length;
+            });
+            console.log(`Wavetables imported, using ${nextPos} table entries`);
+        }
+
+        // Refresh GT2 editors
+        if (window.gt2PatternEditor && window.gt2PatternEditor.renderPattern) {
+            console.log('Refreshing GT2 Pattern Editor...');
+            window.gt2PatternEditor.renderPattern();
+        }
+        if (window.gt2OrderEditor && window.gt2OrderEditor.renderOrderLists) {
+            console.log('Refreshing GT2 Order Editor...');
+            window.gt2OrderEditor.renderOrderLists();
+        }
+
+        // Update instrument selectors
+        const event = new CustomEvent('instrumentsUpdated');
+        document.dispatchEvent(event);
+
+        // Show success message
+        const wtCount = data.wavetables?.length || 0;
+        alert(`SID Rip imported successfully!\n\nSong: ${data.name}\nPatterns: ${data.patterns?.length || 0}\nInstruments: ${data.instruments?.length || 0}${wtCount > 0 ? `\nWavetables: ${wtCount}` : ''}`);
+
+    } catch (error) {
+        console.error('Failed to import SID Ripper data:', error);
+        alert('Failed to import SID Ripper data: ' + error.message);
+    }
+}
 
 // Helper functions for pattern management
 function initializePatternUI() {
@@ -382,6 +620,7 @@ function updateAllInstrumentDropdowns() {
                 select.innerHTML = '';
 
                 instruments.forEach((inst, index) => {
+                    if (!inst) return; // Skip null entries (index 0 = "no change")
                     const option = document.createElement('option');
                     option.value = index;
                     option.textContent = inst.name;
@@ -407,6 +646,7 @@ function updateRecordInstrumentSelector() {
     recordInstrumentSelect.innerHTML = '';
 
     instruments.forEach((inst, index) => {
+        if (!inst) return; // Skip null entries (index 0 = "no change")
         const option = document.createElement('option');
         option.value = index;
         option.textContent = inst.name;
@@ -511,89 +751,78 @@ window.updateWorkletStep = (function () {
 
 // --- Oscilloscope Visualization ---
 window.updateWorkletTelemetry = (function () {
-    const scopes = [
-        { canvas: document.getElementById('scope1'), color: '#0f0' },
-        { canvas: document.getElementById('scope2'), color: '#0ff' },
-        { canvas: document.getElementById('scope3'), color: '#f0f' }
-    ];
+    const colors = ['#0f0', '#0ff', '#f0f'];
+    let cachedScopes = null;
+
+    function getScopes() {
+        // Get canvases lazily since they're created dynamically by gt2-pattern-editor
+        const scope1 = document.getElementById('scope1');
+        const scope2 = document.getElementById('scope2');
+        const scope3 = document.getElementById('scope3');
+        if (scope1 && scope2 && scope3) {
+            return [
+                { canvas: scope1, color: colors[0] },
+                { canvas: scope2, color: colors[1] },
+                { canvas: scope3, color: colors[2] }
+            ];
+        }
+        return null;
+    }
 
     return function (payload) {
         if (!payload || !payload.regs) return;
-        const regs = payload.regs;
 
-        scopes.forEach((scope, v) => {
+        // Get scopes lazily
+        if (!cachedScopes) {
+            cachedScopes = getScopes();
+        }
+        if (!cachedScopes) return;
+
+        const regs = payload.regs;
+        const voiceSamples = payload.voiceSamples; // Per-voice audio samples (pre-filter, with ADSR)
+
+        cachedScopes.forEach((scope, v) => {
             if (!scope.canvas) return;
             const ctx = scope.canvas.getContext('2d');
             const w = scope.canvas.width;
             const h = scope.canvas.height;
             const base = v * 7;
 
-            // Freq from regs 0,1
-            const freq = regs[base + 0] | (regs[base + 1] << 8);
             // Control from reg 4
             const control = regs[base + 4];
             const gate = control & 0x01;
-            const waveform = control & 0xF0; // Pulse=0x40, Saw=0x20, Tri=0x10, Noise=0x80
 
             // Clear
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, w, h);
 
-            // Draw status info
-            ctx.fillStyle = scope.color;
-            ctx.font = '10px monospace';
-            let label = `F:${freq.toString(16).padStart(4, '0')} W:${waveform.toString(16).padStart(2, '0')} G:${gate}`;
-
-            if (payload.filterConfig) {
-                const f = payload.filterConfig;
-                let fType = '';
-                if (f.type & 0x01) fType += 'L';
-                if (f.type & 0x02) fType += 'B';
-                if (f.type & 0x04) fType += 'H';
-                if (fType) label += ` [${fType} R:${f.res}]`;
-            }
-
-            ctx.fillText(label, 5, 12);
-
-            if (gate === 0) {
-                // Draw flat line if gate is off
-                ctx.beginPath();
-                ctx.strokeStyle = '#444';
-                ctx.moveTo(0, h / 2);
-                ctx.lineTo(w, h / 2);
-                ctx.stroke();
-                return;
-            }
-
-            // Draw simple representative waveform
+            // Draw center line
             ctx.beginPath();
-            ctx.strokeStyle = scope.color;
-            ctx.lineWidth = 1;
-
-            const scale = 30; // Amplitude
-            const period = Math.max(10, 400 - (freq / 100)); // Visual period
-
-            for (let x = 0; x < w; x++) {
-                let y = 0;
-                const phase = (x / period) % 1;
-
-                if (waveform === 0x40) { // Pulse
-                    y = phase < 0.5 ? -1 : 1;
-                } else if (waveform === 0x20) { // Saw
-                    y = phase * 2 - 1;
-                } else if (waveform === 0x10) { // Triangle
-                    y = Math.abs(phase * 4 - 2) - 1;
-                } else if (waveform === 0x80) { // Noise
-                    y = Math.random() * 2 - 1;
-                } else {
-                    y = 0;
-                }
-
-                const screenY = h / 2 + y * scale;
-                if (x === 0) ctx.moveTo(x, screenY);
-                else ctx.lineTo(x, screenY);
-            }
+            ctx.strokeStyle = '#222';
+            ctx.moveTo(0, h / 2);
+            ctx.lineTo(w, h / 2);
             ctx.stroke();
+
+            // Use per-voice samples for this voice (shows ADSR envelope, pre-filter)
+            const samples = voiceSamples && voiceSamples[v] ? voiceSamples[v] : null;
+            if (samples && samples.length > 0) {
+                ctx.beginPath();
+                ctx.strokeStyle = gate ? scope.color : '#444';
+                ctx.lineWidth = 1.5;
+
+                const samplesPerPixel = samples.length / w;
+                const scale = h * 0.45;
+
+                for (let x = 0; x < w; x++) {
+                    const sampleIndex = Math.floor(x * samplesPerPixel);
+                    const sample = samples[sampleIndex] || 0;
+                    const screenY = h / 2 - sample * scale;
+
+                    if (x === 0) ctx.moveTo(x, screenY);
+                    else ctx.lineTo(x, screenY);
+                }
+                ctx.stroke();
+            }
         });
     };
 })();

@@ -83,6 +83,7 @@ function populateInstrumentSelector() {
     select.innerHTML = '';
 
     instruments.forEach((instrument, index) => {
+        if (!instrument) return; // Skip null entries (index 0 = "no change")
         const option = document.createElement('option');
         option.value = index;
         option.textContent = `${index}: ${instrument.name}`;
@@ -399,6 +400,7 @@ function updateTrackerInstrumentDropdowns() {
                 select.innerHTML = '';
                 
                 instruments.forEach((inst, index) => {
+                    if (!inst) return; // Skip null entries
                     const option = document.createElement('option');
                     option.value = index;
                     option.textContent = inst.name;

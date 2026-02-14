@@ -36,6 +36,9 @@ const CTRL_TEST = 0x08;        // Test bit (usually not used)
 // Format: name, waveform, ad (attack/decay), sr (sustain/release), pulseWidth, sync, ringMod, tables
 // GT2 table pointers: 0 = no table, 1+ = table position (1-based)
 export const instruments = [
+    // GT2 convention: index 0 = "no change" (instrument 0 in pattern data means keep current)
+    // Actual instruments start at index 1. Pattern instrument N maps to instruments[N].
+    null,
     // GT2-compatible instruments with firstWave, gateTimer, vibratoDelay
     // firstWave: waveform|gate|sync|ringmod bits (0x11=tri+gate, 0x21=saw+gate, 0x41=pulse+gate, 0x81=noise+gate)
     // gateTimer: bits 0-5=timer, bit 6=no gate-off, bit 7=no hard restart
@@ -272,6 +275,15 @@ export function initSynth() {
                             });
                         } catch (e) {
                             console.warn('Failed to update voiceState:', e);
+                        }
+                    }
+
+                    // Update current speed display
+                    if (payload.globalTempo !== undefined) {
+                        const speedEl = document.getElementById('gt2-current-speed');
+                        if (speedEl) {
+                            const speed = payload.globalTempo.toString().padStart(2, '0');
+                            speedEl.textContent = `Speed: ${speed}`;
                         }
                     }
 

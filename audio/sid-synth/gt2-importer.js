@@ -84,7 +84,7 @@ export class GT2Importer {
                 waveTablePtr: dataView.getUint8(offset++),
                 pulseTablePtr: dataView.getUint8(offset++),
                 filterTablePtr: dataView.getUint8(offset++),
-                speedTablePtr: dataView.getUint8(offset++),
+                vibParam: dataView.getUint8(offset++),
                 vibDelay: dataView.getUint8(offset++),
                 gateTimer: dataView.getUint8(offset++),
                 firstWave: dataView.getUint8(offset++),
@@ -93,7 +93,7 @@ export class GT2Importer {
             offset += MAX_INSTRNAMELEN;
 
             importedInstruments.push(instr);
-            console.log(`  ${i}. ${instr.name.trim() || '(unnamed)'} - ADSR: ${instr.ad.toString(16)}/${instr.sr.toString(16)}, Wave:${instr.firstWave.toString(16)}, Tables: W${instr.waveTablePtr} P${instr.pulseTablePtr} F${instr.filterTablePtr} S${instr.speedTablePtr}`);
+            console.log(`  ${i}. ${instr.name.trim() || '(unnamed)'} - ADSR: ${instr.ad.toString(16)}/${instr.sr.toString(16)}, Wave:${instr.firstWave.toString(16)}, Tables: W${instr.waveTablePtr} P${instr.pulseTablePtr} F${instr.filterTablePtr}, VibParam:${instr.vibParam} VibDelay:${instr.vibDelay}`);
         }
 
         // Read tables (4 tables: WTBL, PTBL, FTBL, STBL)
@@ -364,12 +364,14 @@ export class GT2Importer {
             sync: false,
             ringMod: false,
             gateTimer: gtInstr.gateTimer,  // Full byte: bits 0-5 = timer, bit 6 = no HR, bit 7 = no HR ADSR
+            vibParam: gtInstr.vibParam,     // Vibrato speed/depth byte (GT2 instrument field 5)
+            vibratoDelay: gtInstr.vibDelay, // Vibrato delay in frames
             // GT2 table pointers (0 = no table, 1+ = table position)
             tables: {
                 wave: gtInstr.waveTablePtr,
                 pulse: gtInstr.pulseTablePtr,
                 filter: gtInstr.filterTablePtr,
-                speed: gtInstr.speedTablePtr
+                speed: 0  // GT2 has no per-instrument speed table pointer
             }
         };
     }
@@ -395,9 +397,12 @@ export class GT2Importer {
         );
 
         if (replace) {
-            // Keep only the first instrument (Lead Tri) and replace the rest
-            instruments.length = 1;
-            instruments.push(...convertedInstruments);
+            // Replace ALL instruments with GT2 imports (1-based indexing)
+            // GT2 patterns use 1-based instrument numbers (0 = "no change").
+            // Store null at index 0 so instrument N maps to instruments[N].
+            // The SID exporter filters out the null when packing for 6502.
+            instruments.length = 0;
+            instruments.push(null, ...convertedInstruments);
             console.log(`✅ Replaced instruments with ${convertedInstruments.length} from GT2`);
         } else {
             // Append to existing instruments
@@ -499,25 +504,23 @@ export class GT2Importer {
                 const entry = gtOrderList[i];
 
                 // Check for special commands
-                if (entry === 0xFF) {
-                    // End marker
+                if (entry === 0xFF || entry === 0xFE) {
+                    // LOOPSONG/ENDSONG: next byte is the restart position
                     newOrderList.push(0xFF);
+                    if (i + 1 < gtOrderList.length) {
+                        newOrderList.push(gtOrderList[i + 1]);
+                        i++; // Skip restart position byte
+                    }
                     break;
-                } else if (entry === 0xFE) {
-                    // Loop marker
-                    newOrderList.push(0xFE);
-                    // Next byte is loop position
-                    if (i + 1 < gtOrderList.length) {
-                        newOrderList.push(gtOrderList[i + 1]);
-                        i++; // Skip next byte
-                    }
-                } else if (entry >= 0xD0) {
-                    // Special command (transpose, repeat, etc.)
+                } else if (entry >= 0xE0) {
+                    // Transpose command ($E0-$FD): single byte encoding
+                    // In GT2 player, transpose is followed by the next pattern number
+                    // Both bytes are stored sequentially in the .sng
                     newOrderList.push(entry);
-                    if (i + 1 < gtOrderList.length) {
-                        newOrderList.push(gtOrderList[i + 1]);
-                        i++;
-                    }
+                } else if (entry >= 0xD0) {
+                    // Repeat command ($D0-$DF): single byte encoding
+                    // Player replays current pattern, no parameter byte
+                    newOrderList.push(entry);
                 } else {
                     // Regular pattern entry - direct 1:1 mapping
                     if (entry < MAX_PATTERNS) {
@@ -632,6 +635,7 @@ export function setupGT2ImportUI() {
                     const currentValue = instrumentSelect.value;
                     instrumentSelect.innerHTML = '';
                     instruments.forEach((inst, i) => {
+                        if (!inst) return; // Skip null entries
                         const option = document.createElement('option');
                         option.value = i;
                         option.textContent = `${i}: ${inst.name}`;

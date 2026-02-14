@@ -45,6 +45,8 @@
             <button id="saveButton">Save</button>
             <button id="loadButton">Load</button>
             <button id="exportButton">Export JSON</button>
+            <button id="exportSidButton" style="background: #520;">Export .SID</button>
+            <button id="importSidRipButton" style="background: #505;">Import SID Rip</button>
         </div>
 
         <div class="control-section">
@@ -53,6 +55,7 @@
             <button id="tableEditorButton">Table Editor</button>
             <button id="keyboardToggleButton">Enable Keyboard</button>
             <button id="helpButton">Help</button>
+            <a href="sid-ripper.html"><button>SID Ripper</button></a>
             <a href="about.html"><button>About</button></a>
         </div>
     </div>
@@ -62,25 +65,6 @@
 
     <!-- GT2 Order Editor -->
     <div id="gt2-order-editor-container"></div>
-
-    <!-- Oscilloscope Visualization -->
-    <div id="oscilloscope-container" style="margin: 20px; padding: 10px; background: #111; border: 1px solid #333;">
-        <h3 style="color: #0f0; margin: 0 0 10px 0;">Voice Oscilloscopes</h3>
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;">
-                <div style="color: #0f0; font-size: 11px; margin-bottom: 4px;">Voice 1</div>
-                <canvas id="scope1" width="300" height="100" style="background: #000; border: 1px solid #0f0;"></canvas>
-            </div>
-            <div style="flex: 1;">
-                <div style="color: #0ff; font-size: 11px; margin-bottom: 4px;">Voice 2</div>
-                <canvas id="scope2" width="300" height="100" style="background: #000; border: 1px solid #0ff;"></canvas>
-            </div>
-            <div style="flex: 1;">
-                <div style="color: #f0f; font-size: 11px; margin-bottom: 4px;">Voice 3</div>
-                <canvas id="scope3" width="300" height="100" style="background: #000; border: 1px solid #f0f;"></canvas>
-            </div>
-        </div>
-    </div>
 
     <!-- Table Editor Modal -->
     <div id="tableEditorModal" class="modal">

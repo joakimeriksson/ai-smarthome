@@ -1,90 +1,89 @@
-; Relocation header for GoatTracker V2 playroutine (xa syntax)
-; This file is concatenated before player.s and assembled with xa.
+; Configuration header for GoatTracker V2 playroutine (xa syntax)
+; This file is concatenated BEFORE player.s and assembled with xa.
+; Contains ONLY defines - no data allocation (data goes after player code).
 
 ; Core addresses
 base      = $1000        ; load address for PRG
 SIDBASE   = $D400        ; SID register base
-zpbase    = $FB          ; 2-byte ZP scratch base used by player when ZPGHOSTREGS=0
+zpbase    = $FB          ; 2-byte ZP scratch base
 
-; Feature configuration (0 enables the code blocks in original source)
-ZPGHOSTREGS   = 0        ; use real SID regs, not ghost ZP
-SOUNDSUPPORT  = 0
-VOLSUPPORT    = 0
-NOAUTHORINFO  = 1
-NOFILTER      = 0        ; enable filters in driver
-NOFILTERMOD   = 0
-NOWAVECMD     = 0
-NOWAVEDELAY   = 0
-NOPULSE       = 0
-NOPULSEMOD    = 0
+; ---------- Feature configuration ----------
+; 0 = feature ENABLED, nonzero = DISABLED
+ZPGHOSTREGS        = 0
+SOUNDSUPPORT       = 0
+VOLSUPPORT         = 0
+NOAUTHORINFO       = 1
+BUFFEREDWRITES     = 0
+SIMPLEPULSE        = 0
+
+NOEFFECTS          = 0
+NOINSTRVIB         = 0
+NOVIB              = 0
+NOTONEPORTA        = 0
+NOPORTAMENTO       = 0
+NOSETAD            = 0
+NOSETSR            = 0
+NOSETWAVE          = 0
+NOSETWAVEPTR       = 0
+NOSETPULSEPTR      = 0
+NOSETFILTPTR       = 0
+NOSETFILTCTRL      = 0
+NOSETFILTCUTOFF    = 0
+NOSETMASTERVOL     = 0
+NOFUNKTEMPO        = 0
+NOCHANNELTEMPO     = 0
+NOGLOBALTEMPO      = 0
+NOFILTER           = 0
+NOFILTERMOD        = 0
+NOWAVECMD          = 0
+NOWAVEDELAY        = 0
+NOPULSE            = 0
+NOPULSEMOD         = 0
+NOTRANS            = 0
+NOREPEAT           = 0
+NOGATE             = 0
+NOFIRSTWAVECMD     = 0
+
+NOCALCULATEDSPEED  = 0
+NONORMALSPEED      = 0
+NOZEROSPEED        = 0
+
+REALTIMEOPTIMIZATION = 0
+PULSEOPTIMIZATION    = 0
+
+; ---------- Song parameters ----------
 NUMCHANNELS   = 3
 NUMSONGS      = 1
-DEFAULTTEMPO  = 6        ; ticks per row baseline
-FIRSTNOTE     = $80      ; internal encoding base used by GT2
+DEFAULTTEMPO  = 6
+FIRSTNOTE     = $00
 
-; --- Song data labels the player expects (to be patched by JS) ---
-; Orderlists (per channel). For single-song driver, 3 entries (one per voice)
-mt_songtbllo:
-  .BYTE 0,0,0
-mt_songtblhi:
-  .BYTE 0,0,0
+; ---------- Instrument parameters ----------
+FIXEDPARAMS   = 0
 
-; Pattern pointer tables (lo/hi for up to 256 patterns)
-mt_patttbllo:
-  .DSB 256, 0
-mt_patttblhi:
-  .DSB 256, 0
-
-; Wavetable / Pulsetable / Filtertable (basic defaults, may be replaced)
-; Minimal wave: triangle+gate ($11), then loop
-mt_wavetbl:
-  .BYTE $11, $FF
-
-; Pulse: set $0800 once, then loop
-mt_pulsetimetbl:
-  .BYTE $80, $FF
-mt_pulsespdtbl:
-  .BYTE <($0800), >($0800)
-
-; Filter: set cutoff 0, then loop; control defaults patched in playroutine
-mt_filttimetbl:
-  .BYTE $00, $FF
-mt_filtspdtbl:
-  .BYTE $00
-
-; Speed and frequency tables (to be filled/overwritten by JS)
-mt_speedlefttbl:
-  .DSB 32, 6
-mt_speedrighttbl:
-  .DSB 32, 0
-
-; 96-entry frequency table (PAL) — JS will patch true values
-mt_freqtbllo:
-  .DSB 96, 0
-mt_freqtblhi:
-  .DSB 96, 0
-
-; Notetbl used by wavetable jumps (kept zero for now)
-mt_notetbl:
-  .DSB 256, 0
-
+NUMHRINSTR        = 64
+NUMNOHRINSTR      = 0
+NUMLEGATOINSTR    = 0
+FIRSTNOHRINSTR    = 65
+FIRSTLEGATOINSTR  = 65
+SRPARAM           = $00
+ADPARAM           = $00
 ;-------------------------------------------------------------------------------
 ; GoatTracker V2.68 playroutine
 ;
-; NOTE: This playroutine source code does not fall under the GPL license!
+; NOTE - This playroutine source code does not fall under the GPL license!
 ; Use it, or song binaries created from it freely for any purpose, commercial
 ; or noncommercial.
 ;
-; NOTE 2: This code is in the format of Magnus Lind's assembler from Exomizer.
+; NOTE 2 - This code is in the format of Magnus Lind's assembler from Exomizer.
 ; Does not directly compile on DASM etc.
 ;-------------------------------------------------------------------------------
 
         ;Defines will be inserted by the relocator here
 
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
 mt_temp1        = zpbase+0
 mt_temp2        = zpbase+1
-              .ELSE
+#else
 ghostfreqlo     = zpbase+0
 ghostfreqhi     = zpbase+1
 ghostpulselo    = zpbase+2
@@ -98,7 +97,7 @@ ghostfiltctrl   = zpbase+23
 ghostfilttype   = zpbase+24
 mt_temp1        = zpbase+25
 mt_temp2        = zpbase+26
-              .ENDIF
+#endif
 
         ;Defines for the music data
         ;Patterndata notes
@@ -156,268 +155,274 @@ SETCUTOFF       = $00
 
                 jmp mt_init
                 jmp mt_play
-              .IF (SOUNDSUPPORT != 0)
+#if (SOUNDSUPPORT != 0)
                 jmp mt_playsfx
-              .ENDIF
-              .IF (VOLSUPPORT != 0)
+#endif
+#if (VOLSUPPORT != 0)
                 jmp mt_setmastervol
-              .ENDIF
+#endif
 
         ;Author info
 
-              .IF (NOAUTHORINFO == 0)
+#if (NOAUTHORINFO == 0)
 
 authorinfopos   = base + $20
 checkpos1:
-              .IF ((authorinfopos - checkpos1) > 15)
+#if ((authorinfopos - checkpos1) > 15)
 mt_tick0jumptbl:
-                .BYTE (mt_tick0_0 % 256)
-                .BYTE (mt_tick0_12 % 256)
-                .BYTE (mt_tick0_12 % 256)
-                .BYTE (mt_tick0_34 % 256)
-                .BYTE (mt_tick0_34 % 256)
-                .BYTE (mt_tick0_5 % 256)
-                .BYTE (mt_tick0_6 % 256)
-                .BYTE (mt_tick0_7 % 256)
-                .BYTE (mt_tick0_8 % 256)
-                .BYTE (mt_tick0_9 % 256)
-                .BYTE (mt_tick0_a % 256)
-                .BYTE (mt_tick0_b % 256)
-                .BYTE (mt_tick0_c % 256)
-                .BYTE (mt_tick0_d % 256)
-                .BYTE (mt_tick0_e % 256)
-                .BYTE (mt_tick0_f % 256)
-              .ENDIF
+                .byte (mt_tick0_0 & 255)
+                .byte (mt_tick0_12 & 255)
+                .byte (mt_tick0_12 & 255)
+                .byte (mt_tick0_34 & 255)
+                .byte (mt_tick0_34 & 255)
+                .byte (mt_tick0_5 & 255)
+                .byte (mt_tick0_6 & 255)
+                .byte (mt_tick0_7 & 255)
+                .byte (mt_tick0_8 & 255)
+                .byte (mt_tick0_9 & 255)
+                .byte (mt_tick0_a & 255)
+                .byte (mt_tick0_b & 255)
+                .byte (mt_tick0_c & 255)
+                .byte (mt_tick0_d & 255)
+                .byte (mt_tick0_e & 255)
+                .byte (mt_tick0_f & 255)
+#endif
 
 checkpos2:
-              .IF ((authorinfopos - checkpos2) > 4)
+#if ((authorinfopos - checkpos2) > 4)
 mt_effectjumptbl:
-                .BYTE (mt_effect_0 % 256)
-                .BYTE (mt_effect_12 % 256)
-                .BYTE (mt_effect_12 % 256)
-                .BYTE (mt_effect_3 % 256)
-                .BYTE (mt_effect_4 % 256)
-              .ENDIF
+                .byte (mt_effect_0 & 255)
+                .byte (mt_effect_12 & 255)
+                .byte (mt_effect_12 & 255)
+                .byte (mt_effect_3 & 255)
+                .byte (mt_effect_4 & 255)
+#endif
 
 checkpos3:
-              .IF ((authorinfopos - checkpos3) > 1)
+#if ((authorinfopos - checkpos3) > 1)
 mt_funktempotbl:
-                .BYTE (8,5)
-              .ENDIF
+                .byte 8,5
+#endif
 
         ;This is pretty stupid way of filling left-out space, but .ORG
         ;seemed to bug
 
 checkpos4:
-              .IF ((authorinfopos - checkpos4) > 0) .BYTE (0) .ENDIF
+#if ((authorinfopos - checkpos4) > 0)
+.byte 0
+#endif
 checkpos5:
-              .IF ((authorinfopos - checkpos5) > 0) .BYTE (0) .ENDIF
+#if ((authorinfopos - checkpos5) > 0)
+.byte 0
+#endif
 checkpos6:
-              .IF ((authorinfopos - checkpos6) > 0) .BYTE (0) .ENDIF
+#if ((authorinfopos - checkpos6) > 0)
+.byte 0
+#endif
 
 mt_author:
 
-                .BYTE (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-                .BYTE (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-              .ENDIF
+                .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#endif
 
         ;0 Instrument vibrato
 
 mt_tick0_0:
-              .IF (NOEFFECTS == 0)
-              .IF (NOINSTRVIB == 0)
+#if (NOEFFECTS == 0)
+#if (NOINSTRVIB == 0)
                 lda mt_insvibparam-1,y
                 jmp mt_tick0_34
-              .ELSE
-              .IF (NOVIB == 0)
+#else
+#if (NOVIB == 0)
                 jmp mt_tick0_34
-              .ENDIF
-              .ENDIF
-              .ENDIF
+#endif
+#endif
+#endif
 
         ;1,2 Portamentos
 
 
 mt_tick0_12:
-              .IF (NOVIB == 0)
+#if (NOVIB == 0)
                 tay
                 lda #$00
                 sta mt_chnvibtime,x
                 tya
-              .ENDIF
+#endif
 
         ;3,4 Toneportamento, Vibrato
 
 mt_tick0_34:
-              .IF (NOEFFECTS == 0)
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if (NOEFFECTS == 0)
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
                 sta mt_chnparam,x
                 lda mt_chnnewfx,x
                 sta mt_chnfx,x
-              .ENDIF
+#endif
                 rts
-              .ENDIF
+#endif
 
         ;5 Set AD
 
 mt_tick0_5:
-              .IF (NOSETAD == 0)
-              .IF (BUFFEREDWRITES == 0)
+#if (NOSETAD == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$05,x
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnad,x
-              .ELSE
+#else
                 sta <ghostad,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 rts
-              .ENDIF
+#endif
 
         ;6 Set Sustain/Release
 
 mt_tick0_6:
-              .IF (NOSETSR == 0)
-              .IF (BUFFEREDWRITES == 0)
+#if (NOSETSR == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$06,x
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnsr,x
-              .ELSE
+#else
                 sta <ghostsr,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 rts
-              .ENDIF
+#endif
 
         ;7 Set waveform
 
 mt_tick0_7:
-              .IF (NOSETWAVE == 0)
+#if (NOSETWAVE == 0)
                 sta mt_chnwave,x
                 rts
-              .ENDIF
+#endif
 
         ;8 Set wavepointer
 
 mt_tick0_8:
-              .IF (NOSETWAVEPTR == 0)
+#if (NOSETWAVEPTR == 0)
                 sta mt_chnwaveptr,x
-              .IF (NOWAVEDELAY == 0)
+#if (NOWAVEDELAY == 0)
                 lda #$00                        ;Make sure possible delayed
                 sta mt_chnwavetime,x            ;waveform execution goes
-              .ENDIF                            ;correctly
+#endif
                 rts
-              .ENDIF
+#endif
 
         ;9 Set pulsepointer
 
 mt_tick0_9:
-              .IF (NOSETPULSEPTR == 0)
+#if (NOSETPULSEPTR == 0)
                 sta mt_chnpulseptr,x
                 lda #$00                        ;Reset pulse step duration
                 sta mt_chnpulsetime,x
                 rts
-              .ENDIF
+#endif
 
         ;a Set filtpointer
 
 mt_tick0_a:
-              .IF (NOSETFILTPTR == 0)
-              .IF (NOFILTERMOD == 0)
+#if (NOSETFILTPTR == 0)
+#if (NOFILTERMOD == 0)
                 ldy #$00
                 sty mt_filttime+1
-              .ENDIF
+#endif
 mt_tick0_a_step:
                 sta mt_filtstep+1
                 rts
-              .ENDIF
+#endif
 
         ;b Set filtcontrol (channels & resonance)
 
 mt_tick0_b:
-              .IF (NOSETFILTCTRL == 0)
+#if (NOSETFILTCTRL == 0)
                 sta mt_filtctrl+1
-              .IF (NOSETFILTPTR == 0)
+#if (NOSETFILTPTR == 0)
                 beq mt_tick0_a_step          ;If 0, stop also step-programming
-              .ELSE
+#else
                 bne mt_tick0_b_noset
                 sta mt_filtstep+1
 mt_tick0_b_noset:
-              .ENDIF
+#endif
                 rts
-              .ENDIF
+#endif
 
         ;c Set cutoff
 
 mt_tick0_c:
-              .IF (NOSETFILTCUTOFF == 0)
+#if (NOSETFILTCUTOFF == 0)
                 sta mt_filtcutoff+1
                 rts
-              .ENDIF
+#endif
 
         ;d Set mastervolume / timing mark
 
 mt_tick0_d:
-              .IF (NOSETMASTERVOL == 0)
-              .IF (NOAUTHORINFO == 0)
+#if (NOSETMASTERVOL == 0)
+#if (NOAUTHORINFO == 0)
                 cmp #$10
                 bcs mt_tick0_d_timing
-              .ENDIF
+#endif
 mt_setmastervol:
                 sta mt_masterfader+1
                 rts
-              .IF (NOAUTHORINFO == 0)
+#if (NOAUTHORINFO == 0)
 mt_tick0_d_timing:
                 sta mt_author+31
                 rts
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 
         ;e Funktempo
 
 mt_tick0_e:
-              .IF (NOFUNKTEMPO == 0)
+#if (NOFUNKTEMPO == 0)
                 tay
                 lda mt_speedlefttbl-1,y
                 sta mt_funktempotbl
                 lda mt_speedrighttbl-1,y
                 sta mt_funktempotbl+1
                 lda #$00
-              .IF (NOCHANNELTEMPO == 0)
+#if (NOCHANNELTEMPO == 0)
                 beq mt_tick0_f_setglobaltempo
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 
         ;f Set Tempo
 
 mt_tick0_f:
-              .IF ((NOCHANNELTEMPO == 0) && (NOGLOBALTEMPO == 0))
+#if ((NOCHANNELTEMPO == 0) && (NOGLOBALTEMPO == 0))
                 bmi mt_tick0_f_setchantempo     ;Channel or global tempo?
-              .ENDIF
+#endif
 mt_tick0_f_setglobaltempo:
-              .IF (NOGLOBALTEMPO == 0)
+#if (NOGLOBALTEMPO == 0)
                 sta mt_chntempo
-              .IF (NUMCHANNELS > 1)
+#if (NUMCHANNELS > 1)
                 sta mt_chntempo+7
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
+#endif
+#if (NUMCHANNELS > 2)
                 sta mt_chntempo+14
-              .ENDIF
+#endif
                 rts
-              .ENDIF
+#endif
 mt_tick0_f_setchantempo:
-              .IF (NOCHANNELTEMPO == 0)
+#if (NOCHANNELTEMPO == 0)
                 and #$7f
                 sta mt_chntempo,x
                 rts
-              .ENDIF
+#endif
 
         ;Continuous effect code
 
         ;0 Instrument vibrato
 
-              .IF (NOINSTRVIB == 0)
+#if (NOINSTRVIB == 0)
 mt_effect_0_delay:
                 dec mt_chnvibdelay,x
 mt_effect_0_donothing:
@@ -425,38 +430,38 @@ mt_effect_0_donothing:
 mt_effect_0:    beq mt_effect_0_donothing         ;Speed 0 = no vibrato at all
                 lda mt_chnvibdelay,x
                 bne mt_effect_0_delay
-              .ELSE
+#else
 mt_effect_0:
 mt_effect_0_donothing:
                 jmp mt_done
-              .ENDIF
+#endif
 
         ;4 Vibrato
 
 mt_effect_4:
-              .IF (NOVIB == 0)
-              .IF (NOCALCULATEDSPEED == 0)
+#if (NOVIB == 0)
+#if (NOCALCULATEDSPEED == 0)
                 lda mt_speedlefttbl-1,y
-              .IF (NONORMALSPEED == 0)
+#if (NONORMALSPEED == 0)
                 bmi mt_effect_4_nohibyteclear
                 ldy #$00                        ;Clear speed highbyte
                 sty <mt_temp2
-              .ENDIF
+#endif
 mt_effect_4_nohibyteclear:
                 and #$7f
                 sta mt_effect_4_speedcmp+1
-              .ELSE
+#else
                 lda #$00                        ;Clear speed highbyte
                 sta <mt_temp2
-              .ENDIF
+#endif
                 lda mt_chnvibtime,x
                 bmi mt_effect_4_nodir
-              .IF (NOCALCULATEDSPEED != 0)
+#if (NOCALCULATEDSPEED != 0)
                 cmp mt_speedlefttbl-1,y
-              .ELSE
+#else
 mt_effect_4_speedcmp:
                 cmp #$00
-              .ENDIF
+#endif
                 bcc mt_effect_4_nodir2
                 beq mt_effect_4_nodir
                 eor #$ff
@@ -469,51 +474,51 @@ mt_vibdone:
                 lsr
                 bcc mt_freqadd
                 bcs mt_freqsub
-              .ENDIF
+#endif
 
         ;1,2,3 Portamentos
 
 mt_effect_3:
-              .IF (NOTONEPORTA == 0)
+#if (NOTONEPORTA == 0)
                 tya
                 beq mt_effect_3_found           ;Speed $00 = tie note
-              .ENDIF
+#endif
 mt_effect_12:
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0))
-              .IF (NOCALCULATEDSPEED != 0)
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0))
+#if (NOCALCULATEDSPEED != 0)
                 lda mt_speedlefttbl-1,y
                 sta <mt_temp2
-              .ENDIF
-              .ENDIF
-              .IF (NOPORTAMENTO == 0)
+#endif
+#endif
+#if (NOPORTAMENTO == 0)
 
-              .IF (NOWAVECMD != 0)
+#if (NOWAVECMD != 0)
                 lda mt_chnfx,x
-              .ELSE
+#else
 mt_effectnum:
                 lda #$00
-              .ENDIF
+#endif
                 cmp #$02
                 bcc mt_freqadd
                 beq mt_freqsub
-              .ELSE
-              .IF (NOTONEPORTA == 0)
+#else
+#if (NOTONEPORTA == 0)
                 sec
-              .ENDIF
-              .ENDIF
-              .IF (NOTONEPORTA == 0)
-                ldy mt_chnnote,y
-              .IF (ZPGHOSTREGS == 0)
+#endif
+#endif
+#if (NOTONEPORTA == 0)
+                ldy mt_chnnote,x
+#if (ZPGHOSTREGS == 0)
                 lda mt_chnfreqlo,x              ;Calculate offset to the
                 sbc mt_freqtbllo-FIRSTNOTE,y    ;right frequency
                 pha
                 lda mt_chnfreqhi,x
-              .ELSE
+#else
                 lda <ghostfreqlo,x              ;Calculate offset to the
                 sbc mt_freqtbllo-FIRSTNOTE,y    ;right frequency
                 pha
                 lda <ghostfreqhi,x
-              .ENDIF
+#endif
                 sbc mt_freqtblhi-FIRSTNOTE,y
                 tay
                 pla
@@ -524,76 +529,76 @@ mt_effect_3_up:
                 tya                             ;If changes sign, we're done
                 adc <mt_temp2
                 bpl mt_effect_3_found
-              .ENDIF
+#endif
 
 
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
 mt_freqadd:
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 lda mt_chnfreqlo,x
                 adc <mt_temp1
                 sta mt_chnfreqlo,x
                 lda mt_chnfreqhi,x
-              .ELSE
+#else
                 lda <ghostfreqlo,x
                 adc <mt_temp1
                 sta <ghostfreqlo,x
                 lda <ghostfreqhi,x
-              .ENDIF
+#endif
                 adc <mt_temp2
                 jmp mt_storefreqhi
-              .ENDIF
+#endif
 
-              .IF (NOTONEPORTA == 0)
+#if (NOTONEPORTA == 0)
 mt_effect_3_down:
                 sbc <mt_temp1                   ;Subtract speed from offset
                 tya                             ;If changes sign, we're done
                 sbc <mt_temp2
                 bmi mt_effect_3_found
-              .ENDIF
+#endif
 
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
 mt_freqsub:
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 lda mt_chnfreqlo,x
                 sbc <mt_temp1
                 sta mt_chnfreqlo,x
                 lda mt_chnfreqhi,x
-              .ELSE
+#else
                 lda <ghostfreqlo,x
                 sbc <mt_temp1
                 sta <ghostfreqlo,x
                 lda <ghostfreqhi,x
-              .ENDIF
+#endif
                 sbc <mt_temp2
                 jmp mt_storefreqhi
-              .ENDIF
+#endif
 
 mt_effect_3_found:
-              .IF (NOTONEPORTA == 0)
-              .IF (NOCALCULATEDSPEED == 0)
+#if (NOTONEPORTA == 0)
+#if (NOCALCULATEDSPEED == 0)
                 lda mt_chnnote,x
                 jmp mt_wavenoteabs
-              .ELSE
-                ldy mt_chnnote,y
+#else
+                ldy mt_chnnote,x
                 jmp mt_wavenote
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 
         ;Init routine
 
 mt_init:
-              .IF (NUMSONGS > 1)
+#if (NUMSONGS > 1)
                 sta mt_init+5
                 asl
                 adc #$00
-              .ENDIF
+#endif
                 sta mt_initsongnum+1
                 rts
 
         ;Play soundeffect -routine
 
-              .IF (SOUNDSUPPORT != 0)
+#if (SOUNDSUPPORT != 0)
         ;Sound FX init routine
 
 mt_playsfx:     sta mt_playsfxlo+1
@@ -614,15 +619,15 @@ mt_playsfxlo:   lda #$00
 mt_playsfxhi:   lda #$00
                 sta mt_chnsfxhi,x
 mt_playsfxskip: rts
-              .ENDIF
+#endif
 
         ;Set mastervolume -routine
 
-              .IF ((VOLSUPPORT != 0) && (NOSETMASTERVOL != 0))
+#if ((VOLSUPPORT != 0) && (NOSETMASTERVOL != 0))
 mt_setmastervol:
                 sta mt_masterfader+1
                 rts
-              .ENDIF
+#endif
 
         ;Playroutine
 
@@ -639,40 +644,40 @@ mt_resetloop:
                 sta mt_chnsongptr,x             ;Reset sequencer + voice
                 dex                             ;variables on all channels
                 bpl mt_resetloop
-              .IF (ZPGHOSTREGS == 0)
-              .IF (NUMCHANNELS == 2)
+#if (ZPGHOSTREGS == 0)
+#if (NUMCHANNELS == 2)
                 sta SIDBASE+$12
-              .ENDIF
-              .IF (NUMCHANNELS == 1)
+#endif
+#if (NUMCHANNELS == 1)
                 sta SIDBASE+$0b
                 sta SIDBASE+$12
-              .ENDIF
+#endif
                 sta SIDBASE+$15                       ;Reset filter cutoff lowbyte
-              .ELSE
+#else
                 sta <ghostfiltcutlow
-              .ENDIF
+#endif
                 sta mt_filtctrl+1             ;Switch filter off & reset
-              .IF (NOFILTER == 0)
+#if (NOFILTER == 0)
                 sta mt_filtstep+1             ;step-programming
-              .ENDIF
+#endif
                 stx mt_initsongnum+1          ;Reset initflag
                 tax
-              .IF (NUMCHANNELS == 3)
+#if (NUMCHANNELS == 3)
                 jsr mt_initchn
                 ldx #$07
                 jsr mt_initchn
                 ldx #$0e
-              .ENDIF
-              .IF (NUMCHANNELS == 2)
+#endif
+#if (NUMCHANNELS == 2)
                 jsr mt_initchn
                 ldx #$07
-              .ENDIF
+#endif
 mt_initchn:
-              .IF (NUMSONGS > 1)
+#if (NUMSONGS > 1)
                 tya
                 iny
                 sta mt_chnsongnum,x             ;Store index to songtable
-              .ENDIF
+#endif
 mt_defaulttempo:
                 lda #DEFAULTTEMPO               ;Set default tempo
                 sta mt_chntempo,x
@@ -684,20 +689,20 @@ mt_defaulttempo:
         ;Filter execution
 
 mt_filtstep:
-              .IF (NOFILTER == 0)
+#if (NOFILTER == 0)
                 ldy #$00                        ;See if filter stopped
                 beq mt_filtdone
-              .IF (NOFILTERMOD == 0)
+#if (NOFILTERMOD == 0)
 mt_filttime:
                 lda #$00                        ;See if time left for mod.
                 bne mt_filtmod                  ;step
-              .ENDIF
+#endif
 mt_newfiltstep:
                 lda mt_filttimetbl-1,y          ;$80-> = set filt parameters
                 beq mt_setcutoff                ;$00 = set cutoff
-              .IF (NOFILTERMOD == 0)
+#if (NOFILTERMOD == 0)
                 bpl mt_newfiltmod
-              .ENDIF
+#endif
 mt_setfilt:
                 asl                             ;Set passband
                 sta mt_filttype+1
@@ -710,7 +715,7 @@ mt_setcutoff2:
 mt_setcutoff:
                 lda mt_filtspdtbl-1,y           ;Take cutoff value
                 sta mt_filtcutoff+1
-              .IF (NOFILTERMOD == 0)
+#if (NOFILTERMOD == 0)
                 jmp mt_nextfiltstep
 mt_newfiltmod:
                 sta mt_filttime+1               ;$01-$7f = new modulation step
@@ -721,7 +726,7 @@ mt_filtmod:
                 sta mt_filtcutoff+1
                 dec mt_filttime+1
                 bne mt_storecutoff
-              .ENDIF
+#endif
 mt_nextfiltstep:
                 lda mt_filttimetbl,y           ;Jump in filttable?
 mt_nextfiltstep2:
@@ -736,39 +741,39 @@ mt_filtdone:
 mt_filtcutoff:
                 lda #$00
 mt_storecutoff:
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 sta SIDBASE+$16
-              .ELSE
+#else
                 sta <ghostfiltcutoff
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 mt_filtctrl:
                 lda #$00
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 sta SIDBASE+$17
-              .ELSE
+#else
                 sta <ghostfiltctrl
-              .ENDIF
+#endif
 mt_filttype:
                 lda #$00
 mt_masterfader:
                 ora #$0f                        ;Master volume fader
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 sta SIDBASE+$18
-              .ELSE
+#else
                 sta <ghostfilttype
-              .ENDIF
+#endif
 
-              .IF (NUMCHANNELS == 3)
+#if (NUMCHANNELS == 3)
                 jsr mt_execchn
                 ldx #$07
                 jsr mt_execchn
                 ldx #$0e
-              .ENDIF
-              .IF (NUMCHANNELS == 2)
+#endif
+#if (NUMCHANNELS == 2)
                 jsr mt_execchn
                 ldx #$07
-              .ENDIF
+#endif
 
         ;Channel execution
 
@@ -782,15 +787,15 @@ mt_notick0:
                 bpl mt_effects
                 lda mt_chntempo,x               ;Reload tempo if negative
 
-              .IF (NOFUNKTEMPO == 0)
+#if (NOFUNKTEMPO == 0)
                 cmp #$02
-                bcs mt_nofunktempo              ;Funktempo: bounce between
+                bcs mt_nofunktempo              ;Funktempo - bounce between
                 tay                             ;funktable indexes 0,1
                 eor #$01
                 sta mt_chntempo,x
                 lda mt_funktempotbl,y
                 sbc #$00
-              .ENDIF
+#endif
 
 mt_nofunktempo:
                 sta mt_chncounter,x
@@ -800,7 +805,7 @@ mt_effects:
         ;Sequencer repeat
 
 mt_repeat:
-              .IF (NOREPEAT == 0)
+#if (NOREPEAT == 0)
                 sbc #REPEAT
                 inc mt_chnrepeat,x
                 cmp mt_chnrepeat,x
@@ -809,17 +814,17 @@ mt_repeatdone:
                 lda #$00
                 sta mt_chnrepeat,x
                 beq mt_repeatdone2
-              .ENDIF
+#endif
 
         ;Tick 0
 
 mt_tick0:
-              .IF (NOEFFECTS == 0)
-                ldy mt_chnnewfx,y               ;Setup tick 0 FX jumps
+#if (NOEFFECTS == 0)
+                ldy mt_chnnewfx,x  ;Setup tick 0 FX jumps
                 lda mt_tick0jumptbl,y
                 sta mt_tick0jump1+1
                 sta mt_tick0jump2+1
-              .ENDIF
+#endif
 
         ;Sequencer advance
 
@@ -827,12 +832,12 @@ mt_checknewpatt:
                 lda mt_chnpattptr,x             ;Fetch next pattern?
                 bne mt_nonewpatt
 mt_sequencer:
-                ldy mt_chnsongnum,y
+                ldy mt_chnsongnum,x
                 lda mt_songtbllo,y              ;Get address of sequence
                 sta <mt_temp1
                 lda mt_songtblhi,y
                 sta <mt_temp2
-                ldy mt_chnsongptr,y
+                ldy mt_chnsongptr,x
                 lda (mt_temp1),y                ;Get pattern from sequence
                 cmp #LOOPSONG                   ;Check for loop
                 bcc mt_noloop
@@ -841,19 +846,19 @@ mt_sequencer:
                 tay
                 lda (mt_temp1),y
 mt_noloop:
-              .IF (NOTRANS == 0)
+#if (NOTRANS == 0)
                 cmp #TRANSDOWN                  ;Check for transpose
                 bcc mt_notrans
                 sbc #TRANS
                 sta mt_chntrans,x
                 iny
                 lda (mt_temp1),y
-              .ENDIF
+#endif
 mt_notrans:
-              .IF (NOREPEAT == 0)
+#if (NOREPEAT == 0)
                 cmp #REPEAT                     ;Check for repeat
                 bcs mt_repeat
-              .ENDIF
+#endif
                 sta mt_chnpattnum,x             ;Store pattern number
 mt_repeatdone2:
                 iny
@@ -863,11 +868,11 @@ mt_repeatdone2:
         ;New note start
 
 mt_nonewpatt:
-                ldy mt_chninstr,y
-              .IF (FIXEDPARAMS == 0)
+                ldy mt_chninstr,x
+#if (FIXEDPARAMS == 0)
                 lda mt_insgatetimer-1,y
                 sta mt_chngatetimer,x
-              .ENDIF
+#endif
                 lda mt_chnnewnote,x             ;Test new note init flag
                 beq mt_nonewnoteinit
 mt_newnoteinit:
@@ -875,123 +880,123 @@ mt_newnoteinit:
                 sbc #NOTE
                 sta mt_chnnote,x
                 lda #$00
-              .IF (NOEFFECTS == 0)
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if (NOEFFECTS == 0)
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
                 sta mt_chnfx,x                  ;Reset effect
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 sta mt_chnnewnote,x             ;Reset newnote action
-              .IF (NOINSTRVIB == 0)
+#if (NOINSTRVIB == 0)
                 lda mt_insvibdelay-1,y          ;Load instrument vibrato
                 sta mt_chnvibdelay,x
-              .IF (NOEFFECTS == 0)
+#if (NOEFFECTS == 0)
                 lda mt_insvibparam-1,y
                 sta mt_chnparam,x
-              .ENDIF
-              .ENDIF
-              .IF (NOTONEPORTA == 0)
+#endif
+#endif
+#if (NOTONEPORTA == 0)
                 lda mt_chnnewfx,x               ;If toneportamento, skip
                 cmp #TONEPORTA                  ;most of note init
                 beq mt_nonewnoteinit
-              .ENDIF
+#endif
 
-              .IF (FIXEDPARAMS == 0)
+#if (FIXEDPARAMS == 0)
                 lda mt_insfirstwave-1,y         ;Load first frame waveform
-              .IF (NOFIRSTWAVECMD == 0)
+#if (NOFIRSTWAVECMD == 0)
                 beq mt_skipwave
                 cmp #$fe
                 bcs mt_skipwave2                ;Skip waveform but load gate
-              .ENDIF
-              .ELSE
+#endif
+#else
                 lda #FIRSTWAVEPARAM
-              .ENDIF
+#endif
                 sta mt_chnwave,x
-              .IF ((NUMLEGATOINSTR > 0) || (NOFIRSTWAVECMD == 0))
+#if ((NUMLEGATOINSTR > 0) || (NOFIRSTWAVECMD == 0))
                 lda #$ff
 mt_skipwave2:
                 sta mt_chngate,x                ;Reset gateflag
-              .ELSE
+#else
                 inc mt_chngate,x
-              .ENDIF
+#endif
 mt_skipwave:   
 
-              .IF (NOPULSE == 0)
+#if (NOPULSE == 0)
                 lda mt_inspulseptr-1,y          ;Load pulseptr (if nonzero)
                 beq mt_skippulse
                 sta mt_chnpulseptr,x
-              .IF (NOPULSEMOD == 0)
+#if (NOPULSEMOD == 0)
                 lda #$00                        ;Reset pulse step duration
                 sta mt_chnpulsetime,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 mt_skippulse:
-              .IF (NOFILTER == 0)
+#if (NOFILTER == 0)
                 lda mt_insfiltptr-1,y           ;Load filtptr (if nonzero)
                 beq mt_skipfilt
                 sta mt_filtstep+1
-              .IF (NOFILTERMOD == 0)
+#if (NOFILTERMOD == 0)
                 lda #$00
                 sta mt_filttime+1
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 mt_skipfilt:
 
                 lda mt_inswaveptr-1,y           ;Load waveptr
                 sta mt_chnwaveptr,x
 
                 lda mt_inssr-1,y                ;Load Sustain/Release
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$06,x
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnsr,x
-              .ELSE
+#else
                 sta <ghostsr,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 lda mt_insad-1,y                ;Load Attack/Decay
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$05,x
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnad,x
-              .ELSE
+#else
                 sta <ghostad,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 
-              .IF (NOEFFECTS == 0)
+#if (NOEFFECTS == 0)
                 lda mt_chnnewparam,x            ;Execute tick 0 FX after
 mt_tick0jump1:                                  ;newnote init
                 jsr mt_tick0_0
-              .ENDIF
-              .IF (BUFFEREDWRITES == 0)
+#endif
+#if (BUFFEREDWRITES == 0)
                 jmp mt_loadregswaveonly
-              .ELSE
+#else
                 jmp mt_loadregs
-              .ENDIF
+#endif
 
-              .IF (NOWAVECMD == 0)
+#if (NOWAVECMD == 0)
 mt_wavecmd:
                 jmp mt_execwavecmd
-              .ENDIF
+#endif
 
         ;Tick 0 effect execution
 
 mt_nonewnoteinit:
-              .IF (NOEFFECTS == 0)
-                lda mt_chnnewparam,x            ;No new note init: exec tick 0
+#if (NOEFFECTS == 0)
+                lda mt_chnnewparam,x            ;No new note init - exec tick 0
 mt_tick0jump2:
                 jsr mt_tick0_0                  ;FX, and wavetable afterwards
-              .ENDIF
+#endif
 
         ;Wavetable execution
 
 mt_waveexec:
-                ldy mt_chnwaveptr,y
+                ldy mt_chnwaveptr,x
                 beq mt_wavedone
                 lda mt_wavetbl-1,y
-              .IF (NOWAVEDELAY == 0)
+#if (NOWAVEDELAY == 0)
                 cmp #$10                        ;0-15 used as delay
                 bcs mt_nowavedelay              ;+ no wave change
                 cmp mt_chnwavetime,x
@@ -1000,13 +1005,13 @@ mt_waveexec:
                 bne mt_wavedone
 mt_nowavedelay:
                 sbc #$10
-              .ELSE
+#else
                 beq mt_nowavechange
-              .ENDIF
-              .IF (NOWAVECMD == 0)
+#endif
+#if (NOWAVECMD == 0)
                 cmp #$e0
                 bcs mt_nowavechange
-              .ENDIF
+#endif
                 sta mt_chnwave,x
 mt_nowavechange:
                 lda mt_wavetbl,y
@@ -1014,60 +1019,60 @@ mt_nowavechange:
                 iny
                 tya
                 bcc mt_nowavejump
-              .IF (NOWAVECMD != 0)
+#if (NOWAVECMD != 0)
                 clc
-              .ENDIF
+#endif
                 lda mt_notetbl-1,y
 mt_nowavejump:
                 sta mt_chnwaveptr,x
-              .IF (NOWAVEDELAY == 0)
+#if (NOWAVEDELAY == 0)
                 lda #$00
                 sta mt_chnwavetime,x
-              .ENDIF
+#endif
 
-              .IF (NOWAVECMD == 0)
+#if (NOWAVECMD == 0)
                 lda mt_wavetbl-2,y
                 cmp #$e0
                 bcs mt_wavecmd
-              .ENDIF
+#endif
 
                 lda mt_notetbl-2,y
 
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
                 bne mt_wavefreq                 ;No frequency-change?
 
         ;No frequency-change / continuous effect execution
 
 mt_wavedone:
-              .IF (REALTIMEOPTIMIZATION != 0)
+#if (REALTIMEOPTIMIZATION != 0)
                 lda mt_chncounter,x             ;No continuous effects on tick0
-              .IF (PULSEOPTIMIZATION != 0)
+#if (PULSEOPTIMIZATION != 0)
                 beq mt_gatetimer
-              .ELSE
+#else
                 beq mt_done
-              .ENDIF
-              .ENDIF
-              .IF (NOEFFECTS == 0)
-                ldy mt_chnfx,y
-              .IF (NOWAVECMD == 0)
-              .IF (.DEFINED(mt_effectnum))
+#endif
+#endif
+#if (NOEFFECTS == 0)
+                ldy mt_chnfx,x
+#if (NOWAVECMD == 0)
+#if (1)
                 sty mt_effectnum+1
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 lda mt_effectjumptbl,y
                 sta mt_effectjump+1
-                ldy mt_chnparam,y
-              .ELSE
-                ldy mt_chninstr,y
+                ldy mt_chnparam,x
+#else
+                ldy mt_chninstr,x
                 lda mt_insvibparam-1,y
                 tay
-              .ENDIF
+#endif
 mt_setspeedparam:
-              .IF (NOCALCULATEDSPEED != 0)
+#if (NOCALCULATEDSPEED != 0)
                 lda mt_speedrighttbl-1,y
                 sta <mt_temp1
-              .ELSE
-              .IF (NONORMALSPEED == 0)
+#else
+#if (NONORMALSPEED == 0)
                 lda mt_speedlefttbl-1,y
                 bmi mt_calculatedspeed
 mt_normalspeed:
@@ -1075,20 +1080,20 @@ mt_normalspeed:
                 lda mt_speedrighttbl-1,y
                 sta <mt_temp1
                 jmp mt_effectjump
-              .ELSE
-              .IF (NOZEROSPEED == 0)
+#else
+#if (NOZEROSPEED == 0)
                 bne mt_calculatedspeed
 mt_zerospeed:
                 sty <mt_temp1
                 sty <mt_temp2
                 beq mt_effectjump
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 mt_calculatedspeed:
                 lda mt_speedrighttbl-1,y
                 sta mt_cscount+1
                 sty mt_csresty+1
-                ldy mt_chnlastnote,y
+                ldy mt_chnlastnote,x
                 lda mt_freqtbllo+1-FIRSTNOTE,y
                 sec
                 sbc mt_freqtbllo-FIRSTNOTE,y
@@ -1103,12 +1108,12 @@ mt_csloop:      lsr
                 bne mt_csloop
 mt_csresty:     ldy #$00
                 sta <mt_temp2
-              .ENDIF
+#endif
 mt_effectjump:
                 jmp mt_effect_0
-              .ELSE
+#else
                 beq mt_wavedone
-              .ENDIF
+#endif
 
         ;Setting note frequency
 
@@ -1117,125 +1122,125 @@ mt_wavefreq:
                 adc mt_chnnote,x
                 and #$7f
 mt_wavenoteabs:
-              .IF (NOCALCULATEDSPEED == 0)
+#if (NOCALCULATEDSPEED == 0)
                 sta mt_chnlastnote,x
-              .ENDIF
+#endif
                 tay
 mt_wavenote:
-              .IF (NOVIB == 0)
+#if (NOVIB == 0)
                 lda #$00                        ;Reset vibrato phase
                 sta mt_chnvibtime,x
-              .ENDIF
+#endif
                 lda mt_freqtbllo-FIRSTNOTE,y
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnfreqlo,x
                 lda mt_freqtblhi-FIRSTNOTE,y
 mt_storefreqhi:
                 sta mt_chnfreqhi,x
-              .ELSE
+#else
                 sta <ghostfreqlo,x
                 lda mt_freqtblhi-FIRSTNOTE,y
 mt_storefreqhi:
                 sta <ghostfreqhi,x
-              .ENDIF
+#endif
 
         ;Check for new note fetch
 
-              .IF ((NOTONEPORTA != 0) && (NOPORTAMENTO != 0) && (NOVIB != 0))
+#if ((NOTONEPORTA != 0) && (NOPORTAMENTO != 0) && (NOVIB != 0))
 mt_wavedone:
-              .ENDIF
+#endif
 mt_done:
-              .IF (PULSEOPTIMIZATION != 0)
+#if (PULSEOPTIMIZATION != 0)
                 lda mt_chncounter,x             ;Check for gateoff timer
 mt_gatetimer:
-              .IF (FIXEDPARAMS == 0)
+#if (FIXEDPARAMS == 0)
                 cmp mt_chngatetimer,x
-              .ELSE
+#else
                 cmp #GATETIMERPARAM
-              .ENDIF
+#endif
 
                 beq mt_getnewnote               ;Fetch new notes if equal
-              .ENDIF
+#endif
 
         ;Pulse execution
-              .IF (NOPULSE == 0)
+#if (NOPULSE == 0)
 mt_pulseexec:
-                ldy mt_chnpulseptr,y            ;See if pulse stopped
+                ldy mt_chnpulseptr,x  ;See if pulse stopped
                 beq mt_pulseskip
-              .IF (PULSEOPTIMIZATION != 0)
+#if (PULSEOPTIMIZATION != 0)
                 ora mt_chnpattptr,x             ;Skip when sequencer executed
                 beq mt_pulseskip
-              .ENDIF
-              .IF (NOPULSEMOD == 0)
+#endif
+#if (NOPULSEMOD == 0)
                 lda mt_chnpulsetime,x           ;Pulse step counter time left?
                 bne mt_pulsemod
-              .ENDIF
+#endif
 mt_newpulsestep:
                 lda mt_pulsetimetbl-1,y         ;Set pulse, or new modulation
-              .IF (NOPULSEMOD == 0)
+#if (NOPULSEMOD == 0)
                 bpl mt_newpulsemod              ;step?
-              .ENDIF
+#endif
 mt_setpulse:
-              .IF (SIMPLEPULSE == 0)
-              .IF (ZPGHOSTREGS == 0)
+#if (SIMPLEPULSE == 0)
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnpulsehi,x             ;Highbyte
-              .ELSE
+#else
                 sta <ghostpulsehi,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 lda mt_pulsespdtbl-1,y          ;Lowbyte
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnpulselo,x
-              .ELSE
+#else
                 sta <ghostpulselo,x
-              .IF (SIMPLEPULSE != 0)
+#if (SIMPLEPULSE != 0)
                 sta <ghostpulsehi,x
-              .ENDIF
-              .ENDIF
-              .IF (NOPULSEMOD == 0)
+#endif
+#endif
+#if (NOPULSEMOD == 0)
                 jmp mt_nextpulsestep
 mt_newpulsemod:
                 sta mt_chnpulsetime,x
 mt_pulsemod:
-              .IF (SIMPLEPULSE == 0)
+#if (SIMPLEPULSE == 0)
                 lda mt_pulsespdtbl-1,y          ;Take pulse speed
                 clc
                 bpl mt_pulseup
-              .IF (ZPGHOSTREGS == 0)
+#if (ZPGHOSTREGS == 0)
                 dec mt_chnpulsehi,x
 mt_pulseup:
                 adc mt_chnpulselo,x             ;Add pulse lowbyte
                 sta mt_chnpulselo,x
                 bcc mt_pulsenotover
                 inc mt_chnpulsehi,x
-              .ELSE
+#else
                 dec <ghostpulsehi,x
 mt_pulseup:
                 adc <ghostpulselo,x             ;Add pulse lowbyte
                 sta <ghostpulselo,x
                 bcc mt_pulsenotover
                 inc <ghostpulsehi,x
-              .ENDIF
+#endif
 mt_pulsenotover:
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 lda mt_chnpulselo,x
                 clc
                 adc mt_pulsespdtbl-1,y
                 adc #$00
                 sta mt_chnpulselo,x
-              .ELSE
+#else
                 lda <ghostpulselo,x
                 clc
                 adc mt_pulsespdtbl-1,y
                 adc #$00
                 sta <ghostpulselo,x
                 sta <ghostpulsehi,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 dec mt_chnpulsetime,x
                 bne mt_pulsedone2
-              .ENDIF
+#endif
 
 mt_nextpulsestep:
                 lda mt_pulsetimetbl,y           ;Jump in pulsetable?
@@ -1247,50 +1252,50 @@ mt_nextpulsestep:
 mt_nopulsejump:
                 sta mt_chnpulseptr,x
 mt_pulsedone:
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 lda mt_chnpulselo,x
-              .ENDIF
+#endif
 mt_pulsedone2:
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$02,x
-              .IF (SIMPLEPULSE == 0)
+#if (SIMPLEPULSE == 0)
                 lda mt_chnpulsehi,x
-              .ENDIF
+#endif
                 sta SIDBASE+$03,x
-              .ENDIF
+#endif
 mt_pulseskip:
-              .ENDIF
+#endif
 
-              .IF (PULSEOPTIMIZATION == 0)
+#if (PULSEOPTIMIZATION == 0)
                 lda mt_chncounter,x             ;Check for gateoff timer
 mt_gatetimer:
-              .IF (FIXEDPARAMS == 0)
+#if (FIXEDPARAMS == 0)
                 cmp mt_chngatetimer,x
-              .ELSE
+#else
                 cmp #GATETIMERPARAM
-              .ENDIF
+#endif
 
                 beq mt_getnewnote               ;Fetch new notes if equal
-              .ENDIF
+#endif
 
                 jmp mt_loadregs
 
         ;New note fetch
 
 mt_getnewnote:
-                ldy mt_chnpattnum,y
+                ldy mt_chnpattnum,x
                 lda mt_patttbllo,y
                 sta <mt_temp1
                 lda mt_patttblhi,y
                 sta <mt_temp2
-                ldy mt_chnpattptr,y
+                ldy mt_chnpattptr,x
                 lda (mt_temp1),y
                 cmp #FX
                 bcc mt_instr                    ;Instr. change
-              .IF (NOEFFECTS == 0)
+#if (NOEFFECTS == 0)
                 cmp #NOTE
                 bcc mt_fx                       ;FX
-              .ENDIF
+#endif
                 cmp #FIRSTPACKEDREST
                 bcc mt_note                     ;Note only
 
@@ -1313,7 +1318,7 @@ mt_instr:
                 iny
                 lda (mt_temp1),y                ;by either FX or note
 
-              .IF (NOEFFECTS == 0)
+#if (NOEFFECTS == 0)
                 cmp #NOTE
                 bcs mt_note
 
@@ -1332,66 +1337,66 @@ mt_fx_noparam:
 mt_fx_getnote:
                 iny
                 lda (mt_temp1),y
-              .ENDIF
+#endif
 
         ;Note handling
 
 mt_note:
                 cmp #REST                   ;Rest or gateoff/on?
-              .IF (NOGATE == 0)
+#if (NOGATE == 0)
                 bcc mt_normalnote
-              .ENDIF
+#endif
                 beq mt_rest
 mt_gate:
-              .IF (NOGATE == 0)
+#if (NOGATE == 0)
                 ora #$f0
                 bne mt_setgate
-              .ENDIF
+#endif
 
         ;Prepare for note start; perform hardrestart
 
 mt_normalnote:
-              .IF (NOTRANS == 0)
+#if (NOTRANS == 0)
                 adc mt_chntrans,x
-              .ENDIF
+#endif
                 sta mt_chnnewnote,x
-              .IF (NOTONEPORTA == 0)
+#if (NOTONEPORTA == 0)
                 lda mt_chnnewfx,x           ;If toneportamento, no gateoff
                 cmp #TONEPORTA
                 beq mt_rest
-              .ENDIF
-              .IF (((NUMHRINSTR > 0) && (NUMNOHRINSTR > 0)) || (NUMLEGATOINSTR > 0))
+#endif
+#if (((NUMHRINSTR > 0) && (NUMNOHRINSTR > 0)) || (NUMLEGATOINSTR > 0))
                 lda mt_chninstr,x
-                cmp #FIRSTNOHRINSTR         ;Instrument order:
-              .IF (NUMLEGATOINSTR > 0)
+                cmp #FIRSTNOHRINSTR         ;Instrument order -
+#if (NUMLEGATOINSTR > 0)
                 bcs mt_nohr_legato          ;With HR - no HR - legato
-              .ELSE
+#else
                 bcs mt_skiphr
-              .ENDIF
-              .ENDIF
-              .IF (NUMHRINSTR > 0)
+#endif
+#endif
+#if (NUMHRINSTR > 0)
                 lda #SRPARAM                ;Hard restart 
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$06,x
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnsr,x
-              .ELSE
+#else
                 sta <ghostsr,x
-              .ENDIF
-              .ENDIF                
+#endif
+#endif
                 lda #ADPARAM                 
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 sta SIDBASE+$05,x
-              .ELSE
-              .IF (ZPGHOSTREGS == 0)
+#else
+#if (ZPGHOSTREGS == 0)
                 sta mt_chnad,x
-              .ELSE
+#else
                 sta <ghostad,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
             
-              .ENDIF
+#endif
 mt_skiphr:
                 lda #$fe
 mt_setgate:
@@ -1410,7 +1415,7 @@ mt_endpatt:
         ;Load voice registers
 
 mt_loadregs:
-              .IF (BUFFEREDWRITES == 0)
+#if (BUFFEREDWRITES == 0)
                 lda mt_chnfreqlo,x
                 sta SIDBASE+$00,x
                 lda mt_chnfreqhi,x
@@ -1419,21 +1424,21 @@ mt_loadregswaveonly:
                 lda mt_chnwave,x
                 and mt_chngate,x
                 sta SIDBASE+$04,x
-              .ELSE
-              .IF (SOUNDSUPPORT != 0)
-                ldy mt_chnsfx,y
+#else
+#if (SOUNDSUPPORT != 0)
+                ldy mt_chnsfx,x
                 bne mt_sfxexec
-              .ENDIF
-              .IF (ZPGHOSTREGS == 0)
+#endif
+#if (ZPGHOSTREGS == 0)
                 lda mt_chnpulselo,x
-              .IF (SIMPLEPULSE == 0)
+#if (SIMPLEPULSE == 0)
                 sta SIDBASE+$02,x
                 lda mt_chnpulsehi,x
                 sta SIDBASE+$03,x
-              .ELSE
+#else
                 sta SIDBASE+$02,x
                 sta SIDBASE+$03,x
-              .ENDIF
+#endif
                 lda mt_chnsr,x
                 sta SIDBASE+$06,x              
                 lda mt_chnad,x
@@ -1447,26 +1452,26 @@ mt_loadregswaveonly:
                 lda mt_chnwave,x
                 and mt_chngate,x
                 sta SIDBASE+$04,x
-              .ELSE
+#else
 mt_loadregswaveonly:
                 lda mt_chnwave,x
                 and mt_chngate,x
                 sta <ghostwave,x
-              .ENDIF
-              .ENDIF
+#endif
+#endif
                 rts
 
-              .IF (NUMLEGATOINSTR > 0)
+#if (NUMLEGATOINSTR > 0)
 mt_nohr_legato:
                 cmp #FIRSTLEGATOINSTR
                 bcc mt_skiphr
                 bcs mt_rest
-              .ENDIF
+#endif
 
         ;Sound FX code
 
-              .IF (SOUNDSUPPORT != 0)
-              .IF (ZPGHOSTREGS == 0)
+#if (SOUNDSUPPORT != 0)
+#if (ZPGHOSTREGS == 0)
 
         ;Sound FX code without ghostregs
 
@@ -1514,7 +1519,7 @@ mt_sfxexec_noend:
                 sta SIDBASE+$00,x
                 lda mt_freqtblhi-$80,y
                 sta SIDBASE+$01,x
-                ldy mt_chnsfx,y
+                ldy mt_chnsfx,x
                 lda (mt_temp1),y              ;Then take a look at the next
                 beq mt_sfxexec_done           ;byte
                 cmp #$82                      ;Is it a waveform or a note?
@@ -1522,7 +1527,7 @@ mt_sfxexec_noend:
                 inc mt_chnsfx,x
                 bcc mt_sfxexec_wavechg
 
-              .ELSE
+#else
 
         ;Sound FX code with ghostregs
 
@@ -1551,7 +1556,7 @@ mt_sfxexec_noend:
                 sta <ghostfreqlo,x
                 lda mt_freqtblhi-$80,y
                 sta <ghostfreqhi,x
-                ldy mt_chnsfx,y
+                ldy mt_chnsfx,x
                 lda (mt_temp1),y              ;Then take a look at the next
                 beq mt_sfxexec_done           ;byte
                 cmp #$82                      ;Is it a waveform or a note?
@@ -1582,30 +1587,30 @@ mt_sfxexec_fr2:
                 lda #$09
                 bne mt_sfxexec_wavechg
 
-              .ENDIF
-              .ENDIF
+#endif
+#endif
 
         ;Wavetable command exec
 
-              .IF (NOWAVECMD == 0)
+#if (NOWAVECMD == 0)
 mt_execwavecmd:
                 and #$0f
                 sta <mt_temp1
                 lda mt_notetbl-2,y
                 sta <mt_temp2
                 ldy <mt_temp1
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
                 cpy #$05
                 bcs mt_execwavetick0
 mt_execwavetickn:
-              .IF (.DEFINED(mt_effectnum))
+#if (1)
                 sty mt_effectnum+1
-              .ENDIF
+#endif
                 lda mt_effectjumptbl,y
                 sta mt_effectjump+1
                 ldy <mt_temp2
                 jmp mt_setspeedparam
-              .ENDIF
+#endif
 mt_execwavetick0:
                 lda mt_tick0jumptbl,y
                 sta mt_execwavetick0jump+1
@@ -1613,265 +1618,332 @@ mt_execwavetick0:
 mt_execwavetick0jump:
                 jsr mt_tick0_0
                 jmp mt_done
-              .ENDIF
+#endif
 
-              .IF (NOEFFECTS == 0)
-              .IF (!.DEFINED(mt_tick0jumptbl))
+#if (NOEFFECTS == 0)
+#if (1)
 mt_tick0jumptbl:
-                .BYTE (mt_tick0_0 % 256)
-                .BYTE (mt_tick0_12 % 256)
-                .BYTE (mt_tick0_12 % 256)
-                .BYTE (mt_tick0_34 % 256)
-                .BYTE (mt_tick0_34 % 256)
-                .BYTE (mt_tick0_5 % 256)
-                .BYTE (mt_tick0_6 % 256)
-                .BYTE (mt_tick0_7 % 256)
-                .BYTE (mt_tick0_8 % 256)
-                .BYTE (mt_tick0_9 % 256)
-                .BYTE (mt_tick0_a % 256)
-                .BYTE (mt_tick0_b % 256)
-                .BYTE (mt_tick0_c % 256)
-                .BYTE (mt_tick0_d % 256)
-                .BYTE (mt_tick0_e % 256)
-                .BYTE (mt_tick0_f % 256)
-              .ENDIF
-              .ENDIF
+                .byte (mt_tick0_0 & 255)
+                .byte (mt_tick0_12 & 255)
+                .byte (mt_tick0_12 & 255)
+                .byte (mt_tick0_34 & 255)
+                .byte (mt_tick0_34 & 255)
+                .byte (mt_tick0_5 & 255)
+                .byte (mt_tick0_6 & 255)
+                .byte (mt_tick0_7 & 255)
+                .byte (mt_tick0_8 & 255)
+                .byte (mt_tick0_9 & 255)
+                .byte (mt_tick0_a & 255)
+                .byte (mt_tick0_b & 255)
+                .byte (mt_tick0_c & 255)
+                .byte (mt_tick0_d & 255)
+                .byte (mt_tick0_e & 255)
+                .byte (mt_tick0_f & 255)
+#endif
+#endif
 
-              .IF (NOEFFECTS == 0)
-              .IF (!.DEFINED(mt_effectjumptbl))
-              .IF ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
+#if (NOEFFECTS == 0)
+#if (1)
+#if ((NOTONEPORTA == 0) || (NOPORTAMENTO == 0) || (NOVIB == 0))
 mt_effectjumptbl:
-                .BYTE (mt_effect_0 % 256)
-                .BYTE (mt_effect_12 % 256)
-                .BYTE (mt_effect_12 % 256)
-                .BYTE (mt_effect_3 % 256)
-                .BYTE (mt_effect_4 % 256)
-              .ENDIF
-              .ENDIF
-              .ENDIF
+                .byte (mt_effect_0 & 255)
+                .byte (mt_effect_12 & 255)
+                .byte (mt_effect_12 & 255)
+                .byte (mt_effect_3 & 255)
+                .byte (mt_effect_4 & 255)
+#endif
+#endif
+#endif
 
-              .IF (!.DEFINED(mt_funktempotbl))
-              .IF (NOFUNKTEMPO == 0)
+#if (1)
+#if (NOFUNKTEMPO == 0)
 mt_funktempotbl:
-                .BYTE (8,5)
-              .ENDIF
-              .ENDIF
+                .byte 8,5
+#endif
+#endif
 
-              .IF ((NOEFFECTS == 0) || (NOWAVEDELAY == 0) || (NOTRANS == 0) || (NOREPEAT == 0) || (FIXEDPARAMS == 0) || (ZPGHOSTREGS != 0) || (BUFFEREDWRITES != 0) || (NOCALCULATEDSPEED == 0))
+#if ((NOEFFECTS == 0) || (NOWAVEDELAY == 0) || (NOTRANS == 0) || (NOREPEAT == 0) || (FIXEDPARAMS == 0) || (ZPGHOSTREGS != 0) || (BUFFEREDWRITES != 0) || (NOCALCULATEDSPEED == 0))
 
               ;Normal channel variables
 
 mt_chnsongptr:
-                .BYTE (0)
+                .byte 0
 mt_chntrans:
-                .BYTE (0)
+                .byte 0
 mt_chnrepeat:
-                .BYTE (0)
+                .byte 0
 mt_chnpattptr:
-                .BYTE (0)
+                .byte 0
 mt_chnpackedrest:
-                .BYTE (0)
+                .byte 0
 mt_chnnewfx:
-                .BYTE (0)
+                .byte 0
 mt_chnnewparam:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
 mt_chnfx:
-                .BYTE (0)
+                .byte 0
 mt_chnparam:
-                .BYTE (0)
+                .byte 0
 mt_chnnewnote:
-                .BYTE (0)
+                .byte 0
 mt_chnwaveptr:
-                .BYTE (0)
+                .byte 0
 mt_chnwave:
-                .BYTE (0)
+                .byte 0
 mt_chnpulseptr:
-                .BYTE (0)
+                .byte 0
 mt_chnpulsetime:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
 mt_chnsongnum:
-                .BYTE (0)
+                .byte 0
 mt_chnpattnum:
-                .BYTE (0)
+                .byte 0
 mt_chntempo:
-                .BYTE (0)
+                .byte 0
 mt_chncounter:
-                .BYTE (0)
+                .byte 0
 mt_chnnote:
-                .BYTE (0)
+                .byte 0
 mt_chninstr:
-                .BYTE (1)
+                .byte 1
 mt_chngate:
-                .BYTE ($fe)
+                .byte $fe
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (1,0,0,0,0,1,$fe)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (2,0,0,0,0,1,$fe)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 1,0,0,0,0,1,$fe
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 2,0,0,0,0,1,$fe
+#endif
 
-              .IF ((ZPGHOSTREGS == 0) || (NOCALCULATEDSPEED == 0))
+#if ((ZPGHOSTREGS == 0) || (NOCALCULATEDSPEED == 0))
 
 mt_chnvibtime:
-                .BYTE (0)
+                .byte 0
 mt_chnvibdelay:
-                .BYTE (0)
+                .byte 0
 mt_chnwavetime:
-                .BYTE (0)
+                .byte 0
 mt_chnfreqlo:
-                .BYTE (0)
+                .byte 0
 mt_chnfreqhi:
-                .BYTE (0)
+                .byte 0
 mt_chnpulselo:
-                .BYTE (0)
+                .byte 0
 mt_chnpulsehi:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
-              .IF ((BUFFEREDWRITES != 0) || (FIXEDPARAMS == 0) || (NOCALCULATEDSPEED == 0))
+#if ((BUFFEREDWRITES != 0) || (FIXEDPARAMS == 0) || (NOCALCULATEDSPEED == 0))
 mt_chnad:
-                .BYTE (0)
+                .byte 0
 mt_chnsr:
-                .BYTE (0)
+                .byte 0
 mt_chnsfx:
-                .BYTE (0)
+                .byte 0
 mt_chnsfxlo:
-                .BYTE (0)
+                .byte 0
 mt_chnsfxhi:
-                .BYTE (0)
+                .byte 0
 mt_chngatetimer:
-                .BYTE (0)
+                .byte 0
 mt_chnlastnote:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
-              .ENDIF
+#endif
 
-              .ELSE
+#else
 
 mt_chnvibtime:
-                .BYTE (0)
+                .byte 0
 mt_chnvibdelay:
-                .BYTE (0)
+                .byte 0
 mt_chnwavetime:
-                .BYTE (0)
+                .byte 0
 mt_chnsfx:
-                .BYTE (0)
+                .byte 0
 mt_chnsfxlo:
-                .BYTE (0)
+                .byte 0
 mt_chnsfxhi:
-                .BYTE (0)
+                .byte 0
 mt_chngatetimer:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
-              .ENDIF
+#endif
 
-              .ELSE
+#else
 
               ;Optimized channel variables
 
 mt_chnsongptr:
-                .BYTE (0)
+                .byte 0
 mt_chnpattptr:
-                .BYTE (0)
+                .byte 0
 mt_chnpackedrest:
-                .BYTE (0)
+                .byte 0
 mt_chnnewnote:
-                .BYTE (0)
+                .byte 0
 mt_chnwaveptr:
-                .BYTE (0)
+                .byte 0
 mt_chnwave:
-                .BYTE (0)
+                .byte 0
 mt_chnpulseptr:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
 mt_chnpulsetime:
-                .BYTE (0)
+                .byte 0
 mt_chnpulselo:
-                .BYTE (0)
+                .byte 0
 mt_chnpulsehi:
-                .BYTE (0)
+                .byte 0
 mt_chnvibtime:
-                .BYTE (0)
+                .byte 0
 mt_chnvibdelay:
-                .BYTE (0)
+                .byte 0
 mt_chnfreqlo:
-                .BYTE (0)
+                .byte 0
 mt_chnfreqhi:
-                .BYTE (0)
+                .byte 0
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (0,0,0,0,0,0,0)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 0,0,0,0,0,0,0
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 0,0,0,0,0,0,0
+#endif
 
 mt_chnsongnum:
-                .BYTE (0)
+                .byte 0
 mt_chnpattnum:
-                .BYTE (0)
+                .byte 0
 mt_chntempo:
-                .BYTE (0)
+                .byte 0
 mt_chncounter:
-                .BYTE (0)
+                .byte 0
 mt_chnnote:
-                .BYTE (0)
+                .byte 0
 mt_chninstr:
-                .BYTE (1)
+                .byte 1
 mt_chngate:
-                .BYTE ($fe)
+                .byte $fe
 
-              .IF (NUMCHANNELS > 1)
-                .BYTE (1,0,0,0,0,1,$fe)
-              .ENDIF
-              .IF (NUMCHANNELS > 2)
-                .BYTE (2,0,0,0,0,1,$fe)
-              .ENDIF
+#if (NUMCHANNELS > 1)
+                .byte 1,0,0,0,0,1,$fe
+#endif
+#if (NUMCHANNELS > 2)
+                .byte 2,0,0,0,0,1,$fe
+#endif
 
-              .ENDIF
+#endif
 
         ;Songdata & frequencytable will be inserted by the relocator here
+; Data tables appended after player.s code
+; All pre-allocated at fixed sizes for JS binary patching
+; This file is concatenated AFTER player.s
+
+; --- Orderlists (per channel, single song) ---
+mt_songtbllo:
+  .byte 0,0,0
+mt_songtblhi:
+  .byte 0,0,0
+
+; --- Pattern pointer tables ---
+mt_patttbllo:
+  .dsb 256, 0
+mt_patttblhi:
+  .dsb 256, 0
+
+; --- Instrument data (9 parallel arrays, 64 entries each) ---
+mt_insad:
+  .dsb 64, $00
+mt_inssr:
+  .dsb 64, $F0
+mt_inswaveptr:
+  .dsb 64, 0
+mt_inspulseptr:
+  .dsb 64, 0
+mt_insfiltptr:
+  .dsb 64, 0
+mt_insvibparam:
+  .dsb 64, 0
+mt_insvibdelay:
+  .dsb 64, 0
+mt_insgatetimer:
+  .dsb 64, 2
+mt_insfirstwave:
+  .dsb 64, $11
+
+; --- Wavetable (255 entries) ---
+mt_wavetbl:
+  .dsb 255, 0
+
+; --- Pulse table (255 entries each) ---
+mt_pulsetimetbl:
+  .dsb 255, 0
+mt_pulsespdtbl:
+  .dsb 255, 0
+
+; --- Filter table (255 entries each) ---
+mt_filttimetbl:
+  .dsb 255, 0
+mt_filtspdtbl:
+  .dsb 255, 0
+
+; --- Speed table (255 entries each) ---
+mt_speedlefttbl:
+  .dsb 255, 0
+mt_speedrighttbl:
+  .dsb 255, 0
+
+; --- Frequency table (96 entries) ---
+mt_freqtbllo:
+  .dsb 96, 0
+mt_freqtblhi:
+  .dsb 96, 0
+
+; --- Note table (256 entries) ---
+mt_notetbl:
+  .dsb 256, 0

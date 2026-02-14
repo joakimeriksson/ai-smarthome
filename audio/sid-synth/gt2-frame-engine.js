@@ -8,6 +8,29 @@ import { patternCommandEngine } from './pattern-commands.js';
 const PAL_FRAME_RATE = 50;   // Hz (C64 PAL)
 const NTSC_FRAME_RATE = 60;  // Hz (C64 NTSC)
 
+// GT2 frequency tables (copied from gplay.c) - used for accurate note-to-frequency conversion
+const freqtbllo = [
+  0x17,0x27,0x39,0x4b,0x5f,0x74,0x8a,0xa1,0xba,0xd4,0xf0,0x0e,
+  0x2d,0x4e,0x71,0x96,0xbe,0xe8,0x14,0x43,0x74,0xa9,0xe1,0x1c,
+  0x5a,0x9c,0xe2,0x2d,0x7c,0xd1,0x28,0x85,0xe8,0x52,0xc1,0x37,
+  0xb4,0x39,0xc5,0x5a,0xf9,0xa2,0x51,0x0b,0xd0,0xa4,0x82,0x6f,
+  0x69,0x72,0x8a,0xb3,0xf2,0x44,0xa2,0x16,0xa1,0x48,0x04,0xdf,
+  0xd2,0xe5,0x14,0x67,0xe4,0x88,0x45,0x2c,0x41,0x90,0x09,0xbe,
+  0xa4,0xca,0x29,0xce,0xc8,0x10,0x8a,0x59,0x83,0x20,0x12,0x7c,
+  0x48,0x94,0x53,0x9c,0x90,0x20,0x14,0xb1,0x06,0x3f,0x23,0xf8
+];
+
+const freqtblhi = [
+  0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x02,
+  0x02,0x02,0x02,0x02,0x02,0x02,0x03,0x03,0x03,0x03,0x03,0x04,
+  0x04,0x04,0x04,0x05,0x05,0x05,0x06,0x06,0x06,0x07,0x07,0x08,
+  0x08,0x09,0x09,0x0a,0x0a,0x0b,0x0c,0x0d,0x0d,0x0e,0x0f,0x10,
+  0x11,0x12,0x13,0x14,0x15,0x17,0x18,0x1a,0x1b,0x1d,0x1f,0x20,
+  0x22,0x24,0x26,0x29,0x2b,0x2e,0x31,0x34,0x37,0x3a,0x3e,0x41,
+  0x45,0x49,0x4d,0x52,0x57,0x5c,0x62,0x68,0x6e,0x75,0x7c,0x83,
+  0x8b,0x93,0x9c,0xa5,0xaf,0xb9,0xc4,0xd0,0xdd,0xea,0xf8,0xff
+];
+
 export class GT2FrameEngine {
     constructor(frameRate = PAL_FRAME_RATE) {
         this.frameRate = frameRate;
@@ -90,7 +113,7 @@ export class GT2FrameEngine {
                 const waveResult = state.executeWavetable(gt2TableManager, params.baseNote);
                 if (waveResult) {
                     // Apply waveform EVERY frame like GoatTracker does (sidreg[0x4] = wave & gate)
-                    console.log(`📊 V${voice} Wave: waveform=0x${waveResult.wave.toString(16)}, note=${waveResult.note}, pos=${state.wavePos}`);
+                    console.log(`📊 V${voice} Wave: waveform=0x${waveResult.wave.toString(16)}, note=${waveResult.note}, pos=${state.ptr[TABLE_TYPES.WAVE]}`);
                     this.applyWaveformChange(voice, waveResult, params);
                 }
             }
@@ -149,21 +172,23 @@ export class GT2FrameEngine {
             let targetNote = params.baseNote;
 
             if (waveResult.absolute) {
-                // Absolute note (overrides base note)
-                targetNote = waveResult.note;
+                // Absolute note (from wavetable, already 0-based)
+                targetNote = waveResult.note & 0x7F;
             } else {
-                // Relative note offset
-                targetNote = params.baseNote + waveResult.note;
+                // Relative note offset - GT2 uses addition with overflow mask
+                targetNote = (params.baseNote + waveResult.note) & 0x7F;
             }
 
-            // Convert note to frequency
-            const frequency = this.noteToFrequency(targetNote);
-            const sidFreq = Math.round(frequency * 16.777216); // C64 frequency conversion
+            // Clamp to valid GT2 note range (0-95)
+            targetNote = Math.min(Math.max(targetNote, 0), 95);
+
+            // Use GT2 frequency tables (not mathematical calculation)
+            const sidFreq = freqtbllo[targetNote] | (freqtblhi[targetNote] << 8);
 
             setSIDRegister(voice, 0, sidFreq & 0xFF);        // Freq low (register 0)
             setSIDRegister(voice, 1, (sidFreq >> 8) & 0xFF); // Freq high (register 1)
 
-            console.log(`🎛️ Setting frequency ${frequency.toFixed(2)}Hz (note ${targetNote}) on voice ${voice}`);
+            console.log(`🎛️ Setting freq from GT2 tables: note=${targetNote}, freq=0x${sidFreq.toString(16)} on voice ${voice}`);
         }
     }
 
@@ -174,10 +199,20 @@ export class GT2FrameEngine {
     }
 
     // Apply filter changes from filtertable
-    applyFilterChange(voice, filterValue) {
-        // Filter is global in SID, but we apply it if this voice is using it
-        setGlobalSIDRegister(0x15, filterValue & 0x07);           // Filter cutoff low 3 bits
-        setGlobalSIDRegister(0x16, (filterValue >> 3) & 0xFF);    // Filter cutoff high 8 bits
+    // GT2 gplay.c lines 301-304 (FILTERSTOP): writes all 4 filter registers every frame
+    applyFilterChange(voice, filterResult) {
+        if (typeof filterResult === 'object') {
+            setGlobalSIDRegister(0x15, 0x00);                              // GT2 always writes 0
+            setGlobalSIDRegister(0x16, filterResult.cutoff & 0xFF);       // 8-bit cutoff
+            setGlobalSIDRegister(0x17, filterResult.ctrl & 0xFF);         // Resonance + routing
+            // Preserve volume from register 0x18
+            const currentVol = 0x0F; // Default max volume
+            setGlobalSIDRegister(0x18, (filterResult.type & 0x70) | currentVol); // Filter type + volume
+        } else {
+            // Legacy: simple cutoff value
+            setGlobalSIDRegister(0x15, 0x00);
+            setGlobalSIDRegister(0x16, filterResult & 0xFF);
+        }
     }
 
     // Start tables for a voice (called when note is triggered)

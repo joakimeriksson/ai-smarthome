@@ -1,6 +1,7 @@
 // keyboard-input.js - GT2-only version
-import { initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, releaseVoice, setGlobalSIDRegister, setSIDRegister, isWorkletActive, workletNoteOff } from './synth.js';
+import { initSynth, playNote, playNoteWithInstrument, stopVoice, stopAllVoices, releaseVoice, setGlobalSIDRegister, setSIDRegister, isWorkletActive, workletNoteOff, workletLoadTables } from './synth.js';
 import { instruments } from './synth.js';
+import { gt2TableManager } from './table-manager-gt2.js';
 
 // Piano keyboard mapping - computer keyboard to musical notes
 const keyboardMap = {
@@ -242,10 +243,20 @@ class KeyboardInput {
         }
         
         console.log(`Playing with instrument: ${instrument.name} (index ${this.currentInstrument})`);
-        console.log(`Instrument details:`, instrument);
-        
+
         // Find an available voice or use the keyboard voice
         let voice = this.keyboardVoice;
+
+        // Load tables to worklet before playing (so instrument tables work)
+        const tables = {
+            ltable: gt2TableManager.ltable,
+            rtable: gt2TableManager.rtable
+        };
+        // Debug: show if tables have data
+        const wtblEntries = tables.ltable[0].filter(x => x !== 0).length;
+        console.log(`🎹 Loading tables to worklet: WTBL has ${wtblEntries} non-zero entries`);
+        console.log(`🎹 Instrument tables:`, instrument.tables);
+        workletLoadTables(tables);
 
         // Set master volume
         setGlobalSIDRegister(0x18, 0x0F);

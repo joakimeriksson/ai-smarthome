@@ -392,6 +392,21 @@ button:hover {
     transform: scale(1.2);
 }
 
+.param-row input[type="number"] {
+    background-color: #333;
+    color: #0F0;
+    border: 1px solid #0F0;
+    padding: 5px 8px;
+    font-family: monospace;
+}
+
+.param-hint {
+    color: #888;
+    font-size: 11px;
+    font-style: italic;
+    margin-left: 10px;
+}
+
 .modal-footer {
     background-color: #222;
     padding: 15px 20px;

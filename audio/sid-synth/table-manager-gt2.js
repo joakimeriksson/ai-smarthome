@@ -29,24 +29,27 @@ export class GT2TableManager {
     }
 
     initializeDefaultTables() {
-        // WTBL: Simple sawtooth arpeggio starting at position 1 (GT2 style, 0 = no table)
-        const wtbl = TABLE_TYPES.WAVE;
-        this.ltable[wtbl][1] = 0x21;  // Sawtooth + gate, base note
-        this.rtable[wtbl][1] = 0x00;
-        this.ltable[wtbl][2] = 0x08;  // Delay 8 frames
-        this.rtable[wtbl][2] = 0x80;  // Keep freq
-        this.ltable[wtbl][3] = 0x21;  // Sawtooth + gate, +4 semitones
-        this.rtable[wtbl][3] = 0x04;
-        this.ltable[wtbl][4] = 0x08;  // Delay 8 frames
-        this.rtable[wtbl][4] = 0x80;
-        this.ltable[wtbl][5] = 0x21;  // Sawtooth + gate, +7 semitones
-        this.rtable[wtbl][5] = 0x07;
-        this.ltable[wtbl][6] = 0x08;  // Delay 8 frames
-        this.rtable[wtbl][6] = 0x80;
-        this.ltable[wtbl][7] = 0xFF;  // Jump to position 1
-        this.rtable[wtbl][7] = 0x01;
+        // GT2 convention: pointer 0 = no table, pointer 1 = array[0], pointer 2 = array[1], etc.
+        // All sample tables start at array index 0 (GT2 pointer 1)
 
-        // PTBL: PWM sweep at position 0
+        // WTBL: Simple sawtooth arpeggio at position 1 (array index 0)
+        const wtbl = TABLE_TYPES.WAVE;
+        this.ltable[wtbl][0] = 0x21;  // Sawtooth + gate, base note
+        this.rtable[wtbl][0] = 0x00;
+        this.ltable[wtbl][1] = 0x08;  // Delay 8 frames
+        this.rtable[wtbl][1] = 0x80;  // Keep freq
+        this.ltable[wtbl][2] = 0x21;  // Sawtooth + gate, +4 semitones
+        this.rtable[wtbl][2] = 0x04;
+        this.ltable[wtbl][3] = 0x08;  // Delay 8 frames
+        this.rtable[wtbl][3] = 0x80;
+        this.ltable[wtbl][4] = 0x21;  // Sawtooth + gate, +7 semitones
+        this.rtable[wtbl][4] = 0x07;
+        this.ltable[wtbl][5] = 0x08;  // Delay 8 frames
+        this.rtable[wtbl][5] = 0x80;
+        this.ltable[wtbl][6] = 0xFF;  // Jump to position 1 (array[0])
+        this.rtable[wtbl][6] = 0x01;
+
+        // PTBL: PWM sweep at position 1 (array index 0)
         const ptbl = TABLE_TYPES.PULSE;
         this.ltable[ptbl][0] = 0x88;  // Set pulse $800
         this.rtable[ptbl][0] = 0x00;
@@ -54,22 +57,24 @@ export class GT2TableManager {
         this.rtable[ptbl][1] = 0x40;
         this.ltable[ptbl][2] = 0x40;  // 64 ticks, speed -$20
         this.rtable[ptbl][2] = 0xE0;
-        this.ltable[ptbl][3] = 0xFF;  // Jump to position 1
-        this.rtable[ptbl][3] = 0x01;
+        this.ltable[ptbl][3] = 0xFF;  // Jump to position 2 (array[1])
+        this.rtable[ptbl][3] = 0x02;
 
-        // FTBL: Filter sweep at position 0
+        // FTBL: Filter sweep at position 1 (array index 0)
         const ftbl = TABLE_TYPES.FILTER;
-        this.ltable[ftbl][0] = 0x80;  // Set filter $010
-        this.rtable[ftbl][0] = 0x10;
-        this.ltable[ftbl][1] = 0x40;  // 64 ticks, speed +$20
-        this.rtable[ftbl][1] = 0x20;
-        this.ltable[ftbl][2] = 0xFF;  // Jump to position 1
-        this.rtable[ftbl][2] = 0x01;
+        this.ltable[ftbl][0] = 0x90;  // Set filter params: lowpass + resonance
+        this.rtable[ftbl][0] = 0xF1;  // Res=F, route voice 0
+        this.ltable[ftbl][1] = 0x00;  // Set cutoff
+        this.rtable[ftbl][1] = 0x20;  // Cutoff = $20
+        this.ltable[ftbl][2] = 0x40;  // 64 ticks, speed +$10
+        this.rtable[ftbl][2] = 0x10;
+        this.ltable[ftbl][3] = 0xFF;  // Jump to position 3 (array[2])
+        this.rtable[ftbl][3] = 0x03;
 
-        // STBL: No speed change at position 0
+        // STBL: Vibrato params at position 1 (array index 0)
         const stbl = TABLE_TYPES.SPEED;
-        this.ltable[stbl][0] = 0x00;  // Speed 1
-        this.rtable[stbl][0] = 0x00;
+        this.ltable[stbl][0] = 0x40;  // Vibrato speed
+        this.rtable[stbl][0] = 0x20;  // Vibrato depth
         this.ltable[stbl][1] = 0xFF;  // Stop
         this.rtable[stbl][1] = 0x00;
     }
@@ -162,6 +167,10 @@ export class GT2TablePlaybackState {
         this.filterModSpeed = 0;
         this.filterModTicks = 0;
 
+        // Filter state (GT2 global filter params)
+        this.filterType = 0;
+        this.filterCtrl = 0;
+
         // Active flags
         this.waveActive = false;
         this.pulseActive = false;
@@ -170,6 +179,7 @@ export class GT2TablePlaybackState {
     }
 
     // Execute wavetable step (matches GT2 gplay.c wavetable logic)
+    // GT2 uses 1-based pointers: ptr=1 reads array index 0
     executeWavetable(tableManager, baseNote) {
         if (!this.waveActive || this.ptr[TABLE_TYPES.WAVE] === 0) return null;
 
@@ -179,61 +189,67 @@ export class GT2TablePlaybackState {
 
         while (jumpCount < MAX_JUMPS) {
             const pos = this.ptr[TABLE_TYPES.WAVE];
-            const entry = tableManager.getEntry(TABLE_TYPES.WAVE, pos);
+            const entry = tableManager.getEntry(TABLE_TYPES.WAVE, pos - 1); // 1-based to 0-based
             const left = entry.left;
             const right = entry.right;
 
-            // Delay handling (0x01-0x0F)
-            if (left >= 0x01 && left <= 0x0F) {
+            // GT2: if (wave > WAVELASTDELAY) - i.e. wave > 0x0F
+            if (left > 0x0F) {
+                // Normal waveform (0x10-0xDF)
+                if (left < 0xE0) {
+                    this.wave = left;
+                }
+                // Silent waveform (0xE0-0xEF) - GT2: cptr->wave = wave & 0xf
+                else if (left >= 0xE0 && left <= 0xEF) {
+                    this.wave = left & 0x0F;
+                }
+                // Commands (0xF0-0xFE) - execute pattern command from wavetable
+                else if (left >= 0xF0 && left <= 0xFE) {
+                    // TODO: Execute embedded pattern commands
+                    this.wavetime = 0;
+                    this.ptr[TABLE_TYPES.WAVE]++;
+                    return { wave: this.wave, note: this.note, changed: false };
+                }
+                // Jump (0xFF)
+                else if (left === 0xFF) {
+                    if (right === 0x00 || right >= MAX_TABLELEN) {
+                        this.waveActive = false;
+                        return null;
+                    }
+                    this.ptr[TABLE_TYPES.WAVE] = right;
+                    this.wavetime = 0;
+                    jumpCount++;
+                    continue;
+                }
+            } else {
+                // Delay (0x00-0x0F) - GT2: if (wavetime != wave) wavetime++; else advance
                 if (this.wavetime !== left) {
                     this.wavetime++;
                     return { wave: this.wave, note: this.note, changed: false };
                 }
-                this.wavetime = 0;
-                this.ptr[TABLE_TYPES.WAVE]++;
-                return { wave: this.wave, note: this.note, changed: false };
             }
 
-            // Waveform change (0x10-0xDF)
-            if (left >= 0x10 && left <= 0xDF) {
-                this.wave = left;
-
-                // Parse note parameter
-                if (right >= 0x00 && right <= 0x5F) {
-                    this.note = right; // Relative note
-                } else if (right >= 0x60 && right <= 0x7F) {
-                    this.note = -(right - 0x60); // Negative offset
-                } else if (right === 0x80) {
-                    // Keep frequency unchanged
-                } else if (right >= 0x81 && right <= 0xDF) {
-                    this.note = right - 0x81; // Absolute note
-                }
-
-                this.ptr[TABLE_TYPES.WAVE]++;
-                return { wave: this.wave, note: this.note, absolute: right >= 0x81, changed: true };
-            }
-
-            // Silent waveform (0xE0-0xEF)
-            if (left >= 0xE0 && left <= 0xEF) {
-                this.wave = (left & 0x0F) | 0x08;
-                this.ptr[TABLE_TYPES.WAVE]++;
-                return { wave: this.wave, note: this.note, changed: true };
-            }
-
-            // Jump (0xFF)
-            if (left === 0xFF) {
-                if (right === 0x00 || right >= MAX_TABLELEN) {
-                    this.waveActive = false;
-                    return null;
-                }
-                this.ptr[TABLE_TYPES.WAVE] = right;
-                jumpCount++;
-                continue; // Process jump target
-            }
-
-            // Unknown/end
+            // Advance pointer and process note
+            this.wavetime = 0;
             this.ptr[TABLE_TYPES.WAVE]++;
-            return { wave: this.wave, note: this.note, changed: false };
+
+            // Parse note parameter (GT2 gplay.c lines 716-725)
+            let noteChanged = false;
+            let absolute = false;
+            if (right !== 0x80) {
+                if (right < 0x80) {
+                    // Relative note - GT2 uses addition with overflow mask
+                    this.note = (right + baseNote) & 0x7F;
+                    noteChanged = true;
+                } else {
+                    // Absolute note (0x81-0xFF)
+                    this.note = right & 0x7F;
+                    noteChanged = true;
+                    absolute = true;
+                }
+            }
+
+            return { wave: this.wave, note: this.note, absolute, changed: noteChanged };
         }
 
         if (jumpCount >= MAX_JUMPS) {
@@ -245,6 +261,7 @@ export class GT2TablePlaybackState {
     }
 
     // Execute pulsetable step
+    // GT2 uses 1-based pointers: ptr=1 reads array index 0
     executePulsetable(tableManager) {
         if (!this.pulseActive || this.ptr[TABLE_TYPES.PULSE] === 0) return this.pulse;
 
@@ -261,7 +278,7 @@ export class GT2TablePlaybackState {
 
         while (jumpCount < MAX_JUMPS) {
             const pos = this.ptr[TABLE_TYPES.PULSE];
-            const entry = tableManager.getEntry(TABLE_TYPES.PULSE, pos);
+            const entry = tableManager.getEntry(TABLE_TYPES.PULSE, pos - 1); // 1-based to 0-based
             const left = entry.left;
             const right = entry.right;
 
@@ -304,14 +321,16 @@ export class GT2TablePlaybackState {
         return this.pulse;
     }
 
-    // Execute filtertable step
+    // Execute filtertable step - GT2 GLOBAL filter (gplay.c lines 255-304)
+    // GT2 uses 1-based pointers: ptr=1 reads array index 0
+    // In GT2, filter is GLOBAL (not per-voice), executed once per frame
     executeFiltertable(tableManager) {
         if (!this.filterActive || this.ptr[TABLE_TYPES.FILTER] === 0) return this.filter;
 
         // Handle ongoing modulation
         if (this.filterModTicks > 0) {
             this.filterModTicks--;
-            this.filter = Math.max(0, Math.min(0x7FF, this.filter + this.filterModSpeed));
+            this.filter = Math.max(0, Math.min(0xFF, this.filter + this.filterModSpeed));
             return this.filter;
         }
 
@@ -321,21 +340,28 @@ export class GT2TablePlaybackState {
 
         while (jumpCount < MAX_JUMPS) {
             const pos = this.ptr[TABLE_TYPES.FILTER];
-            const entry = tableManager.getEntry(TABLE_TYPES.FILTER, pos);
+            const entry = tableManager.getEntry(TABLE_TYPES.FILTER, pos - 1); // 1-based to 0-based
             const left = entry.left;
             const right = entry.right;
 
-            // Modulation (0x01-0x7F)
-            if (left >= 0x01 && left <= 0x7F) {
+            // Set cutoff (left = 0x00) - GT2 gplay.c lines 285-288
+            if (left === 0x00) {
+                this.filter = right;  // 8-bit cutoff
+                this.ptr[TABLE_TYPES.FILTER]++;
+                break;
+            }
+            // Modulation (0x01-0x7F) - GT2 gplay.c lines 282-283
+            else if (left >= 0x01 && left <= 0x7F) {
                 this.filterModTicks = left;
                 this.filterModSpeed = (right & 0x80) ? (right - 256) : right;
                 this.ptr[TABLE_TYPES.FILTER]++;
                 break;
             }
-            // Set filter (0x80-0xFE)
+            // Set filter params (0x80-0xFE) - GT2 gplay.c lines 267-278
+            // left & 0x70 = filter type, right = resonance + voice routing
             else if (left >= 0x80 && left <= 0xFE) {
-                const highBits = (left & 0x07) << 8;
-                this.filter = highBits | right;
+                this.filterType = left & 0x70;
+                this.filterCtrl = right;  // GT2 doesn't auto-add voice
                 this.ptr[TABLE_TYPES.FILTER]++;
                 break;
             }
@@ -347,10 +373,9 @@ export class GT2TablePlaybackState {
                 }
                 this.ptr[TABLE_TYPES.FILTER] = right;
                 jumpCount++;
-                continue; // Process jump target
+                continue;
             }
             else {
-                // Unknown command
                 this.ptr[TABLE_TYPES.FILTER]++;
                 break;
             }
@@ -365,6 +390,9 @@ export class GT2TablePlaybackState {
     }
 
     // Execute speedtable step
+    // NOTE: In GT2, speedtable is a STATIC lookup (not executable) for vibrato/portamento.
+    // Commands 1-4 read from speedtable directly. This method is kept for compatibility.
+    // GT2 uses 1-based pointers: ptr=1 reads array index 0
     executeSpeedtable(tableManager) {
         if (!this.speedActive || this.ptr[TABLE_TYPES.SPEED] === 0) return this.speed;
 
@@ -374,7 +402,7 @@ export class GT2TablePlaybackState {
 
         while (jumpCount < MAX_JUMPS) {
             const pos = this.ptr[TABLE_TYPES.SPEED];
-            const entry = tableManager.getEntry(TABLE_TYPES.SPEED, pos);
+            const entry = tableManager.getEntry(TABLE_TYPES.SPEED, pos - 1); // 1-based to 0-based
             const left = entry.left;
             const right = entry.right;
 

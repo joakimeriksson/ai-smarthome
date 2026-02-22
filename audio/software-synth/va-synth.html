@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VA Synth</title>
+  <link rel="stylesheet" href="css/va-synth.css">
+</head>
+<body>
+<div class="synth-container">
+
+  <!-- Header -->
+  <div class="synth-header">
+    <h1>VA Synth</h1>
+    <div class="header-controls">
+      <select id="preset-select"><option value="">-- Preset --</option></select>
+      <button id="save-preset-btn" class="btn btn-small">Save</button>
+      <button id="saveas-preset-btn" class="btn btn-small">Save As</button>
+      <button id="delete-preset-btn" class="btn btn-small btn-danger" style="display:none">Delete</button>
+      <button id="export-preset-btn" class="btn btn-small">Export</button>
+      <button id="import-preset-btn" class="btn btn-small">Import</button>
+      <button id="start-btn" class="btn">Start Audio</button>
+    </div>
+  </div>
+
+  <!-- Top Row: Oscillators | Filter | Envelopes -->
+  <div class="synth-grid">
+
+    <!-- OSCILLATORS -->
+    <div class="panel">
+      <div class="panel-title">Oscillators</div>
+
+      <div class="control-row">
+        <label>Osc 1</label>
+        <select id="osc1-wave">
+          <option value="0">Saw</option>
+          <option value="1">Square</option>
+          <option value="2">Triangle</option>
+          <option value="3">Sine</option>
+          <option value="4">Noise</option>
+        </select>
+        <input type="range" id="osc1-level" min="0" max="1" step="0.01" value="1">
+        <span class="val" id="osc1-level-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Osc 2</label>
+        <select id="osc2-wave">
+          <option value="0">Saw</option>
+          <option value="1">Square</option>
+          <option value="2">Triangle</option>
+          <option value="3">Sine</option>
+          <option value="4">Noise</option>
+        </select>
+        <input type="range" id="osc2-level" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="osc2-level-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Detune</label>
+        <input type="range" id="osc2-detune" min="-50" max="50" step="0.1" value="0">
+        <span class="val" id="osc2-detune-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Oct</label>
+        <select id="osc2-octave">
+          <option value="-24">-2</option>
+          <option value="-12">-1</option>
+          <option value="0" selected>0</option>
+          <option value="12">+1</option>
+          <option value="24">+2</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label>PW</label>
+        <input type="range" id="pulse-width" min="0.05" max="0.95" step="0.01" value="0.5">
+        <span class="val" id="pulse-width-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Sub</label>
+        <input type="range" id="sub-level" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="sub-level-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Noise</label>
+        <input type="range" id="noise-level" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="noise-level-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>X-Mod</label>
+        <input type="range" id="cross-mod" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="cross-mod-val"></span>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:4px">
+        <div class="checkbox-row">
+          <input type="checkbox" id="osc-sync">
+          <label for="osc-sync">Sync</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="ring-mod">
+          <label for="ring-mod">Ring</label>
+        </div>
+      </div>
+
+      <!-- Unison -->
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--panel-border)">
+        <div class="control-row">
+          <label>Unison</label>
+          <select id="unison-count">
+            <option value="1">1 (Off)</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label>Spread</label>
+          <input type="range" id="unison-detune" min="0" max="50" step="1" value="10">
+          <span class="val" id="unison-detune-val"></span>
+        </div>
+        <div class="control-row">
+          <label>Stereo</label>
+          <input type="range" id="unison-spread" min="0" max="1" step="0.01" value="0.5">
+          <span class="val" id="unison-spread-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="panel">
+      <div class="panel-title">Filter</div>
+
+      <div class="control-row">
+        <label>Type</label>
+        <select id="filter-type">
+          <option value="0">Moog 24dB</option>
+          <option value="1">SVF 12dB</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label>Mode</label>
+        <select id="filter-mode">
+          <option value="0">Low Pass</option>
+          <option value="1">High Pass</option>
+          <option value="2">Band Pass</option>
+          <option value="3">Notch</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label>HPF</label>
+        <input type="range" id="hpf-cutoff" min="0" max="1" step="0.001" value="0">
+        <span class="val" id="hpf-cutoff-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Cutoff</label>
+        <input type="range" id="filter-cutoff" min="0" max="1" step="0.001" value="0.85">
+        <span class="val" id="filter-cutoff-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Reso</label>
+        <input type="range" id="filter-reso" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="filter-reso-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Env Amt</label>
+        <input type="range" id="filter-env-amt" min="-1" max="1" step="0.01" value="0">
+        <span class="val" id="filter-env-amt-val"></span>
+      </div>
+
+      <div class="control-row">
+        <label>Key Trk</label>
+        <input type="range" id="filter-keytrack" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="filter-keytrack-val"></span>
+      </div>
+
+      <!-- Analog Warmth -->
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--panel-border)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dim);margin-bottom:4px">Analog</div>
+        <div class="control-row">
+          <label>Drift</label>
+          <input type="range" id="drift" min="0" max="1" step="0.01" value="0.3">
+          <span class="val" id="drift-val"></span>
+        </div>
+        <div class="control-row">
+          <label>Satur.</label>
+          <input type="range" id="saturation" min="0" max="1" step="0.01" value="0">
+          <span class="val" id="saturation-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENVELOPES -->
+    <div class="panel">
+      <div class="panel-title">Envelopes</div>
+
+      <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin-bottom:2px">AMP</div>
+      <div class="adsr-group">
+        <div class="control-row"><label>A</label><input type="range" id="amp-a" min="0" max="1" step="0.001" value="0.05"><span class="val" id="amp-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="amp-d" min="0" max="1" step="0.001" value="0.2"><span class="val" id="amp-d-val"></span></div>
+        <div class="control-row"><label>S</label><input type="range" id="amp-s" min="0" max="1" step="0.01" value="0.7"><span class="val" id="amp-s-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="amp-r" min="0" max="1" step="0.001" value="0.17"><span class="val" id="amp-r-val"></span></div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin:6px 0 2px">FILTER</div>
+      <div class="adsr-group">
+        <div class="control-row"><label>A</label><input type="range" id="flt-a" min="0" max="1" step="0.001" value="0.05"><span class="val" id="flt-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="flt-d" min="0" max="1" step="0.001" value="0.25"><span class="val" id="flt-d-val"></span></div>
+        <div class="control-row"><label>S</label><input type="range" id="flt-s" min="0" max="1" step="0.01" value="0.3"><span class="val" id="flt-s-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="flt-r" min="0" max="1" step="0.001" value="0.17"><span class="val" id="flt-r-val"></span></div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin:6px 0 2px">MOD</div>
+      <div class="adsr-group">
+        <div class="control-row"><label>A</label><input type="range" id="mod-a" min="0" max="1" step="0.001" value="0.05"><span class="val" id="mod-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="mod-d" min="0" max="1" step="0.001" value="0.25"><span class="val" id="mod-d-val"></span></div>
+        <div class="control-row"><label>S</label><input type="range" id="mod-s" min="0" max="1" step="0.01" value="0"><span class="val" id="mod-s-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="mod-r" min="0" max="1" step="0.001" value="0.1"><span class="val" id="mod-r-val"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle Row: LFO 1 | LFO 2 | Mod Matrix -->
+  <div class="synth-row">
+
+    <!-- LFO 1 -->
+    <div class="panel">
+      <div class="panel-title">LFO 1</div>
+      <div class="control-row">
+        <label>Rate</label>
+        <input type="range" id="lfo1-rate" min="0" max="1" step="0.001" value="0.37">
+        <span class="val" id="lfo1-rate-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Wave</label>
+        <select id="lfo1-wave">
+          <option value="0">Sine</option>
+          <option value="1">Triangle</option>
+          <option value="2">Saw</option>
+          <option value="3">Square</option>
+          <option value="4">S&H</option>
+          <option value="5">Random</option>
+        </select>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="lfo1-sync" checked>
+        <label for="lfo1-sync">Key Sync</label>
+      </div>
+      <div class="control-row">
+        <label>Delay</label>
+        <input type="range" id="lfo1-delay" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="lfo1-delay-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Fade In</label>
+        <input type="range" id="lfo1-fadein" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="lfo1-fadein-val"></span>
+      </div>
+    </div>
+
+    <!-- LFO 2 -->
+    <div class="panel">
+      <div class="panel-title">LFO 2</div>
+      <div class="control-row">
+        <label>Rate</label>
+        <input type="range" id="lfo2-rate" min="0" max="1" step="0.001" value="0.25">
+        <span class="val" id="lfo2-rate-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Wave</label>
+        <select id="lfo2-wave">
+          <option value="0">Sine</option>
+          <option value="1">Triangle</option>
+          <option value="2">Saw</option>
+          <option value="3">Square</option>
+          <option value="4">S&H</option>
+          <option value="5">Random</option>
+        </select>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="lfo2-sync" checked>
+        <label for="lfo2-sync">Key Sync</label>
+      </div>
+      <div class="control-row">
+        <label>Delay</label>
+        <input type="range" id="lfo2-delay" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="lfo2-delay-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Fade In</label>
+        <input type="range" id="lfo2-fadein" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="lfo2-fadein-val"></span>
+      </div>
+    </div>
+
+    <!-- MOD MATRIX -->
+    <div class="panel">
+      <div class="panel-title">Mod Matrix</div>
+      <div class="mod-slot">
+        <span class="slot-num">1</span>
+        <select id="mod0-src">
+          <option value="off">Off</option>
+          <option value="lfo1">LFO 1</option>
+          <option value="lfo2">LFO 2</option>
+          <option value="modEnv">Mod Env</option>
+          <option value="velocity">Velocity</option>
+          <option value="keyFollow">Key Follow</option>
+        </select>
+        <select id="mod0-dst">
+          <option value="off">Off</option>
+          <option value="pitch">Pitch</option>
+          <option value="osc2Pitch">Osc2 Pitch</option>
+          <option value="cutoff">Cutoff</option>
+          <option value="pwm">PWM</option>
+          <option value="amp">Amp</option>
+          <option value="pan">Pan</option>
+          <option value="lfo1Rate">LFO1 Rate</option>
+          <option value="lfo2Rate">LFO2 Rate</option>
+          <option value="resonance">Resonance</option>
+        </select>
+        <input type="range" id="mod0-amt" min="-1" max="1" step="0.01" value="0">
+      </div>
+      <div class="mod-slot">
+        <span class="slot-num">2</span>
+        <select id="mod1-src">
+          <option value="off">Off</option>
+          <option value="lfo1">LFO 1</option>
+          <option value="lfo2">LFO 2</option>
+          <option value="modEnv">Mod Env</option>
+          <option value="velocity">Velocity</option>
+          <option value="keyFollow">Key Follow</option>
+        </select>
+        <select id="mod1-dst">
+          <option value="off">Off</option>
+          <option value="pitch">Pitch</option>
+          <option value="osc2Pitch">Osc2 Pitch</option>
+          <option value="cutoff">Cutoff</option>
+          <option value="pwm">PWM</option>
+          <option value="amp">Amp</option>
+          <option value="pan">Pan</option>
+          <option value="lfo1Rate">LFO1 Rate</option>
+          <option value="lfo2Rate">LFO2 Rate</option>
+          <option value="resonance">Resonance</option>
+        </select>
+        <input type="range" id="mod1-amt" min="-1" max="1" step="0.01" value="0">
+      </div>
+      <div class="mod-slot">
+        <span class="slot-num">3</span>
+        <select id="mod2-src">
+          <option value="off">Off</option>
+          <option value="lfo1">LFO 1</option>
+          <option value="lfo2">LFO 2</option>
+          <option value="modEnv">Mod Env</option>
+          <option value="velocity">Velocity</option>
+          <option value="keyFollow">Key Follow</option>
+        </select>
+        <select id="mod2-dst">
+          <option value="off">Off</option>
+          <option value="pitch">Pitch</option>
+          <option value="osc2Pitch">Osc2 Pitch</option>
+          <option value="cutoff">Cutoff</option>
+          <option value="pwm">PWM</option>
+          <option value="amp">Amp</option>
+          <option value="pan">Pan</option>
+          <option value="lfo1Rate">LFO1 Rate</option>
+          <option value="lfo2Rate">LFO2 Rate</option>
+          <option value="resonance">Resonance</option>
+        </select>
+        <input type="range" id="mod2-amt" min="-1" max="1" step="0.01" value="0">
+      </div>
+      <div class="mod-slot">
+        <span class="slot-num">4</span>
+        <select id="mod3-src">
+          <option value="off">Off</option>
+          <option value="lfo1">LFO 1</option>
+          <option value="lfo2">LFO 2</option>
+          <option value="modEnv">Mod Env</option>
+          <option value="velocity">Velocity</option>
+          <option value="keyFollow">Key Follow</option>
+        </select>
+        <select id="mod3-dst">
+          <option value="off">Off</option>
+          <option value="pitch">Pitch</option>
+          <option value="osc2Pitch">Osc2 Pitch</option>
+          <option value="cutoff">Cutoff</option>
+          <option value="pwm">PWM</option>
+          <option value="amp">Amp</option>
+          <option value="pan">Pan</option>
+          <option value="lfo1Rate">LFO1 Rate</option>
+          <option value="lfo2Rate">LFO2 Rate</option>
+          <option value="resonance">Resonance</option>
+        </select>
+        <input type="range" id="mod3-amt" min="-1" max="1" step="0.01" value="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- Arpeggiator Row -->
+  <div class="arp-row">
+    <div class="panel">
+      <div class="fx-header">
+        <div class="panel-title">Arpeggiator</div>
+        <input type="checkbox" id="arp-on">
+      </div>
+      <div class="arp-controls">
+        <div class="control-row">
+          <label>BPM</label>
+          <input type="range" id="arp-bpm" min="60" max="300" step="1" value="120">
+          <span class="val" id="arp-bpm-val"></span>
+        </div>
+        <div class="control-row">
+          <label>Division</label>
+          <select id="arp-division">
+            <option value="1/4">1/4</option>
+            <option value="1/8" selected>1/8</option>
+            <option value="1/8T">1/8T</option>
+            <option value="1/16">1/16</option>
+            <option value="1/16T">1/16T</option>
+            <option value="1/32">1/32</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label>Mode</label>
+          <select id="arp-mode">
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+            <option value="upDown">Up-Down</option>
+            <option value="downUp">Down-Up</option>
+            <option value="random">Random</option>
+            <option value="order">Order</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label>Octaves</label>
+          <select id="arp-octaves">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label>Gate</label>
+          <input type="range" id="arp-gate" min="0.1" max="1" step="0.05" value="0.8">
+          <span class="val" id="arp-gate-val"></span>
+        </div>
+        <div class="control-row">
+          <label>Swing</label>
+          <input type="range" id="arp-swing" min="0" max="100" step="1" value="0">
+          <span class="val" id="arp-swing-val"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Row -->
+  <div class="perf-row">
+    <div class="panel">
+      <div class="panel-title">Performance</div>
+      <div class="perf-controls">
+        <div class="control-row">
+          <label>Mode</label>
+          <select id="mono-mode">
+            <option value="poly">Poly</option>
+            <option value="mono">Mono</option>
+            <option value="legato">Legato</option>
+          </select>
+        </div>
+        <div class="control-row" id="note-priority-row" style="display:none">
+          <label>Priority</label>
+          <select id="note-priority">
+            <option value="last">Last</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="portamento-on">
+          <label for="portamento-on">Portamento</label>
+        </div>
+        <div class="control-row">
+          <label>Glide</label>
+          <input type="range" id="portamento-time" min="0" max="1" step="0.01" value="0.35">
+          <span class="val" id="portamento-time-val"></span>
+        </div>
+        <div class="control-row">
+          <label>PB Range</label>
+          <select id="pitch-bend-range">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="7">7</option>
+            <option value="12">12</option>
+            <option value="24">24</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Effects Row -->
+  <div class="effects-row">
+
+    <!-- Distortion -->
+    <div class="panel">
+      <div class="fx-header">
+        <div class="panel-title">Distortion</div>
+        <input type="checkbox" id="fx-dist-on">
+      </div>
+      <div class="control-row">
+        <label>Drive</label>
+        <input type="range" id="fx-dist-drive" min="0" max="1" step="0.01" value="0.1">
+        <span class="val" id="fx-dist-drive-val"></span>
+      </div>
+    </div>
+
+    <!-- EQ -->
+    <div class="panel">
+      <div class="fx-header">
+        <div class="panel-title">EQ</div>
+        <input type="checkbox" id="fx-eq-on">
+      </div>
+      <div class="control-row">
+        <label>Low</label>
+        <input type="range" id="fx-eq-low" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="fx-eq-low-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Mid</label>
+        <input type="range" id="fx-eq-mid" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="fx-eq-mid-val"></span>
+      </div>
+      <div class="control-row">
+        <label>High</label>
+        <input type="range" id="fx-eq-high" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="fx-eq-high-val"></span>
+      </div>
+    </div>
+
+    <!-- Chorus -->
+    <div class="panel">
+      <div class="fx-header">
+        <div class="panel-title">Chorus</div>
+        <input type="checkbox" id="fx-chorus-on">
+      </div>
+      <div class="control-row">
+        <label>Rate</label>
+        <input type="range" id="fx-chorus-rate" min="0" max="1" step="0.01" value="0.1">
+        <span class="val" id="fx-chorus-rate-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Depth</label>
+        <input type="range" id="fx-chorus-depth" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="fx-chorus-depth-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Mix</label>
+        <input type="range" id="fx-chorus-mix" min="0" max="1" step="0.01" value="0.3">
+        <span class="val" id="fx-chorus-mix-val"></span>
+      </div>
+    </div>
+
+    <!-- Delay -->
+    <div class="panel">
+      <div class="fx-header">
+        <div class="panel-title">Delay</div>
+        <input type="checkbox" id="fx-delay-on">
+      </div>
+      <div class="control-row">
+        <label>Time</label>
+        <input type="range" id="fx-delay-time" min="0" max="1" step="0.01" value="0.19">
+        <span class="val" id="fx-delay-time-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Fback</label>
+        <input type="range" id="fx-delay-fb" min="0" max="0.95" step="0.01" value="0.4">
+        <span class="val" id="fx-delay-fb-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Mix</label>
+        <input type="range" id="fx-delay-mix" min="0" max="1" step="0.01" value="0.3">
+        <span class="val" id="fx-delay-mix-val"></span>
+      </div>
+    </div>
+
+    <!-- Reverb -->
+    <div class="panel">
+      <div class="fx-header">
+        <div class="panel-title">Reverb</div>
+        <input type="checkbox" id="fx-reverb-on">
+      </div>
+      <div class="control-row">
+        <label>Size</label>
+        <input type="range" id="fx-reverb-size" min="0" max="1" step="0.01" value="0.8">
+        <span class="val" id="fx-reverb-size-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Damp</label>
+        <input type="range" id="fx-reverb-damp" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="fx-reverb-damp-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Mix</label>
+        <input type="range" id="fx-reverb-mix" min="0" max="1" step="0.01" value="0.2">
+        <span class="val" id="fx-reverb-mix-val"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row: Master + Scope -->
+  <div class="bottom-row">
+    <div class="panel">
+      <div class="panel-title">Master</div>
+      <div class="control-row">
+        <label>Volume</label>
+        <input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.7">
+        <span class="val" id="master-vol-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Octave</label>
+        <select id="master-octave">
+          <option value="-36">-3</option>
+          <option value="-24">-2</option>
+          <option value="-12">-1</option>
+          <option value="0" selected>0</option>
+          <option value="12">+1</option>
+          <option value="24">+2</option>
+          <option value="36">+3</option>
+        </select>
+      </div>
+      <div class="status-bar">
+        <span id="voice-display">Voices: 0/8</span>
+        <span id="octave-display">Oct: +0</span>
+        <span id="sustain-indicator" style="color:var(--text-dim)">SUS</span>
+        <span id="midi-status">MIDI: --</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Scope</div>
+      <canvas id="scope" width="800" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- Piano Keyboard -->
+  <div class="panel">
+    <div id="piano-keyboard"></div>
+  </div>
+
+  <div style="text-align:center;padding:8px;font-size:10px;color:var(--text-dim)">
+    Keyboard: Z-M (C3-B3) | Q-U (C4-B4) | [ ] octave shift | Computer keyboard or MIDI
+  </div>
+
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

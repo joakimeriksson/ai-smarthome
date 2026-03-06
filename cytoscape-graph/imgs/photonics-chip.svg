@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
+  <rect x="14" y="14" width="36" height="36" rx="4" fill="none" stroke="white" stroke-width="2.5"/>
+  <!-- waveguide paths -->
+  <path d="M20 26 Q28 20 36 26 Q44 32 36 38" fill="none" stroke="white" stroke-width="1.5"/>
+  <path d="M24 22 Q32 28 40 22" fill="none" stroke="white" stroke-width="1.5"/>
+  <path d="M24 42 Q32 36 40 42" fill="none" stroke="white" stroke-width="1.5"/>
+  <!-- light burst -->
+  <circle cx="32" cy="32" r="3"/>
+  <!-- fiber connections -->
+  <line x1="6" y1="26" x2="14" y2="26" stroke="white" stroke-width="2"/>
+  <line x1="6" y1="38" x2="14" y2="38" stroke="white" stroke-width="2"/>
+  <line x1="50" y1="26" x2="58" y2="26" stroke="white" stroke-width="2"/>
+  <line x1="50" y1="38" x2="58" y2="38" stroke="white" stroke-width="2"/>
+</svg>

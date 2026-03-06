@@ -1,11 +1,20 @@
-// photos from flickr with creative commons license
+var graphData = null;
+var cy = null;
 
-var cy = window.cy = cytoscape({
+fetch('/api/data')
+  .then(response => response.json())
+  .then(data => {
+    graphData = data;
+    initGraph();
+  });
+
+function initGraph() {
+  cy = window.cy = cytoscape({
     container: document.getElementById('cy'),
-  
+
     boxSelectionEnabled: false,
     autounselectify: true,
-  
+
     style: cytoscape.stylesheet()
       .selector('node')
         .css({
@@ -22,9 +31,9 @@ var cy = window.cy = cytoscape({
             "label": "data(label)",
             'color': 'white',
             'font-size': 15,
-            'text-max-width': '100px' // Added for text wrapping
+            'text-max-width': '100px'
         })
-      
+
       .selector('edge')
         .css({
           'curve-style': 'bezier',
@@ -70,9 +79,9 @@ var cy = window.cy = cytoscape({
         .css({
           'opacity': 0.3
         }),
-  
+
     elements: graphData,
-  
+
     layout: {
       name: 'klay',
       directed: true,
@@ -82,8 +91,8 @@ var cy = window.cy = cytoscape({
         fixedAlignment: "LEFTDOWN"
       }
     }
-}); // cy init
-  
+  });
+
   // Create tooltip div
   const tooltip = document.createElement('div');
   tooltip.classList.add('tooltip');
@@ -93,16 +102,14 @@ var cy = window.cy = cytoscape({
   cy.on('mouseover', 'node', function(e) {
     const node = e.target;
     const description = node.data('description');
-    
+
     if (description) {
       tooltip.innerHTML = description;
       tooltip.style.display = 'block';
-      
-      // Position tooltip near mouse
+
       const renderedPosition = node.renderedPosition();
-      const zoom = cy.zoom();
       const padding = 10;
-      
+
       tooltip.style.left = (renderedPosition.x + padding) + 'px';
       tooltip.style.top = (renderedPosition.y + padding) + 'px';
     }
@@ -112,19 +119,17 @@ var cy = window.cy = cytoscape({
     tooltip.style.display = 'none';
   });
 
-  // Update tooltip position on node drag
   cy.on('position', 'node', function(e) {
     if (tooltip.style.display === 'block') {
       const node = e.target;
       const renderedPosition = node.renderedPosition();
       const padding = 10;
-      
+
       tooltip.style.left = (renderedPosition.x + padding) + 'px';
       tooltip.style.top = (renderedPosition.y + padding) + 'px';
     }
   });
 
-  // Hide tooltip during pan/zoom
   cy.on('viewport', function() {
     tooltip.style.display = 'none';
   });
@@ -141,7 +146,7 @@ var cy = window.cy = cytoscape({
 
   closePersonsDisplayBtn.addEventListener('click', () => {
     personsDisplayContainer.style.display = 'none';
-    cy.elements().removeClass('highlighted-node highlighted-edge faded'); // Clear highlighting when closing
+    cy.elements().removeClass('highlighted-node highlighted-edge faded');
   });
 
   function populatePersonsDisplayList() {
@@ -151,7 +156,7 @@ var cy = window.cy = cytoscape({
         const listItem = document.createElement('li');
         listItem.classList.add('person-list-item');
         listItem.textContent = person.name;
-        listItem.dataset.email = person.email; // Store email for lookup
+        listItem.dataset.email = person.email;
         listItem.addEventListener('click', () => highlightPersonNodes(person.linkedNodes));
         personsDisplayList.appendChild(listItem);
       });
@@ -172,22 +177,18 @@ var cy = window.cy = cytoscape({
 
   cy.on('tap', 'node', function(evt) {
     const clickedNodeId = evt.target.id();
-    
-    // Clear previous node highlighting
+
     cy.elements().removeClass('highlighted-node faded');
     cy.elements().addClass('faded');
     evt.target.removeClass('faded').addClass('highlighted-node');
 
-    // Clear previous person highlighting
     document.querySelectorAll('.person-list-item').forEach(item => {
       item.classList.remove('highlighted');
     });
 
-    // Show persons display container if not already visible
     personsDisplayContainer.style.display = 'block';
-    populatePersonsDisplayList(); // Re-populate to ensure all items are there
+    populatePersonsDisplayList();
 
-    // Highlight persons linked to the clicked node
     if (graphData.persons) {
       graphData.persons.forEach(person => {
         if (person.linkedNodes.includes(clickedNodeId)) {
@@ -201,10 +202,11 @@ var cy = window.cy = cytoscape({
   });
 
   cy.on('tap', function(event) {
-      if (event.target === cy) { // Clicked on background
-          cy.elements().removeClass('highlighted-node faded');
-          document.querySelectorAll('.person-list-item').forEach(item => {
-            item.classList.remove('highlighted');
-          });
-      }
+    if (event.target === cy) {
+      cy.elements().removeClass('highlighted-node faded');
+      document.querySelectorAll('.person-list-item').forEach(item => {
+        item.classList.remove('highlighted');
+      });
+    }
   });
+}

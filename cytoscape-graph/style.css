@@ -155,6 +155,31 @@ body {
     box-sizing: border-box;
   }
 
+  .editor-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+  }
+
+  .editor-item button {
+    margin-left: 5px;
+    padding: 3px 8px;
+    width: auto;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  #persons-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
   .editor-controls {
     margin-top: 20px;
   }

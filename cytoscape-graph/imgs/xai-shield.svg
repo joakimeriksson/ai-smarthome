@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
+  <!-- shield -->
+  <path d="M32 6 L52 16 L52 34 Q52 50 32 58 Q12 50 12 34 L12 16 Z" fill="none" stroke="white" stroke-width="2.5"/>
+  <!-- XAI text -->
+  <text x="32" y="30" text-anchor="middle" font-size="10" font-family="sans-serif" font-weight="bold" fill="white">XAI</text>
+  <!-- checkmark -->
+  <polyline points="24,38 30,44 42,32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

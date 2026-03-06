@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
+  <!-- nodes -->
+  <circle cx="32" cy="12" r="5"/>
+  <circle cx="12" cy="32" r="5"/>
+  <circle cx="52" cy="32" r="5"/>
+  <circle cx="20" cy="52" r="5"/>
+  <circle cx="44" cy="52" r="5"/>
+  <circle cx="32" cy="36" r="4"/>
+  <!-- connections -->
+  <line x1="32" y1="17" x2="32" y2="32" stroke="white" stroke-width="1.5"/>
+  <line x1="17" y1="32" x2="28" y2="36" stroke="white" stroke-width="1.5"/>
+  <line x1="47" y1="32" x2="36" y2="36" stroke="white" stroke-width="1.5"/>
+  <line x1="30" y1="40" x2="22" y2="48" stroke="white" stroke-width="1.5"/>
+  <line x1="34" y1="40" x2="42" y2="48" stroke="white" stroke-width="1.5"/>
+  <line x1="28" y1="14" x2="15" y2="28" stroke="white" stroke-width="1.5"/>
+  <line x1="36" y1="14" x2="49" y2="28" stroke="white" stroke-width="1.5"/>
+  <line x1="15" y1="37" x2="18" y2="47" stroke="white" stroke-width="1.5"/>
+  <line x1="49" y1="37" x2="46" y2="47" stroke="white" stroke-width="1.5"/>
+  <line x1="25" y1="52" x2="39" y2="52" stroke="white" stroke-width="1.5"/>
+</svg>

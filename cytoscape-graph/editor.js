@@ -74,14 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   saveEditorBtn.addEventListener('click', () => {
-    console.log('Saving changes. currentGraphData before save:', currentGraphData);
-    graphData = JSON.parse(JSON.stringify(currentGraphData)); // Deep copy to ensure no lingering references
-    console.log('graphData after assignment:', graphData);
+    graphData = JSON.parse(JSON.stringify(currentGraphData));
     window.cy.elements().remove();
     window.cy.add(graphData.nodes);
     window.cy.add(graphData.edges);
     window.cy.layout({ name: 'klay', directed: true, padding: 10, klay: { spacing: 120, fixedAlignment: "LEFTDOWN" } }).run();
-    console.log('Graph re-rendered with new data.');
+
+    // Persist to server
+    fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(graphData)
+    }).then(res => {
+      if (!res.ok) console.error('Failed to save data');
+    });
+
     editorContainer.style.display = 'none';
     insertMode = false;
     insertSource = null;
@@ -91,10 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   exportJsonBtn.addEventListener('click', () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent("let graphData = " + JSON.stringify(currentGraphData, null, 2) + ";");
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentGraphData, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "data.js");
+    downloadAnchorNode.setAttribute("download", "data.json");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();

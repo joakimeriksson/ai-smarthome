@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
+  <!-- code window -->
+  <rect x="8" y="10" width="48" height="44" rx="4" fill="none" stroke="white" stroke-width="2.5"/>
+  <line x1="8" y1="20" x2="56" y2="20" stroke="white" stroke-width="2"/>
+  <!-- window buttons -->
+  <circle cx="15" cy="15" r="2"/>
+  <circle cx="22" cy="15" r="2"/>
+  <circle cx="29" cy="15" r="2"/>
+  <!-- code brackets -->
+  <text x="16" y="36" font-size="14" font-family="monospace" fill="white">&lt;/&gt;</text>
+  <!-- gear -->
+  <circle cx="46" cy="42" r="6" fill="none" stroke="white" stroke-width="1.5"/>
+  <circle cx="46" cy="42" r="2"/>
+  <line x1="46" y1="34" x2="46" y2="36" stroke="white" stroke-width="1.5"/>
+  <line x1="46" y1="48" x2="46" y2="50" stroke="white" stroke-width="1.5"/>
+  <line x1="38" y1="42" x2="40" y2="42" stroke="white" stroke-width="1.5"/>
+  <line x1="52" y1="42" x2="54" y2="42" stroke="white" stroke-width="1.5"/>
+</svg>

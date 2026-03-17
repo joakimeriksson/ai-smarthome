@@ -1,0 +1,82 @@
+/* FM Synth — DX7-style, orange/amber theme */
+
+:root {
+  --bg: #1a1208;
+  --panel-bg: #241c10;
+  --panel-border: #4a3a20;
+  --accent: #ff8800;
+  --accent-dim: #aa5500;
+  --accent-bright: #ffaa33;
+  --text: #e8dcc8;
+  --text-dim: #998866;
+  --knob-track: #3a3020;
+  --slider-thumb: #ff8800;
+  --danger: #ff4466;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 12px; overflow-x: hidden; }
+
+.synth-container { max-width: 1280px; margin: 0 auto; padding: 10px; }
+.synth-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 8px; }
+.synth-header h1 { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+.synth-header .subtitle { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+.header-controls { display: flex; align-items: center; gap: 12px; }
+
+.panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 6px; padding: 10px; }
+.panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-border); }
+.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-dim); margin: 4px 0 2px; }
+
+.control-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.control-row label { width: 42px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; flex-shrink: 0; }
+.control-row .val { width: 40px; text-align: right; font-size: 10px; font-family: 'Courier New', monospace; color: var(--accent); flex-shrink: 0; }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; background: var(--knob-track); border-radius: 2px; outline: none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--slider-thumb); cursor: pointer; box-shadow: 0 0 4px rgba(255,136,0,0.4); }
+select { background: #2a2010; color: var(--text); border: 1px solid var(--panel-border); border-radius: 3px; padding: 2px 4px; font-size: 11px; outline: none; }
+select:focus { border-color: var(--accent); }
+input[type="checkbox"] { accent-color: var(--accent); }
+.checkbox-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.checkbox-row label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
+
+.btn { background: var(--accent-dim); color: #fff; border: none; border-radius: 4px; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: background 0.15s; }
+.btn:hover { background: var(--accent); color: #000; }
+.btn:disabled { background: #333; color: #666; cursor: default; }
+.btn-small { padding: 3px 8px; font-size: 10px; }
+
+/* Algorithm selector */
+.algo-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: stretch; }
+.algo-buttons { display: flex; gap: 3px; flex-wrap: wrap; }
+.algo-buttons button { width: 36px; height: 36px; font-size: 14px; font-weight: 700; background: #2a2010; color: var(--text-dim); border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; }
+.algo-buttons button.active { background: var(--accent-dim); color: #fff; border-color: var(--accent); }
+.algo-diagram { flex: 1; min-height: 60px; background: #1a1208; border: 1px solid var(--panel-border); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 11px; color: var(--text-dim); padding: 8px; white-space: pre; line-height: 1.4; }
+
+/* Operator grid */
+.op-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.op-panel { position: relative; }
+.op-panel .panel-title { display: flex; align-items: center; justify-content: space-between; }
+.op-num { font-size: 16px; font-weight: 700; color: var(--accent-bright); }
+.op-carrier { font-size: 9px; color: var(--accent-dim); text-transform: uppercase; letter-spacing: 1px; }
+.adsr-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 6px; }
+.adsr-group .control-row label { width: 14px; }
+
+/* Global row */
+.global-row { display: grid; grid-template-columns: 1fr 1fr 200px; gap: 8px; margin-bottom: 8px; }
+
+.fx-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.fx-header .panel-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+#scope { width: 100%; height: 100px; border-radius: 4px; background: #1a1208; }
+.status-bar { display: flex; gap: 12px; font-size: 10px; color: var(--text-dim); padding: 4px 0; }
+.status-bar span { font-family: 'Courier New', monospace; }
+
+#piano-keyboard { position: relative; height: 100px; overflow: hidden; user-select: none; -webkit-user-select: none; }
+.white-key { display: inline-block; width: 38px; height: 100px; background: linear-gradient(180deg, #f8f0e0, #e8d8c0); border: 1px solid #aa9970; border-radius: 0 0 4px 4px; position: relative; cursor: pointer; vertical-align: top; margin-right: 1px; }
+.white-key:hover { background: linear-gradient(180deg, #fff8e8, #f0e0d0); }
+.white-key.active { background: linear-gradient(180deg, #ffcc66, #dd9922); }
+.black-key { position: absolute; width: 24px; height: 60px; background: linear-gradient(180deg, #3a2a10, #1a1008); border: 1px solid #000; border-radius: 0 0 3px 3px; cursor: pointer; z-index: 2; top: 0; }
+.black-key:hover { background: linear-gradient(180deg, #4a3a20, #2a1a10); }
+.black-key.active { background: linear-gradient(180deg, #aa5500, #663300); }
+.key-label { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #aa9970; pointer-events: none; }
+
+@media (max-width: 1000px) { .op-grid { grid-template-columns: repeat(2, 1fr); } .global-row { grid-template-columns: 1fr; } }

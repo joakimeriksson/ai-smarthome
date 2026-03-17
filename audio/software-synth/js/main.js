@@ -245,18 +245,7 @@ let monoNoteStack = []; // {note, velocity} stack for mono mode
 let sustainPedalOn = false;
 let sustainedNotes = [];
 
-// Keyboard state
-let octaveShift = 0;
-const keyMap = {
-  // Lower row: C3-B3
-  'z': 0, 's': 1, 'x': 2, 'd': 3, 'c': 4, 'v': 5,
-  'g': 6, 'b': 7, 'h': 8, 'n': 9, 'j': 10, 'm': 11,
-  // Upper row: C4-C5
-  'q': 12, '2': 13, 'w': 14, '3': 15, 'e': 16, 'r': 17,
-  '5': 18, 't': 19, '6': 20, 'y': 21, '7': 22, 'u': 23,
-  'i': 24
-};
-const activeKeys = new Set();
+// Keyboard state now managed by shared keyboard.js
 
 // ─── Audio Setup ────────────────────────────────────────────────────────────
 
@@ -282,7 +271,6 @@ async function initAudio() {
   document.getElementById('start-btn').disabled = true;
 
   initScope();
-  initMIDI();
 }
 
 // ─── Voice Allocation ───────────────────────────────────────────────────────
@@ -413,31 +401,7 @@ function inputNoteOff(note) {
   }
 }
 
-// ─── Computer Keyboard ─────────────────────────────────────────────────────
-
-document.addEventListener('keydown', (e) => {
-  if (e.repeat) return;
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-
-  if (e.key === '[') { octaveShift = Math.max(-3, octaveShift - 1); updateOctaveDisplay(); return; }
-  if (e.key === ']') { octaveShift = Math.min(3, octaveShift + 1); updateOctaveDisplay(); return; }
-
-  const k = e.key.toLowerCase();
-  if (k in keyMap && !activeKeys.has(k)) {
-    activeKeys.add(k);
-    const note = 48 + octaveShift * 12 + keyMap[k]; // C3 base
-    inputNoteOn(note);
-  }
-});
-
-document.addEventListener('keyup', (e) => {
-  const k = e.key.toLowerCase();
-  if (k in keyMap && activeKeys.has(k)) {
-    activeKeys.delete(k);
-    const note = 48 + octaveShift * 12 + keyMap[k];
-    inputNoteOff(note);
-  }
-});
+// Computer keyboard, on-screen piano, and MIDI are now handled by shared keyboard.js
 
 // ─── UI Bindings ────────────────────────────────────────────────────────────
 
@@ -786,11 +750,6 @@ function setupBindings() {
 
 // ─── Display Updates ────────────────────────────────────────────────────────
 
-function updateOctaveDisplay() {
-  const el = document.getElementById('octave-display');
-  if (el) el.textContent = `Oct: ${octaveShift >= 0 ? '+' : ''}${octaveShift}`;
-}
-
 function updateVoiceDisplay() {
   const el = document.getElementById('voice-display');
   if (!el) return;
@@ -858,172 +817,7 @@ function drawScope() {
   scopeCtx.stroke();
 }
 
-// ─── On-Screen Keyboard ────────────────────────────────────────────────────
 
-function initOnScreenKeyboard() {
-  const container = document.getElementById('piano-keyboard');
-  if (!container) return;
-
-  const startNote = 48; // C3
-  const numOctaves = 4;
-  const whiteNotes = [0, 2, 4, 5, 7, 9, 11]; // C D E F G A B
-  const blackNotes = [1, 3, -1, 6, 8, 10, -1]; // C# D# - F# G# A#
-  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-  let isMouseDown = false;
-
-  for (let oct = 0; oct < numOctaves; oct++) {
-    const octBase = startNote + oct * 12;
-
-    // White keys
-    for (let i = 0; i < 7; i++) {
-      const note = octBase + whiteNotes[i];
-      const key = document.createElement('div');
-      key.className = 'piano-key white-key';
-      key.dataset.note = note;
-      if (i === 0) {
-        const label = document.createElement('span');
-        label.className = 'key-label';
-        label.textContent = `C${3 + oct}`;
-        key.appendChild(label);
-      }
-      container.appendChild(key);
-
-      key.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        isMouseDown = true;
-        inputNoteOn(note, 100);
-        key.classList.add('active');
-      });
-      key.addEventListener('mouseenter', () => {
-        if (isMouseDown) {
-          inputNoteOn(note, 80);
-          key.classList.add('active');
-        }
-      });
-      key.addEventListener('mouseleave', () => {
-        if (isMouseDown) {
-          inputNoteOff(note);
-          key.classList.remove('active');
-        }
-      });
-      key.addEventListener('mouseup', () => {
-        inputNoteOff(note);
-        key.classList.remove('active');
-        isMouseDown = false;
-      });
-    }
-
-    // Black keys
-    for (let i = 0; i < 7; i++) {
-      if (blackNotes[i] === -1) continue;
-      const note = octBase + blackNotes[i];
-      const key = document.createElement('div');
-      key.className = 'piano-key black-key';
-      key.dataset.note = note;
-      // White key stride = 38px (border-box) + 1px margin = 39px
-      const whiteStride = 39;
-      const blackW = 24;
-      const offset = oct * 7 * whiteStride + (i + 1) * whiteStride - blackW / 2;
-      key.style.left = offset + 'px';
-      container.appendChild(key);
-
-      key.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        isMouseDown = true;
-        inputNoteOn(note, 100);
-        key.classList.add('active');
-      });
-      key.addEventListener('mouseenter', () => {
-        if (isMouseDown) {
-          inputNoteOn(note, 80);
-          key.classList.add('active');
-        }
-      });
-      key.addEventListener('mouseleave', () => {
-        if (isMouseDown) {
-          inputNoteOff(note);
-          key.classList.remove('active');
-        }
-      });
-      key.addEventListener('mouseup', () => {
-        inputNoteOff(note);
-        key.classList.remove('active');
-        isMouseDown = false;
-      });
-    }
-  }
-
-  document.addEventListener('mouseup', () => {
-    isMouseDown = false;
-    container.querySelectorAll('.piano-key.active').forEach(k => {
-      const note = parseInt(k.dataset.note);
-      inputNoteOff(note);
-      k.classList.remove('active');
-    });
-  });
-}
-
-// ─── MIDI ───────────────────────────────────────────────────────────────────
-
-function initMIDI() {
-  if (!navigator.requestMIDIAccess) return;
-  navigator.requestMIDIAccess().then(midi => {
-    const midiStatus = document.getElementById('midi-status');
-
-    function onMIDIMessage(e) {
-      const [status, data1, data2] = e.data;
-      const cmd = status & 0xf0;
-
-      if (cmd === 0x90 && data2 > 0) {
-        inputNoteOn(data1, data2);
-      } else if (cmd === 0x80 || (cmd === 0x90 && data2 === 0)) {
-        inputNoteOff(data1);
-      } else if (cmd === 0xb0) {
-        // CC mapping
-        const val = data2 / 127;
-        switch (data1) {
-          case 1: // Mod wheel
-            sendParam('mod.0.amount', val); break;
-          case 64: // Sustain pedal
-            sustainPedalOn = data2 >= 64;
-            if (!sustainPedalOn) {
-              sustainedNotes.forEach(n => noteOff(n));
-              sustainedNotes = [];
-            }
-            updateSustainIndicator();
-            break;
-          case 71: // Resonance
-            sendParam('filterResonance', val); break;
-          case 74: // Cutoff
-            sendParam('filterCutoff', 20 * Math.pow(1000, val)); break;
-        }
-      } else if (cmd === 0xe0) {
-        // Pitch bend
-        const bend = ((data2 << 7) | data1) / 8192 - 1; // -1 to +1
-        sendParam('pitchBend', bend);
-      }
-    }
-
-    for (const input of midi.inputs.values()) {
-      input.onmidimessage = onMIDIMessage;
-    }
-    midi.onstatechange = () => {
-      for (const input of midi.inputs.values()) {
-        input.onmidimessage = onMIDIMessage;
-      }
-      if (midiStatus) {
-        const count = [...midi.inputs.values()].length;
-        midiStatus.textContent = count > 0 ? `MIDI: ${count} device(s)` : 'MIDI: No devices';
-      }
-    };
-
-    if (midiStatus) {
-      const count = [...midi.inputs.values()].length;
-      midiStatus.textContent = count > 0 ? `MIDI: ${count} device(s)` : 'MIDI: No devices';
-    }
-  }).catch(() => {});
-}
 
 // ─── Preset State Capture ────────────────────────────────────────────────────
 
@@ -1797,8 +1591,27 @@ function _showButtonFeedback(btnId, text) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('start-btn').addEventListener('click', initAudio);
   setupBindings();
-  initOnScreenKeyboard();
+
+  // Use shared keyboard module (replaces initOnScreenKeyboard, computer keyboard, MIDI)
+  window._synthKeyboard = new SynthKeyboard('piano-keyboard', {
+    noteOn: (note, vel) => inputNoteOn(note, vel),
+    noteOff: (note) => inputNoteOff(note),
+    pitchBend: (val) => sendParam('pitchBend', val),
+    sustainChange: (on) => {
+      sustainPedalOn = on;
+      if (!on) {
+        sustainedNotes.forEach(n => noteOff(n));
+        sustainedNotes = [];
+      }
+      updateSustainIndicator();
+    },
+    modWheel: (val) => sendParam('mod.0.amount', val),
+    cc: (cc, val) => {
+      if (cc === 71) sendParam('filterResonance', val);
+      else if (cc === 74) sendParam('filterCutoff', 20 * Math.pow(1000, val));
+    }
+  });
+
   initPresets();
-  updateOctaveDisplay();
   updateVoiceDisplay();
 });

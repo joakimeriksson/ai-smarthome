@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drum Machine</title>
+  <link rel="stylesheet" href="css/drum-machine.css">
+</head>
+<body>
+<div class="synth-container">
+
+  <div class="synth-header">
+    <div><h1>Drum Machine</h1></div>
+    <div class="header-controls">
+      <select id="preset-select"><option value="">-- Pattern --</option></select>
+      <button id="clear-btn" class="btn btn-small">Clear</button>
+      <button id="start-btn" class="btn">Start Audio</button>
+    </div>
+  </div>
+
+  <!-- Transport -->
+  <div class="transport">
+    <button id="play-btn" class="btn btn-play">PLAY</button>
+    <div class="control-row" style="margin:0"><label>BPM</label><input type="range" id="bpm" min="60" max="200" step="1" value="120"><span class="val" id="bpm-val">120</span></div>
+    <div class="control-row" style="margin:0"><label>Swing</label><input type="range" id="swing" min="0" max="0.5" step="0.01" value="0"><span class="val" id="swing-val">0%</span></div>
+    <div class="control-row" style="margin:0"><label>Vol</label><input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.8"><span class="val" id="master-vol-val">0.80</span></div>
+  </div>
+
+  <!-- Step Sequencer Grid -->
+  <div class="panel seq-grid">
+    <div id="seq-grid"></div>
+  </div>
+
+  <!-- Channel Editor + Scope -->
+  <div class="channel-grid">
+    <div class="panel" id="channel-edit"></div>
+    <div class="panel">
+      <div class="panel-title">Output</div>
+      <canvas id="scope" width="400" height="80"></canvas>
+      <div style="margin-top:6px;font-size:10px;color:var(--text-dim)">
+        Keys 1-8: trigger drums | Space: play/stop | Click grid to program
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="js/drum-main.js"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FM Synth</title>
+  <link rel="stylesheet" href="css/fm-synth.css">
+</head>
+<body>
+<div class="synth-container">
+
+  <div class="synth-header">
+    <div>
+      <h1>FM Synth</h1>
+      <span class="subtitle">DX7-Style 6-Operator FM Synthesis</span>
+    </div>
+    <div class="header-controls">
+      <select id="preset-select"><option value="">-- Preset --</option></select>
+      <button id="save-preset-btn" class="btn btn-small">Save</button>
+      <button id="start-btn" class="btn">Start Audio</button>
+    </div>
+  </div>
+
+  <!-- Algorithm selector -->
+  <div class="algo-row">
+    <div class="panel" style="flex-shrink:0">
+      <div class="panel-title">Algorithm</div>
+      <div class="algo-buttons" id="algo-buttons">
+        <button class="active" data-algo="0">1</button>
+        <button data-algo="1">2</button>
+        <button data-algo="2">3</button>
+        <button data-algo="3">4</button>
+        <button data-algo="4">5</button>
+        <button data-algo="5">6</button>
+        <button data-algo="6">7</button>
+        <button data-algo="7">8</button>
+      </div>
+      <div class="control-row" style="margin-top:6px">
+        <label>Fback</label>
+        <input type="range" id="feedback" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="feedback-val"></span>
+      </div>
+    </div>
+    <div class="panel algo-diagram" id="algo-diagram">6→5→4→3→2→1</div>
+  </div>
+
+  <!-- 6 Operator panels -->
+  <div class="op-grid" id="op-grid"></div>
+
+  <!-- Global controls -->
+  <div class="global-row">
+    <div class="panel">
+      <div class="panel-title">LFO</div>
+      <div class="control-row"><label>Rate</label><input type="range" id="lfo-rate" min="0.1" max="20" step="0.1" value="4"><span class="val" id="lfo-rate-val"></span></div>
+      <div class="control-row"><label>Wave</label><select id="lfo-wave"><option value="0">Sine</option><option value="1">Triangle</option><option value="2">Square</option><option value="3">S&H</option></select></div>
+      <div class="control-row"><label>Pitch</label><input type="range" id="lfo-pitch" min="0" max="1" step="0.01" value="0"><span class="val" id="lfo-pitch-val"></span></div>
+      <div class="control-row"><label>Amp</label><input type="range" id="lfo-amp" min="0" max="1" step="0.01" value="0"><span class="val" id="lfo-amp-val"></span></div>
+    </div>
+
+    <div class="panel">
+      <div class="fx-header"><div class="panel-title">Effects</div></div>
+      <div class="checkbox-row"><input type="checkbox" id="fx-chorus-on"><label for="fx-chorus-on">Chorus</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fx-delay-on"><label for="fx-delay-on">Delay</label></div>
+      <div class="control-row"><label>Time</label><input type="range" id="fx-delay-time" min="0" max="1" step="0.01" value="0.25"><span class="val" id="fx-delay-time-val"></span></div>
+      <div class="control-row"><label>Fback</label><input type="range" id="fx-delay-fb" min="0" max="0.95" step="0.01" value="0.4"><span class="val" id="fx-delay-fb-val"></span></div>
+      <div class="checkbox-row"><input type="checkbox" id="fx-reverb-on"><label for="fx-reverb-on">Reverb</label></div>
+      <div class="control-row"><label>Size</label><input type="range" id="fx-reverb-size" min="0" max="1" step="0.01" value="0.7"><span class="val" id="fx-reverb-size-val"></span></div>
+      <div class="control-row"><label>Mix</label><input type="range" id="fx-reverb-mix" min="0" max="1" step="0.01" value="0.2"><span class="val" id="fx-reverb-mix-val"></span></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Master</div>
+      <div class="control-row"><label>Vol</label><input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.7"><span class="val" id="master-vol-val"></span></div>
+      <div class="status-bar">
+        <span id="voice-display">Voices: 0/8</span>
+        <span id="octave-display">Oct: +0</span>
+        <span id="midi-status">MIDI: --</span>
+      </div>
+      <canvas id="scope" width="400" height="100"></canvas>
+    </div>
+  </div>
+
+  <div class="panel"><div id="piano-keyboard"></div></div>
+  <div style="text-align:center;padding:8px;font-size:10px;color:var(--text-dim)">
+    Keyboard: Z-M (C3-B3) | Q-U (C4-B4) | [ ] octave shift
+  </div>
+
+</div>
+
+<script>
+// Build operator panels dynamically
+document.addEventListener('DOMContentLoaded', () => {
+  const grid = document.getElementById('op-grid');
+  for (let i = 0; i < 6; i++) {
+    const n = i + 1; // display 1-based
+    grid.innerHTML += `
+    <div class="panel op-panel">
+      <div class="panel-title"><span class="op-num">OP${n}</span><span class="op-carrier" id="op${i}-role"></span>
+        <input type="checkbox" id="op${i}-on" checked></div>
+      <div class="control-row"><label>Ratio</label><select id="op${i}-ratio">
+        <option value="0.5">0.5</option>${Array.from({length:16},(_, j)=>`<option value="${j+1}" ${j===0?'selected':''}>${j+1}</option>`).join('')}
+      </select>
+      <input type="range" id="op${i}-fine" min="0.5" max="2.0" step="0.01" value="1.0" style="width:60px">
+      <span class="val" id="op${i}-fine-val">1.00</span></div>
+      <div class="control-row"><label>Level</label><input type="range" id="op${i}-level" min="0" max="99" step="1" value="90"><span class="val" id="op${i}-level-val">90</span></div>
+      <div class="control-row"><label>VelSn</label><input type="range" id="op${i}-velsens" min="0" max="1" step="0.01" value="0.7"><span class="val" id="op${i}-velsens-val"></span></div>
+      <div class="section-label">Envelope</div>
+      <div class="adsr-group">
+        <div class="control-row"><label>A</label><input type="range" id="op${i}-a" min="0" max="1" step="0.001" value="0.01"><span class="val" id="op${i}-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="op${i}-d" min="0" max="1" step="0.001" value="0.3"><span class="val" id="op${i}-d-val"></span></div>
+        <div class="control-row"><label>S</label><input type="range" id="op${i}-s" min="0" max="1" step="0.01" value="0.7"><span class="val" id="op${i}-s-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="op${i}-r" min="0" max="1" step="0.001" value="0.3"><span class="val" id="op${i}-r-val"></span></div>
+      </div>
+    </div>`;
+  }
+});
+</script>
+<script src="js/keyboard.js"></script>
+<script src="js/fm-main.js"></script>
+</body>
+</html>

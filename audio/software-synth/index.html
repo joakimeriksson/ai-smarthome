@@ -2,10 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=va-synth.html">
-  <title>Software Synth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Synths</title>
+  <style>
+    body { background: #0d0d1a; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { text-align: center; }
+    h1 { font-size: 24px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 32px; color: #ccc; }
+    .synths { display: flex; gap: 24px; }
+    a { display: block; padding: 32px 48px; border-radius: 12px; text-decoration: none; color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; transition: transform 0.15s, box-shadow 0.15s; }
+    a:hover { transform: translateY(-2px); }
+    .va { background: linear-gradient(135deg, #1a2e1a, #0d1a0d); border: 1px solid #00ff88; box-shadow: 0 0 20px rgba(0,255,136,0.15); color: #00ff88; }
+    .va:hover { box-shadow: 0 0 30px rgba(0,255,136,0.3); }
+    .ws { background: linear-gradient(135deg, #1a1e2e, #0d101a); border: 1px solid #00ccff; box-shadow: 0 0 20px rgba(0,204,255,0.15); color: #00ccff; }
+    .ws:hover { box-shadow: 0 0 30px rgba(0,204,255,0.3); }
+    .sid { background: linear-gradient(135deg, #1a1a3e, #0d0d20); border: 1px solid #7878ff; box-shadow: 0 0 20px rgba(120,120,255,0.15); color: #7878ff; font-family: 'Courier New', monospace; }
+    .sid:hover { box-shadow: 0 0 30px rgba(120,120,255,0.3); }
+    .fm { background: linear-gradient(135deg, #2e1a0a, #1a0d00); border: 1px solid #ff8800; box-shadow: 0 0 20px rgba(255,136,0,0.15); color: #ff8800; }
+    .fm:hover { box-shadow: 0 0 30px rgba(255,136,0,0.3); }
+    .pm { background: linear-gradient(135deg, #0a2e0a, #001a00); border: 1px solid #44cc44; box-shadow: 0 0 20px rgba(68,204,68,0.15); color: #44cc44; }
+    .pm:hover { box-shadow: 0 0 30px rgba(68,204,68,0.3); }
+    .drum { background: linear-gradient(135deg, #2e0a0a, #1a0000); border: 1px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.15); color: #ff4444; }
+    .drum:hover { box-shadow: 0 0 30px rgba(255,68,68,0.3); }
+    .sub { font-size: 11px; color: #888; margin-top: 6px; font-weight: 400; letter-spacing: 1px; }
+  </style>
 </head>
 <body>
-  <p>Redirecting to <a href="va-synth.html">VA Synth</a>...</p>
+  <div class="container">
+    <h1>Software Synths</h1>
+    <div class="synths">
+      <a href="va-synth.html" class="va">VA Synth<div class="sub">Virtual Analog</div></a>
+      <a href="ws-synth.html" class="ws">WaveSynth<div class="sub">Wavetable &amp; Wave Sequence</div></a>
+      <a href="sid-synth.html" class="sid">SID Synth<div class="sub">C64 MOS 6581 / 8580</div></a>
+      <a href="fm-synth.html" class="fm">FM Synth<div class="sub">DX7-Style 6-Operator</div></a>
+      <a href="pm-synth.html" class="pm">PM Synth<div class="sub">Karplus-Strong Physical Modeling</div></a>
+      <a href="drum-machine.html" class="drum">Drums<div class="sub">808/909 Drum Machine</div></a>
+    </div>
+  </div>
 </body>
 </html>

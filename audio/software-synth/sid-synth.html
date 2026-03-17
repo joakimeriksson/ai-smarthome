@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SID Synth</title>
+  <link rel="stylesheet" href="css/sid-synth.css">
+</head>
+<body>
+<div class="synth-container">
+
+  <div class="synth-header">
+    <div>
+      <h1>SID Synth</h1>
+      <span class="subtitle">MOS 6581 / 8580 Emulation</span>
+    </div>
+    <div class="header-controls">
+      <select id="preset-select"><option value="">-- Preset --</option></select>
+      <button id="save-preset-btn" class="btn btn-small">Save</button>
+      <button id="start-btn" class="btn">Start Audio</button>
+    </div>
+  </div>
+
+  <!-- Row 1: Oscillator | Mod Osc | Filter -->
+  <div class="synth-grid">
+
+    <!-- OSCILLATOR -->
+    <div class="panel">
+      <div class="panel-title">Oscillator</div>
+      <div class="section-label">Waveform (toggle to combine)</div>
+      <div class="wave-toggles main-wave-toggles">
+        <button data-bit="16">TRI</button>
+        <button data-bit="32">SAW</button>
+        <button data-bit="64" class="active">PULSE</button>
+        <button data-bit="128">NOISE</button>
+      </div>
+      <div class="control-row">
+        <label>PW</label>
+        <input type="range" id="pulse-width" min="0" max="1" step="0.001" value="0.5">
+        <span class="val" id="pulse-width-val"></span>
+      </div>
+
+      <div class="section-label" style="margin-top:8px">Envelope (ADSR 0-15)</div>
+      <div class="sid-adsr">
+        <div class="control-row"><label>A</label><input type="range" id="attack" min="0" max="15" step="1" value="0"><span class="val" id="attack-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="decay" min="0" max="15" step="1" value="0"><span class="val" id="decay-val"></span></div>
+        <div class="control-row"><label>S</label><input type="range" id="sustain" min="0" max="15" step="1" value="15"><span class="val" id="sustain-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="release" min="0" max="15" step="1" value="0"><span class="val" id="release-val"></span></div>
+      </div>
+    </div>
+
+    <!-- OSCILLATOR 2 -->
+    <div class="panel">
+      <div class="panel-title">Oscillator 2</div>
+      <div class="checkbox-row"><input type="checkbox" id="osc2-on"><label for="osc2-on">Enable (audible on SID)</label></div>
+      <div class="section-label">Waveform</div>
+      <div class="wave-toggles mod-wave-toggles">
+        <button data-bit="16" class="active">TRI</button>
+        <button data-bit="32">SAW</button>
+        <button data-bit="64">PULSE</button>
+        <button data-bit="128">NOISE</button>
+      </div>
+      <div class="control-row">
+        <label>Detune</label>
+        <input type="range" id="osc2-detune" min="-24" max="24" step="0.1" value="0">
+        <span class="val" id="osc2-detune-val"></span>
+      </div>
+      <div class="section-label">Pitch Sweep</div>
+      <div class="control-row">
+        <label>Amount</label>
+        <input type="range" id="osc2-env-amt" min="-1" max="1" step="0.01" value="0">
+        <span class="val" id="osc2-env-amt-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Speed</label>
+        <input type="range" id="osc2-sweep-speed" min="0" max="15" step="1" value="8">
+        <span class="val" id="osc2-sweep-speed-val"></span>
+      </div>
+      <div class="checkbox-row"><input type="checkbox" id="ring-mod"><label for="ring-mod">Ring Mod (Osc1 × Osc2)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="hard-sync"><label for="hard-sync">Hard Sync (Osc2 resets Osc1)</label></div>
+
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--panel-border)">
+        <div class="section-label">Performance</div>
+        <div class="checkbox-row"><input type="checkbox" id="portamento-on"><label for="portamento-on">Portamento</label></div>
+        <div class="control-row"><label>Glide</label><input type="range" id="portamento-time" min="0" max="1" step="0.01" value="0.1"><span class="val" id="portamento-time-val"></span></div>
+        <div class="control-row"><label>PB Range</label><select id="pitch-bend-range"><option value="2" selected>2</option><option value="3">3</option><option value="5">5</option><option value="7">7</option><option value="12">12</option></select></div>
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="panel">
+      <div class="panel-title">Filter (SID SVF)</div>
+      <div class="checkbox-row"><input type="checkbox" id="filter-on" checked><label for="filter-on">Enable</label></div>
+      <div class="control-row">
+        <label>Mode</label>
+        <select id="filter-mode">
+          <option value="16">Low Pass</option>
+          <option value="32">Band Pass</option>
+          <option value="64">High Pass</option>
+          <option value="80">LP + HP</option>
+        </select>
+      </div>
+      <div class="control-row"><label>Cutoff</label><input type="range" id="filter-cutoff" min="0" max="1" step="0.001" value="0.5"><span class="val" id="filter-cutoff-val"></span></div>
+      <div class="control-row"><label>Reso</label><input type="range" id="filter-reso" min="0" max="15" step="1" value="0"><span class="val" id="filter-reso-val"></span></div>
+      <div class="control-row"><label>Env Amt</label><input type="range" id="filter-env-amt" min="-1" max="1" step="0.01" value="0"><span class="val" id="filter-env-amt-val"></span></div>
+
+      <div class="section-label" style="margin-top:8px">Filter Envelope (0-15)</div>
+      <div class="sid-adsr">
+        <div class="control-row"><label>A</label><input type="range" id="flt-attack" min="0" max="15" step="1" value="0"><span class="val" id="flt-attack-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="flt-decay" min="0" max="15" step="1" value="8"><span class="val" id="flt-decay-val"></span></div>
+        <div class="control-row"><label>S</label><input type="range" id="flt-sustain" min="0" max="15" step="1" value="0"><span class="val" id="flt-sustain-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="flt-release" min="0" max="15" step="1" value="4"><span class="val" id="flt-release-val"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GT2 Table Editor -->
+  <div class="panel" id="table-section">
+    <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
+      GT2 Tables
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="table-enabled"><label for="table-enabled" style="font-size:10px;color:var(--text-dim)">ENABLE</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:6px;align-items:center;flex-wrap:wrap">
+      <div class="wave-toggles" id="table-tabs" style="margin:0">
+        <button class="active" data-tbl="0">WTBL</button>
+        <button data-tbl="1">PTBL</button>
+        <button data-tbl="2">FTBL</button>
+      </div>
+      <div class="control-row" style="margin:0"><label>Wave@</label><input type="number" id="tbl-wave-ptr" min="0" max="255" value="0" style="width:48px;background:#1a1a35;color:var(--text);border:1px solid var(--panel-border);border-radius:3px;font-family:monospace;text-align:center"></div>
+      <div class="control-row" style="margin:0"><label>Pulse@</label><input type="number" id="tbl-pulse-ptr" min="0" max="255" value="0" style="width:48px;background:#1a1a35;color:var(--text);border:1px solid var(--panel-border);border-radius:3px;font-family:monospace;text-align:center"></div>
+      <div class="control-row" style="margin:0"><label>Filter@</label><input type="number" id="tbl-filter-ptr" min="0" max="255" value="0" style="width:48px;background:#1a1a35;color:var(--text);border:1px solid var(--panel-border);border-radius:3px;font-family:monospace;text-align:center"></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;font-family:monospace;font-size:11px;width:100%">
+        <thead><tr style="color:var(--accent-dim);font-size:9px;text-transform:uppercase">
+          <th style="width:30px;text-align:center;padding:2px 4px">Pos</th>
+          <th style="width:50px;text-align:center;padding:2px 4px">Left</th>
+          <th style="width:50px;text-align:center;padding:2px 4px">Right</th>
+          <th style="text-align:left;padding:2px 4px">Description</th>
+        </tr></thead>
+        <tbody id="table-grid"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+      <button class="btn btn-small" id="tbl-clear">Clear</button>
+      <button class="btn btn-small" id="tbl-fill-arp">Arp (CEG)</button>
+      <button class="btn btn-small" id="tbl-fill-pwm">PWM Sweep</button>
+      <button class="btn btn-small" id="tbl-fill-flt">Filter Sweep</button>
+      <button class="btn btn-small" id="tbl-fill-transient">Noise→Pulse</button>
+    </div>
+    <details style="margin-top:6px"><summary style="font-size:10px;color:var(--text-dim);cursor:pointer">Command Reference</summary>
+      <pre style="font-size:9px;color:var(--text-dim);line-height:1.4;margin-top:4px;white-space:pre-wrap">WTBL: 00-0F=Delay frames | 10-DF=Waveform+gate (bit0=gate,1=sync,2=ring,4-7=wave) | Right: 80=no note, 00-7F=relative semi | FF=Jump (00=stop)
+PTBL: 01-7F=Modulate (left=ticks, right=signed speed) | 80-FE=Set PW ((left&0F)<<8|right) | FF=Jump
+FTBL: 00=Set cutoff (right) | 01-7F=Modulate (ticks,speed) | 80-FE=Set filter (left bits=type, right=reso<<4|route) | FF=Jump</pre>
+    </details>
+  </div>
+
+  <!-- Use GT2 tables for PWM/filter modulation instead of LFO. Pure SID output, no post-FX. -->
+
+  <!-- Master + Scope -->
+  <div class="bottom-row">
+    <div class="panel">
+      <div class="panel-title">Master</div>
+      <div class="control-row"><label>Volume</label><input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.7"><span class="val" id="master-vol-val"></span></div>
+      <div class="status-bar">
+        <span id="voice-display">Voices: 0/8</span>
+        <span id="octave-display">Oct: +0</span>
+        <span id="sustain-indicator" style="color:var(--text-dim)">SUS</span>
+        <span id="midi-status">MIDI: --</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Scope</div>
+      <canvas id="scope" width="800" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- Piano -->
+  <div class="panel"><div id="piano-keyboard"></div></div>
+  <div style="text-align:center;padding:8px;font-size:10px;color:var(--text-dim)">
+    Keyboard: Z-M (C3-B3) | Q-U (C4-B4) | [ ] octave shift | Computer keyboard or MIDI
+  </div>
+
+</div>
+
+<script src="js/keyboard.js"></script>
+<script src="js/sid-main.js"></script>
+</body>
+</html>

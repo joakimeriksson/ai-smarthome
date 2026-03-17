@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physical Modeling Synth</title>
+  <link rel="stylesheet" href="css/pm-synth.css">
+</head>
+<body>
+<div class="synth-container">
+
+  <div class="synth-header">
+    <div>
+      <h1>PM Synth</h1>
+      <span class="subtitle">Karplus-Strong Physical Modeling</span>
+    </div>
+    <div class="header-controls">
+      <select id="preset-select"><option value="">-- Preset --</option></select>
+      <button id="save-preset-btn" class="btn btn-small">Save</button>
+      <button id="start-btn" class="btn">Start Audio</button>
+    </div>
+  </div>
+
+  <!-- Main controls -->
+  <div class="synth-grid">
+
+    <!-- Exciter -->
+    <div class="panel">
+      <div class="panel-title">Exciter</div>
+      <div class="control-row">
+        <label>Type</label>
+        <select id="exciter">
+          <option value="0">Pluck</option>
+          <option value="1">Strike</option>
+          <option value="2">Bow</option>
+          <option value="3">Hammer</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <label>Color</label>
+        <input type="range" id="color" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="color-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Bright</label>
+        <input type="range" id="brightness" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="brightness-val"></span>
+      </div>
+    </div>
+
+    <!-- String -->
+    <div class="panel">
+      <div class="panel-title">String</div>
+      <div class="control-row">
+        <label>Decay</label>
+        <input type="range" id="decay" min="0" max="1" step="0.01" value="0.7">
+        <span class="val" id="decay-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Damping</label>
+        <input type="range" id="damping" min="0" max="1" step="0.01" value="0.3">
+        <span class="val" id="damping-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Pickup</label>
+        <input type="range" id="pickup" min="0" max="0.5" step="0.01" value="0.13">
+        <span class="val" id="pickup-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Inharm</label>
+        <input type="range" id="inharm" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="inharm-val"></span>
+      </div>
+    </div>
+
+    <!-- Body & Output -->
+    <div class="panel">
+      <div class="panel-title">Body &amp; Output</div>
+      <div class="control-row">
+        <label>Body</label>
+        <input type="range" id="body-amount" min="0" max="1" step="0.01" value="0">
+        <span class="val" id="body-amount-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Size</label>
+        <input type="range" id="body-size" min="0" max="1" step="0.01" value="0.5">
+        <span class="val" id="body-size-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Stereo</label>
+        <input type="range" id="stereo-width" min="0" max="1" step="0.01" value="0.3">
+        <span class="val" id="stereo-width-val"></span>
+      </div>
+      <div class="control-row">
+        <label>Volume</label>
+        <input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.8">
+        <span class="val" id="master-vol-val"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Effects -->
+  <div class="effects-row">
+    <div class="panel">
+      <div class="fx-header"><div class="panel-title">Chorus</div><input type="checkbox" id="fx-chorus-on"></div>
+      <div class="control-row"><label>Rate</label><input type="range" id="fx-chorus-rate" min="0" max="1" step="0.01" value="0.1"><span class="val" id="fx-chorus-rate-val"></span></div>
+      <div class="control-row"><label>Depth</label><input type="range" id="fx-chorus-depth" min="0" max="1" step="0.01" value="0.5"><span class="val" id="fx-chorus-depth-val"></span></div>
+      <div class="control-row"><label>Mix</label><input type="range" id="fx-chorus-mix" min="0" max="1" step="0.01" value="0.3"><span class="val" id="fx-chorus-mix-val"></span></div>
+    </div>
+    <div class="panel">
+      <div class="fx-header"><div class="panel-title">Delay</div><input type="checkbox" id="fx-delay-on"></div>
+      <div class="control-row"><label>Time</label><input type="range" id="fx-delay-time" min="0" max="1" step="0.01" value="0.25"><span class="val" id="fx-delay-time-val"></span></div>
+      <div class="control-row"><label>Fback</label><input type="range" id="fx-delay-fb" min="0" max="0.95" step="0.01" value="0.4"><span class="val" id="fx-delay-fb-val"></span></div>
+      <div class="control-row"><label>Mix</label><input type="range" id="fx-delay-mix" min="0" max="1" step="0.01" value="0.3"><span class="val" id="fx-delay-mix-val"></span></div>
+    </div>
+    <div class="panel">
+      <div class="fx-header"><div class="panel-title">Reverb</div><input type="checkbox" id="fx-reverb-on"></div>
+      <div class="control-row"><label>Size</label><input type="range" id="fx-reverb-size" min="0" max="1" step="0.01" value="0.7"><span class="val" id="fx-reverb-size-val"></span></div>
+      <div class="control-row"><label>Damp</label><input type="range" id="fx-reverb-damp" min="0" max="1" step="0.01" value="0.5"><span class="val" id="fx-reverb-damp-val"></span></div>
+      <div class="control-row"><label>Mix</label><input type="range" id="fx-reverb-mix" min="0" max="1" step="0.01" value="0.2"><span class="val" id="fx-reverb-mix-val"></span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Scope</div>
+      <canvas id="scope" width="400" height="120"></canvas>
+      <div class="status-bar">
+        <span id="voice-display">Voices: 0/8</span>
+        <span id="octave-display">Oct: +0</span>
+        <span id="midi-status">MIDI: --</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Piano -->
+  <div class="panel"><div id="piano-keyboard"></div></div>
+  <div style="text-align:center;padding:8px;font-size:10px;color:var(--text-dim)">
+    Keyboard: Z-M (C3-B3) | Q-U (C4-B4) | [ ] octave shift | Velocity-sensitive via MIDI
+  </div>
+
+</div>
+<script src="js/keyboard.js"></script>
+<script src="js/pm-main.js"></script>
+</body>
+</html>

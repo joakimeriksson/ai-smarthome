@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Synthex Web — comparison harness</title>
+<style>
+  body { background:#0d0d10; color:#e8e8e8; font-family: ui-sans-serif, system-ui, sans-serif; margin:0; padding:1.5rem 2rem; }
+  h1 { color:#ff8a3d; letter-spacing:0.18em; font-size:1.3rem; margin:0 0 0.2rem; }
+  .sub { color:#888; font-size:0.78rem; margin:0 0 1.5rem; }
+  .scenario { background:#16161a; border:1px solid #2c2c33; border-radius:6px; padding:1rem 1.2rem; margin-bottom:1rem; }
+  .scenario h2 { font-size:1rem; color:#ff8a3d; margin:0 0 0.3rem; }
+  .scenario p { color:#bbb; font-size:0.84rem; margin:0 0 0.6rem; line-height:1.45; }
+  .scenario .audio { display:flex; gap:1rem; align-items:center; margin-bottom:0.6rem; flex-wrap:wrap; }
+  .scenario .audio label { font-size:0.78rem; color:#888; }
+  audio { height:32px; }
+  .plots { display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-top:0.5rem; }
+  .plot { border:1px solid #2c2c33; border-radius:4px; overflow:hidden; }
+  .plot img { display:block; width:100%; height:auto; }
+  .metric { display:inline-block; padding:0.15rem 0.5rem; border-radius:3px; font-size:0.78rem; margin-left:0.6rem; }
+  .metric.good { background:#143a14; color:#7fdb7f; }
+  .metric.warn { background:#3a3014; color:#ffce7f; }
+  .metric.bad  { background:#3a1414; color:#ff7f7f; }
+  .metric.none { background:#2c2c33; color:#888; }
+  .legend { background:#1d1d22; padding:0.75rem 1rem; border-radius:6px; border:1px solid #2c2c33; margin-bottom:1rem; font-size:0.85rem; line-height:1.55; color:#ccc; }
+  code { background:#2c2c33; padding:0 0.3rem; border-radius:2px; }
+</style>
+</head>
+<body>
+<h1>SYNTHEX WEB — Comparison harness</h1>
+<p class="sub">Generated 2026-05-09T20:04:56.116Z · 18 scenarios at 48000 Hz</p>
+
+<div class="legend">
+<strong>How to use:</strong>
+Drop a reference WAV at <code>tools/compare/refs/&lt;scenario-id&gt;.wav</code> (any sample rate, mono or stereo) and re-run <code>npm run compare</code>.
+The orange trace is Synthex Web; the blue trace is your reference. The "Δ" badge is the RMS dB difference of the spectra over 50 Hz – 10 kHz.
+Lower = closer match. <em>Below 5 dB is good, 10 dB is suspicious, 20 dB+ means the subsystem is doing something different.</em>
+Spectrogram comparisons are visual: look for matching attack timing, modulation rates, and harmonic structure over time.
+</div>
+
+<section class="scenario">
+  <h2>PolyBLEP saw — A3 (220 Hz) <span class="metric none">no reference</span></h2>
+  <p>Bare sawtooth at 220 Hz with filter wide open. Spectrum should show fundamental + harmonics decaying as 1/n. Aliased mirror images mean the BLEP isn&apos;t suppressing enough.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-saw-A3.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-saw-A3.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-saw-A3.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>PolyBLEP saw — A5 (880 Hz) <span class="metric none">no reference</span></h2>
+  <p>Saw at 880 Hz. Fewer harmonics fit under Nyquist; aliasing becomes visible above ~12 kHz if the BLEP is too narrow.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-saw-A5.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-saw-A5.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-saw-A5.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>PolyBLEP saw — A6 (1760 Hz) <span class="metric none">no reference</span></h2>
+  <p>High-pitch alias stress test. 1st-order PolyBLEP typically gives 25–35 dB SNR here. Reference synths with higher-order BLEP (or oversampling) will show a cleaner upper band.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-saw-A6.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-saw-A6.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-saw-A6.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Square (50% duty) — A3 <span class="metric none">no reference</span></h2>
+  <p>Square at 50% duty has only odd harmonics. Even harmonics should be ≥40 dB below odd ones; if not, the dual-saw-subtract isn&apos;t matched.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-square-50pct.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-square-50pct.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-square-50pct.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Square (25% duty) — A3 <span class="metric none">no reference</span></h2>
+  <p>PWM at 25%. Even harmonics now appear; spectral envelope should match the analytic formula sin(πfk·d)/(πfk).</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-square-25pct.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-square-25pct.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-square-25pct.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Triangle — A3 <span class="metric none">no reference</span></h2>
+  <p>Triangle has odd harmonics decaying as 1/n². Compare slope of the decay; band-limited triangles don&apos;t alias significantly under typical pitches.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-tri-A3.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-tri-A3.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-tri-A3.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Sine — A3 <span class="metric none">no reference</span></h2>
+  <p>Sine reference. Should show one very tall fundamental with everything else ≥120 dB down.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/osc-sine-A3.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/osc-sine-A3.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/osc-sine-A3.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>LP24 cutoff sweep on saw — A3 <span class="metric none">no reference</span></h2>
+  <p>Sustained saw, cutoff sweeping 0→1 over 2 seconds, no resonance. Spectrogram should show harmonics being shaved off the top.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/filter-lp24-sweep.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/filter-lp24-sweep.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/filter-lp24-sweep.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>LP24 resonance peak — fc=A4 <span class="metric none">no reference</span></h2>
+  <p>Cutoff fixed near A4 (440 Hz). Resonance ramps 0→1; expect a growing peak at fc.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/filter-lp24-resonance.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/filter-lp24-resonance.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/filter-lp24-resonance.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>BP12 — fc=A4 — Q≈3 <span class="metric none">no reference</span></h2>
+  <p>Band-pass at A4 with moderate resonance. Expect a single bump centered at 440 Hz with ~12 dB/oct skirts on both sides.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/filter-bp12.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/filter-bp12.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/filter-bp12.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>HP12 — fc=440 Hz on saw <span class="metric none">no reference</span></h2>
+  <p>High-pass at 440 Hz. Saw fundamental at 220 should be down ~12 dB; harmonics above 440 mostly intact.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/filter-hp12.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/filter-hp12.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/filter-hp12.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Hard sync — osc1 A3, osc2 sweep A3→A6 <span class="metric none">no reference</span></h2>
+  <p>Classic sync sweep. Spectrogram should show an animated formant moving up while the fundamental stays at 220 Hz.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/sync-osc2-sweep.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/sync-osc2-sweep.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/sync-osc2-sweep.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Ring mod — osc1 A3, osc2 +7 semis (perfect 5th) <span class="metric none">no reference</span></h2>
+  <p>Ring modulator output is sum and difference frequencies of the two oscillators. With a perfect 5th, expect a clangorous spectrum with sum/diff sidebands.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/ring-mod-fifth.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/ring-mod-fifth.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/ring-mod-fifth.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Cross-mod — osc1 audio-rate → osc2 PWM <span class="metric none">no reference</span></h2>
+  <p>OSC1 at 110 Hz modulates OSC2&apos;s pulse width at audio rate. The Synthex signature feature (slot 46 &quot;Ring mod.&quot; / Laser Harp).</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/cross-mod-pwm.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/cross-mod-pwm.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/cross-mod-pwm.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>ADSR amp envelope — A=10ms D=200ms S=0.7 R=300ms <span class="metric none">no reference</span></h2>
+  <p>Sustained note with the spec envelope. View the spectrogram&apos;s loudness over time to verify attack/decay/release timing.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/adsr-amp.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/adsr-amp.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/adsr-amp.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>LFO 1 vibrato — 5 Hz → osc1 pitch <span class="metric none">no reference</span></h2>
+  <p>Triangle LFO at 5 Hz pitching osc1 by ±~5 cents. Spectrum should show two sidebands either side of the carrier.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/lfo-vibrato.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/lfo-vibrato.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/lfo-vibrato.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+<section class="scenario">
+  <h2>Patch — Ring mod. (Laser Harp, slot 46) <span class="metric warn">Δ 9.5 dB</span></h2>
+  <p>The Wiffen/JMJ &quot;Rendez-Vous&quot; sound. All four &quot;weird&quot; switches engaged: sync + ring + cross-mod + filter env on osc2 pitch.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/patch-laser-harp.wav"></audio>
+    <label>reference</label><audio controls src="refs/patch-laser-harp.wav"></audio>
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/patch-laser-harp.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/patch-laser-harp.spectrogram.svg" /></div>
+    <div class="plot"><img alt="ref spectrogram" src="out/patch-laser-harp.ref-spectrogram.svg" /></div>
+  </div>
+</section>
+<section class="scenario">
+  <h2>Patch — Brass I (slot 17) <span class="metric none">no reference</span></h2>
+  <p>Standard brass patch from PRESETS_B1. Detuned saws + filter env. Compare against perkristian recording or any brass preset on Cherry/Arturia.</p>
+  <div class="audio">
+    <label>synthex-web</label>
+    <audio controls src="out/patch-brass-1.wav"></audio>
+    
+  </div>
+  <div class="plots">
+    <div class="plot"><img alt="spectrum" src="out/patch-brass-1.spectrum.svg" /></div>
+    <div class="plot"><img alt="spectrogram" src="out/patch-brass-1.spectrogram.svg" /></div>
+    
+  </div>
+</section>
+
+</body>
+</html>

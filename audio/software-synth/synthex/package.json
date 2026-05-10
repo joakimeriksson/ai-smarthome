@@ -1,0 +1,22 @@
+{
+  "name": "synthex-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @synthex/app",
+    "build": "npm run build --workspace @synthex/engine && npm run build --workspace @synthex/app",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "compare": "node --experimental-transform-types tools/compare/run.ts",
+    "typecheck": "tsc -b && cd packages/app && svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "@types/node": "^22.9.0"
+  }
+}

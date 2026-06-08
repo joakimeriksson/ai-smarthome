@@ -1,0 +1,20 @@
+# Custom Swedish pronunciation fixes for Piper (espeak-ng sv dictionary).
+# Format (TAB-separated):   word<TAB>espeak-phonemes
+# - lowercase the word (matching is case-insensitive for the entry key)
+# - phonemes use espeak's notation, NOT IPA. Quick reference:
+#     ' = primary stress (before the stressed syllable)
+#     : = long vowel        I = short i (ɪ)        u: = long u (uː)
+#     A: = long a (ɑː)      2: = ö (øː)            } = u (ʉ)
+#     S = sj/sh sound (ɧ/ʃ)  tS = tj/ch
+#   Tip: find the phonemes for any word with
+#     espeak-ng -v sv -q -x "ditt ord"
+#   then tweak (e.g. shorten a vowel by removing ':', move the ' stress mark).
+#
+# Lines starting with # and blank lines are ignored.
+# Entries here OVERRIDE the upstream dictionary.
+
+# --- examples (safe to keep or edit) ---
+godis	g'u:dIs
+# Place / brand / personal names espeak mangles — add yours below:
+# linköping	l'INS2:pIN
+# saltsjöbaden	s'altS2:bA:den

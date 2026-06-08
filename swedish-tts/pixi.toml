@@ -1,0 +1,46 @@
+[workspace]
+channels = ["conda-forge"]
+name = "piper-sv"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[dependencies]
+python = ">=3.11,<3.12"
+pip = ">=25,<26"
+ffmpeg = ">=8.0,<9"
+libsndfile = ">=1.2,<2"
+cmake = "*"
+ninja = "*"
+# Audio + data prep
+librosa = ">=0.10"
+
+[tasks]
+# --- inference / baseline ---
+install-infer = "python -m pip install piper-tts"
+download-baseline = "python -m piper.download_voices sv_SE-nst-medium --data-dir voices"
+baseline = "python synth.py --model voices/sv_SE-nst-medium.onnx --label baseline_sv_SE-nst-medium"
+check = "python -c \"import piper, onnxruntime as ort; print('piper ok'); print('onnxruntime', ort.__version__); print('providers', ort.get_available_providers())\""
+
+# --- data prep (uses repo-root data/swedish_raw) ---
+prepare-data = "python prepare_data.py --min-dnsmos 3.5 --single-speaker auto"
+
+# --- training ---
+# clone piper1-gpl + install train extras
+install-train = "bash install_train.sh"
+
+# NOTE: on resume the global_step counter restarts near 0, so --trainer.max_steps
+# is the ABSOLUTE number of fine-tune steps (not BASE + N). CPU does ~1.8 s/step.
+# Smoke: 40 clips, ~5 steps, CPU — proves the fine-tune pipeline end-to-end.
+train-smoke = "KMP_DUPLICATE_LIB_OK=TRUE PYTORCH_ENABLE_MPS_FALLBACK=1 python -m piper.train fit --data.voice_name sv_nyckfull_smoke --data.csv_path train_sv_smoke.csv --data.audio_dir data/swedish_raw/wavs --model.sample_rate 22050 --data.espeak_voice sv --data.num_symbols 130 --data.phonemes_path basemodel/sv_phoneme_id_map.json --data.cache_dir cache_smoke --data.config_path output/sv_nyckfull_smoke.config.json --data.batch_size 4 --ckpt_path basemodel/sv_nst_base_resume.ckpt --trainer.max_steps 5 --trainer.accelerator cpu --trainer.limit_val_batches 1"
+
+# Short Mac fine-tune: 6.8h single-speaker set, 400 steps on CPU (~12 min after
+# one-time preprocessing). Override ++trainer.max_steps / ++trainer.accelerator=mps.
+train = "KMP_DUPLICATE_LIB_OK=TRUE PYTORCH_ENABLE_MPS_FALLBACK=1 python -m piper.train fit --data.voice_name sv_nyckfull --data.csv_path train_sv.csv --data.audio_dir data/swedish_raw/wavs --model.sample_rate 22050 --data.espeak_voice sv --data.num_symbols 130 --data.phonemes_path basemodel/sv_phoneme_id_map.json --data.cache_dir cache --data.config_path output/sv_nyckfull.config.json --data.batch_size 8 --ckpt_path basemodel/sv_nst_base_resume.ckpt --trainer.max_steps 400 --trainer.accelerator cpu"
+
+# Same fine-tune on the Mac GPU (Metal/MPS). VITS' stft op falls back to CPU, so
+# expect a modest speedup over CPU, not CUDA-level. Fallback env makes it safe.
+train-mps = "KMP_DUPLICATE_LIB_OK=TRUE PYTORCH_ENABLE_MPS_FALLBACK=1 python -m piper.train fit --data.voice_name sv_nyckfull --data.csv_path train_sv.csv --data.audio_dir data/swedish_raw/wavs --model.sample_rate 22050 --data.espeak_voice sv --data.num_symbols 130 --data.phonemes_path basemodel/sv_phoneme_id_map.json --data.cache_dir cache --data.config_path output/sv_nyckfull.config.json --data.batch_size 8 --ckpt_path basemodel/sv_nst_base_resume.ckpt --trainer.max_steps 2000 --trainer.accelerator mps"
+
+# Export the newest trained checkpoint to ONNX + pair its config, then A/B synth.
+export = "bash finetune_export.sh sv_nyckfull"
+compare = "bash compare.sh"

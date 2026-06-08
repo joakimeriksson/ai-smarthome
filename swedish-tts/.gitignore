@@ -1,0 +1,26 @@
+# environments
+.venv/
+.pixi/
+__pycache__/
+
+# data, models, generated artifacts (rebuilt by the scripts)
+data/
+basemodel/
+voices/
+output/
+cache/
+cache_*/
+lightning_logs/
+piper1-gpl/
+espeak_data*/
+espeak_build/
+espeak_sv/
+
+# generated files
+*.ckpt
+*.onnx
+*.onnx.json
+*.wav
+*.log
+train_sv.csv
+train_sv_smoke.csv

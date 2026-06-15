@@ -1,0 +1,13 @@
+# pixi environments
+.pixi/
+
+# fetched/trained artifacts and data (live on the 3090 box / downloaded)
+voices/
+output/
+data/
+g2p/
+recipe/
+models/
+
+# temporary audio
+*.wav

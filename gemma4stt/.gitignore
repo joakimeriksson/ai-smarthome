@@ -1,0 +1,13 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# downloaded TTS voice models (fetch via `pixi run download-voice`)
+voices/
+
+# recorded / temporary audio
+*.wav
+
+# python cache
+__pycache__/
+*.pyc

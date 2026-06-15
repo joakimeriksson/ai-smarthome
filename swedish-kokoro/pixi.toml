@@ -1,0 +1,27 @@
+[workspace]
+channels = ["conda-forge"]
+name = "swedish-kokoro"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+# Mac mirror env: data prep, phonemization and Kokoro-vocab validation only.
+# Actual GPU training runs on the RTX 3090 box via setup_3090.sh / train_3090.sh.
+
+[dependencies]
+python = ">=3.11,<3.12"
+ffmpeg = ">=8.0,<9"
+libsndfile = ">=1.2,<2"
+espeak-ng = "*"
+librosa = ">=0.10"
+
+[pypi-dependencies]
+soundfile = ">=0.14.0,<0.15"
+misaki = "*"
+kokoro-onnx = "*"
+
+[tasks]
+# Smoke-test the Swedish G2P + Kokoro vocab coverage (espeak backend on Mac).
+check-g2p = "python g2p_sv.py"
+# Build train/val filelists from data/swedish_raw (espeak fallback on the Mac;
+# the neural G2P runs on the GPU box where the model lives).
+prepare-data = "python prepare_data.py --raw data/swedish_raw --speaker sv0 --g2p espeak"

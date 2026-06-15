@@ -1,0 +1,39 @@
+# Swedish Kokoro fine-tune config (StyleTTS2 / kikiri recipe).
+# Paths are relative to the recipe/ dir at run time; absolute paths recommended.
+# Tune batch_size to the GPU: 4 fits ~12 GB, the RTX 3090 (24 GB) handles 8-16.
+
+log_dir: "../output/sv_kokoro"
+save_freq: 1
+log_interval: 50
+device: "cuda"
+
+# --- data -------------------------------------------------------------------
+data_params:
+  train_data: "../data/train_list.txt"
+  val_data: "../data/val_list.txt"
+  root_path: "../data"           # filelist paths are relative to this
+  sr: 24000                       # Kokoro sample rate
+  # single speaker fine-tune; set multispeaker true for the multi-speaker base
+  multispeaker: false
+
+# --- models to warm-start / condition on ------------------------------------
+# Swedish PL-BERT (downloaded by setup_3090.sh) — Swedish is in its 15-lang set.
+PLBERT_dir: "../models/multilingual-pl-bert"
+# Warm-start acoustic weights from base Kokoro for faster convergence.
+pretrained_model: "../models/Kokoro-82M/kokoro-v1_0.pth"
+load_only_params: true
+
+# --- training schedule ------------------------------------------------------
+batch_size: 8
+max_len: 400                      # max phoneme length per sample
+epochs_1st: 50                    # Stage 1 (acoustic + duration/prosody)
+epochs_2nd: 25                    # Stage 2 (joint adversarial + SLM)
+joint_epoch: 3                    # epoch at which adversarial/SLM kicks in
+
+optimizer_params:
+  lr: 0.0001
+
+loss_params:
+  lambda_mel: 5.0
+  lambda_gen: 1.0
+  lambda_slm: 1.0

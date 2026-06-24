@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nvidia-smi)",
+      "Bash(nvidia-smi --query-gpu *)",
+      "Bash(nvidia-smi --query-compute-apps *)"
+    ]
+  }
+}

@@ -13,3 +13,6 @@ models/
 
 # temporary audio
 *.wav
+
+# run logs
+*.log

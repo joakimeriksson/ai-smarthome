@@ -1,39 +1,149 @@
-# Swedish Kokoro fine-tune config (StyleTTS2 / kikiri recipe).
-# Paths are relative to the recipe/ dir at run time; absolute paths recommended.
-# Tune batch_size to the GPU: 4 fits ~12 GB, the RTX 3090 (24 GB) handles 8-16.
+# Swedish Kokoro-82M fine-tune config (StyleTTS2 / kikiri recipe).
+#
+# Paths are RELATIVE TO THE StyleTTS2 WORKING DIR (recipe/StyleTTS2/), which is
+# where train_first.py / train_second.py run. Repo root is ../../ from there:
+#   ../../models/...   our downloaded/converted weights
+#   ../../data/...     filelists produced by prepare_data.py
+#   Utils/...          ships inside the StyleTTS2 submodule
+#
+# CRITICAL vs the previous (broken) version:
+#   * pretrained_model points at the CONVERTED kokoro_base.pth (run convert_weights.py),
+#     NOT the raw kokoro-v1_0.pth.  -> Stage 2 mel loss must START ~0.43, not ~7.5.
+#   * the full model_params block below MUST match Kokoro-82M exactly or the
+#     pretrained weights won't load.
+#   * token ids come from kokoro_symbols.py (sparse 178-slot map), wired into
+#     StyleTTS2/text_utils.py by setup_3090.sh.
 
-log_dir: "../output/sv_kokoro"
+log_dir: "../../output/sv_kokoro"
 save_freq: 1
 log_interval: 50
 device: "cuda"
 
-# --- data -------------------------------------------------------------------
+# ── Data ─────────────────────────────────────────────────────────────────────
 data_params:
-  train_data: "../data/train_list.txt"
-  val_data: "../data/val_list.txt"
-  root_path: "../data"           # filelist paths are relative to this
-  sr: 24000                       # Kokoro sample rate
-  # single speaker fine-tune; set multispeaker true for the multi-speaker base
-  multispeaker: false
+  train_data: "../../data/train_list.txt"
+  val_data: "../../data/val_list.txt"
+  root_path: "../../data"
+  OOD_data: "../../data/OOD_texts.txt"
+  min_length: 50
+  num_workers: 16
 
-# --- models to warm-start / condition on ------------------------------------
-# Swedish PL-BERT (downloaded by setup_3090.sh) — Swedish is in its 15-lang set.
-PLBERT_dir: "../models/multilingual-pl-bert"
-# Warm-start acoustic weights from base Kokoro for faster convergence.
-pretrained_model: "../models/Kokoro-82M/kokoro-v1_0.pth"
+preprocess_params:
+  sr: 24000
+  spect_params:
+    n_fft: 2048
+    win_length: 1200
+    hop_length: 300
+    n_mels: 80
+    fmin: 0
+    fmax: 8000
+
+# ── Warm-start / conditioning weights ───────────────────────────────────────
+pretrained_model: "../../models/kokoro_base.pth"   # CONVERTED (convert_weights.py)
 load_only_params: true
+second_stage_load_pretrained: false                # Stage 2 loads from first_stage.pth
+first_stage_path: "first_stage.pth"
 
-# --- training schedule ------------------------------------------------------
-batch_size: 8
-max_len: 400                      # max phoneme length per sample
-epochs_1st: 50                    # Stage 1 (acoustic + duration/prosody)
-epochs_2nd: 25                    # Stage 2 (joint adversarial + SLM)
-joint_epoch: 3                    # epoch at which adversarial/SLM kicks in
+# PL-BERT: use the recipe's bundled PLBERT (same one the working German fine-tune used).
+# It operates on Kokoro's IPA phoneme vocab — which already covers Swedish phonemes —
+# and `pretrained_model` (kokoro_base.pth `net.bert`) overrides its weights via
+# load_only_params anyway. A *foreign* multilingual PL-BERT would use a different
+# phoneme tokenizer/dims and silently feed the model garbage context. Do NOT swap it.
+PLBERT_dir: "Utils/PLBERT/"
+# StyleTTS2 utilities that ship in the submodule:
+F0_path: "Utils/JDC/bst.t7"
+ASR_config: "Utils/ASR/config.yml"
+ASR_path: "Utils/ASR/epoch_00080.pth"
 
-optimizer_params:
-  lr: 0.0001
+# ── Training schedule ───────────────────────────────────────────────────────
+batch_size: 8          # 4 fits ~12 GB; RTX 3090 (24 GB) handles 8–16
+max_len: 400           # MEL FRAMES (~5 s at hop 300/24 kHz); longer clips get random-cropped.
+                       # Keep prepare_data --max-sec near this (≤12 s) to avoid wasting audio.
+epochs: 50             # some StyleTTS2 forks read top-level `epochs`; mirror epochs_1st
+epochs_1st: 50         # Stage 1: acoustic + duration/prosody
+epochs_2nd: 25         # Stage 2: joint adversarial + SLM
+joint_epoch: 3         # adversarial/SLM kicks in here (Stage 2)
 
+# ── Model architecture — MUST equal Kokoro-82M to load pretrained weights ────
+model_params:
+  dim_in: 64
+  n_token: 178                 # embedding size (sparse 114-symbol vocab lives in it)
+  hidden_dim: 512
+  style_dim: 128
+  max_dur: 50
+  multispeaker: false          # single-speaker fine-tune — the PROVEN German-recipe setting.
+                               # Kokoro weights still load (load_only_params/strict=False).
+                               # Only set true if you actually train on multi-speaker data + refs.
+  n_mels: 80
+  dropout: 0.2
+  n_layer: 3
+  text_encoder_kernel_size: 5
+
+  decoder:
+    type: istftnet             # Kokoro uses ISTFTNet, NOT hifigan
+    upsample_rates: [10, 6]
+    upsample_kernel_sizes: [20, 12]
+    upsample_initial_channel: 512
+    resblock_kernel_sizes: [3, 7, 11]
+    resblock_dilation_sizes: [[1, 3, 5], [1, 3, 5], [1, 3, 5]]
+    gen_istft_n_fft: 20
+    gen_istft_hop_size: 5
+
+  diffusion:                   # (no diffusion training; block kept for arch parity)
+    embedding_mask_proba: 0.1
+    transformer:
+      num_layers: 3
+      num_heads: 8
+      head_features: 64
+      multiplier: 2
+    dist:
+      sigma_data: 0.2
+      estimate_sigma_data: true
+      mean: -3.0
+      std: 1.0
+
+  plbert:
+    hidden_size: 768
+    num_attention_heads: 12
+    intermediate_size: 2048
+    max_position_embeddings: 512
+    num_hidden_layers: 12
+    dropout: 0.1
+
+  slm:
+    model: "microsoft/wavlm-base-plus"
+    sr: 16000
+    hidden: 768
+    nlayers: 13
+    initial_channel: 64
+
+# ── Losses ───────────────────────────────────────────────────────────────────
 loss_params:
   lambda_mel: 5.0
   lambda_gen: 1.0
+  lambda_dur: 1.0
+  lambda_ce: 20.0
+  lambda_F0: 1.0
+  lambda_norm: 1.0
+  lambda_s2s: 1.0
+  lambda_mono: 1.0
   lambda_slm: 1.0
+  lambda_diff: 0.0
+  lambda_sty: 0.0
+  TMA_epoch: 0          # learn alignment from epoch 0 (fine-tune)
+  diff_epoch: 999       # disable diffusion
+  joint_epoch: 3
+
+optimizer_params:
+  lr: 0.0001
+  bert_lr: 0.00001
+  ft_lr: 0.0001
+
+slmadv_params:
+  min_len: 100
+  max_len: 500
+  batch_percentage: 0.5
+  iter: 10
+  thresh: 5
+  scale: 0.01
+  sig: 1.5

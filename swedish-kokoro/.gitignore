@@ -1,5 +1,7 @@
 # pixi environments
 .pixi/
+__pycache__/
+config_sv.smoke.yml
 
 # fetched/trained artifacts and data (live on the 3090 box / downloaded)
 voices/

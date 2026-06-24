@@ -6,9 +6,13 @@ the NST lexicon (the one that beat espeak for the Piper voice) and fall back to
 espeak-ng only when it is unavailable.
 
 Whatever the source, the phoneme string MUST stay inside Kokoro's fixed symbol
-vocabulary (114 symbols). `validate_against_kokoro()` checks this and an optional
-remap table fixes the few symbols a richer Swedish G2P might emit that Kokoro
-lacks (e.g. ʏ -> y, as the German recipe had to do).
+vocabulary (114 symbols mapped onto sparse ids in a 178-slot space — see
+kokoro_symbols.py). `validate_against_kokoro()` checks this against the AUTHORITATIVE
+vocab from Kokoro's config.json (NOT kokoro-onnx, which differs), and the remap table
+fixes the symbols a Swedish G2P emits that Kokoro lacks. Verified empirically (June
+2026): espeak-ng `sv` emits exactly two out-of-vocab symbols, ɵ and ʉ, both remapped
+below to in-vocab central vowels that Swedish does not otherwise use (no contrast
+collapse).
 
 Usage:
     from g2p_sv import SwedishG2P
@@ -19,15 +23,20 @@ from __future__ import annotations
 
 import os
 import re
+import importlib
 from typing import Callable
 
 # Symbols a Swedish neural G2P may emit that are NOT in Kokoro's vocab, mapped to
 # the closest in-vocab symbol. Extend this as `validate_against_kokoro` reports
 # misses on your data. (espeak's Swedish output already stays in-vocab.)
+# All targets are verified IN Kokoro's vocab; sources are the only OOV symbols
+# espeak-sv produces. ɨ(101)/ɜ(87) are unused by Swedish so they don't collapse a
+# real contrast. NOTE the previous version's `ɵ -> ʉ` was a bug: ʉ is ALSO missing.
 KOKORO_REMAP = {
-    "ʏ": "y",   # close front rounded — same fix the German (kikiri) recipe used
-    "ɵ": "ʉ",   # close-mid central rounded -> close central rounded
-    "ɧ": "ʃ",   # sj-sound -> postalveolar fricative
+    "ʏ": "y",   # close front rounded -> y (id 67); same fix the German recipe used
+    "ʉ": "ɨ",   # close central rounded -> close central unrounded (id 101, unused by sv)
+    "ɵ": "ɜ",   # close-mid central rounded -> open-mid central unrounded (id 87, unused by sv)
+    "ɧ": "ʂ",   # sj-sound -> retroflex (id 130); espeak-sv already emits ʂ/x for it anyway
     "̃": "",     # stray combining tilde
 }
 
@@ -69,7 +78,7 @@ class SwedishG2P:
         """
         mod_name = os.environ.get("SV_NEURAL_G2P", "nst_g2p")
         try:
-            mod = __import__(mod_name)
+            mod = importlib.import_module(mod_name)
         except Exception:
             return None
         if hasattr(mod, "phonemize"):
@@ -109,14 +118,15 @@ class SwedishG2P:
 
 
 def kokoro_vocab() -> set[str]:
-    """Return Kokoro's phoneme symbol set, across kokoro-onnx versions."""
-    from kokoro_onnx.tokenizer import Tokenizer
+    """Return Kokoro's AUTHORITATIVE phoneme symbol set.
 
-    t = Tokenizer()
-    vocab = getattr(t, "vocab", None)
-    if vocab is None:
-        from kokoro_onnx.tokenizer import DEFAULT_VOCAB as vocab  # type: ignore
-    return set(vocab.keys()) if isinstance(vocab, dict) else set(vocab)
+    Source of truth is kokoro_symbols.py (generated from hexgrad/Kokoro-82M
+    config.json), NOT kokoro-onnx — the two differ, and the model's pretrained
+    weights expect exactly these ids. This is the set the corpus must stay inside.
+    """
+    from kokoro_symbols import dicts
+
+    return set(dicts.keys())
 
 
 def validate_against_kokoro(phoneme_strings, kokoro_vocab: set[str]) -> dict:

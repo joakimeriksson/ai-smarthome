@@ -17,9 +17,14 @@ mkdir -p "$LOCAL/voices" "$LOCAL/g2p" "$LOCAL/data/refs"
 echo "==> model weights + voicepack + config"
 rsync -avz --progress \
   "$HOST:$REMOTE/output/sv_kokoro.voicepack.pt" \
-  "$HOST:$REMOTE/output/sv_kokoro.model.pth" \
   "$HOST:$REMOTE/config_sv.yml" \
   "$LOCAL/voices/"
+if ssh "$HOST" "test -f $REMOTE/output/sv_kokoro.model.pth"; then
+  rsync -avz --progress "$HOST:$REMOTE/output/sv_kokoro.model.pth" "$LOCAL/voices/"
+else
+  echo "!! output/sv_kokoro.model.pth is missing on the 3090."
+  echo "   Export KModel-compatible weights from the kikiri checkpoint before Mac-side inference."
+fi
 
 echo "==> the neural G2P (model + code + lexicon) — MUST match training"
 rsync -avz --progress "$HOST:$REMOTE/g2p/" "$LOCAL/g2p/"

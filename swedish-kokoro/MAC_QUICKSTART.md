@@ -28,10 +28,17 @@ sf.write("en.wav", tts.generate("And English too.",          lang="en"), 24000)
 python onnx_example.py --text "Hej från ONNX på Mac."
 ```
 
+## G2P
+- **Neural G2P is the default and self-contained.** The code is vendored in
+  `g2p/`; the model + lexicon auto-download from HF (`Joakim/swedish-kokoro` under
+  `g2p/`) on first use and cache. It needs `torch` (already a dep) — no need to copy
+  anything from `swedish-tts`. Correct loanword/name pronunciation (godis, robot,
+  Candytron) vs espeak.
+- **espeak is the automatic fallback** — if HF is unreachable or torch is missing,
+  it falls back to espeak `sv` (needs `brew install espeak-ng`) with a clear log
+  line. Force espeak with `SV_NEURAL_G2P=` (empty) if you want the light path.
+
 ## Gotchas
-- **G2P = espeak by default.** The higher-quality neural G2P model (`g2p_model.pt`)
-  is NOT published — leave `SV_NEURAL_G2P` unset (uses espeak `sv`), or copy
-  `../swedish-tts/g2p/` over and set `SV_NEURAL_G2P=nst_g2p SV_G2P_DIR=…/g2p`.
 - **Text normalization is the caller's job** — numbers/Roman numerals aren't
   normalized (e.g. capitalized "Vi" → "VI" = 6 = "sex" in espeak). Lowercase or
   pre-normalize if you hit it.

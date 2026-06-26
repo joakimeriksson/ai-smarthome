@@ -78,17 +78,31 @@ class SwedishG2P:
         either `phonemize(text) -> ipa` or a `G2P` class with `.phonemize`.
         This is the model that lives on the 3090 box and beat espeak for Piper.
         """
+        import sys
         mod_name = os.environ.get("SV_NEURAL_G2P", "nst_g2p")
         try:
             mod = importlib.import_module(mod_name)
-        except Exception:
+            if hasattr(mod, "phonemize"):
+                fn = lambda text: mod.phonemize(text)
+            elif hasattr(mod, "G2P"):
+                inst = mod.G2P()
+                fn = lambda text: inst.phonemize(text)
+            else:
+                return None
+            # PROBE the real model now. nst_g2p defers importing g2p_infer (the
+            # actual torch model + lexicon) until call-time, so importing the
+            # module alone does NOT prove the neural G2P works. Run one tiny
+            # phonemization here so the backend label is honest and a missing
+            # model/lexicon fails fast (falls back to espeak) instead of crashing
+            # at first synth.
+            if not fn("test"):
+                raise RuntimeError("neural G2P returned empty output")
+            return fn
+        except Exception as e:
+            print(f"[g2p_sv] neural G2P ({mod_name}) unavailable "
+                  f"({type(e).__name__}: {e}); falling back to espeak",
+                  file=sys.stderr)
             return None
-        if hasattr(mod, "phonemize"):
-            return lambda text: mod.phonemize(text)
-        if hasattr(mod, "G2P"):
-            inst = mod.G2P()
-            return lambda text: inst.phonemize(text)
-        return None
 
     def _build_espeak(self):
         """espeak-ng Swedish. Uses misaki (the kikiri/Kokoro recipe's G2P) when

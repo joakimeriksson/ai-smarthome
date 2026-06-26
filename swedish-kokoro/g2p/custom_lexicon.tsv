@@ -1,0 +1,21 @@
+# Custom pronunciation overrides (win over the NST lexicon). TAB-separated:
+#   word<TAB>space-separated IPA tokens (from the voice's phoneme inventory)
+# Use for brand/place/personal names and register choices NST transcribes formally.
+
+# brand persona
+candytron	k ˈ a n d i t r ɔ n
+
+# "robot": NST has the short-vowel first-stress form (r ˈɔ b ɔ t = "robb-ot");
+# prefer the long-vowel "roo-bot" /ˈruːbɔt/. Compounds get it as 2nd element.
+robot	r ˈ u ː b ɔ t
+robotar	r ˈ u ː b ɔ t a r
+roboten	r ˈ u ː b ɔ t ə n
+godisrobot	ɡ ˈ u ː d ɪ s r ˌ u ː b ɔ t
+
+# Greeting compounds: NST stores the stiff citation form with a full hard "god"
+# (ɡuːd). Natural speech reduces god -> go (ɡʊ, no d) before natt/morgon/dag/kväll.
+godnatt	ɡ ʊ n ˈ a t
+godnattsaga	ɡ ʊ n ˈ a t ˌ s ɑ ː ɡ a
+godmorgon	ɡ ʊ m ˈ ɔ r ɔ n
+goddag	ɡ ʊ d ˈ ɑ ː
+godkväll	ɡ ʊ k v ˈ ɛ l

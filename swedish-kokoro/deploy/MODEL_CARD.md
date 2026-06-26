@@ -41,6 +41,8 @@ serve every language; the language lives in the G2P front-end you feed it.
 | `kokoro_sv.onnx` | ONNX export (fp32) for torch-free / CPU / edge inference |
 | `sv_female.pt` | Swedish voicepack `[510, 1, 256]` |
 | `config.json` | Kokoro config (178-token IPA vocab) |
+| `g2p/g2p_model.pt` | neural Swedish G2P model (NST-trained; better loanword/name pronunciation than espeak) |
+| `g2p/lexicon.tsv` | NST pronunciation lexicon for the neural G2P |
 
 ## Usage
 

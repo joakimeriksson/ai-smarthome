@@ -22,7 +22,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT / "recipe" / "kokoro"))
+# prefer the vendored kokoro submodule if checked out (dev box); else fall back to
+# a pip-installed `kokoro` (e.g. on a Mac where recipe/ isn't present).
+_vendored = ROOT / "recipe" / "kokoro"
+if _vendored.exists():
+    sys.path.insert(0, str(_vendored))
 sys.path.insert(0, str(ROOT))
 
 import numpy as np

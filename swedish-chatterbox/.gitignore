@@ -1,0 +1,11 @@
+# uv virtual environment
+.venv/
+__pycache__/
+
+# generated dataset audio — regenerable via batch_synth.py (1.3 GB of wavs).
+# dataset/speakers.csv (the manifest) IS kept so the dataset is documented.
+dataset/wavs/
+output/
+
+# run logs (gen.log etc.)
+*.log

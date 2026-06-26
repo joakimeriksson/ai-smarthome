@@ -16,3 +16,8 @@ models/
 
 # run logs
 *.log
+
+# large model weights — host on HuggingFace / Git LFS, NOT plain git (>100 MB).
+# deploy/README.md, config.json, sv_female.pt (512 K) ARE tracked.
+deploy/*.pth
+deploy/*.onnx

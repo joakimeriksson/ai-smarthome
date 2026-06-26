@@ -18,9 +18,23 @@ fi
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 
 echo "==> [2/6] system packages"
-sudo apt-get update -qq
-sudo apt-get install -y build-essential cmake ninja-build espeak-ng git \
-                        python3-venv python3-pip curl
+# Skip the apt step when the toolchain is already present (e.g. sandboxes
+# without passwordless sudo). Otherwise install what's missing.
+_need_pkgs=""
+command -v gcc        >/dev/null 2>&1 || _need_pkgs="$_need_pkgs build-essential"
+command -v cmake      >/dev/null 2>&1 || _need_pkgs="$_need_pkgs cmake"
+command -v ninja      >/dev/null 2>&1 || _need_pkgs="$_need_pkgs ninja-build"
+command -v espeak-ng  >/dev/null 2>&1 || _need_pkgs="$_need_pkgs espeak-ng"
+command -v git        >/dev/null 2>&1 || _need_pkgs="$_need_pkgs git"
+command -v curl       >/dev/null 2>&1 || _need_pkgs="$_need_pkgs curl"
+python3 -c "import venv" >/dev/null 2>&1 || _need_pkgs="$_need_pkgs python3-venv python3-pip"
+if [ -n "$_need_pkgs" ]; then
+  echo "  installing:$_need_pkgs"
+  sudo apt-get update -qq
+  sudo apt-get install -y $_need_pkgs
+else
+  echo "  all system packages already present — skipping apt"
+fi
 
 echo "==> [3/6] python venv + deps (CUDA PyTorch)"
 python3 -m venv .venv
@@ -37,6 +51,12 @@ if [ ! -d piper1-gpl ]; then
   git clone --depth 1 https://github.com/OHF-voice/piper1-gpl.git
 fi
 ( cd piper1-gpl && pip install -e '.[train]' && bash build_monotonic_align.sh )
+# The editable install above does NOT compile the espeakbridge C extension
+# (scikit-build skips it in -e mode), so build it in place. Needs the build
+# tools in the venv, then `setup.py build_ext --inplace` produces and copies
+# src/piper/espeakbridge.so + espeak-ng-data (espeak-ng is built from source).
+python -m pip install 'scikit-build<1' 'cmake>=3.18,<4' ninja cython
+( cd piper1-gpl && python script/dev_build )
 # Force the legacy ONNX exporter (avoids torch's dynamo exporter tripping an
 # assert in piper's spline code). Harmless if already patched.
 sed -i 's/        opset_version=OPSET_VERSION,/        dynamo=False,\n        opset_version=OPSET_VERSION,/' \

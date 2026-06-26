@@ -5,6 +5,11 @@ architecture, Apache-2.0 weights) to **speak native Swedish** — the language
 Kokoro ships without. Sister project to [`swedish-tts`](../swedish-tts) (Piper);
 uses the TTS-Swedish data layout and a **neural G2P** hook.
 
+> 📓 **[RUN1.md](RUN1.md)** — full end-to-end account of the first real run:
+> Chatterbox-distilled data, the two-stage training + OOM crash, the echo/ending-hum
+> diagnosis, and the shipped voice in [`deploy/`](deploy/). This README below is the
+> setup/architecture reference; RUN1 is what actually happened.
+
 ## Why this is feasible (all blockers checked, June 2026)
 
 | Dependency | Status |

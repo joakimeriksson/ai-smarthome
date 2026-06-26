@@ -37,6 +37,8 @@ KOKORO_REMAP = {
     "ʉ": "ɨ",   # close central rounded -> close central unrounded (id 101, unused by sv)
     "ɵ": "ɜ",   # close-mid central rounded -> open-mid central unrounded (id 87, unused by sv)
     "ɧ": "ʂ",   # sj-sound -> retroflex (id 130); espeak-sv already emits ʂ/x for it anyway
+    "ɭ": "l",   # retroflex lateral -> l; Kokoro lacks ɭ and the neural NST G2P emits it often
+    "-": "",    # stray hyphen the neural G2P emits between some compound parts
     "̃": "",     # stray combining tilde
 }
 

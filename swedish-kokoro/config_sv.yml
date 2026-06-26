@@ -56,12 +56,12 @@ ASR_config: "Utils/ASR/config.yml"
 ASR_path: "Utils/ASR/epoch_00080.pth"
 
 # ── Training schedule ───────────────────────────────────────────────────────
-batch_size: 8          # 4 fits ~12 GB; RTX 3090 (24 GB) handles 8–16
+batch_size: 4          # STABLE fp32 config (bf16 breaks the iSTFTNet Snake/STFT decoder); 4 = proven
 max_len: 400           # MEL FRAMES (~5 s at hop 300/24 kHz); longer clips get random-cropped.
                        # Keep prepare_data --max-sec near this (≤12 s) to avoid wasting audio.
-epochs: 50             # some StyleTTS2 forks read top-level `epochs`; mirror epochs_1st
-epochs_1st: 50         # Stage 1: acoustic + duration/prosody
-epochs_2nd: 25         # Stage 2: joint adversarial + SLM
+epochs: 6              # some StyleTTS2 forks read top-level `epochs`; mirror epochs_1st
+epochs_1st: 6          # Stage 1: acoustic + duration/prosody
+epochs_2nd: 5          # Stage 2: joint adversarial + SLM (>joint_epoch 3 so SLM runs)
 joint_epoch: 3         # adversarial/SLM kicks in here (Stage 2)
 
 # ── Model architecture — MUST equal Kokoro-82M to load pretrained weights ────

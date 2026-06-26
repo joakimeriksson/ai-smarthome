@@ -20,7 +20,7 @@ DEFAULT_TEXT = (
 )
 
 
-def synth(model_path: str, text: str, output: Path, label: str):
+def synth(model_path: str, text: str, output: Path, label: str, use_g2p: bool = False):
     from piper import PiperVoice
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -28,6 +28,16 @@ def synth(model_path: str, text: str, output: Path, label: str):
     load_start = time.perf_counter()
     voice = PiperVoice.load(model_path)
     load_seconds = time.perf_counter() - load_start
+
+    if use_g2p:
+        # Swap espeak for the neural NST G2P front-end. SwedishG2P.phonemize has
+        # the same text->list[list[str]] shape voice.phonemize uses internally,
+        # so the rest of the synthesis pipeline (and these metrics) are unchanged.
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent / "g2p"))
+        from g2p_infer import SwedishG2P
+        voice.phonemize = SwedishG2P().phonemize
+        label = f"{label}+g2p"
 
     # --- streaming: time to first audio chunk ---
     stream_start = time.perf_counter()
@@ -70,10 +80,12 @@ def main():
     parser.add_argument("--text", default=DEFAULT_TEXT)
     parser.add_argument("--output", default=None, help="Output wav path (defaults to output/<label>.wav).")
     parser.add_argument("--label", default="piper_sv")
+    parser.add_argument("--g2p", action="store_true",
+                        help="Use the neural NST G2P front-end instead of espeak.")
     args = parser.parse_args()
 
     output = Path(args.output) if args.output else Path(__file__).parent / "output" / f"{args.label}.wav"
-    synth(args.model, args.text, output, args.label)
+    synth(args.model, args.text, output, args.label, use_g2p=args.g2p)
 
 
 if __name__ == "__main__":

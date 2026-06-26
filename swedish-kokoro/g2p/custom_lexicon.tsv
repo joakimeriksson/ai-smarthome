@@ -19,3 +19,13 @@ godnattsaga	ɡ ʊ n ˈ a t ˌ s ɑ ː ɡ a
 godmorgon	ɡ ʊ m ˈ ɔ r ɔ n
 goddag	ɡ ʊ d ˈ ɑ ː
 godkväll	ɡ ʊ k v ˈ ɛ l
+
+# Roman-numeral contamination in the NST lexicon: these map to NUMBER words
+# (vi=VI=6=sex, v=5=fem, c=100=hundra, l=50=femtio, m=1000=tusen, iv=4=fyra).
+# Override with the correct Swedish word / letter-name pronunciations.
+vi	v ˈ i ː
+v	v ˈ e ː
+c	s ˈ e ː
+l	ˈ ɛ l
+m	ˈ ɛ m
+iv	ˈ i ː v ˌ e ː

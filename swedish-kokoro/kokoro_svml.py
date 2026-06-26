@@ -22,18 +22,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-# prefer the vendored kokoro submodule if checked out (dev box); else fall back to
-# a pip-installed `kokoro` (e.g. on a Mac where recipe/ isn't present).
-_vendored = ROOT / "recipe" / "kokoro"
-if _vendored.exists():
-    sys.path.insert(0, str(_vendored))
 sys.path.insert(0, str(ROOT))
 
 import numpy as np
 import torch
+# STOCK `kokoro` (PyPI) — the deployed kokoro_sv.pth is in stock's old weight_norm
+# format (see convert_to_stock.py). We deliberately do NOT put the vendored
+# recipe/kokoro (new-API) on the path here, so loading matches the checkpoint.
 from kokoro import KModel, KPipeline
 from g2p_sv import SwedishG2P
-from synth_real import trim_eos_tail  # reuse the tail-trim we built
+from sv_postproc import trim_eos_tail
 from sv_weights import resolve  # local deploy/ or HF auto-download
 
 # lang -> (KPipeline lang_code, default voice). Swedish handled separately.

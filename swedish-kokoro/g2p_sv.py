@@ -49,6 +49,22 @@ def _apply_remap(phonemes: str, remap: dict[str, str]) -> str:
     return phonemes
 
 
+# Word-level pronunciation fixes: exact IPA sequences the neural G2P currently emits
+# for specific words -> the correct IPA. A tiny LOCAL lexicon patch (no retraining)
+# until the upstream NST lexicon carries these. Safe no-op otherwise — these
+# sequences don't occur in espeak output or inside other Swedish words.
+NEURAL_FIXES = {
+    "ˈuːɕˌɛj": "ˈuːkɛj",   # "okej": soft-k (k -> ɕ) wrongly applied to the loanword
+    "uːəsˈɛs": "ˈɔs",       # "oss": garbled to ~"oo-sess"
+}
+
+
+def _apply_fixes(phonemes: str) -> str:
+    for bad, good in NEURAL_FIXES.items():
+        phonemes = phonemes.replace(bad, good)
+    return phonemes
+
+
 class SwedishG2P:
     """Pluggable Swedish G2P. Prefers the NST neural G2P, falls back to espeak."""
 
@@ -127,6 +143,7 @@ class SwedishG2P:
     # --- public API -------------------------------------------------------
     def __call__(self, text: str) -> str:
         ph = self._fn(text)
+        ph = _apply_fixes(ph)  # word-level lexicon corrections (okej, oss, ...)
         ph = _apply_remap(ph, self.remap)
         # collapse whitespace; Kokoro expects single spaces between tokens
         ph = re.sub(r"\s+", " ", ph).strip()

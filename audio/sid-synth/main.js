@@ -1,4 +1,4 @@
-import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister, workletSetSidModel } from './synth.js';
+import { initSynth, audioContext, instruments, setSIDRegister, playNote, lfoPhase, calculateTriangleLFO, setGlobalSIDRegister, workletSetSidModel, currentGT2Tempo } from './synth.js';
 import { NUM_VOICES, currentStep, noteToHz, stopPlayback, startPlayback, togglePause, isPaused, getPlaybackState, voiceState, resetVoiceState } from './sequencer-gt2.js';
 import { patternManager, MAX_PATTERNS, MAX_PATTERN_LENGTH as MAX_STEPS, getCurrentPatternLength, setSongMode, selectPattern } from './pattern-manager-compat.js';
 import { gt2PatternManager } from './pattern-manager-gt2.js';
@@ -13,6 +13,7 @@ import { setupGT2ImportUI } from './gt2-importer.js';
 import { initGT2PatternEditor } from './gt2-pattern-editor.js';
 import { initGT2OrderEditor } from './gt2-order-editor.js';
 import { downloadSIDFile } from './exporters/gt2/sid-exporter-gt2.js';
+import { writeSng } from './gt2-sng-writer.js';
 
 // Transport controls
 const playButton = document.getElementById('playButton');
@@ -286,12 +287,53 @@ GT2 Notes:
                     instruments: instruments,
                     patternManager: gt2PatternManager,
                     tableManager: gt2TableManager,
+                    tempo: currentGT2Tempo.speed,
+                    funktempo: currentGT2Tempo.tempo !== currentGT2Tempo.speed
+                        ? { left: currentGT2Tempo.speed, right: currentGT2Tempo.tempo }
+                        : null,
+                    subtunes: gt2PatternManager.song.subtunes,
+                    startSong: gt2PatternManager.song.currentSubtune + 1,
                 });
 
                 console.log(`Exported .SID file: ${songTitle}`);
             } catch (e) {
                 console.error('SID export failed:', e);
                 alert('SID export failed: ' + e.message);
+            }
+        });
+    }
+
+    // Save song as GoatTracker2 .sng (loadable in real GT2)
+    const exportSngButton = document.getElementById('exportSngButton');
+    if (exportSngButton) {
+        exportSngButton.addEventListener('click', () => {
+            try {
+                const song = gt2PatternManager.song;
+                const bytes = writeSng({
+                    name: song.title || 'SID Tracker',
+                    author: song.author || '',
+                    copyright: song.copyright || '',
+                    subtunes: song.subtunes,
+                    patterns: gt2PatternManager.patterns,
+                    instruments: instruments,
+                    tables: { ltable: gt2TableManager.ltable, rtable: gt2TableManager.rtable },
+                });
+
+                const filename = (song.title || 'song').replace(/[^a-zA-Z0-9_-]+/g, '_') + '.sng';
+                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                console.log(`Saved GT2 song: ${filename} (${bytes.length} bytes)`);
+            } catch (e) {
+                console.error('.sng save failed:', e);
+                alert('.sng save failed: ' + e.message);
             }
         });
     }
@@ -363,10 +405,8 @@ GT2 Notes:
     // Listen for storage events (when SID Ripper adds data from another tab)
     window.addEventListener('storage', (e) => {
         if (e.key === 'sidRipperData' && e.newValue) {
-            console.log('📡 Detected SID Ripper data from another tab');
-            if (confirm('SID Ripper data detected! Import now?')) {
-                importSIDRipperData();
-            }
+            console.log('📡 Detected SID Ripper data from another tab, auto-importing...');
+            importSIDRipperData();
         }
     });
 };
@@ -394,7 +434,6 @@ function importSIDRipperData() {
     const dataStr = localStorage.getItem('sidRipperData');
     if (!dataStr) {
         console.log('❌ No SID Ripper data found in localStorage');
-        alert('No SID Ripper data found. Please convert a SID file in the SID Ripper first.');
         return;
     }
 
@@ -430,14 +469,19 @@ function importSIDRipperData() {
             }
 
             data.instruments.forEach((inst, i) => {
+                const waveform = inst.waveform || 0x41;
                 const newInst = {
                     name: inst.name || `Inst ${i}`,
-                    waveform: inst.waveform || 0x41,
+                    waveform: waveform,
+                    firstWave: inst.firstWave || waveform,  // Critical for worklet sound
+                    gateTimer: inst.gateTimer || 0x02,
                     ad: inst.ad || 0x0A,
                     sr: inst.sr || 0xA0,
                     pulseWidth: inst.pulseWidth || 0x0800,
-                    sync: false,
-                    ringMod: false,
+                    vibratoDelay: inst.vibratoDelay || 0,
+                    vibParam: inst.vibParam || 0,
+                    sync: inst.sync || false,
+                    ringMod: inst.ringMod || false,
                     tables: inst.tables || { wave: 0, pulse: 0, filter: 0, speed: 0 }
                 };
                 instruments[i] = newInst;
@@ -507,6 +551,14 @@ function importSIDRipperData() {
             console.log(`  Voice ${v}: [${ol.slice(0, 5).join(', ')}${ol.length > 5 ? '...' : ''}]`);
         });
 
+        // Set GT2 speed/tempo if available
+        if (data.speed && data.speed > 0) {
+            console.log(`Setting GT2 speed: ${data.speed} frames/step`);
+            if (window.setGT2Tempo) {
+                window.setGT2Tempo(data.speed, data.speed);  // speed = tempo (no funktempo)
+            }
+        }
+
         // Reset voice state to reflect new order lists
         resetVoiceState();
         console.log('Voice state reset for new song');
@@ -538,6 +590,63 @@ function importSIDRipperData() {
             console.log(`Wavetables imported, using ${nextPos} table entries`);
         }
 
+        // Import pulse tables if present
+        if (data.pulseTables && data.pulseTables.length > 0 && window.gt2TableManager) {
+            console.log(`Importing ${data.pulseTables.length} pulse tables...`);
+            const TABLE_PULSE = 1;  // PTBL
+            let nextPos = 0;
+
+            data.pulseTables.forEach((pt, idx) => {
+                console.log(`  Pulse table ${idx + 1}: ${pt.entries.length} entries - ${pt.description}`);
+                pt.entries.forEach((entry, entryIdx) => {
+                    const pos = nextPos + entryIdx;
+                    if (pos < 255) {
+                        window.gt2TableManager.setEntry(TABLE_PULSE, pos, entry.left, entry.right);
+                    }
+                });
+                nextPos += pt.entries.length;
+            });
+            console.log(`Pulse tables imported, using ${nextPos} entries`);
+        }
+
+        // Import filter tables if present
+        if (data.filterTables && data.filterTables.length > 0 && window.gt2TableManager) {
+            console.log(`Importing ${data.filterTables.length} filter tables...`);
+            const TABLE_FILTER = 2;  // FTBL
+            let nextPos = 0;
+
+            data.filterTables.forEach((ft, idx) => {
+                console.log(`  Filter table ${idx + 1}: ${ft.entries.length} entries - ${ft.description}`);
+                ft.entries.forEach((entry, entryIdx) => {
+                    const pos = nextPos + entryIdx;
+                    if (pos < 255) {
+                        window.gt2TableManager.setEntry(TABLE_FILTER, pos, entry.left, entry.right);
+                    }
+                });
+                nextPos += ft.entries.length;
+            });
+            console.log(`Filter tables imported, using ${nextPos} entries`);
+        }
+
+        // Import speed tables if present
+        if (data.speedTables && data.speedTables.length > 0 && window.gt2TableManager) {
+            console.log(`Importing ${data.speedTables.length} speed tables...`);
+            const TABLE_SPEED = 3;  // STBL
+            let nextPos = 0;
+
+            data.speedTables.forEach((st, idx) => {
+                console.log(`  Speed table ${idx + 1}: ${st.entries.length} entries - ${st.description}`);
+                st.entries.forEach((entry, entryIdx) => {
+                    const pos = nextPos + entryIdx;
+                    if (pos < 255) {
+                        window.gt2TableManager.setEntry(TABLE_SPEED, pos, entry.left, entry.right);
+                    }
+                });
+                nextPos += st.entries.length;
+            });
+            console.log(`Speed tables imported, using ${nextPos} entries`);
+        }
+
         // Refresh GT2 editors
         if (window.gt2PatternEditor && window.gt2PatternEditor.renderPattern) {
             console.log('Refreshing GT2 Pattern Editor...');
@@ -554,11 +663,19 @@ function importSIDRipperData() {
 
         // Show success message
         const wtCount = data.wavetables?.length || 0;
-        alert(`SID Rip imported successfully!\n\nSong: ${data.name}\nPatterns: ${data.patterns?.length || 0}\nInstruments: ${data.instruments?.length || 0}${wtCount > 0 ? `\nWavetables: ${wtCount}` : ''}`);
+        const ptCount = data.pulseTables?.length || 0;
+        const ftCount = data.filterTables?.length || 0;
+        const stCount = data.speedTables?.length || 0;
+        const tableInfo = [
+            wtCount > 0 ? `WTBL: ${wtCount}` : '',
+            ptCount > 0 ? `PTBL: ${ptCount}` : '',
+            ftCount > 0 ? `FTBL: ${ftCount}` : '',
+            stCount > 0 ? `STBL: ${stCount}` : ''
+        ].filter(Boolean).join(', ');
+        console.log(`✅ SID Rip imported: ${data.name} | Patterns: ${data.patterns?.length || 0} | Instruments: ${data.instruments?.length || 0}${tableInfo ? ` | Tables: ${tableInfo}` : ''}`);
 
     } catch (error) {
         console.error('Failed to import SID Ripper data:', error);
-        alert('Failed to import SID Ripper data: ' + error.message);
     }
 }
 
@@ -751,7 +868,7 @@ window.updateWorkletStep = (function () {
 
 // --- Oscilloscope Visualization ---
 window.updateWorkletTelemetry = (function () {
-    const colors = ['#0f0', '#0ff', '#f0f'];
+    const colors = ['#00cc55', '#aaffee', '#cc44cc'];
     let cachedScopes = null;
 
     function getScopes() {

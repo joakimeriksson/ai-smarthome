@@ -1,0 +1,11 @@
+# Generated register dumps and resaved test artifacts (make verify)
+tests/dumps/
+
+# Locally built binaries
+tools/bin/
+tools/gt2-refdump/gt2dump
+gt2-src/**/*.o
+gt2-src/goattrk2
+
+# Generated driver binary (rebuild with `make driver`)
+exporters/gt2/build/gt2_driver.prg

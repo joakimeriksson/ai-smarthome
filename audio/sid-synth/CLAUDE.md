@@ -1,6 +1,6 @@
 # SID Tracker
 
-Web-based SID (C64) tracker with full **GoatTracker2 compatibility**. AudioWorklet-only architecture, GT2 per-voice patterns, table-based modulation, .sng import, .SID export.
+Web-based SID (C64) tracker with full **GoatTracker2 compatibility**. AudioWorklet-only architecture, GT2 per-voice patterns, table-based modulation, .sng import AND save, multi-subtune, .SID export.
 
 ## Architecture Overview
 
@@ -81,9 +81,11 @@ Internal note index: `noteInput - 0x60` gives 0-95 range for frequency table loo
 ### Import/Export
 | File | Purpose |
 |------|---------|
-| `gt2-importer.js` | GoatTracker2 .sng import (GTS3/GTS4/GTS5), replaces ALL instruments (no default at index 0) |
-| `exporters/gt2/sid-exporter-gt2.js` | .SID file generation with pre-assembled GT2 6502 player binary |
-| `exporters/gt2/driver/gt2-driver-data.js` | Pre-assembled 4553-byte GT2 player as base64 + metadata |
+| `gt2-sng-parser.js` | Pure .sng parse core (GTS3/GTS4/GTS5), Node-safe (no DOM) — used by the importer AND the headless tools |
+| `gt2-sng-writer.js` | Pure GTS5 .sng writer, Node-safe — inverse of the parser, byte-identical to GT2's savesong() on the corpus. Used by the "Save .sng" button and tools/resave-sng.js |
+| `gt2-importer.js` | Browser-side .sng import UI (subtune modal picks the ACTIVE subtune; all subtunes are kept in the song model) |
+| `exporters/gt2/sid-exporter-gt2.js` | .SID file generation with pre-assembled GT2 6502 player binary; multi-subtune (PSID songs/startSong, songtbl = 3 ptrs per subtune) |
+| `exporters/gt2/driver/gt2-driver-data.js` | Pre-assembled GT2 player (NUMSONGS=32) as base64 + metadata; rebuild with `make driver` |
 
 ### External
 | File | Purpose |
@@ -103,11 +105,16 @@ Internal note index: `noteInput - 0x60` gives 0-95 range for frequency table loo
     vibParam: 0,          // Vibrato parameter (index into STBL)
     ad: 0x0F,             // Attack/Decay (4 bits each)
     sr: 0xF0,             // Sustain/Release (4 bits each)
-    pulseWidth: 0x0800,   // 12-bit (0x000-0xFFF)
+    pulseWidth: 0x0800,   // 12-bit (0x000-0xFFF) — keyboard mode only; sequencer uses PTBL like GT2
     sync: false,
     ringMod: false,
     tables: { wave: 0, pulse: 0, filter: 0, speed: 0 }  // 0 = no table, 1+ = 1-based position
 }
+```
+NOTE: `tables.speed` IS the GT2 instrument vibrato parameter (GT2's
+`ptr[STBL]` doubles as vibrato param). `vibParam` is a legacy alias kept in
+sync by the parser; the worklet and exporter read `tables.speed` first.
+```javascript
 ```
 
 ### GT2 Tables (per type: WTBL, PTBL, FTBL, STBL)
@@ -312,42 +319,77 @@ Each frame, for each channel:
 8. **GETNEWNOTES** (when `tick == gatetimer`): read pattern data, start HR - lines 904-937
 9. **NEXTCHN**: write ALL SID registers (freq, pulse, wave&gate) - lines 938-948
 
-## Differences from GT2 C Source (Bugs / Missing Features)
+## GT2 Parity Status & Verification Harness
 
-### 1. Hard Restart Timing (MAJOR)
-**GT2**: Pattern data is read at `tick == gatetimer` (GETNEWNOTES, lines 901-937). This triggers gate-off `gatetimer` frames BEFORE TICK0. On TICK0, the new note is processed (firstWave applied, tables reset). The HR gap gives the SID's ADSR time to decay, preventing clicks.
-**Our worklet**: Reads pattern data and processes the new note in the same step (`handleSequencerStep`). Uses a tiny `synth.generate(8)` gap (~0.17ms) instead of proper gatetimer-based frame delay. The instrument's `gatetimer` field is not used for timing.
-**Impact**: Note retriggering may click. Songs relying on HR timing will sound different.
+The worklet, the .SID exporter AND the .sng writer are verified
+**frame-identical** to GT2's `gplay.c` (register-by-register,
+hardware-masked) on the whole test corpus. Run the regression suite after
+ANY change to the worklet, exporter, parser, writer, or driver:
 
-### 2. Instrument Vibrato with Delay (MODERATE)
-**GT2** (gplay.c lines 768-801): When command is DONOTHING (0), if `cmddata` (= instrument STBL ptr) is non-zero AND `vibdelay > 0`, it counts down vibdelay then FALLS THROUGH to CMD_VIBRATO. This enables automatic vibrato from instrument settings.
-```c
-case CMD_DONOTHING:
-  if ((!cptr->cmddata) || (!cptr->vibdelay)) break;
-  if (cptr->vibdelay > 1) { cptr->vibdelay--; break; }
-case CMD_VIBRATO:  // falls through!
+```sh
+make verify          # or tools/verify.sh [frames]
+make golden          # refresh golden reference dumps in tests/golden/
 ```
-**Our worklet**: Only activates vibrato from explicit pattern command 4XY. Instrument `vibParam`/`vibratoDelay` are imported but never used during playback.
-**Impact**: Instruments with built-in vibrato (common in GT2 songs) won't vibrate.
 
-### 3. Per-Channel Tick Counters (MODERATE)
-**GT2**: Each channel has its own `tick` counter that decrements independently every frame. With per-channel tempo, channels advance at different rates.
-**Our worklet**: Uses a single global step timer (`nextStepSample`). All 3 voices advance together. `channelTempo` exists but doesn't drive independent tick counters.
-**Impact**: Per-channel tempo (FXY with high bit set) won't work correctly. Songs with different speeds per voice will be wrong.
+### Harness components (tools/)
+| Tool | Purpose |
+|------|---------|
+| `tools/gt2-refdump/gt2dump` | **Ground truth**: compiles gt2-src/gplay.c + gsong.c unmodified into a CLI that loads a .sng and dumps `sidreg[0..24]` per frame as JSON lines (`make -C tools/gt2-refdump`) |
+| `tools/worklet-dump.js` | Runs `worklet/sid-processor.body.js` headless under Node (stubbed AudioWorklet + fake reSID), same JSON output |
+| `tools/export-sid.js` | Headless .SID export: `.sng → parseSng → exportSIDFile → .sid` (all subtunes into one multi-song .SID) |
+| `tools/sid-dump.js` | Plays a .sid with a 6502 CPU emulator (`tools/lib/cpu6502.js`), traps $D400-$D418 writes, same JSON output; `--subtune N` picks the PSID song |
+| `tools/resave-sng.js` | `.sng → parseSng → writeSng → .sng` with structural round-trip check; verify feeds the result back to gt2dump |
+| `tools/regdiff.js` | Diffs two dumps: auto-alignment, per-register summary, first divergent frames. Default compare is hardware-masked (PW-hi 4 bits, FC-lo 3 bits); `--strict` for bit-exact |
+| `tools/bin/sidplayfp` | Real sidplayfp 3.1.0 (built against brew libsidplayfp, sidlite engine) for independent .sid validation: `tools/bin/sidplayfp --sidlite -w out.wav -t20 file.sid` |
+| `tests/make-test-songs.js` | Generates `tests/songs/features.sng`: feature-isolating subtunes (instrument vibrato, funktempo, porta/toneporta, per-channel tempo, KEYOFF/KEYON/REST, transpose+repeat) |
 
-### 4. Filter Cutoff Wrapping (MINOR)
-**GT2**: `filtercutoff += rtable[...]` uses unsigned 8-bit wrapping (0xFF + 1 = 0x00).
-**Our worklet**: `gf.cutoff = Math.max(0, Math.min(0xFF, gf.cutoff + gf.modSpeed))` clamps to 0-255.
-**Impact**: Filter sweeps that intentionally wrap past boundaries will sound different.
+Corpus: `sids/dojo.sng` (4 subtunes) + `tests/songs/features.sng` (6
+subtunes). Each subtune is checked worklet-vs-ref, exported-SID-vs-ref and
+resaved-.sng-vs-ref, plus ref-vs-golden drift detection — 40 checks total.
+Golden dumps (`tests/golden/*.json.gz`) also let verify run on machines
+without gcc.
 
-### 5. Pulse Width Low Bit (MINOR)
-**GT2** (line 945): `sidreg[0x2+7*c] = cptr->pulse & 0xfe` — clears bit 0 of pulse low register.
-**Our worklet**: `this.setVoiceReg(voice, 0x02, pulseVal & 0xFF)` — keeps all bits.
-**Impact**: Negligible (SID hardware ignores bit 0 of pulse low on 6581).
+### Multi-subtune model
+- `GT2Song.subtunes` = `[{orderLists}, ...]`; `song.orderLists` ALIASES the
+  active subtune's array (`selectSubtune(i)` re-points it, so the sequencer,
+  editors and worklet payload never need to know about subtunes).
+- Order editor has the subtune selector (+ add/remove). Import keeps all
+  subtunes; the modal picks the active one.
+- .SID export packs 3 orderlist pointers per subtune into the driver's
+  songtbl (driver built with NUMSONGS=32 = GT2 MAX_SONGS) and sets PSID
+  songs/startSong. The player's init takes the subtune number in A.
 
-### 6. Frequency Tables
-**Worklet** (`sid-processor.body.js`): Tables match GT2 `gplay.c` exactly. Correct.
-**Frame engine** (`gt2-frame-engine.js`): Tables differ from `gplay.c` — wrong values from octave 2 onwards. But frame engine is DISABLED, so no impact on playback.
+### Worklet execution model (matches gplay.c exactly)
+Per voice per frame: tick decrement → TICK0 (sequencer advance, note init,
+tick0 commands) → tempo reload on wrap → WAVEEXEC → TICKNEFFECTS → PULSEEXEC
+→ GETNEWNOTES (at `tick == gatetimer`) → **NEXTCHN** (all register writes
+happen HERE, from state, after GETNEWNOTES). Key gplay.c behaviors ported:
+- New-note TICK0 jumps straight to NEXTCHN (no wave/effects/pulse that frame,
+  gplay.c lines 512-516). Frequency is NOT set at TICK0 — the wavetable
+  computes it next frame from `cptr->note` (and resets `vibtime`/`lastnote`).
+- `optimizepulse`/`optimizerealtime` are GT2 editor defaults (ON): realtime
+  effects skip TICK0 frames; PULSEEXEC skips the GETNEWNOTES frame and
+  pattern-wrap TICK0 frames.
+- GETNEWNOTES runs for every voice each row, even silent/inactive ones.
+- Pulse value persists across notes (only pointer/time reset at note init);
+  the modulation entry modulates on its load frame and the pointer advances
+  when time expires.
+- Hard-restart ADSR comes from `adparam` (default $0F00 → AD=$0F, SR=$00),
+  written at GETNEWNOTES `gatetimer` frames before the note.
+- Instrument vibrato: `tables.speed` (= GT2 `ptr[STBL]`) + `vibratoDelay`;
+  DONOTHING falls through to vibrato when the delay expires.
+- Start state matches PLAY_BEGINNING init: tick=tempo-1, instrument 1,
+  gatetimer from instrument 1, cutoff 0, pulse 0, no pre-read.
+
+### Known benign differences (visible only in raw register dumps)
+- GT2's 6502 player stores unmasked set-bytes in PW-hi ($88 vs gplay's $08)
+  and skips `& 0xfe` nowhere we don't — SID hardware ignores those bits;
+  regdiff masks them by default.
+- A never-gated channel whose init instrument (instrument 1) has vibrato
+  wiggles its inaudible frequency register in the 6502 player but not in
+  gplay.c (real GT2 exports do this too).
+- Dump alignment: gt2dump does not count GT2's internal init pass, so dumps
+  align at a small constant offset; regdiff auto-aligns.
 
 ## Known Issues / Legacy Code
 

@@ -662,7 +662,14 @@ export function workletSetBPM(bpm) {
     sidWorkletNode.port.postMessage({ type: 'setBPM', payload: { bpm } });
 }
 
+// Last GT2 tempo sent to the worklet; read by the .SID exporter so exported
+// files start at the same speed as live playback. speed/tempo differ only
+// when funktempo is active.
+export const currentGT2Tempo = { speed: 6, tempo: 6 };
+
 export function workletSetGT2Tempo(speed, tempo) {
+    currentGT2Tempo.speed = speed;
+    currentGT2Tempo.tempo = tempo;
     if (!sidWorkletNode) return;
     sidWorkletNode.port.postMessage({ type: 'setGT2Tempo', payload: { speed, tempo } });
 }

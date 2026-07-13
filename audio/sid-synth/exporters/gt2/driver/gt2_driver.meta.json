@@ -1,0 +1,143 @@
+{
+  "base": 4096,
+  "init": 4347,
+  "play": 4357,
+  "size": 4760,
+  "tables": {
+    "songtbllo": {
+      "offset": 1247,
+      "length": 96,
+      "addr": 5343
+    },
+    "songtblhi": {
+      "offset": 1343,
+      "length": 96,
+      "addr": 5439
+    },
+    "patttbllo": {
+      "offset": 1439,
+      "length": 256,
+      "addr": 5535
+    },
+    "patttblhi": {
+      "offset": 1695,
+      "length": 256,
+      "addr": 5791
+    },
+    "insad": {
+      "offset": 1951,
+      "length": 64,
+      "addr": 6047
+    },
+    "inssr": {
+      "offset": 2015,
+      "length": 64,
+      "addr": 6111
+    },
+    "inswaveptr": {
+      "offset": 2079,
+      "length": 64,
+      "addr": 6175
+    },
+    "inspulseptr": {
+      "offset": 2143,
+      "length": 64,
+      "addr": 6239
+    },
+    "insfiltptr": {
+      "offset": 2207,
+      "length": 64,
+      "addr": 6303
+    },
+    "insvibparam": {
+      "offset": 2271,
+      "length": 64,
+      "addr": 6367
+    },
+    "insvibdelay": {
+      "offset": 2335,
+      "length": 64,
+      "addr": 6431
+    },
+    "insgatetimer": {
+      "offset": 2399,
+      "length": 64,
+      "addr": 6495
+    },
+    "insfirstwave": {
+      "offset": 2463,
+      "length": 64,
+      "addr": 6559
+    },
+    "wavetbl": {
+      "offset": 2527,
+      "length": 255,
+      "addr": 6623
+    },
+    "pulsetimetbl": {
+      "offset": 2782,
+      "length": 255,
+      "addr": 6878
+    },
+    "pulsespdtbl": {
+      "offset": 3037,
+      "length": 255,
+      "addr": 7133
+    },
+    "filttimetbl": {
+      "offset": 3292,
+      "length": 255,
+      "addr": 7388
+    },
+    "filtspdtbl": {
+      "offset": 3547,
+      "length": 255,
+      "addr": 7643
+    },
+    "speedlefttbl": {
+      "offset": 3802,
+      "length": 255,
+      "addr": 7898
+    },
+    "speedrighttbl": {
+      "offset": 4057,
+      "length": 255,
+      "addr": 8153
+    },
+    "freqtbllo": {
+      "offset": 4312,
+      "length": 96,
+      "addr": 8408
+    },
+    "freqtblhi": {
+      "offset": 4408,
+      "length": 96,
+      "addr": 8504
+    },
+    "notetbl": {
+      "offset": 4504,
+      "length": 256,
+      "addr": 8600
+    },
+    "defaulttempo": {
+      "offset": 305,
+      "length": 1,
+      "addr": 4401
+    },
+    "funktempotbl": {
+      "offset": 1140,
+      "length": 2,
+      "addr": 5236
+    },
+    "hrsrparam": {
+      "offset": 1031,
+      "length": 1,
+      "addr": 5127
+    },
+    "hradparam": {
+      "offset": 1036,
+      "length": 1,
+      "addr": 5132
+    }
+  }
+}

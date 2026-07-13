@@ -1,0 +1,200 @@
+# GT2 Full-Parity Plan (Playback + Working .SID Export)
+
+> **STATUS (2026-07-11): Phases 0-2 and 3-partial DONE.** The verification
+> harness exists (`make verify`), and the worklet + exported .SID files are
+> register-identical to native gplay.c across the corpus (dojo.sng 4 subtunes
+> + tests/songs/features.sng 6 feature subtunes — 20/20 green). Remaining
+> from this plan: .sng save (3.1), multi-subtune song model (3.2), multispeed
+> (1.7/3.3), driver relocation (2.8), editor extras (3.4).
+>
+> **UPDATE (2026-07-13): 3.1, 3.2 and 4.1 DONE too.** `make verify` is now 40
+> checks green: worklet, exported .SID files AND .sng files resaved by
+> gt2-sng-writer.js are register-identical to native gplay.c. .sng save is
+> byte-identical to GT2's savesong() on the corpus. Multi-subtune works
+> end-to-end (song model + UI selector, .sng save, multi-song .SID export
+> with NUMSONGS=32 driver, PSID songs/startSong) and exports validate in
+> sidplayfp (tools/bin/sidplayfp). Golden reference dumps live in
+> tests/golden/ (`make golden`); verify runs without gcc using them.
+> Remaining: multispeed (1.7/3.3), driver relocation (2.8), editor extras
+> (3.4), in-browser verify button (4.2).
+
+Goal: the tracker plays songs **frame-for-frame identical** to GoatTracker2's
+`gplay.c`, and exported `.SID` files play **identically** in sidplayfp / VICE /
+real C64. "Identical" is defined mechanically: same SID register values written
+on the same frame.
+
+Status note: `CLAUDE.md`'s "Differences from GT2 C Source" section and
+`GT2_FULL_JS_IMPLEMENTATION_PLAN.md` are **stale**. The worklet already has
+per-channel tick counters, GETNEWNOTES at `tick == gatetimer`, hard-restart
+timers, instrument-vibrato fallthrough, and wrapping filter cutoff. The plan
+below starts from the *actual* code state (verified 2026-07-11).
+
+---
+
+## Phase 0 — Verification harness (highest leverage, do first)
+
+Everything else in this plan is guesswork without a way to *prove* parity.
+Build three SID-register dumpers that all consume the same song and emit the
+same format (one line per frame: 25 SID register values), plus a differ.
+
+### 0.1 Native reference dumper (`tools/gt2-refdump/`)
+- Compile `gt2-src/gplay.c` (+ minimal stubs for `gcommon.h` globals and
+  `gfile.c` .sng loading) into a CLI: `gt2dump song.sng --frames 3000 > ref.json`.
+- It writes `sidreg[0..24]` after each `playroutine()` call. This is **the**
+  ground truth; no interpretation needed.
+- Effort: small — gplay.c is self-contained; only the editor globals
+  (`editorInfo.adparam`, `epattern`, etc.) need stubbing.
+
+### 0.2 Headless worklet dumper (`tools/worklet-dump.js`)
+- Run `worklet/sid-processor.body.js` under Node: stub
+  `AudioWorkletProcessor`/`registerProcessor`/`sampleRate`, feed it the same
+  `loadPattern` + `start` messages `sequencer-gt2.js` sends, intercept
+  `setVoiceReg`/`poke` instead of jsSID, snapshot registers once per tick.
+- Requires the .sng importer to run in Node too (factor the parse core of
+  `gt2-importer.js` out of its DOM/UI code — pure function
+  `parseSng(bytes) -> {patterns, orderLists, instruments, tables}`).
+
+### 0.3 Exported-SID dumper (`tools/sid-dump.js`)
+- A minimal 6502 CPU emulator in JS (bring in a known-good core, e.g.
+  fake6502/py65-style port — a few hundred lines) that loads the exported PRG,
+  JSRs `init`, then JSRs `play` once per frame, trapping writes to `$D400-$D418`.
+- This validates the **entire export chain**: packing, driver patching,
+  pointer tables, and the assembled player itself.
+
+### 0.4 Differ + corpus + make target
+- `tools/regdiff.js a.json b.json` → first divergent frame, register, values,
+  and a per-feature summary.
+- Test corpus in `tests/songs/`: `dojo.sng` plus small hand-made .sng files
+  each isolating one feature: plain notes/ADSR, hard restart (fast retrigger),
+  instrument vibrato with delay, command 1/2/3/4, wavetable arps, PWM,
+  filter sweep + wrap, funktempo, per-channel tempo, transpose + repeat
+  orderlists, KEYOFF/KEYON, tie notes, legato (firstwave 0).
+  Real GT2 example songs from the GT2 distribution are good additions.
+- `make verify`: for each song, dump ref vs worklet vs exported-SID, diff all
+  three pairwise, print red/green table. This is the acceptance test for
+  every later phase.
+
+Deliverable: a red/green matrix telling us *exactly* which features diverge
+and at which frame. Expect surprises the docs don't mention.
+
+---
+
+## Phase 1 — Worklet vs gplay.c: close the remaining gaps
+
+Drive this phase entirely off Phase 0 diffs. Known/suspected items to audit:
+
+1. **Hard-restart ADSR values.** Worklet writes `AD=$00, SR=$F0` during HR
+   (`sid-processor.body.js:1297-1298`); GT2 writes `editorInfo.adparam`
+   (default `$0F00` → `AD=$0F, SR=$00`, gplay.c:931-932). Sustain-F vs
+   sustain-0 during the HR gap is audibly different. Make adparam a song-level
+   setting (import it from .sng header, default `$0F00`).
+2. **First-frame wave / gate-off semantics**: gatetimer bit 6 (no gate-off)
+   and bit 7 (no HR) paths, legato instruments (`firstwave < $10` = wait),
+   FIRSTWAVEPARAM behavior — verify against gplay.c TICK0 (lines 342-516).
+3. **Vibrato details**: hifi mode (STBL speed bit 7), `vibtime` signed
+   direction dance, interaction with toneportamento — diff against
+   TICKNEFFECTS (lines 729-844).
+4. **Tick-N vs TICK0 command timing**: which commands execute on which tick,
+   and command 0 clearing rules; verify effect jump table order.
+5. **Pulse low-bit** (`pulse & $FE`, gplay.c:945) — trivial, do it for
+   bit-exact diffs even though inaudible.
+6. **Funktempo table defaults** (player uses `8,5`; worklet default?) and the
+   `tempo-1` convention differences between editor-side and player-side values.
+7. **Multispeed** (GT2 supports 1x-8x `play` calls per frame): decide
+   supported or explicitly out of scope v1. If supported: worklet calls the
+   tick routine N times per frame and export sets PSID speed bits.
+8. Update `CLAUDE.md`'s differences section to match reality; delete or mark
+   the stale plan docs.
+
+Exit criterion: worklet dump == native dump for the whole corpus.
+
+---
+
+## Phase 2 — Export chain: guaranteed-working .SID files
+
+The exporter (`exporters/gt2/sid-exporter-gt2.js` + real GT2 `player.s`
+assembled via xa65) is structurally sound. Gaps to fix, verified by the
+Phase 0.3 dumper:
+
+1. **Initial tempo is never exported.** The UI tempo (BPM/tempo-control) and
+   song funktempo are not patched into the driver — every export plays at the
+   player's built-in default (tempo 6, funktempo table `8,5`). Fix: patch
+   `mt_chntempo` init value and `mt_funktempotbl` in the driver (add labels to
+   `gt2_driver.meta.json` via the label export), or synthesize an `FXY`/`EXY`
+   command on row 0. Patching the driver is cleaner (no pattern mutation).
+2. **Master volume** and **adparam (HR ADSR)**: expose as export/song
+   settings, patch into driver.
+3. **vibParam vs tables.speed unification.** GT2 has *one* field: instrument
+   `ptr[STBL]` doubles as the vibrato parameter. Our instrument struct has
+   both `vibParam` and `tables.speed`; the instrument editor writes
+   `tables.speed` while the exporter reads `vibParam`. An instrument given
+   vibrato in our UI exports silently without it. Unify into one field
+   everywhere (importer, editor, worklet, exporter).
+4. **Pattern packer audit vs `greloc.c`**: FX/FXONLY state-tracking reset
+   rules, packed-rest first-row rule, >64-row patterns, the `SETTEMPO - 1`
+   adjustment (also applies to funktempo STBL values — greloc adjusts
+   speedtable funktempo entries; check), and instrument-change on REST rows.
+5. **Orderlist packer audit vs `greloc.c`**: REPEAT byte-order swap,
+   transpose ranges, ENDSONG→LOOPSONG conversion.
+6. **Auto-generated wavetables**: collision handling when the song's own
+   wavetable already extends near entry 255; also skip generation for legato
+   instruments (firstwave 0).
+7. **PSID header polish**: set v2NG flags correctly — PAL clock (bits 2-3 =
+   01), SID model from a UI toggle (6581/8580, bits 4-5), proper `released`
+   string; multi-subtune fields when Phase 3.2 lands.
+8. **Relocation option** (later, optional): driver is fixed at `$1000`;
+   greloc-style page relocation + zeropage selection for compatibility with
+   demos/games. Requires reassembling per-address or applying a relocation
+   table — the xa65 label output makes a two-pass "assemble at two addresses,
+   diff bytes" relocation-table generator easy.
+
+Exit criterion: exported-SID dump == native GT2 dump for the whole corpus,
+plus manual spot-check in sidplayfp/VICE (and ideally real hardware once).
+
+---
+
+## Phase 3 — Feature completeness (editor-side GT2 features)
+
+1. **.sng export (GTS5 save).** Biggest missing feature; import exists, save
+   doesn't. Enables the ultimate parity test: save from our tracker, load in
+   real GT2, compare by ear/dump. Round-trip test: import → export →
+   re-import → deep-equal song model.
+2. **Multiple subtunes**: importer already parses them (modal at
+   `gt2-importer.js:614-700`) but the song model holds one; extend the model,
+   the worklet `loadPattern` payload, .sng save, and PSID `songs`/`startSong`.
+3. **Multispeed** editing + export (if Phase 1.7 decided "in").
+4. Editor conveniences from GT2 (pattern shrink/expand/join/split, orderlist
+   optimization/unused-pattern cleanup, instrument copy/paste) — nice-to-have,
+   independent of parity; schedule after everything above.
+
+---
+
+## Phase 4 — Regression suite + docs
+
+1. Check golden register dumps for the corpus into `tests/golden/`;
+   `make verify` becomes a fast regression suite run before commits (and CI).
+2. In-browser "Verify export" button: run the exported SID through the JS
+   6502 core + jsSID and A/B it against live worklet playback.
+3. Rewrite `CLAUDE.md` sections (Differences, File Map) to the new reality;
+   delete `GT2_FULL_JS_IMPLEMENTATION_PLAN.md` / `PROGRESS_REPORT.md` or mark
+   them historical.
+
+---
+
+## Suggested order & effort
+
+| Step | What | Size |
+|------|------|------|
+| 0.1 | Native gplay.c dumper | S — ~1 session |
+| 0.2 | Headless worklet dumper (+ Node-safe sng parser) | M |
+| 0.3 | JS 6502 core + SID dumper for exports | M |
+| 0.4 | Differ + corpus + `make verify` | S |
+| 1 | Worklet gap-closing driven by diffs | M–L (unknown until 0 runs) |
+| 2.1–2.3 | Tempo/volume/adparam patching + vibParam unification | S |
+| 2.4–2.7 | Packer audits + PSID flags | M |
+| 3.1 | .sng save | M |
+| 3.2 | Subtunes | M |
+| 2.8, 3.3, 3.4 | Relocation, multispeed, editor extras | L, optional |
+
+The single most important decision: **build Phase 0 before touching the
+engine or exporter again.** Every subsequent fix then comes with a proof.

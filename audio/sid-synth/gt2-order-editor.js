@@ -30,6 +30,10 @@ export class GT2OrderEditor {
             <div class="gt2-order-header">
                 <h3>Order Lists (Song Sequence)</h3>
                 <div class="order-controls">
+                    <label for="gt2-subtune-select">Subtune:</label>
+                    <select id="gt2-subtune-select"></select>
+                    <button id="gt2-add-subtune" title="Add new subtune">+</button>
+                    <button id="gt2-del-subtune" title="Remove current subtune">&minus;</button>
                     <button id="gt2-add-order">Add Pattern</button>
                     <button id="gt2-insert-order">Insert</button>
                     <button id="gt2-delete-order">Delete</button>
@@ -70,6 +74,42 @@ export class GT2OrderEditor {
     }
 
     setupEventHandlers() {
+        const song = () => gt2PatternManager.song;
+
+        this.updateSubtuneSelector = () => {
+            const sel = document.getElementById('gt2-subtune-select');
+            sel.innerHTML = '';
+            for (let i = 0; i < song().subtunes.length; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${i + 1} / ${song().subtunes.length}`;
+                sel.appendChild(opt);
+            }
+            sel.value = song().currentSubtune;
+            this.renderOrderLists();
+        };
+        // Let the importer refresh the selector after loading a .sng
+        window.updateSubtuneSelector = this.updateSubtuneSelector;
+        this.updateSubtuneSelector();
+
+        document.getElementById('gt2-subtune-select').addEventListener('change', (e) => {
+            song().selectSubtune(parseInt(e.target.value, 10));
+            this.renderOrderLists();
+        });
+
+        document.getElementById('gt2-add-subtune').addEventListener('click', () => {
+            const idx = song().addSubtune();
+            song().selectSubtune(idx);
+            this.updateSubtuneSelector();
+        });
+
+        document.getElementById('gt2-del-subtune').addEventListener('click', () => {
+            if (song().subtunes.length <= 1) return;
+            if (!confirm(`Remove subtune ${song().currentSubtune + 1}?`)) return;
+            song().removeSubtune(song().currentSubtune);
+            this.updateSubtuneSelector();
+        });
+
         document.getElementById('gt2-add-order').addEventListener('click', () => {
             const pattern = prompt('Enter pattern number (0-' + (MAX_PATTERNS-1) + '):');
             if (pattern !== null) {
@@ -235,17 +275,18 @@ export class GT2OrderEditor {
         style.textContent = `
             #gt2-order-editor {
                 padding: 10px;
-                background: #1a1a1a;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
+                background: var(--bg-main, #0000aa);
+                color: var(--text-primary, #0088ff);
+                font-family: 'C64 Pro Mono', 'Courier New', monospace;
                 font-size: 14px;
+                -webkit-font-smoothing: none;
             }
 
             .gt2-order-header {
                 margin-bottom: 10px;
                 padding: 10px;
-                background: #2a2a2a;
-                border: 1px solid #00ff00;
+                background: var(--bg-panel, #14148b);
+                border: 2px solid var(--border-main, #0088ff);
             }
 
             .order-controls {
@@ -256,22 +297,28 @@ export class GT2OrderEditor {
             }
 
             .order-controls button {
-                background: #003300;
-                color: #00ff00;
-                border: 1px solid #00ff00;
+                background: var(--btn-bg, #333);
+                color: var(--btn-text, #aaff66);
+                border: 2px solid var(--btn-border, #00cc55);
                 padding: 5px 10px;
                 cursor: pointer;
+                text-transform: uppercase;
+                font-family: 'C64 Pro Mono', monospace;
+                font-size: 8px;
+                letter-spacing: 1px;
             }
 
             .order-controls button:hover {
-                background: #005500;
+                background: var(--c64-green, #00cc55);
+                color: var(--c64-black, #000);
             }
 
             .gt2-order-grid {
                 display: flex;
                 gap: 10px;
-                border: 1px solid #00ff00;
-                background: #000;
+                border: 3px solid var(--border-main, #0088ff);
+                outline: 2px solid var(--c64-black, #000);
+                background: var(--c64-black, #000);
                 padding: 10px;
             }
 
@@ -285,9 +332,13 @@ export class GT2OrderEditor {
                 font-weight: bold;
                 text-align: center;
                 padding: 5px;
-                background: #2a2a2a;
-                border-bottom: 2px solid #00ff00;
+                background: var(--border-main, #0088ff);
+                color: var(--c64-black, #000);
+                border-bottom: 2px solid var(--c64-white, #fff);
                 margin-bottom: 5px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-size: 12px;
             }
 
             .gt2-order-list {
@@ -296,6 +347,8 @@ export class GT2OrderEditor {
                 gap: 2px;
                 max-height: 300px;
                 overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border-main, #0088ff) var(--c64-black, #000);
             }
 
             .gt2-order-entry {
@@ -304,44 +357,69 @@ export class GT2OrderEditor {
                 padding: 5px;
                 cursor: pointer;
                 border: 1px solid transparent;
-                background: #0a0a0a;
+                background: #0a0a2a;
             }
 
             .gt2-order-entry:hover {
-                background: #1a3a1a;
+                background: rgba(0, 136, 255, 0.15);
             }
 
             .gt2-order-entry.gt2-current-order {
-                background: #003300;
-                border: 1px solid #00ff00;
+                background: var(--bg-panel, #14148b);
+                border: 1px solid var(--border-main, #0088ff);
             }
 
             .gt2-order-entry.gt2-playing-order {
-                background: #1a1a3a;
-                border: 1px solid #00aaff;
+                background: linear-gradient(
+                    90deg,
+                    #880000,
+                    #dd8855,
+                    #eeee77,
+                    #00cc55,
+                    #aaffee,
+                    #0088ff
+                );
+                border: 2px solid var(--c64-white, #fff);
+                color: var(--c64-black, #000);
+                box-shadow: 0 0 8px rgba(170, 255, 238, 0.4);
+            }
+
+            .gt2-order-entry.gt2-playing-order .gt2-order-pos,
+            .gt2-order-entry.gt2-playing-order .gt2-order-value {
+                color: var(--c64-black, #000) !important;
+                font-weight: bold;
             }
 
             .gt2-order-entry.gt2-playing-order.gt2-current-order {
-                background: #1a331a;
-                border: 1px solid #00ffff;
+                background: linear-gradient(
+                    90deg,
+                    #ff7777,
+                    #eeee77,
+                    #aaff66,
+                    #aaffee,
+                    #0088ff,
+                    #cc44cc
+                );
+                border: 2px solid var(--c64-white, #fff);
             }
 
             .gt2-order-pos {
-                color: #888;
+                color: var(--c64-gray, #777);
                 min-width: 30px;
             }
 
             .gt2-order-value {
-                color: #ffff00;
+                color: var(--c64-yellow, #eeee77);
                 font-weight: bold;
             }
 
             .gt2-order-help {
                 margin-top: 10px;
                 padding: 10px;
-                background: #2a2a2a;
-                border: 1px solid #00ff00;
-                font-size: 12px;
+                background: var(--bg-panel, #14148b);
+                border: 2px solid var(--border-main, #0088ff);
+                font-size: 8px;
+                color: var(--c64-lightgray, #bbb);
             }
         `;
         document.head.appendChild(style);

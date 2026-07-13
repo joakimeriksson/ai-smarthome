@@ -2029,6 +2029,9 @@ class SidProcessor extends AudioWorkletProcessor {
     this.isSequencing = false;  // True when sequencer is running (vs keyboard-only mode)
     this.globalTempo = 6;
     this.funktempo = { active: false, left: 6, right: 6, state: 0 };
+    // GT2 hard-restart ADSR parameter (editorInfo.adparam, default $0F00):
+    // written as AD=high byte, SR=low byte during the hard-restart gap
+    this.adparam = 0x0F00;
     // GT2 funktable: two tempo values that alternate per step (swing)
     // funktable[0] and funktable[1] are reload values (like tempo-1)
     // Per-voice tempo field indexes into this when tempo is 0 or 1
@@ -2286,14 +2289,15 @@ class SidProcessor extends AudioWorkletProcessor {
           this.stepDurationSamples = (sampleRate * 60) / (this.bpm * 4);
         }
 
-        // Reset filter to safe state at playback start
+        // Reset filter to GT2 start state (initsong zeroes all SID registers;
+        // filtercutoff starts at 0 and only FTBL/commands raise it)
         this.poke(0x15, 0x00);
-        this.poke(0x16, 0xFF);  // Max cutoff so nothing is filtered out initially
+        this.poke(0x16, 0x00);
         this.poke(0x17, 0x00);  // No resonance, no voice routing
         // Reset GLOBAL filter state (GT2 filter is global, not per-voice)
         this.globalFilter.ptr = 0;
         this.globalFilter.time = 0;
-        this.globalFilter.cutoff = 0xFF;
+        this.globalFilter.cutoff = 0x00;
         this.globalFilter.ctrl = 0;
         this.globalFilter.type = 0;
         this.globalFilter.modSpeed = 0;
@@ -2321,15 +2325,26 @@ class SidProcessor extends AudioWorkletProcessor {
         if (initTempo >= 3) initTempo--;
         this.funktable = [initTempo, initTempo]; // Default funktable
 
+        // GT2 PLAY_BEGINNING init (gplay.c lines 186-227): tick starts at
+        // tempo-1 so the first TICK0 lands like on the C64; GETNEWNOTES at
+        // tick == gatetimer reads row 0 a few frames in. No pre-reading.
         for (let v = 0; v < 3; v++) {
           const vs = this.voiceState[v];
-          vs.tick = 1; // TICK0 fires on first tick for immediate playback
+          vs.tick = initTempo;
           vs.tempo = initTempo;
-          vs.gatetimer = 2; // Default, updated from instrument at TICK0
+          // gplay.c line 200: gatetimer from instrument 1
+          const inst1 = this.instruments[1];
+          vs.gatetimer = inst1 ? ((inst1.gateTimer || 2) & 0x3F) : 2;
+          vs.instrumentIndex = 1;
+          vs.instrument = inst1 || vs.instrument;
           vs.newnote = 0;
           vs.newinstr = 0;
           vs.newcommand = 0;
           vs.newcmddata = 0;
+          vs.wave = 0;
+          vs.ptr[0] = 0;
+          vs.tablePulse = 0; // GT2 initchannels: chnpulse starts at 0
+          vs.newNoteInit = false;
           vs.patternExhausted = false;
           vs.hrTimer = 0;
           vs.displayOrderPos = 0;
@@ -2338,38 +2353,12 @@ class SidProcessor extends AudioWorkletProcessor {
           vs.repeatCounter = 0;
           vs.transpose = 0;
 
-          // Pre-read first pattern row so TICK0 can process it immediately
-          // This avoids the GT2 startup delay (5+ frames before first note)
+          // gplay.c: sequencer(c, cptr) — resolve orderlist position 0
+          // (transpose/repeat) so GETNEWNOTES starts on the right pattern
           const orderList = this.orderLists[v];
           if (orderList && orderList.length > 0) {
             const result = this.processOrderlistCommands(orderList, 0, v);
             vs.transpose = result.transpose;
-            const patIdx = result.patternIndex;
-            if (patIdx < this.allPatterns.length) {
-              const pattern = this.allPatterns[patIdx];
-              if (pattern && pattern.length > 0 && pattern[0].note !== 0xFF) {
-                const step = pattern[0];
-                vs.newnote = step.note || 0;
-                vs.newinstr = step.instrument || 0;
-                vs.newcommand = step.command || 0;
-                vs.newcmddata = step.cmdData || 0;
-                // Only set newnote for actual notes (not sustain/rest)
-                if (vs.newnote < 0x60 || vs.newnote > 0xBC) {
-                  if (vs.newnote !== 0xBE && vs.newnote !== 0xBF) {
-                    vs.newnote = 0; // Clear non-note values
-                  }
-                }
-                vs.displayOrderPos = 0;
-                vs.displayPatternIdx = patIdx;
-                vs.displayPatternRow = 0;
-                this.patternRows[v] = 1; // Advance past row 0
-                // Check if pattern is exhausted after row 0
-                if (this.patternRows[v] >= pattern.length ||
-                    (pattern[1] && pattern[1].note === 0xFF)) {
-                  vs.patternExhausted = true;
-                }
-              }
-            }
           }
         }
 
@@ -3281,9 +3270,9 @@ class SidProcessor extends AudioWorkletProcessor {
             this.setVoiceReg(voice, 0x03, (pw >> 8) & 0xFF);
 
             if (vs.hrTimer > 0) {
-              // Hard restart active: set HR ADSR (gplay.c lines 929-933)
-              this.setVoiceReg(voice, 0x05, 0x00);
-              this.setVoiceReg(voice, 0x06, 0xF0);
+              // Hard restart active: set HR ADSR from adparam (gplay.c lines 929-933)
+              this.setVoiceReg(voice, 0x05, (this.adparam >> 8) & 0xFF);
+              this.setVoiceReg(voice, 0x06, this.adparam & 0xFF);
             } else {
               // No HR: set real ADSR immediately
               this.setVoiceReg(voice, 0x05, ad);
@@ -3749,56 +3738,41 @@ class SidProcessor extends AudioWorkletProcessor {
   }
 
   // Execute pulsetable step
+  // Exact port of gplay.c PULSEEXEC (lines 853-900).
+  // Key GT2 behaviors: the jump entry is re-checked every frame; loading a
+  // modulation entry does NOT advance the pointer; modulation runs on the
+  // SAME frame the entry is loaded; the pointer advances when time expires.
   executePulsetable(voice) {
     const vs = this.voiceState[voice];
     const TABLE_PULSE = 1;
 
     if (!vs.pulseActive || vs.ptr[TABLE_PULSE] === 0) return vs.tablePulse;
 
-    // Modulation
-    if (vs.pulseModTicks > 0) {
-      vs.pulseModTicks--;
-      vs.tablePulse = (vs.tablePulse + vs.pulseModSpeed) & 0xFFF;
-      return vs.tablePulse;
+    // Pulsetable jump (gplay.c lines 861-866)
+    if ((this.tables.ltable[TABLE_PULSE][vs.ptr[TABLE_PULSE] - 1] || 0) === 0xFF) {
+      vs.ptr[TABLE_PULSE] = this.tables.rtable[TABLE_PULSE][vs.ptr[TABLE_PULSE] - 1] || 0;
+      if (!vs.ptr[TABLE_PULSE]) {
+        vs.pulseActive = false;
+        return vs.tablePulse;
+      }
     }
 
-    let jumpCount = 0;
-    const MAX_JUMPS = 10;
-
-    while (jumpCount < MAX_JUMPS) {
-      const pos = vs.ptr[TABLE_PULSE];
-      // GT2 uses 1-based pointers, reads with [ptr-1]
-      const left = this.tables.ltable[TABLE_PULSE][pos - 1] || 0;
-      const right = this.tables.rtable[TABLE_PULSE][pos - 1] || 0;
-
-      // Modulation (0x01-0x7F)
-      if (left >= 0x01 && left <= 0x7F) {
-        vs.pulseModTicks = left;
-        vs.pulseModSpeed = (right & 0x80) ? (right - 256) : right;
+    if (!vs.pulsetime) {
+      const left = this.tables.ltable[TABLE_PULSE][vs.ptr[TABLE_PULSE] - 1] || 0;
+      if (left >= 0x80) {
+        // Set pulse (no modulation this frame)
+        vs.tablePulse = ((left & 0x0F) << 8) | (this.tables.rtable[TABLE_PULSE][vs.ptr[TABLE_PULSE] - 1] || 0);
         vs.ptr[TABLE_PULSE]++;
-        break;
+      } else {
+        vs.pulsetime = left;
       }
-      // Set pulse (0x80-0xFE)
-      else if (left >= 0x80 && left <= 0xFE) {
-        const highNibble = (left & 0x0F) << 8;
-        vs.tablePulse = highNibble | right;
-        vs.ptr[TABLE_PULSE]++;
-        break;
-      }
-      // Jump (0xFF)
-      else if (left === 0xFF) {
-        if (right === 0x00 || right >= 0xFF) {
-          vs.pulseActive = false;
-          break;
-        }
-        vs.ptr[TABLE_PULSE] = right;
-        jumpCount++;
-        continue;
-      }
-      else {
-        vs.ptr[TABLE_PULSE]++;
-        break;
-      }
+    }
+    // Pulse modulation (runs on the load frame too)
+    if (vs.pulsetime) {
+      const speed = this.tables.rtable[TABLE_PULSE][vs.ptr[TABLE_PULSE] - 1] || 0;
+      vs.tablePulse = (vs.tablePulse + (speed < 0x80 ? speed : speed - 0x100)) & 0xFFF;
+      vs.pulsetime--;
+      if (!vs.pulsetime) vs.ptr[TABLE_PULSE]++;
     }
 
     return vs.tablePulse;
@@ -4086,8 +4060,9 @@ class SidProcessor extends AudioWorkletProcessor {
         if (!(gt & 0x40)) { // Bit 6 = no gate-off
           vs.gate = 0xFE; // Gate off for hard restart
           if (!(gt & 0x80)) { // Bit 7 = no hard restart ADSR
-            this.setVoiceReg(voice, 0x05, 0x00);
-            this.setVoiceReg(voice, 0x06, 0xF0);
+            // gplay.c lines 931-932: HR ADSR from editorInfo.adparam
+            this.setVoiceReg(voice, 0x05, (this.adparam >> 8) & 0xFF);
+            this.setVoiceReg(voice, 0x06, this.adparam & 0xFF);
           }
         }
       }
@@ -4115,15 +4090,17 @@ class SidProcessor extends AudioWorkletProcessor {
       this.orderPositions[voice] = result.nextPosition + 1;
     }
 
-    // Handle order list end/loop
+    // Handle order list end/loop. The importer normalizes both LOOPSONG
+    // ($FE) and ENDSONG ($FF) to $FF followed by the restart position byte
+    // (gplay.c sequencer lines 962-971: songptr = songorder[songptr+1]).
     if (this.orderPositions[voice] >= orderList.length) {
       this.orderPositions[voice] = 0;
     } else {
       const nextEntry = orderList[this.orderPositions[voice]];
-      if (nextEntry === 0xFF) {
-        this.orderPositions[voice] = 0;
-      } else if (nextEntry === 0xFE) {
-        this.orderPositions[voice] = orderList[this.orderPositions[voice] + 1] || 0;
+      if (nextEntry === 0xFF || nextEntry === 0xFE) {
+        const restart = orderList[this.orderPositions[voice] + 1] || 0;
+        // Safety: restart must land inside the list (before the $FF tail)
+        this.orderPositions[voice] = (restart < orderList.length - 1) ? restart : 0;
       }
     }
   }
@@ -4201,15 +4178,14 @@ class SidProcessor extends AudioWorkletProcessor {
         if (iptr.tables && iptr.tables.wave > 0) {
           vs.ptr[0] = iptr.tables.wave;
           vs.waveActive = true;
-          // GT2: skip WAVEEXEC on TICK0 with new note (gplay.c lines 512-515)
-          vs.skipWaveOnce = true;
         }
 
-        // Init pulsetable (gplay.c lines 381-392)
+        // Init pulsetable (gplay.c lines 381-392).
+        // GT2 keeps the running pulse value across notes — only the pointer
+        // and time are reset; a PTBL set command changes the value later.
         if (iptr.tables && iptr.tables.pulse > 0) {
           vs.ptr[1] = iptr.tables.pulse;
           vs.pulseActive = true;
-          vs.tablePulse = iptr.pulseWidth || 0x800;
         }
 
         // Init filtertable - GLOBAL (gplay.c lines 393-402)
@@ -4237,9 +4213,10 @@ class SidProcessor extends AudioWorkletProcessor {
         this.setVoiceReg(voice, 0x06, sr);
       }
 
-      // Set frequency (gplay.c: after note init)
+      // Note index (gplay.c: cptr->note = newnote - FIRSTNOTE; transpose was
+      // applied at GETNEWNOTES). GT2 does NOT set the frequency at TICK0 —
+      // the wavetable computes it on the next frame from cptr->note.
       const noteIdx = noteInput - 0x60;
-      // Apply transpose (gplay.c: newnote = newnote + cptr->trans at GETNEWNOTES)
       vs.baseNote = Math.max(0, Math.min(95, noteIdx + vs.transpose));
       const sidFreq = freqtbllo[vs.baseNote] | (freqtblhi[vs.baseNote] << 8);
       vs.lastnote = vs.baseNote;
@@ -4249,16 +4226,17 @@ class SidProcessor extends AudioWorkletProcessor {
         vs.targetFrequency = sidFreq;
         vs.activeCommand = 0x03;
         vs.commandData = vs.newcmddata;
-      } else {
+      } else if (!(iptr && iptr.tables && iptr.tables.wave > 0)) {
+        // App convenience (not GT2): instruments without a wavetable get the
+        // frequency directly, since no WAVEEXEC will ever compute it
         vs.currentFrequency = sidFreq;
         vs.baseSidFreq = sidFreq;
-        // Set pulse width
-        if (iptr) {
-          const pw = iptr.pulseWidth | 0;
-          this.setVoiceReg(voice, 0x02, pw & 0xFE);
-          this.setVoiceReg(voice, 0x03, (pw >> 8) & 0x0F);
-        }
       }
+
+      // gplay.c lines 512-516: after a new-note TICK0 (non-toneportamento),
+      // skip WAVEEXEC/effects/PULSEEXEC this frame — go straight to the
+      // register writes
+      vs.newNoteInit = (vs.newcommand !== 0x03);
 
       vs.active = true;
       vs.instrument = iptr;
@@ -4392,53 +4370,35 @@ class SidProcessor extends AudioWorkletProcessor {
         }
       }
 
-      // Skip table/effect processing if voice not active
-      if (!vs.active) continue;
+      // GT2 gplay.c lines 512-516: after a new-note TICK0 the playroutine
+      // jumps straight to NEXTCHN — no wavetable, no effects, no pulse this
+      // frame, just the register writes from current state.
+      if (vs.newNoteInit) {
+        vs.newNoteInit = false;
+        this.setVoiceReg(voice, 0x00, vs.currentFrequency & 0xFF);
+        this.setVoiceReg(voice, 0x01, (vs.currentFrequency >> 8) & 0xFF);
+        this.setVoiceReg(voice, 0x02, vs.tablePulse & 0xFE);
+        this.setVoiceReg(voice, 0x03, (vs.tablePulse >> 8) & 0x0F);
+        this.setVoiceReg(voice, 0x04, vs.wave & vs.gate);
+        continue;
+      }
+
+      // Skip table/effect processing if voice not active.
+      // GT2 runs GETNEWNOTES for every channel regardless of whether it is
+      // currently sounding (gplay.c lines 904-937) — a voice whose pattern
+      // starts with rests must still consume rows or it never starts.
+      if (!vs.active) {
+        if (this.isSequencing && vs.tick === vs.gatetimer) {
+          this.processGetNewNotes(voice);
+        }
+        continue;
+      }
 
       let skipEffects = false;
 
-      // 1. Wavetable Execution (updates vs.wave directly)
-      // GT2: Skip WAVEEXEC on TICK0 when there's a new note (gplay.c lines 512-515)
-      // This matches GT2 behavior where wavetable starts executing on TICK1, not TICK0
-      // BUT we still need to write the firstWave to the SID register on TICK0!
-      let waveResult = null;
-      let writeFirstWave = false;
-      if (vs.skipWaveOnce) {
-        vs.skipWaveOnce = false;
-        writeFirstWave = true;  // Need to write initial waveform even though we skip table
-        console.log(`🔄 V${voice} SKIP WAVEEXEC on TICK0 (GT2 newnote behavior) - will write firstWave=0x${vs.wave.toString(16)}`);
-      } else {
-        waveResult = this.executeWavetable(voice);
-      }
-      if (waveResult || writeFirstWave) {
-        // Write updated waveform to SID using gate mask
-        // During hard restart: vs.gate = 0xFE clears gate bit
-        // After hard restart: vs.gate = 0xFF passes gate bit
-        const regVal = vs.wave & vs.gate;
-        const hasGate = (regVal & 0x01) !== 0;
-
-        // Track gate state changes
-        if (!this.lastGateState) this.lastGateState = [null, null, null];
-        if (this.lastGateState[voice] !== hasGate) {
-          console.log(`🚦 V${voice} GATE ${hasGate ? 'ON' : 'OFF'}: wave=0x${vs.wave.toString(16)}, reg=0x${regVal.toString(16)}, ptr=${vs.ptr[0]}`);
-          this.lastGateState[voice] = hasGate;
-        }
-
-        this.setVoiceReg(voice, 0x04, regVal);
-      } else if (vs.active) {
-        // No wavetable result - still write wave+gate register every frame
-        // GT2 NEXTCHN (gplay.c line 940): sidreg[0x4+7*c] = cptr->wave & cptr->gate
-        // This is UNCONDITIONAL - written every frame regardless of wavetable
-        const regVal = vs.wave & vs.gate;
-        this.setVoiceReg(voice, 0x04, regVal);
-
-        // Track gate state changes
-        if (!this.lastGateState) this.lastGateState = [null, null, null];
-        if (this.lastGateState[voice] !== ((regVal & 0x01) !== 0)) {
-          console.log(`🚦 V${voice} GATE ${(regVal & 0x01) ? 'ON' : 'OFF'}: wave=0x${vs.wave.toString(16)}, reg=0x${regVal.toString(16)} (no wavetable)`);
-          this.lastGateState[voice] = (regVal & 0x01) !== 0;
-        }
-      }
+      // 1. Wavetable Execution (updates vs.wave / vs.currentFrequency state
+      // only — ALL register writes happen at NEXTCHN below, matching gplay.c)
+      const waveResult = this.executeWavetable(voice);
 
       if (waveResult) {
 
@@ -4466,17 +4426,23 @@ class SidProcessor extends AudioWorkletProcessor {
           // Use GT2 frequency table lookup instead of mathematical calculation
           vs.currentFrequency = freqtbllo[resultNote] | (freqtblhi[resultNote] << 8);
 
-          // Store for vibrato/portamento reference
+          // Store for vibrato/portamento reference and reset vibrato phase
+          // (gplay.c lines 721-724: freq set, vibtime = 0, lastnote = note,
+          // goto PULSEEXEC — realtime effects skipped this frame)
           vs.lastnote = resultNote;
-
-          // Reset Vibrato Phase (GT2 behavior)
+          vs.vibtime = 0;
           vs.vibratoPhase = 0;
           skipEffects = true;
         }
       }
 
       // 3. Tick N Effects (Portamento / Vibrato)
-      // Only if Wavetable didn't force a note set (SkipEffects)
+      // Only if Wavetable didn't force a note set (SkipEffects).
+      // GT2 optimizerealtime (editor default ON, gplay.c line 730): realtime
+      // commands do not run on TICK0 frames.
+      if (this.isSequencing && vs.tick === 0) {
+        skipEffects = true;
+      }
       if (!skipEffects) {
         let cmd = vs.activeCommand;
         let index = vs.commandData;
@@ -4597,37 +4563,28 @@ class SidProcessor extends AudioWorkletProcessor {
             }
             vs.vibtime = (vs.vibtime + 2) & 0xFF;
 
-            let finalFreq = vs.currentFrequency;
+            // GT2 accumulates vibrato into cptr->freq (gplay.c lines 797-800)
             if (vs.vibtime & 0x01) {
-              finalFreq -= speed;
+              vs.currentFrequency -= speed;
             } else {
-              finalFreq += speed;
+              vs.currentFrequency += speed;
             }
-
-            // Clip
-            finalFreq = Math.max(0, Math.min(65535, finalFreq));
-
-            this.setVoiceReg(voice, 0x00, finalFreq & 0xFF);
-            this.setVoiceReg(voice, 0x01, (finalFreq >> 8) & 0xFF);
-            updateFreq = false; // Already poked
           }
         }
 
-        if (updateFreq) {
-          vs.currentFrequency = Math.max(0, Math.min(65535, vs.currentFrequency));
-          this.setVoiceReg(voice, 0x00, vs.currentFrequency & 0xFF);
-          this.setVoiceReg(voice, 0x01, (vs.currentFrequency >> 8) & 0xFF);
-        }
-      } else {
-        // Absolute Note Active - Just write the reset frequency
-        this.setVoiceReg(voice, 0x00, vs.currentFrequency & 0xFF);
-        this.setVoiceReg(voice, 0x01, (vs.currentFrequency >> 8) & 0xFF);
+        vs.currentFrequency = Math.max(0, Math.min(65535, vs.currentFrequency)) & 0xFFFF;
       }
 
-      // 4. Pulsetable Execution
-      let pulseVal = this.executePulsetable(voice);
-      this.setVoiceReg(voice, 0x02, pulseVal & 0xFE);
-      this.setVoiceReg(voice, 0x03, (pulseVal >> 8) & 0x0F);
+      // 4. Pulsetable Execution (state only; NEXTCHN writes the registers)
+      // GT2 optimizepulse (editor default ON, gplay.c lines 847-859):
+      // skip pulse on the GETNEWNOTES frame (tick == gatetimer) and on TICK0
+      // frames where the sequencer advanced to a new pattern (pattptr == 0)
+      const skipPulse =
+        (this.isSequencing && vs.tick === vs.gatetimer) ||
+        (this.isSequencing && vs.tick === 0 && this.patternRows[voice] === 0);
+      if (!skipPulse) {
+        this.executePulsetable(voice);
+      }
 
       // 5. Filtertable Execution - REMOVED (now executed globally via executeGlobalFiltertable)
       // GT2 filter is GLOBAL, not per-voice. See executeGlobalFiltertable() called at start of executeRealtimeCommands()
@@ -4636,6 +4593,15 @@ class SidProcessor extends AudioWorkletProcessor {
       if (this.isSequencing && vs.tick === vs.gatetimer) {
         this.processGetNewNotes(voice);
       }
+
+      // 7. NEXTCHN - write ALL voice registers from current state
+      // (gplay.c lines 938-948; runs after GETNEWNOTES so same-frame gate
+      // changes and HR are reflected immediately)
+      this.setVoiceReg(voice, 0x00, vs.currentFrequency & 0xFF);
+      this.setVoiceReg(voice, 0x01, (vs.currentFrequency >> 8) & 0xFF);
+      this.setVoiceReg(voice, 0x02, vs.tablePulse & 0xFE);
+      this.setVoiceReg(voice, 0x03, (vs.tablePulse >> 8) & 0x0F);
+      this.setVoiceReg(voice, 0x04, vs.wave & vs.gate);
     }
 
     // Send UI position update when any voice advanced

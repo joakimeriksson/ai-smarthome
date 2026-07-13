@@ -52,8 +52,8 @@ function main() {
   }
 
   // Song structure
-  add('mt_songtbllo', 3);
-  add('mt_songtblhi', 3);
+  add('mt_songtbllo', 96);
+  add('mt_songtblhi', 96);
   add('mt_patttbllo', 256);
   add('mt_patttblhi', 256);
 
@@ -85,6 +85,38 @@ function main() {
 
   // Note table (256 entries)
   add('mt_notetbl', 256);
+
+  // Playback defaults patched per-song at export time:
+  // mt_defaulttempo is `lda #DEFAULTTEMPO` — operand byte is at +1
+  {
+    const addr = labels.get('mt_defaulttempo');
+    if (addr == null) {
+      console.error('Warning: Missing label: mt_defaulttempo, skipping');
+    } else {
+      tables['defaulttempo'] = { offset: off(base, addr) + 1, length: 1, addr: addr + 1 };
+    }
+  }
+  add('mt_funktempotbl', 2);
+
+  // Hard-restart ADSR operands (ADPARAM/SRPARAM immediates) have no labels;
+  // locate them by instruction pattern in mt_normalnote:
+  //   lda #SRPARAM / sta SIDBASE+$06,x  ->  A9 xx 9D 06 D4
+  //   lda #ADPARAM / sta SIDBASE+$05,x  ->  A9 xx 9D 05 D4
+  function findOperand(name, staLo) {
+    const matches = [];
+    for (let i = 0; i + 4 < prg.length; i++) {
+      if (prg[i] === 0xA9 && prg[i + 2] === 0x9D && prg[i + 3] === staLo && prg[i + 4] === 0xD4) {
+        matches.push(i + 1);
+      }
+    }
+    if (matches.length !== 1) {
+      console.error(`Warning: ${name}: expected 1 match for lda #imm/sta $D4${staLo.toString(16).padStart(2, '0')},x — found ${matches.length}, skipping`);
+      return;
+    }
+    tables[name] = { offset: matches[0], length: 1, addr: base + matches[0] };
+  }
+  findOperand('hrsrparam', 0x06);
+  findOperand('hradparam', 0x05);
 
   const meta = {
     base,

@@ -908,20 +908,31 @@ export class GT2PatternEditor {
         style.textContent = `
             #gt2-pattern-editor {
                 padding: 10px;
-                background: #1a1a1a;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
+                background: var(--bg-main, #0000aa);
+                color: var(--text-primary, #0088ff);
+                font-family: 'C64 Pro Mono', 'Courier New', monospace;
                 font-size: 14px;
+                -webkit-font-smoothing: none;
             }
 
             .gt2-song-info {
                 padding: 8px 15px;
-                background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-                border: 1px solid #00aa00;
+                background: linear-gradient(
+                    90deg,
+                    #880000, #dd8855, #eeee77, #00cc55, #aaffee, #0088ff, #cc44cc, #880000
+                );
+                background-size: 200% 100%;
+                animation: rasterScroll 4s linear infinite;
+                border: 2px solid var(--border-main, #0088ff);
                 border-bottom: none;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+            }
+
+            @keyframes rasterScroll {
+                0%   { background-position: 0% 50%; }
+                100% { background-position: 200% 50%; }
             }
 
             .gt2-song-info-left {
@@ -938,73 +949,75 @@ export class GT2PatternEditor {
             .gt2-transport-btn {
                 width: 28px;
                 height: 28px;
-                border: 1px solid #00aa00;
-                background: #1a1a1a;
-                color: #00ff00;
+                border: 2px solid var(--btn-border, #00cc55);
+                background: var(--btn-bg, #333333);
+                color: var(--btn-text, #aaff66);
                 cursor: pointer;
                 font-size: 12px;
-                border-radius: 3px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.1s;
             }
 
             .gt2-transport-btn:hover {
-                background: #003300;
-                border-color: #00ff00;
+                background: var(--c64-green, #00cc55);
+                color: var(--c64-black, #000);
             }
 
             .gt2-transport-btn.active {
-                background: #00aa00;
-                color: #000;
-                border-color: #00ff00;
-                box-shadow: 0 0 8px #00ff00;
+                background: var(--c64-lightgreen, #aaff66);
+                color: var(--c64-black, #000);
+                border-color: var(--c64-white, #fff);
+                box-shadow: 0 0 8px var(--c64-lightgreen, #aaff66);
             }
 
             #gt2-play-btn.active {
-                background: #00cc00;
+                background: var(--c64-lightgreen, #aaff66);
             }
 
             .gt2-play-track-btn {
-                background: #1a1a2a !important;
-                border-color: #6666ff !important;
-                color: #aaaaff !important;
+                background: var(--bg-panel, #14148b) !important;
+                border-color: var(--c64-lightblue, #0088ff) !important;
+                color: var(--c64-cyan, #aaffee) !important;
             }
 
             .gt2-play-track-btn:hover {
-                background: #2a2a4a !important;
-                border-color: #aaaaff !important;
+                background: var(--c64-blue, #0000aa) !important;
+                border-color: var(--c64-cyan, #aaffee) !important;
             }
 
             .gt2-play-track-btn.active {
-                background: #4444aa !important;
-                color: #fff !important;
-                border-color: #aaaaff !important;
-                box-shadow: 0 0 8px #6666ff !important;
+                background: var(--c64-lightblue, #0088ff) !important;
+                color: var(--c64-black, #000) !important;
+                border-color: var(--c64-cyan, #aaffee) !important;
+                box-shadow: 0 0 8px var(--c64-lightblue, #0088ff) !important;
             }
 
             #gt2-pause-btn.active {
-                background: #ccaa00;
-                color: #000;
-                border-color: #ffcc00;
-                box-shadow: 0 0 8px #ffcc00;
+                background: var(--c64-yellow, #eeee77);
+                color: var(--c64-black, #000);
+                border-color: var(--c64-yellow, #eeee77);
+                box-shadow: 0 0 8px var(--c64-yellow, #eeee77);
             }
 
             #gt2-stop-btn.active {
-                background: #333;
+                background: var(--c64-darkgray, #333);
             }
 
             .gt2-song-title {
                 font-size: 16px;
                 font-weight: bold;
-                color: #00ff00;
-                text-shadow: 0 0 8px #00ff00;
+                color: var(--c64-white, #fff);
+                text-shadow: 2px 2px 0 var(--c64-black, #000), 0 0 10px var(--c64-lightblue, #0088ff);
+                text-transform: uppercase;
+                letter-spacing: 3px;
             }
 
             .gt2-song-meta {
-                font-size: 11px;
-                color: #00aa00;
+                font-size: 8px;
+                color: var(--c64-black, #000);
+                text-shadow: none;
+                font-weight: bold;
             }
 
             .gt2-song-meta span {
@@ -1015,8 +1028,8 @@ export class GT2PatternEditor {
                 display: flex;
                 gap: 8px;
                 padding: 6px 15px;
-                background: #0a0a0a;
-                border: 1px solid #00aa00;
+                background: var(--c64-black, #000);
+                border: 2px solid var(--border-main, #0088ff);
                 border-top: none;
                 border-bottom: none;
             }
@@ -1032,23 +1045,23 @@ export class GT2PatternEditor {
             .gt2-oscilloscope canvas {
                 width: 100%;
                 height: 60px;
-                background: #000;
-                border: 1px solid #333;
-                border-radius: 2px;
+                background: var(--c64-black, #000);
+                border: 1px solid var(--c64-darkgray, #333);
+                box-shadow: 0 0 6px rgba(0, 204, 85, 0.3);
             }
 
             .gt2-scope-label {
-                font-size: 10px;
+                font-size: 8px;
                 font-weight: bold;
-                color: #00ff00;
+                color: var(--c64-lightgreen, #aaff66);
                 min-width: 20px;
             }
 
             .gt2-editor-header {
                 margin-bottom: 10px;
                 padding: 10px;
-                background: #2a2a2a;
-                border: 1px solid #00ff00;
+                background: var(--bg-panel, #14148b);
+                border: 2px solid var(--border-main, #0088ff);
             }
 
             .pattern-controls {
@@ -1062,52 +1075,56 @@ export class GT2PatternEditor {
                 display: flex;
                 align-items: center;
                 gap: 5px;
+                font-size: 8px;
             }
 
             .pattern-controls input {
                 width: 60px;
-                background: #000;
-                color: #00ff00;
-                border: 1px solid #00ff00;
+                background: var(--c64-black, #000);
+                color: var(--text-primary, #0088ff);
+                border: 1px solid var(--border-main, #0088ff);
                 padding: 2px 5px;
+                font-family: 'C64 Pro Mono', monospace;
             }
 
             .pattern-controls button {
-                background: #003300;
-                color: #00ff00;
-                border: 1px solid #00ff00;
+                background: var(--btn-bg, #333);
+                color: var(--btn-text, #aaff66);
+                border: 1px solid var(--btn-border, #00cc55);
                 padding: 5px 10px;
                 cursor: pointer;
+                text-transform: uppercase;
+                font-family: 'C64 Pro Mono', monospace;
+                font-size: 8px;
             }
 
             .pattern-controls button:hover {
-                background: #005500;
+                background: var(--c64-green, #00cc55);
+                color: var(--c64-black, #000);
             }
 
             .gt2-speed-display {
-                background: #001a00;
-                border: 1px solid #00aa00;
+                background: var(--c64-black, #000);
+                border: 2px solid var(--border-main, #0088ff);
                 padding: 2px 8px;
-                border-radius: 3px;
-                font-family: monospace;
+                font-family: 'C64 Pro Mono', monospace;
                 font-weight: bold;
-                color: #00ff00;
+                color: var(--c64-yellow, #eeee77);
             }
 
             .gt2-position-nav {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                background: #1a1a1a;
-                border: 1px solid #00aa00;
-                border-radius: 4px;
+                background: var(--c64-black, #000);
+                border: 2px solid var(--border-main, #0088ff);
                 padding: 2px 6px;
             }
 
             .gt2-position-display {
-                font-family: monospace;
+                font-family: 'C64 Pro Mono', monospace;
                 font-weight: bold;
-                color: #ffff00;
+                color: var(--c64-yellow, #eeee77);
                 min-width: 90px;
                 text-align: center;
             }
@@ -1115,81 +1132,84 @@ export class GT2PatternEditor {
             .gt2-nav-btn {
                 width: 24px;
                 height: 24px;
-                border: 1px solid #00aa00;
-                background: #002200;
-                color: #00ff00;
+                border: 2px solid var(--btn-border, #00cc55);
+                background: var(--btn-bg, #333);
+                color: var(--btn-text, #aaff66);
                 cursor: pointer;
                 font-size: 12px;
-                border-radius: 3px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.1s;
             }
 
             .gt2-nav-btn:hover {
-                background: #004400;
-                border-color: #00ff00;
+                background: var(--c64-green, #00cc55);
+                color: var(--c64-black, #000);
             }
 
             .gt2-nav-btn:active {
-                background: #006600;
+                background: var(--c64-lightgreen, #aaff66);
+                color: var(--c64-black, #000);
             }
 
             .gt2-loop-btn {
-                background: #1a1a2a;
-                border-color: #6666ff;
-                color: #aaaaff;
+                background: var(--bg-panel, #14148b);
+                border-color: var(--c64-lightblue, #0088ff);
+                color: var(--c64-cyan, #aaffee);
                 margin-left: 4px;
             }
 
             .gt2-loop-btn:hover {
-                background: #2a2a4a;
-                border-color: #aaaaff;
+                background: var(--c64-lightblue, #0088ff);
+                color: var(--c64-black, #000);
             }
 
             .gt2-loop-btn:active {
-                background: #4444aa;
+                background: var(--c64-cyan, #aaffee);
+                color: var(--c64-black, #000);
             }
 
             .gt2-slowmo-btn {
-                background: #2a1a1a;
-                border-color: #aa6600;
-                color: #ffaa00;
+                background: var(--c64-brown, #664400);
+                border-color: var(--c64-orange, #dd8855);
+                color: var(--c64-orange, #dd8855);
                 margin-left: 8px;
                 font-size: 14px;
             }
 
             .gt2-slowmo-btn:hover {
-                background: #3a2a1a;
-                border-color: #ffaa00;
+                background: var(--c64-orange, #dd8855);
+                color: var(--c64-black, #000);
             }
 
             .gt2-slowmo-btn.active {
-                background: #aa6600;
-                color: #fff;
-                border-color: #ffcc00;
-                box-shadow: 0 0 8px #ffaa00;
+                background: var(--c64-orange, #dd8855);
+                color: var(--c64-black, #000);
+                border-color: var(--c64-yellow, #eeee77);
+                box-shadow: 0 0 8px var(--c64-orange, #dd8855);
             }
 
             .gt2-pattern-view {
-                border: 1px solid #00ff00;
-                background: #000;
+                border: 3px solid var(--border-main, #0088ff);
+                outline: 2px solid var(--c64-black, #000);
+                background: var(--c64-black, #000);
             }
 
             .gt2-pattern-headers {
                 display: flex;
                 gap: 5px;
-                background: #2a2a2a;
+                background: var(--border-main, #0088ff);
+                color: var(--c64-black, #000);
                 padding: 5px;
-                border-bottom: 2px solid #00ff00;
+                border-bottom: 2px solid var(--c64-white, #fff);
             }
 
             .gt2-row-number-header-fixed {
                 font-weight: bold;
                 text-align: center;
                 padding: 5px;
-                background: #2a2a2a;
+                background: var(--border-main, #0088ff);
+                color: var(--c64-black, #000);
                 min-width: 40px;
                 width: 40px;
             }
@@ -1205,24 +1225,40 @@ export class GT2PatternEditor {
                 gap: 5px;
                 max-height: 500px;
                 overflow-y: auto;
-                background: #000;
+                background: var(--c64-black, #000);
                 padding: 5px;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border-main, #0088ff) var(--c64-black, #000);
+            }
+
+            .gt2-pattern-grid-container::-webkit-scrollbar {
+                width: 8px;
+            }
+            .gt2-pattern-grid-container::-webkit-scrollbar-track {
+                background: var(--c64-black, #000);
+            }
+            .gt2-pattern-grid-container::-webkit-scrollbar-thumb {
+                background: var(--border-main, #0088ff);
             }
 
             .gt2-row-numbers {
                 display: flex;
                 flex-direction: column;
-                background: #1a1a1a;
+                background: #0a0a2a;
                 padding: 2px;
                 min-width: 40px;
                 width: 40px;
             }
 
             .gt2-row-number {
-                padding: 3px 5px;
+                padding: 0 5px;
                 text-align: right;
-                color: #888;
+                color: var(--c64-gray, #777);
                 min-width: 30px;
+                font-size: 12px;
+                height: 22px;
+                line-height: 22px;
+                box-sizing: border-box;
             }
 
             .gt2-pattern-grid {
@@ -1235,119 +1271,173 @@ export class GT2PatternEditor {
                 flex: 1;
                 display: flex;
                 flex-direction: column;
-                min-width: 200px;
+                min-width: 220px;
             }
 
             .gt2-voice-header {
                 font-weight: bold;
                 text-align: center;
                 padding: 5px;
-                background: #2a2a2a;
+                background: var(--border-main, #0088ff);
+                color: var(--c64-black, #000);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 flex: 1;
-                min-width: 200px;
+                min-width: 220px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-size: 12px;
             }
 
             .gt2-mute-btn {
-                background: #003300;
-                color: #00ff00;
-                border: 1px solid #00ff00;
+                background: var(--btn-bg, #333);
+                color: var(--btn-text, #aaff66);
+                border: 2px solid var(--btn-border, #00cc55);
                 padding: 2px 6px;
-                font-size: 12px;
+                font-size: 8px;
                 cursor: pointer;
-                border-radius: 3px;
                 min-width: 30px;
+                text-transform: uppercase;
+                font-family: 'C64 Pro Mono', monospace;
             }
 
             .gt2-mute-btn:hover {
-                background: #005500;
+                background: var(--c64-green, #00cc55);
+                color: var(--c64-black, #000);
             }
 
             .gt2-mute-btn.muted {
-                background: #550000;
-                color: #ff5555;
-                border-color: #ff5555;
+                background: var(--c64-red, #880000);
+                color: var(--c64-lightred, #ff7777);
+                border-color: var(--c64-lightred, #ff7777);
             }
 
             .gt2-pattern-number {
-                font-size: 11px;
-                color: #ffff00;
-                font-weight: normal;
+                font-size: 8px;
+                color: var(--c64-black, #000);
+                font-weight: bold;
                 margin-left: 8px;
             }
 
             .gt2-pattern-row {
                 display: flex;
                 gap: 5px;
-                padding: 2px 5px;
+                padding: 0 5px;
                 cursor: pointer;
                 border: 1px solid transparent;
+                height: 22px;
+                line-height: 22px;
+                align-items: center;
+                box-sizing: border-box;
+            }
+
+            .gt2-pattern-row:nth-child(4n+1) {
+                background: rgba(0, 0, 170, 0.15);
             }
 
             .gt2-pattern-row:hover {
-                background: #1a3a1a;
+                background: rgba(0, 136, 255, 0.15);
             }
 
             .gt2-pattern-row.gt2-current-row {
-                background: #003300;
-                border: 1px solid #00ff00;
+                background: var(--bg-panel, #14148b);
+                border: 1px solid var(--border-main, #0088ff);
             }
 
             .gt2-current-cell {
-                background: #005500 !important;
-                outline: 2px solid #00ff00;
+                background: var(--c64-blue, #0000aa) !important;
+                outline: 2px solid var(--c64-lightblue, #0088ff);
                 outline-offset: -2px;
             }
 
+            /* === RASTER BAR PLAYBACK HIGHLIGHT === */
             .gt2-pattern-row.gt2-playing-row {
-                background: #00aa00 !important;  /* Bright green for playing row */
-                border: 2px solid #00ff00;
-                color: #ffffff;
+                background: linear-gradient(
+                    90deg,
+                    #880000,
+                    #dd8855,
+                    #eeee77,
+                    #00cc55,
+                    #aaffee,
+                    #0088ff
+                ) !important;
+                border: 2px solid var(--c64-white, #fff);
+                color: var(--c64-black, #000) !important;
                 font-weight: bold;
-                box-shadow: 0 0 8px #00ff00;  /* Glow effect */
+                box-shadow: 0 0 12px rgba(170, 255, 238, 0.5);
+            }
+
+            .gt2-pattern-row.gt2-playing-row .gt2-note,
+            .gt2-pattern-row.gt2-playing-row .gt2-instrument,
+            .gt2-pattern-row.gt2-playing-row .gt2-command,
+            .gt2-pattern-row.gt2-playing-row .gt2-cmddata {
+                color: var(--c64-black, #000) !important;
+                text-shadow: none;
             }
 
             .gt2-pattern-row.gt2-playing-row.gt2-current-row {
-                background: #00dd00 !important;  /* Even brighter if also cursor row */
-                border: 3px solid #ffff00;
-                box-shadow: 0 0 12px #00ff00;
+                background: linear-gradient(
+                    90deg,
+                    #ff7777,
+                    #eeee77,
+                    #aaff66,
+                    #aaffee,
+                    #0088ff,
+                    #cc44cc
+                ) !important;
+                border: 3px solid var(--c64-white, #fff);
+                box-shadow: 0 0 16px rgba(170, 255, 238, 0.7);
             }
 
             .gt2-row-number.playing {
-                background: #00aa00;  /* Match row highlighting */
-                color: #ffffff;
+                background: linear-gradient(180deg, #880000, #dd8855, #eeee77);
+                color: var(--c64-black, #000);
                 font-weight: bold;
-                box-shadow: 0 0 4px #00ff00;
+            }
+
+            .gt2-note, .gt2-instrument, .gt2-command, .gt2-cmddata {
+                white-space: nowrap;
+                overflow: hidden;
             }
 
             .gt2-note {
-                width: 40px;
-                color: #ffff00;
+                width: 50px;
+                min-width: 50px;
+                color: var(--c64-yellow, #eeee77);
             }
 
             .gt2-instrument {
-                width: 30px;
-                color: #00ffff;
+                width: 35px;
+                min-width: 35px;
+                color: var(--c64-cyan, #aaffee);
             }
 
             .gt2-command {
-                width: 30px;
-                color: #ff00ff;
+                width: 35px;
+                min-width: 35px;
+                color: var(--c64-purple, #cc44cc);
             }
 
             .gt2-cmddata {
-                width: 30px;
-                color: #ff8800;
+                width: 35px;
+                min-width: 35px;
+                color: var(--c64-orange, #dd8855);
             }
 
             .gt2-editor-help {
                 margin-top: 10px;
                 padding: 10px;
-                background: #2a2a2a;
-                border: 1px solid #00ff00;
-                font-size: 12px;
+                background: var(--bg-panel, #14148b);
+                border: 2px solid var(--border-main, #0088ff);
+                font-size: 8px;
+                color: var(--c64-lightgray, #bbb);
+            }
+
+            /* Blinking cursor for editing */
+            @keyframes c64Blink {
+                0%, 49% { background: var(--c64-lightblue, #0088ff); color: var(--c64-black, #000); }
+                50%, 100% { background: transparent; color: inherit; }
             }
         `;
         document.head.appendChild(style);

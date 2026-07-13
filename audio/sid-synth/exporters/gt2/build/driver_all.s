@@ -48,13 +48,19 @@ NOCALCULATEDSPEED  = 0
 NONORMALSPEED      = 0
 NOZEROSPEED        = 0
 
-REALTIMEOPTIMIZATION = 0
-PULSEOPTIMIZATION    = 0
+; GT2 editor ships with these optimizations ENABLED (1) — gplay.c
+; optimizerealtime/optimizepulse default to 1, and greloc exports match.
+REALTIMEOPTIMIZATION = 1
+PULSEOPTIMIZATION    = 1
 
 ; ---------- Song parameters ----------
 NUMCHANNELS   = 3
-NUMSONGS      = 1
-DEFAULTTEMPO  = 6
+; 32 = GT2's MAX_SONGS: one driver binary serves any subtune count
+; (songtbl in data_tables.s holds 3 pointers per song)
+NUMSONGS      = 32
+; Player step period is value plus one frame - editor tempo 6 stored as 5.
+; The exporter patches this per song via meta defaulttempo.
+DEFAULTTEMPO  = 5
 FIRSTNOTE     = $00
 
 ; ---------- Instrument parameters ----------
@@ -65,8 +71,10 @@ NUMNOHRINSTR      = 0
 NUMLEGATOINSTR    = 0
 FIRSTNOHRINSTR    = 65
 FIRSTLEGATOINSTR  = 65
+; Hard-restart ADSR = GT2 editor adparam default $0F00 (AD=$0F, SR=$00).
+; The exporter patches these per song via meta hradparam / hrsrparam.
 SRPARAM           = $00
-ADPARAM           = $00
+ADPARAM           = $0F
 ;-------------------------------------------------------------------------------
 ; GoatTracker V2.68 playroutine
 ;
@@ -1884,11 +1892,11 @@ mt_chngate:
 ; All pre-allocated at fixed sizes for JS binary patching
 ; This file is concatenated AFTER player.s
 
-; --- Orderlists (per channel, single song) ---
+; --- Orderlists (3 pointers per song, up to NUMSONGS=32 songs) ---
 mt_songtbllo:
-  .byte 0,0,0
+  .dsb 96, 0
 mt_songtblhi:
-  .byte 0,0,0
+  .dsb 96, 0
 
 ; --- Pattern pointer tables ---
 mt_patttbllo:

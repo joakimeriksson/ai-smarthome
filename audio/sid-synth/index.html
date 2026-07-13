@@ -45,8 +45,9 @@
             <button id="saveButton">Save</button>
             <button id="loadButton">Load</button>
             <button id="exportButton">Export JSON</button>
-            <button id="exportSidButton" style="background: #520;">Export .SID</button>
-            <button id="importSidRipButton" style="background: #505;">Import SID Rip</button>
+            <button id="exportSidButton" style="background: var(--c64-brown); border-color: var(--c64-orange);">Export .SID</button>
+            <button id="exportSngButton" style="background: var(--c64-brown); border-color: var(--c64-orange);">Save .sng</button>
+            <button id="importSidRipButton" style="background: #440044; border-color: var(--c64-purple);">Import SID Rip</button>
         </div>
 
         <div class="control-section">
@@ -60,11 +61,14 @@
         </div>
     </div>
 
-    <!-- GT2 Pattern Editor -->
-    <div id="gt2-pattern-editor-container"></div>
+    <!-- GT2 Editors Wrapper (shared width) -->
+    <div id="gt2-editors-wrapper">
+        <!-- GT2 Pattern Editor -->
+        <div id="gt2-pattern-editor-container"></div>
 
-    <!-- GT2 Order Editor -->
-    <div id="gt2-order-editor-container"></div>
+        <!-- GT2 Order Editor -->
+        <div id="gt2-order-editor-container"></div>
+    </div>
 
     <!-- Table Editor Modal -->
     <div id="tableEditorModal" class="modal">
@@ -383,6 +387,7 @@
     <script type="module" src="gt2-pattern-editor.js"></script>
     <script type="module" src="gt2-order-editor.js"></script>
     <script type="module" src="main.js"></script>
+    <div id="crt-overlay"></div>
 </body>
 
 </html>

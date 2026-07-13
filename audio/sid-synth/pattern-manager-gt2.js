@@ -86,6 +86,12 @@ export class GT2Song {
             [0, ENDSONG]   // Voice 2: play pattern 0, then end
         ];
 
+        // GT2 subtunes: each is a set of 3 order lists (patterns, instruments
+        // and tables are shared). orderLists above IS the active subtune's
+        // list array — subtunes[currentSubtune].orderLists aliases it.
+        this.subtunes = [{ orderLists: this.orderLists }];
+        this.currentSubtune = 0;
+
         // Current playback positions (one per voice)
         this.orderPositions = [0, 0, 0];
 
@@ -148,6 +154,42 @@ export class GT2Song {
         if (voice >= 0 && voice < NUM_VOICES) {
             this.orderLists[voice] = orderList.slice();
         }
+    }
+
+    // Replace all subtunes (e.g. on .sng import). Each entry is
+    // { orderLists: [v0[], v1[], v2[]] }. Keeps activeIndex selected.
+    setSubtunes(subtunes, activeIndex = 0) {
+        if (!subtunes || subtunes.length === 0) return;
+        this.subtunes = subtunes.map(st => ({
+            orderLists: st.orderLists.map(ol => ol.slice())
+        }));
+        this.selectSubtune(Math.min(activeIndex, this.subtunes.length - 1));
+    }
+
+    // Switch the active subtune; orderLists re-points to its lists so all
+    // existing editor/sequencer code keeps working unchanged
+    selectSubtune(index) {
+        if (index < 0 || index >= this.subtunes.length) return false;
+        this.currentSubtune = index;
+        this.orderLists = this.subtunes[index].orderLists;
+        this.reset();
+        return true;
+    }
+
+    // Append a new empty subtune, returns its index
+    addSubtune() {
+        this.subtunes.push({
+            orderLists: [[0, ENDSONG], [0, ENDSONG], [0, ENDSONG]]
+        });
+        return this.subtunes.length - 1;
+    }
+
+    // Remove a subtune (the last one cannot be removed)
+    removeSubtune(index) {
+        if (this.subtunes.length <= 1 || index < 0 || index >= this.subtunes.length) return false;
+        this.subtunes.splice(index, 1);
+        this.selectSubtune(Math.min(this.currentSubtune, this.subtunes.length - 1));
+        return true;
     }
 
     // Add pattern to order list for a voice
@@ -298,6 +340,10 @@ class GT2PatternManager {
                 data: p.data.slice(0, p.length)  // Only export used rows
             })),
             orderLists: this.song.orderLists.map(ol => ol.slice()),
+            subtunes: this.song.subtunes.map(st => ({
+                orderLists: st.orderLists.map(ol => ol.slice())
+            })),
+            currentSubtune: this.song.currentSubtune,
             currentPatternIndex: this.currentPatternIndex,
             currentVoice: this.currentVoice
         };
@@ -318,13 +364,12 @@ class GT2PatternManager {
                 });
             }
 
-            // Import order lists
-            if (songData.orderLists) {
-                songData.orderLists.forEach((ol, voice) => {
-                    if (voice < NUM_VOICES) {
-                        this.song.orderLists[voice] = ol.slice();
-                    }
-                });
+            // Import order lists (new saves carry all subtunes; older saves
+            // and SID rips only the active subtune's order lists)
+            if (songData.subtunes && songData.subtunes.length) {
+                this.song.setSubtunes(songData.subtunes, songData.currentSubtune || 0);
+            } else if (songData.orderLists) {
+                this.song.setSubtunes([{ orderLists: songData.orderLists }], 0);
             }
 
             // Import metadata

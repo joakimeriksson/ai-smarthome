@@ -195,6 +195,18 @@ for (let v = 0; v < 3; v++) {
             console.log(`    orig on=${a.on} len=${a.len} note=${na} ad=$${a.ad.toString(16)} sr=$${a.sr.toString(16)} | rip on=${b.on} len=${b.len} note=${nb} ad=$${b.ad.toString(16)} sr=$${b.sr.toString(16)}`);
         }
     }
+
+    if (args.includes('--mismatches')) {
+        const ctrls = (n) => [...n.ctrls].map(c => '$' + c.toString(16)).join(',');
+        for (const [a, b] of pairs) {
+            const cm = contentMatch(a, b);
+            if (cm >= 0.5) continue;
+            const fseq = (n) => n.freqs.slice(0, 10).map(fr => freqToNoteIdx(fr)).join(' ');
+            console.log(`    BAD v${v} orig on=${a.on} content=${(100*cm).toFixed(0)}%`);
+            console.log(`      orig: notes ${fseq(a)} ad=$${a.ad.toString(16)} sr=$${a.sr.toString(16)} ctrl=[${ctrls(a)}]`);
+            console.log(`      rip:  notes ${fseq(b)} ad=$${b.ad.toString(16)} sr=$${b.sr.toString(16)} ctrl=[${ctrls(b)}]`);
+        }
+    }
 }
 
 const matchPct = totals.origCount ? (100 * totals.matched / totals.origCount).toFixed(1) : 0;

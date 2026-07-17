@@ -5,8 +5,9 @@
 import { webkit } from 'playwright';
 import { writeFileSync } from 'node:fs';
 
-const [sidPath, outSng, secondsArg] = process.argv.slice(2);
+const [sidPath, outSng, secondsArg, subtuneArg] = process.argv.slice(2);
 const seconds = parseInt(secondsArg || '30', 10);
+const subtune = parseInt(subtuneArg || '0', 10);
 if (!sidPath || !outSng) { console.error('usage: rip-roundtrip.mjs <sid-url-path> <out.sng> [seconds]'); process.exit(2); }
 
 const browser = await webkit.launch();
@@ -16,10 +17,11 @@ page.on('pageerror', e => console.error('[pageerror]', e.message));
 await page.goto('http://localhost:8471/sid-ripper.html', { waitUntil: 'load' });
 await page.waitForTimeout(400);
 
-const ripInfo = await page.evaluate(async ({ sidPath, seconds }) => {
+const ripInfo = await page.evaluate(async ({ sidPath, seconds, subtune }) => {
   const buf = new Uint8Array(await (await fetch(sidPath)).arrayBuffer());
   SIDRipper.loadSIDData(buf);
   await new Promise(r => setTimeout(r, 200));
+  document.getElementById('subsongSelect').value = String(subtune);
   SIDRipper.autoCapture(seconds);
   // autoCapture runs in a setTimeout; poll for completion
   for (let i = 0; i < 100; i++) {
@@ -31,7 +33,7 @@ const ripInfo = await page.evaluate(async ({ sidPath, seconds }) => {
   const d = SIDRipper.gt2Data;
   return { writes: SIDRipper.registerLog.length, patterns: d.patterns.length,
            instruments: d.instruments.length, speed: d.speed };
-}, { sidPath, seconds });
+}, { sidPath, seconds, subtune });
 console.error('rip:', JSON.stringify(ripInfo));
 
 await page.goto('http://localhost:8471/index.html?import=sidrip', { waitUntil: 'load' });

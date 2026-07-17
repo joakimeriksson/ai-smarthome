@@ -1331,9 +1331,12 @@
                         let bodyFreq = 0;
                         for (let k = 0; k <= 8 && f + k < frames.length; k++) {
                             const nf = frames[f + k].voices[v];
-                            if (k > 0 && (nf.noteEvent || !nf.gateOn)) break;
-                            // Tonal waveform (tri/saw/pulse combos, not noise)
-                            if (nf.waveform >= 1 && nf.waveform <= 7 && nf.freq > 0) bodyFreq = nf.freq;
+                            if (k > 0 && nf.noteEvent) break;
+                            // FIRST tonal waveform frame (tri/saw/pulse, not
+                            // noise) - the same base the onset wavetable
+                            // offsets use. Taking a later frame would pick
+                            // the wrong phase of a trill/slide.
+                            if (nf.waveform >= 1 && nf.waveform <= 7 && nf.freq > 0) { bodyFreq = nf.freq; break; }
                         }
                         if (bodyFreq > 0 && bodyFreq !== vf.freq) {
                             vf.note = this.freqToNote(bodyFreq);
@@ -2126,22 +2129,19 @@
                     });
                 }
 
-                // Find most common small gap (likely 16th note)
-                const gapCounts = {};
-                noteGaps.forEach(gap => {
-                    if (gap >= 2 && gap <= 24) {
-                        gapCounts[gap] = (gapCounts[gap] || 0) + 1;
-                    }
-                });
-
+                // Find the row grid: the speed that DIVIDES the most note
+                // gaps (a slow tune's most common gap may be 2-4 rows long -
+                // picking it directly merges faster notes into one row and
+                // drops them). Ties prefer the coarser grid.
                 let framesPerRow = 6; // Default: ~125 BPM
-                const sortedGaps = Object.entries(gapCounts).sort((a, b) => b[1] - a[1]);
-                if (sortedGaps.length > 0) {
-                    framesPerRow = parseInt(sortedGaps[0][0]);
+                const usableGaps = noteGaps.filter(g => g >= 2 && g <= 96);
+                let bestScore = -1;
+                for (let cand = 3; cand <= 24; cand++) {
+                    let explained = 0;
+                    for (const g of usableGaps) if (g % cand === 0) explained++;
+                    const score = explained + cand * 0.001; // tie-break: coarser
+                    if (score > bestScore) { bestScore = score; framesPerRow = cand; }
                 }
-
-                // Clamp to reasonable values
-                framesPerRow = Math.max(3, Math.min(12, framesPerRow));
 
                 const tempo = Math.round(50 * 60 / (framesPerRow * 4)); // Assuming 16th notes
                 console.log(`Quantizing with ${framesPerRow} frames/row (${tempo} BPM)`);
@@ -2950,12 +2950,21 @@
              * an octave-trill note with the same waveform sequence - they
              * need different wavetables.
              */
-            onsetSignature(seq) {
-                let base = seq.freq;
+            /**
+             * Base frequency of an onset sequence: the FIRST tonal
+             * (non-noise, non-test) step. Must match the row-note body-pitch
+             * rule so wavetable offsets and pattern notes share one base.
+             */
+            onsetBaseFreq(seq) {
                 for (const s of seq.steps) {
                     const wf = (s.ctrl >> 4) & 0x0F;
-                    if (wf >= 1 && wf <= 7 && s.freq > 0 && !(s.ctrl & 0x08)) base = s.freq;
+                    if (wf >= 1 && wf <= 7 && s.freq > 0 && !(s.ctrl & 0x08)) return s.freq;
                 }
+                return seq.freq;
+            },
+
+            onsetSignature(seq) {
+                const base = this.onsetBaseFreq(seq);
                 return seq.steps.map(s => {
                     const off = (s.freq > 0 && base > 0)
                         ? Math.round(12 * Math.log2(s.freq / base)) : 0;
@@ -2996,15 +3005,12 @@
                         const exampleSeq = pattern.example;
 
                         // Build wavetable entries from the ctrl sequence.
-                        // Relative notes are computed against the note BODY
-                        // frequency (last tonal step) - the same base the
-                        // pattern row note now uses - NOT the gate-on
-                        // frequency, which is still the attack/previous value.
-                        let baseFreq = exampleSeq.freq;
-                        for (const step of exampleSeq.steps) {
-                            const wf = (step.ctrl >> 4) & 0x0F;
-                            if (wf >= 1 && wf <= 7 && step.freq > 0 && !(step.ctrl & 0x08)) baseFreq = step.freq;
-                        }
+                        // Relative notes are computed against the onset base
+                        // (FIRST tonal step) - the same base the pattern row
+                        // note uses.
+                        const baseFreq = this.onsetBaseFreq(exampleSeq);
+                        const baseIdx = baseFreq > 0
+                            ? this.noteToMidi(this.freqToNote(baseFreq)) - 12 : -1;
                         const rawEntries = [];
 
                         exampleSeq.steps.forEach((step, i) => {
@@ -3025,16 +3031,21 @@
                             // Right byte: note relationship
                             let right = 0x80;  // Default: no note change
                             if ((waveform & 0x80) && step.freq > 0) {
-                                // Noise frames use ABSOLUTE notes ($81-$FF =
-                                // note index 1-127): drum pitches are fixed
-                                // per drum, not relative to the melody note,
-                                // and pattern notes clamp at G#7 while noise
-                                // drums live up at A-7..B-7 - relative offsets
-                                // from a clamped base note land flat.
+                                // Noise frames: RELATIVE when the base note
+                                // can express it (keeps pitched toms
+                                // transposable across drum notes), ABSOLUTE
+                                // only when out of range - pattern notes
+                                // clamp at G#7 while snares/hats sit at
+                                // A-7..B-7.
                                 const midi = this.noteToMidi(this.freqToNote(step.freq));
                                 if (midi >= 0) {
-                                    const idx = Math.max(1, Math.min(95, midi - 12));
-                                    right = 0x80 | idx;
+                                    const idx = midi - 12;
+                                    const off = baseIdx >= 0 ? idx - baseIdx : 999;
+                                    if (baseIdx >= 0 && baseIdx <= 92 && off >= -64 && off <= 63) {
+                                        right = off & 0x7F;
+                                    } else {
+                                        right = 0x80 | Math.max(1, Math.min(95, idx));
+                                    }
                                 }
                             } else if (i > 0 && step.freq !== exampleSeq.steps[i-1].freq && step.freq > 0 && baseFreq > 0) {
                                 // Relative semitone offset from base note. NOTE:
@@ -3048,7 +3059,7 @@
                                 }
                             }
 
-                            rawEntries.push({ left, right });
+                            rawEntries.push({ left, right, frame: step.frame });
                         });
 
                         // The FIRST entry must establish the new note's
@@ -3059,18 +3070,20 @@
                             rawEntries[0].right = 0x00;
                         }
 
-                        // Deduplicate consecutive entries with same ctrl AND same note (no change)
+                        // Onset steps are recorded ONLY on change, so held
+                        // frames live in the step frame numbers. Emit GT2
+                        // delay entries (left $01-$0F) for the gaps -
+                        // otherwise a 12-frame gate collapses to 1 frame and
+                        // the gate-off entry fires 11 frames early.
                         const entries = [];
-                        for (let e = 0; e < rawEntries.length; e++) {
-                            const curr = rawEntries[e];
-                            if (entries.length > 0) {
-                                const prev = entries[entries.length - 1];
-                                // Skip if same waveform byte and no note change on either
-                                if (curr.left === prev.left && curr.right === 0x80 && prev.right === 0x80) {
-                                    continue;
-                                }
+                        let prevFrame = null;
+                        for (const e of rawEntries) {
+                            if (prevFrame !== null) {
+                                let gap = e.frame - prevFrame - 1;
+                                while (gap > 0) { const d = Math.min(15, gap); entries.push({ left: d, right: 0x80 }); gap -= d; }
                             }
-                            entries.push(curr);
+                            entries.push({ left: e.left, right: e.right });
+                            prevFrame = e.frame;
                         }
 
                         if (entries.length < 2) continue;

@@ -100,7 +100,7 @@ export function stopPlayback() {
     isPaused = false;
 
     // Resume audio context if it was suspended (paused)
-    if (window.audioContext && window.audioContext.state === 'suspended') {
+    if (window.audioContext && window.audioContext.state !== 'running') {
         window.audioContext.resume();
     }
 
@@ -192,7 +192,7 @@ export function resumePlayback() {
     isPaused = false;
 
     // Resume audio context - this resumes all audio processing
-    if (window.audioContext && window.audioContext.state === 'suspended') {
+    if (window.audioContext && window.audioContext.state !== 'running') {
         window.audioContext.resume().then(() => {
             console.log("Audio context resumed - playback resumed.");
         });

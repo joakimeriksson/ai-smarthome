@@ -245,6 +245,14 @@ export function initSynth() {
                     try { window.sidWorkletInfo = payload; } catch (_) { }
                     // Default master volume
                     setGlobalSIDRegister(0x18, 0x0F);
+                    // Replay the current GT2 tempo: a song import (e.g. from
+                    // the SID ripper) may have set it BEFORE the worklet
+                    // existed, in which case the original message was dropped
+                    console.log(`Replaying GT2 tempo to worklet: speed=${currentGT2Tempo.speed}, tempo=${currentGT2Tempo.tempo}`);
+                    sidWorkletNode.port.postMessage({
+                        type: 'setGT2Tempo',
+                        payload: { speed: currentGT2Tempo.speed, tempo: currentGT2Tempo.tempo }
+                    });
                     // Flush any pending pokes queued before readiness
                     if (pendingPokes.length) {
                         for (const p of pendingPokes) {

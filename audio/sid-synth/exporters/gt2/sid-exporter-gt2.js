@@ -498,9 +498,14 @@ export function exportSIDFile({ title, author, instruments, patternManager, tabl
             // Entry 1: waveform|gate, note = $80 (relative 0 = use current note)
             // Entry 2: $FF (loop), target = entry 1
             const pos = nextFreeWavePos; // 1-based position
-            let wf = (validInstruments[i].waveform || 0x10) | 0x01; // add gate bit
-            if (validInstruments[i].sync) wf |= 0x02;
-            if (validInstruments[i].ringMod) wf |= 0x04;
+            // Add the gate bit unless the instrument is deliberately
+            // gate-less (silent sync/ring modulator: firstWave without bit 0)
+            const inst = validInstruments[i];
+            const gateBit = (inst.firstWave !== undefined && inst.firstWave !== null)
+                ? (inst.firstWave & 0x01) : 0x01;
+            let wf = ((inst.waveform || 0x10) & 0xFE) | gateBit;
+            if (inst.sync) wf |= 0x02;
+            if (inst.ringMod) wf |= 0x04;
             // GT2 wavetable format: values 0-15 are delay counters,
             // so waveform bytes are stored with +$10 offset (player subtracts $10)
             tables.wavetbl[pos - 1] = wf + 0x10; // left: waveform+gate with +$10 bias

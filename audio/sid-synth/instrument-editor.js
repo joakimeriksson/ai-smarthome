@@ -327,7 +327,7 @@ async function testCurrentInstrument() {
     }
 
     // Ensure audio context is running
-    if (window.audioContext && window.audioContext.state === 'suspended') {
+    if (window.audioContext && window.audioContext.state !== 'running') {
         await window.audioContext.resume();
     }
 

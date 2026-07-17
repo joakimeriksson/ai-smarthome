@@ -337,10 +337,13 @@ make golden          # refresh golden reference dumps in tests/golden/
 | `tools/gt2-refdump/gt2dump` | **Ground truth**: compiles gt2-src/gplay.c + gsong.c unmodified into a CLI that loads a .sng and dumps `sidreg[0..24]` per frame as JSON lines (`make -C tools/gt2-refdump`) |
 | `tools/worklet-dump.js` | Runs `worklet/sid-processor.body.js` headless under Node (stubbed AudioWorklet + fake reSID), same JSON output |
 | `tools/export-sid.js` | Headless .SID export: `.sng → parseSng → exportSIDFile → .sid` (all subtunes into one multi-song .SID) |
-| `tools/sid-dump.js` | Plays a .sid with a 6502 CPU emulator (`tools/lib/cpu6502.js`), traps $D400-$D418 writes, same JSON output; `--subtune N` picks the PSID song |
+| `tools/sid-dump.js` | Plays a .sid with a 6502 CPU emulator, traps $D400-$D418 writes, same JSON output; `--subtune N` picks the PSID song |
+| `tools/lib/psid-capture.js` | PSID parse + headless play-call machine on `tools/lib/cpu6502.js`. Shared by sid-dump.js AND the browser SID ripper's Capture button (jsSID's MOS6510 has V-flag/BRK/illegal-opcode bugs, so ripper capture must NOT use it — jsSID is audition-only) |
 | `tools/resave-sng.js` | `.sng → parseSng → writeSng → .sng` with structural round-trip check; verify feeds the result back to gt2dump |
 | `tools/regdiff.js` | Diffs two dumps: auto-alignment, per-register summary, first divergent frames. Default compare is hardware-masked (PW-hi 4 bits, FC-lo 3 bits); `--strict` for bit-exact |
 | `tools/bin/sidplayfp` | Real sidplayfp 3.1.0 (built against brew libsidplayfp, sidlite engine) for independent .sid validation: `tools/bin/sidplayfp --sidlite -w out.wav -t20 file.sid` |
+| `tools/rip-compare.js` | **Rip-quality score**: musical comparison of two register dumps (note onsets, gate lengths, pitch content/trajectory, ADSR). Use: rip original with sid-dump, replay converted rip with worklet-dump, compare |
+| `tools/rip-roundtrip.mjs` | Headless rip round trip (needs `npx playwright` + local http server on :8471): .sid → sid-ripper capture+convert → tracker import → writeSng → .sng for worklet-dump |
 | `tests/make-test-songs.js` | Generates `tests/songs/features.sng`: feature-isolating subtunes (instrument vibrato, funktempo, porta/toneporta, per-channel tempo, KEYOFF/KEYON/REST, transpose+repeat) |
 
 Corpus: `sids/dojo.sng` (4 subtunes) + `tests/songs/features.sng` (6

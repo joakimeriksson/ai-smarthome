@@ -49,6 +49,7 @@ const subtunes = [
     [[4], [6], [SILENT]],                      // 3: per-channel tempo (2 voices)
     [[5], [SILENT], [SILENT]],                 // 4: keyoff/keyon/rest
     [[0xF3, 0, 0xD1, 0], [SILENT], [SILENT]],  // 5: transpose +3, repeat 1 extra
+    [[7], [SILENT], [8]],                      // 6: ring mod carrier (v0) + silent gate-less modulator (v2)
 ];
 put(subtunes.length);
 for (const st of subtunes) {
@@ -73,6 +74,11 @@ const instruments = [
     { ad: 0x22, sr: 0xA8, wave: 3, pulse: 0, filt: 0, vib: 0, vibdelay: 0, gate: 0x02, fw: 0x09, name: 'Plain' },
     // 2: triangle with instrument vibrato (STBL 1) after 20 frames
     { ad: 0x09, sr: 0x00, wave: 1, pulse: 0, filt: 0, vib: 1, vibdelay: 20, gate: 0x02, fw: 0x09, name: 'Vib' },
+    // 3: ring-mod carrier: triangle + ring (osc from voice-1, i.e. voice 2)
+    { ad: 0x09, sr: 0x80, wave: 5, pulse: 0, filt: 0, vib: 0, vibdelay: 0, gate: 0x02, fw: 0x09, name: 'Ring' },
+    // 4: silent gate-less modulator: waveform without gate bit, envelope
+    // stays silent while its oscillator drives the ring modulation
+    { ad: 0x00, sr: 0x00, wave: 7, pulse: 0, filt: 0, vib: 0, vibdelay: 0, gate: 0x02, fw: 0x09, name: 'Mod' },
 ];
 put(instruments.length);
 for (const i of instruments) {
@@ -83,8 +89,8 @@ for (const i of instruments) {
 // ---------------------------------------------------------------------------
 // Tables: 4 x (size, left[size], right[size]) — WTBL, PTBL, FTBL, STBL
 // ---------------------------------------------------------------------------
-const WTBL_L = [0x11, 0xFF, 0x21, 0xFF]; // 1: tri+gate stop / 3: saw+gate stop
-const WTBL_R = [0x00, 0x00, 0x00, 0x00];
+const WTBL_L = [0x11, 0xFF, 0x21, 0xFF, 0x15, 0xFF, 0x40, 0xFF]; // 1: tri+gate / 3: saw+gate / 5: tri+ring+gate / 7: pulse NO gate (silent modulator)
+const WTBL_R = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
 const STBL_L = [0x02, 0x09, 0x00, 0x00]; // 1: vib cmp=2  2: funktempo 9   3: porta $0040  4: toneporta $0020
 const STBL_R = [0x20, 0x06, 0x40, 0x20]; //    depth $20     right 6          lo $40          lo $20
 const tables = [
@@ -145,6 +151,18 @@ const patterns = [
         0: [N(24), 1, 0x0F, 0x88], 2: [N(28), 0, 0, 0], 4: [N(31), 0, 0, 0],
         6: [N(24), 0, 0, 0], 8: [N(28), 0, 0, 0], 10: [N(31), 0, 0, 0],
         12: [N(24), 0, 0, 0], 14: [N(31), 0, 0, 0],
+    }),
+    // 7: ring-mod carrier notes (instrument 3, tri+ring)
+    pattern({
+        0: [N(48), 3, 0, 0], 4: [N(50), 0, 0, 0],
+        8: [N(52), 0, 0, 0], 12: [N(48), 0, 0, 0], 14: [KEYOFF, 0, 0, 0],
+    }),
+    // 8: silent modulator line (instrument 4) - different rhythm so the
+    // ring timbre changes within carrier notes
+    pattern({
+        0: [N(12), 4, 0, 0], 2: [N(19), 0, 0, 0], 4: [N(14), 0, 0, 0],
+        6: [N(21), 0, 0, 0], 8: [N(16), 0, 0, 0], 10: [N(23), 0, 0, 0],
+        12: [N(12), 0, 0, 0], 14: [N(24), 0, 0, 0],
     }),
 ];
 put(patterns.length);

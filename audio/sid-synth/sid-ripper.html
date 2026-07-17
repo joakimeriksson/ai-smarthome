@@ -1,0 +1,3694 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>SID Ripper - Convert SID to GT2</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #0ff;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .control-section {
+            background: #252540;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .control-section h3 {
+            margin: 0 0 10px 0;
+            color: #0ff;
+            font-size: 14px;
+        }
+        button {
+            background: #050;
+            color: #fff;
+            border: 1px solid #0a0;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            margin: 2px;
+        }
+        button:hover {
+            background: #070;
+        }
+        button:disabled {
+            background: #333;
+            border-color: #555;
+            color: #666;
+            cursor: not-allowed;
+        }
+        button.active {
+            background: #0a0;
+        }
+        button.stop {
+            background: #500;
+            border-color: #a00;
+        }
+        button.stop:hover {
+            background: #700;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            background: #005;
+            border: 1px solid #00a;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .file-label:hover {
+            background: #007;
+        }
+        #sidInfo {
+            background: #1a1a2e;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            min-height: 80px;
+        }
+        .info-row {
+            display: flex;
+            gap: 20px;
+            margin: 5px 0;
+        }
+        .info-label {
+            color: #888;
+            width: 100px;
+        }
+        .info-value {
+            color: #0f0;
+        }
+        #registerDisplay {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .voice-panel {
+            background: #252540;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .voice-panel h4 {
+            margin: 0 0 10px 0;
+            color: #ff0;
+        }
+        .register-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            font-size: 12px;
+        }
+        .reg-name {
+            color: #888;
+        }
+        .reg-value {
+            color: #0f0;
+            font-weight: bold;
+        }
+        .reg-value.changed {
+            color: #f00;
+            animation: flash 0.2s;
+        }
+        @keyframes flash {
+            0% { background: #f00; color: #fff; }
+            100% { background: transparent; }
+        }
+        #logOutput {
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            color: #0f0;
+        }
+        .log-entry.frame {
+            color: #ff0;
+            border-top: 1px solid #333;
+            margin-top: 5px;
+            padding-top: 5px;
+        }
+        #status {
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .status-playing {
+            color: #0f0;
+        }
+        .status-stopped {
+            color: #888;
+        }
+        .status-logging {
+            color: #f00;
+        }
+        select {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        a {
+            color: #0ff;
+        }
+        /* Tracker View Styles */
+        .tracker-container {
+            margin-top: 20px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .tracker-header {
+            display: grid;
+            grid-template-columns: 60px repeat(3, 1fr);
+            background: #252540;
+            border-bottom: 2px solid #444;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .tracker-header-cell {
+            padding: 8px;
+            text-align: center;
+            border-right: 1px solid #444;
+        }
+        .tracker-header-cell:last-child {
+            border-right: none;
+        }
+        .tracker-header-cell.voice1 { color: #ff8; }
+        .tracker-header-cell.voice2 { color: #8ff; }
+        .tracker-header-cell.voice3 { color: #f8f; }
+        .tracker-body {
+            height: 400px;
+            overflow-y: auto;
+        }
+        .tracker-row {
+            display: grid;
+            grid-template-columns: 60px repeat(3, 1fr);
+            border-bottom: 1px solid #222;
+        }
+        .tracker-row:nth-child(4n) {
+            background: #1a1a2a;
+        }
+        .tracker-row:nth-child(16n) {
+            border-bottom: 2px solid #444;
+        }
+        .tracker-row.highlight {
+            background: #003300;
+        }
+        .tracker-cell {
+            padding: 2px 4px;
+            font-size: 11px;
+            border-right: 1px solid #222;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 2px;
+        }
+        .tracker-cell:last-child {
+            border-right: none;
+        }
+        .tracker-row-num {
+            padding: 2px 4px;
+            text-align: right;
+            color: #666;
+            font-size: 11px;
+            border-right: 1px solid #333;
+        }
+        .note { color: #ff0; }
+        .inst { color: #0ff; font-size: 10px; }
+        .cmd { color: #f0f; font-size: 10px; }
+        .gate-on { color: #0f0; font-weight: bold; }
+        .gate-off { color: #f80; font-weight: bold; }  /* Orange for key-off */
+        .arpeggio { color: #0ff; font-weight: bold; background: #033; }  /* Cyan for arpeggio/pitch change */
+        .wave-change { color: #f0f; font-weight: bold; background: #303; }  /* Magenta for wavetable-like changes */
+        .vibrato { color: #88f; }  /* Light blue for vibrato */
+        .portamento { color: #8f8; }  /* Light green for portamento */
+        .empty { color: #333; }
+        .tracker-stats {
+            display: flex;
+            gap: 20px;
+            padding: 10px;
+            background: #252540;
+            border-bottom: 1px solid #444;
+        }
+        .stat-item {
+            font-size: 12px;
+        }
+        .stat-label { color: #888; }
+        .stat-value { color: #0f0; margin-left: 5px; }
+        .view-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .view-tab {
+            padding: 8px 16px;
+            background: #333;
+            border: 1px solid #555;
+            cursor: pointer;
+        }
+        .view-tab.active {
+            background: #005;
+            border-color: #00a;
+        }
+        /* Piano Roll Styles */
+        .piano-roll-container {
+            margin-top: 20px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            display: none;
+        }
+        .piano-roll-controls {
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            background: #252540;
+            border-bottom: 1px solid #444;
+            align-items: center;
+        }
+        .piano-roll-controls label {
+            font-size: 12px;
+            color: #888;
+        }
+        .piano-roll-controls input[type="range"] {
+            width: 100px;
+        }
+        .piano-roll-wrapper {
+            display: flex;
+            height: 400px;
+            overflow: hidden;
+        }
+        .piano-keys {
+            width: 60px;
+            background: #1a1a2e;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .piano-key {
+            height: 12px;
+            border-bottom: 1px solid #333;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            padding-left: 4px;
+        }
+        .piano-key.white {
+            background: linear-gradient(90deg, #ddd 0%, #fff 100%);
+            color: #000;
+        }
+        .piano-key.black {
+            background: linear-gradient(90deg, #222 0%, #444 100%);
+            color: #888;
+        }
+        .piano-roll-canvas-wrapper {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+        #pianoRollCanvas {
+            display: block;
+        }
+        .voice-legend {
+            display: flex;
+            gap: 20px;
+            padding: 8px 10px;
+            background: #1a1a2e;
+            border-top: 1px solid #333;
+            font-size: 11px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        .legend-v1 { background: #ff8800; }
+        .legend-v2 { background: #00aaff; }
+        .legend-v3 { background: #ff00aa; }
+    </style>
+</head>
+<body>
+    <h1>SID Ripper</h1>
+    <p class="subtitle">Load SID files, analyze register writes, convert to GT2 format | <a href="index.html">Back to Tracker</a></p>
+
+    <div class="controls">
+        <div class="control-section">
+            <h3>Load SID File</h3>
+            <label class="file-label">
+                Choose .sid file
+                <input type="file" id="sidFileInput" accept=".sid">
+            </label>
+            <button id="loadExampleBtn">Load Example (Commando)</button>
+        </div>
+
+        <div class="control-section">
+            <h3>Playback</h3>
+            <button id="playBtn" disabled>Play</button>
+            <button id="stopBtn" class="stop" disabled>Stop</button>
+            <select id="subsongSelect" disabled>
+                <option value="0">Song 1</option>
+            </select>
+        </div>
+
+        <div class="control-section">
+            <h3>Register Logging</h3>
+            <button id="startLogBtn" disabled>Start Live Log</button>
+            <button id="stopLogBtn" class="stop" disabled>Stop Live Log</button>
+            <button id="autoCapBtn" disabled title="Headless capture on the verified 6502 core - instant, no audio needed">Capture 30s (instant)</button>
+            <button id="clearLogBtn">Clear Log</button>
+            <button id="exportLogBtn" disabled>Export Log</button>
+        </div>
+
+        <div class="control-section">
+            <h3>Analysis</h3>
+            <button id="analyzeBtn" disabled>Analyze Log</button>
+            <button id="convertGT2Btn" disabled>Convert to GT2</button>
+            <button id="openInTrackerBtn" disabled>Open in Tracker</button>
+        </div>
+    </div>
+
+    <div id="sidInfo">
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value" id="infoTitle">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Author:</span>
+            <span class="info-value" id="infoAuthor">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Published:</span>
+            <span class="info-value" id="infoPublished">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Load Addr:</span>
+            <span class="info-value" id="infoLoadAddr">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Init/Play:</span>
+            <span class="info-value" id="infoInitPlay">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Clock:</span>
+            <span class="info-value" id="infoClock">-</span>
+        </div>
+    </div>
+
+    <div id="status" class="status-stopped">Status: No SID loaded</div>
+
+    <div id="registerDisplay">
+        <div class="voice-panel">
+            <h4>Voice 1</h4>
+            <div class="register-row"><span class="reg-name">Freq:</span><span class="reg-value" id="v1freq">0000</span></div>
+            <div class="register-row"><span class="reg-name">PW:</span><span class="reg-value" id="v1pw">000</span></div>
+            <div class="register-row"><span class="reg-name">Ctrl:</span><span class="reg-value" id="v1ctrl">00</span></div>
+            <div class="register-row"><span class="reg-name">AD:</span><span class="reg-value" id="v1ad">00</span></div>
+            <div class="register-row"><span class="reg-name">SR:</span><span class="reg-value" id="v1sr">00</span></div>
+        </div>
+        <div class="voice-panel">
+            <h4>Voice 2</h4>
+            <div class="register-row"><span class="reg-name">Freq:</span><span class="reg-value" id="v2freq">0000</span></div>
+            <div class="register-row"><span class="reg-name">PW:</span><span class="reg-value" id="v2pw">000</span></div>
+            <div class="register-row"><span class="reg-name">Ctrl:</span><span class="reg-value" id="v2ctrl">00</span></div>
+            <div class="register-row"><span class="reg-name">AD:</span><span class="reg-value" id="v2ad">00</span></div>
+            <div class="register-row"><span class="reg-name">SR:</span><span class="reg-value" id="v2sr">00</span></div>
+        </div>
+        <div class="voice-panel">
+            <h4>Voice 3</h4>
+            <div class="register-row"><span class="reg-name">Freq:</span><span class="reg-value" id="v3freq">0000</span></div>
+            <div class="register-row"><span class="reg-name">PW:</span><span class="reg-value" id="v3pw">000</span></div>
+            <div class="register-row"><span class="reg-name">Ctrl:</span><span class="reg-value" id="v3ctrl">00</span></div>
+            <div class="register-row"><span class="reg-name">AD:</span><span class="reg-value" id="v3ad">00</span></div>
+            <div class="register-row"><span class="reg-name">SR:</span><span class="reg-value" id="v3sr">00</span></div>
+        </div>
+        <div class="voice-panel">
+            <h4>Filter/Global</h4>
+            <div class="register-row"><span class="reg-name">FC:</span><span class="reg-value" id="filterFC">000</span></div>
+            <div class="register-row"><span class="reg-name">Res/Rt:</span><span class="reg-value" id="filterRes">00</span></div>
+            <div class="register-row"><span class="reg-name">Mode/Vol:</span><span class="reg-value" id="filterMode">0F</span></div>
+        </div>
+    </div>
+
+    <h3>Analysis View <span id="logCount">(0 entries)</span></h3>
+
+    <div class="view-tabs">
+        <button class="view-tab" id="tabPianoRoll">Piano Roll</button>
+        <button class="view-tab active" id="tabTracker">Tracker View</button>
+        <button class="view-tab" id="tabLog">Raw Log</button>
+    </div>
+
+    <!-- Piano Roll View -->
+    <div id="pianoRollView" class="piano-roll-container">
+        <div class="piano-roll-controls">
+            <label>Zoom: <input type="range" id="pianoZoom" min="1" max="10" value="4"></label>
+            <label>Note Range: <span id="noteRangeDisplay">C2 - C7</span></label>
+            <label><input type="checkbox" id="showAllVoices" checked> Show All Voices</label>
+            <label><input type="checkbox" id="voice1Check" checked> V1</label>
+            <label><input type="checkbox" id="voice2Check" checked> V2</label>
+            <label><input type="checkbox" id="voice3Check" checked> V3</label>
+        </div>
+        <div class="piano-roll-wrapper">
+            <div class="piano-keys" id="pianoKeys"></div>
+            <div class="piano-roll-canvas-wrapper" id="canvasWrapper">
+                <canvas id="pianoRollCanvas"></canvas>
+            </div>
+        </div>
+        <div class="voice-legend">
+            <div class="legend-item"><div class="legend-color legend-v1"></div>Voice 1</div>
+            <div class="legend-item"><div class="legend-color legend-v2"></div>Voice 2</div>
+            <div class="legend-item"><div class="legend-color legend-v3"></div>Voice 3</div>
+            <div class="legend-item" style="margin-left: auto;" id="hoverInfo">Hover over notes for details</div>
+        </div>
+    </div>
+
+    <!-- Tracker View -->
+    <div id="trackerView" class="tracker-container">
+        <div class="tracker-stats">
+            <div class="stat-item"><span class="stat-label">Frames:</span><span class="stat-value" id="statFrames">0</span></div>
+            <div class="stat-item"><span class="stat-label">Tempo:</span><span class="stat-value" id="statTempo">~120 BPM</span></div>
+            <div class="stat-item"><span class="stat-label">V1 Notes:</span><span class="stat-value" id="statV1">0</span></div>
+            <div class="stat-item"><span class="stat-label">V2 Notes:</span><span class="stat-value" id="statV2">0</span></div>
+            <div class="stat-item"><span class="stat-label">V3 Notes:</span><span class="stat-value" id="statV3">0</span></div>
+        </div>
+        <div class="tracker-header">
+            <div class="tracker-header-cell">Row</div>
+            <div class="tracker-header-cell voice1">Voice 1</div>
+            <div class="tracker-header-cell voice2">Voice 2</div>
+            <div class="tracker-header-cell voice3">Voice 3</div>
+        </div>
+        <div class="tracker-body" id="trackerBody">
+            <div style="padding: 20px; color: #666; text-align: center;">
+                Load a SID file and capture some data, then click "Analyze Log" to see tracker view
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Log View (hidden by default) -->
+    <div id="logOutput" style="display: none;"></div>
+
+    <!-- jsSID library -->
+    <script src="jsSID/js/stream.js"></script>
+    <script src="jsSID/js/jssid.core.js"></script>
+    <script src="jsSID/js/jssid.tinysid.js"></script>
+    <script src="jsSID/js/jssid.fastsid.js"></script>
+    <script src="jsSID/js/jssid.mos6510.js"></script>
+    <script src="jsSID/js/jssid.sidplayer.js"></script>
+    <script src="jsSID/js/pico.dev.js"></script>
+
+    <!-- Headless capture engine: the same verified Cpu6502 + PSID runner
+         that tools/sid-dump.js uses (guarded by make verify). jsSID above
+         is only used for audio audition; its MOS6510 core has known
+         correctness bugs (V flag, BRK, illegal opcodes) so register
+         CAPTURE runs on this engine instead. -->
+    <script type="module">
+        import { parsePsid, PsidRunner } from './tools/lib/psid-capture.js';
+        window.PsidCapture = { parsePsid, PsidRunner };
+    </script>
+
+    <script>
+        // SID Ripper Application
+        const SIDRipper = window.SIDRipper = {
+            player: null,
+            sidFile: null,
+            isPlaying: false,
+            isLogging: false,
+            registerLog: [],
+            frameCount: 0,
+            lastRegs: new Uint8Array(32),
+            // Clock detection
+            sidClockHz: 985248, // PAL default, updated on load
+            sidClockType: 'PAL',
+            // Auto-capture
+            autoCaptureTimer: null,
+
+            init() {
+                this.setupEventListeners();
+                this.updateStatus('No SID loaded');
+            },
+
+            setupEventListeners() {
+                document.getElementById('sidFileInput').addEventListener('change', (e) => this.loadFile(e.target.files[0]));
+                document.getElementById('loadExampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('playBtn').addEventListener('click', () => this.play());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                document.getElementById('subsongSelect').addEventListener('change', (e) => this.changeSubsong(parseInt(e.target.value)));
+                document.getElementById('startLogBtn').addEventListener('click', () => this.startLogging());
+                document.getElementById('stopLogBtn').addEventListener('click', () => this.stopLogging());
+                document.getElementById('autoCapBtn').addEventListener('click', () => this.autoCapture(30));
+                document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+                document.getElementById('exportLogBtn').addEventListener('click', () => this.exportLog());
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeLog());
+                document.getElementById('convertGT2Btn').addEventListener('click', () => this.convertToGT2());
+                document.getElementById('openInTrackerBtn').addEventListener('click', () => this.openInTracker());
+
+                // Tab switching
+                document.getElementById('tabPianoRoll').addEventListener('click', () => this.switchTab('pianoroll'));
+                document.getElementById('tabTracker').addEventListener('click', () => this.switchTab('tracker'));
+                document.getElementById('tabLog').addEventListener('click', () => this.switchTab('log'));
+
+                // Piano roll controls
+                document.getElementById('pianoZoom').addEventListener('input', () => this.renderPianoRoll());
+                document.getElementById('voice1Check').addEventListener('change', () => this.renderPianoRoll());
+                document.getElementById('voice2Check').addEventListener('change', () => this.renderPianoRoll());
+                document.getElementById('voice3Check').addEventListener('change', () => this.renderPianoRoll());
+
+                // Piano roll hover
+                const canvas = document.getElementById('pianoRollCanvas');
+                canvas.addEventListener('mousemove', (e) => this.onPianoRollHover(e));
+
+                // Sync vertical scrolling between piano keys and canvas
+                const canvasWrapper = document.getElementById('canvasWrapper');
+                const pianoKeys = document.getElementById('pianoKeys');
+                canvasWrapper.addEventListener('scroll', () => {
+                    pianoKeys.style.marginTop = -canvasWrapper.scrollTop + 'px';
+                });
+            },
+
+            switchTab(tab) {
+                document.getElementById('tabPianoRoll').classList.toggle('active', tab === 'pianoroll');
+                document.getElementById('tabTracker').classList.toggle('active', tab === 'tracker');
+                document.getElementById('tabLog').classList.toggle('active', tab === 'log');
+                document.getElementById('pianoRollView').style.display = tab === 'pianoroll' ? 'block' : 'none';
+                document.getElementById('trackerView').style.display = tab === 'tracker' ? 'block' : 'none';
+                document.getElementById('logOutput').style.display = tab === 'log' ? 'block' : 'none';
+            },
+
+            async loadFile(file) {
+                if (!file) return;
+
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const data = new Uint8Array(arrayBuffer);
+                    this.loadSIDData(data);
+                } catch (error) {
+                    console.error('Failed to load SID file:', error);
+                    this.updateStatus('Error loading file: ' + error.message);
+                }
+            },
+
+            async loadExample() {
+                try {
+                    this.updateStatus('Loading example SID...');
+                    const response = await fetch('sids/Commando.sid');
+                    if (!response.ok) throw new Error('Could not load example SID');
+
+                    const arrayBuffer = await response.arrayBuffer();
+                    const data = new Uint8Array(arrayBuffer);
+                    this.loadSIDData(data);
+                } catch (error) {
+                    console.error('Failed to load example:', error);
+                    this.updateStatus('Error: ' + error.message);
+                }
+            },
+
+            loadSIDData(data) {
+                // Keep raw bytes for the headless capture engine
+                this.sidFileBytes = data;
+
+                // Parse PSID header for clock type (v2+)
+                // Bytes 0x04-0x05 = version (big-endian), 0x76-0x77 = flags
+                const version = (data[0x04] << 8) | data[0x05];
+                let clockType = jsSID.chip.clock.PAL;
+                this.sidClockHz = 985248;
+                this.sidClockType = 'PAL';
+
+                if (version >= 2 && data.length > 0x77) {
+                    const flags = (data[0x76] << 8) | data[0x77];
+                    const clockBits = (flags >> 2) & 0x03;
+                    if (clockBits === 2) { // NTSC
+                        clockType = jsSID.chip.clock.NTSC;
+                        this.sidClockHz = 1022730;
+                        this.sidClockType = 'NTSC';
+                    } else if (clockBits === 3) { // PAL+NTSC, default to PAL
+                        this.sidClockType = 'PAL+NTSC';
+                    }
+                    // clockBits 0 (unknown) or 1 (PAL) keep PAL defaults
+                }
+
+                // Convert to string for jsSID
+                let sidString = '';
+                for (let i = 0; i < data.length; i++) {
+                    sidString += String.fromCharCode(data[i]);
+                }
+
+                // Create player with register interception
+                // Use tinysid (low quality) since resid isn't loaded
+                this.player = new jsSID.SIDPlayer({
+                    quality: jsSID.quality.low,
+                    clock: clockType,
+                    model: jsSID.chip.model.MOS6581
+                });
+
+                // Intercept poke calls for logging
+                const originalPoke = this.player.synth.poke.bind(this.player.synth);
+                this.player.synth.poke = (reg, val) => {
+                    this.onRegisterWrite(reg, val);
+                    return originalPoke(reg, val);
+                };
+
+                // Wrap getNextFrame to get accurate visual-frame counting
+                // Multi-speed tunes (e.g. Sanxion) call the play routine multiple
+                // times per PAL frame via CIA timer. Accumulate samples and only
+                // increment frameCount when a full visual frame has elapsed.
+                const originalGetNextFrame = this.player.getNextFrame.bind(this.player);
+                this.sampleAccumulator = 0;
+                const visualFrameRate = this.sidClockType === 'NTSC' ? 60 : 50;
+                this.samplesPerVisualFrame = Math.round(this.player.synth.mix_freq / visualFrameRate);
+                this.player.getNextFrame = () => {
+                    if (this.isLogging) {
+                        const spf = this.player.samplesPerFrame || this.samplesPerVisualFrame;
+                        this.sampleAccumulator += spf;
+                        while (this.sampleAccumulator >= this.samplesPerVisualFrame) {
+                            this.frameCount++;
+                            this.sampleAccumulator -= this.samplesPerVisualFrame;
+                        }
+                    }
+                    return originalGetNextFrame();
+                };
+
+                // Load the file
+                this.player.loadFileFromData(sidString);
+                this.sidFile = this.player.getSidFile();
+
+                // Update UI
+                this.updateSIDInfo();
+                this.updateSubsongSelect();
+                this.enableControls(true);
+                this.updateStatus('SID loaded: ' + this.sidFile.name);
+            },
+
+            updateSIDInfo() {
+                if (!this.sidFile) return;
+
+                document.getElementById('infoTitle').textContent = this.sidFile.name || '-';
+                document.getElementById('infoAuthor').textContent = this.sidFile.author || '-';
+                document.getElementById('infoPublished').textContent = this.sidFile.published || '-';
+                document.getElementById('infoLoadAddr').textContent = '$' + this.sidFile.load_addr.toString(16).toUpperCase().padStart(4, '0');
+                document.getElementById('infoInitPlay').textContent =
+                    '$' + this.sidFile.init_addr.toString(16).toUpperCase().padStart(4, '0') +
+                    ' / $' + this.sidFile.play_addr.toString(16).toUpperCase().padStart(4, '0');
+                document.getElementById('infoClock').textContent = this.sidClockType +
+                    ` (${this.sidClockHz} Hz)`;
+            },
+
+            updateSubsongSelect() {
+                const select = document.getElementById('subsongSelect');
+                select.innerHTML = '';
+
+                for (let i = 0; i <= this.sidFile.subsongs; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `Song ${i + 1}`;
+                    select.appendChild(option);
+                }
+
+                select.value = this.sidFile.currentsong;
+            },
+
+            enableControls(enabled) {
+                document.getElementById('playBtn').disabled = !enabled;
+                document.getElementById('stopBtn').disabled = !enabled;
+                document.getElementById('subsongSelect').disabled = !enabled;
+                document.getElementById('startLogBtn').disabled = !enabled;
+                document.getElementById('autoCapBtn').disabled = !enabled;
+            },
+
+            play() {
+                if (!this.player) return;
+
+                this.isPlaying = true;
+                this.player.play();
+                this.updateStatus('Playing: ' + this.sidFile.name, 'playing');
+
+                // Start register display update
+                this.startRegisterDisplay();
+            },
+
+            stop() {
+                if (!this.player) return;
+
+                this.isPlaying = false;
+                this.player.stop();
+                this.stopLogging();
+                this.updateStatus('Stopped', 'stopped');
+
+                if (this.displayInterval) {
+                    clearInterval(this.displayInterval);
+                    this.displayInterval = null;
+                }
+            },
+
+            changeSubsong(track) {
+                if (!this.player) return;
+                this.player.changeTrack(track);
+                if (this.isPlaying) {
+                    this.player.play();
+                }
+            },
+
+            startRegisterDisplay() {
+                if (this.displayInterval) return;
+
+                this.displayInterval = setInterval(() => {
+                    this.updateRegisterDisplay();
+                }, 50);
+            },
+
+            onRegisterWrite(reg, val) {
+                // Always update the register mirror
+                if (reg < 32) {
+                    this.lastRegs[reg] = val;
+                }
+
+                // Log if logging is enabled
+                if (this.isLogging) {
+                    this.registerLog.push({
+                        frame: this.frameCount,
+                        reg: reg,
+                        val: val
+                    });
+
+                    // Update count periodically (every 200 writes to avoid DOM thrashing)
+                    if (this.registerLog.length % 200 === 0) {
+                        document.getElementById('logCount').textContent =
+                            `(${this.registerLog.length} writes, ${this.frameCount} frames)`;
+                    }
+                }
+            },
+
+            updateRegisterDisplay() {
+                const regs = this.lastRegs;
+
+                // Voice 1
+                document.getElementById('v1freq').textContent = ((regs[1] << 8) | regs[0]).toString(16).toUpperCase().padStart(4, '0');
+                document.getElementById('v1pw').textContent = (((regs[3] & 0x0F) << 8) | regs[2]).toString(16).toUpperCase().padStart(3, '0');
+                document.getElementById('v1ctrl').textContent = regs[4].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('v1ad').textContent = regs[5].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('v1sr').textContent = regs[6].toString(16).toUpperCase().padStart(2, '0');
+
+                // Voice 2
+                document.getElementById('v2freq').textContent = ((regs[8] << 8) | regs[7]).toString(16).toUpperCase().padStart(4, '0');
+                document.getElementById('v2pw').textContent = (((regs[10] & 0x0F) << 8) | regs[9]).toString(16).toUpperCase().padStart(3, '0');
+                document.getElementById('v2ctrl').textContent = regs[11].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('v2ad').textContent = regs[12].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('v2sr').textContent = regs[13].toString(16).toUpperCase().padStart(2, '0');
+
+                // Voice 3
+                document.getElementById('v3freq').textContent = ((regs[15] << 8) | regs[14]).toString(16).toUpperCase().padStart(4, '0');
+                document.getElementById('v3pw').textContent = (((regs[17] & 0x0F) << 8) | regs[16]).toString(16).toUpperCase().padStart(3, '0');
+                document.getElementById('v3ctrl').textContent = regs[18].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('v3ad').textContent = regs[19].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('v3sr').textContent = regs[20].toString(16).toUpperCase().padStart(2, '0');
+
+                // Filter
+                document.getElementById('filterFC').textContent = (((regs[22] << 3) | (regs[21] & 0x07))).toString(16).toUpperCase().padStart(3, '0');
+                document.getElementById('filterRes').textContent = regs[23].toString(16).toUpperCase().padStart(2, '0');
+                document.getElementById('filterMode').textContent = regs[24].toString(16).toUpperCase().padStart(2, '0');
+
+                // Frame count tracked via getNextFrame wrapper
+            },
+
+            startLogging() {
+                this.isLogging = true;
+                this.frameCount = 0;
+                document.getElementById('startLogBtn').disabled = true;
+                document.getElementById('stopLogBtn').disabled = false;
+                document.getElementById('exportLogBtn').disabled = true;
+                document.getElementById('analyzeBtn').disabled = true;
+                this.updateStatus('Logging register writes...', 'logging');
+            },
+
+            stopLogging() {
+                this.isLogging = false;
+                document.getElementById('startLogBtn').disabled = false;
+                document.getElementById('stopLogBtn').disabled = true;
+                document.getElementById('exportLogBtn').disabled = this.registerLog.length === 0;
+                document.getElementById('analyzeBtn').disabled = this.registerLog.length === 0;
+
+                if (this.registerLog.length > 0) {
+                    this.updateStatus(`Logging stopped. ${this.registerLog.length} register writes captured.`);
+                    this.displayLogSummary();
+                }
+            },
+
+            // Headless capture: runs the tune's init+play on the verified
+            // Cpu6502 core (tools/lib/psid-capture.js, same engine as
+            // tools/sid-dump.js) - instant, no audio, and correct for tunes
+            // that jsSID's MOS6510 mis-executes (V flag, BRK, illegal
+            // opcodes). Produces registerLog in the same {frame, reg, val}
+            // format the live log uses, so the whole analysis/conversion
+            // pipeline downstream is unchanged.
+            autoCapture(seconds) {
+                if (!this.sidFileBytes) return;
+                if (!window.PsidCapture) {
+                    this.updateStatus('Capture engine not loaded (serve over http, not file://)');
+                    return;
+                }
+
+                const btn = document.getElementById('autoCapBtn');
+                const btnLabel = btn.textContent;
+                btn.textContent = 'Capturing...';
+                btn.disabled = true;
+                this.updateStatus('Capturing headlessly...', 'logging');
+
+                // Let the UI paint before the (brief) synchronous emulation
+                setTimeout(() => {
+                    try {
+                        this.clearLog();
+                        const { parsePsid, PsidRunner } = window.PsidCapture;
+                        const psid = parsePsid(this.sidFileBytes);
+                        const select = document.getElementById('subsongSelect');
+                        const subtune = Math.min(parseInt(select.value, 10) || 0, psid.songs - 1);
+
+                        // Init-phase writes (call -1) land on frame 0; play
+                        // calls map to 50Hz visual frames via the multispeed
+                        // ratio (CIA-timed tunes call play >1x per frame).
+                        let callsPerFrame = 1;
+                        const runner = new PsidRunner(psid, {
+                            subtune,
+                            onWrite: (reg, val, call) => {
+                                if (reg < 32) this.lastRegs[reg] = val;
+                                this.registerLog.push({
+                                    frame: call < 0 ? 0 : Math.floor(call / callsPerFrame),
+                                    reg: reg,
+                                    val: val
+                                });
+                            },
+                            warn: (m) => console.warn('capture:', m)
+                        });
+                        callsPerFrame = runner.callsPerVisualFrame;
+
+                        const frames = seconds * 50;
+                        const totalCalls = frames * callsPerFrame;
+                        for (let c = 0; c < totalCalls; c++) runner.runFrame();
+
+                        this.frameCount = frames;
+                        this.isLogging = false;
+                        document.getElementById('logCount').textContent =
+                            `(${this.registerLog.length} writes, ${frames} frames)`;
+                        document.getElementById('exportLogBtn').disabled = this.registerLog.length === 0;
+                        document.getElementById('analyzeBtn').disabled = this.registerLog.length === 0;
+                        const speedNote = callsPerFrame > 1 ? `, ${callsPerFrame}x multispeed` : '';
+                        this.updateStatus(`Captured ${frames} frames (${this.registerLog.length} writes${speedNote}).`);
+                        this.updateRegisterDisplay();
+                        this.displayLogSummary();
+                        this.analyzeLog();
+                    } catch (e) {
+                        console.error('Headless capture failed:', e);
+                        this.updateStatus('Capture failed: ' + e.message);
+                    } finally {
+                        btn.textContent = btnLabel;
+                        btn.disabled = false;
+                    }
+                }, 30);
+            },
+
+            clearLog() {
+                this.registerLog = [];
+                this.frameCount = 0;
+                document.getElementById('logOutput').innerHTML = '';
+                document.getElementById('logCount').textContent = '(0 entries)';
+                document.getElementById('exportLogBtn').disabled = true;
+                document.getElementById('analyzeBtn').disabled = true;
+            },
+
+            displayLogSummary() {
+                const output = document.getElementById('logOutput');
+                output.innerHTML = '';
+
+                // Group by frame
+                const frames = {};
+                this.registerLog.forEach(entry => {
+                    if (!frames[entry.frame]) frames[entry.frame] = [];
+                    frames[entry.frame].push(entry);
+                });
+
+                // Display first 100 frames
+                const frameNums = Object.keys(frames).slice(0, 100);
+                frameNums.forEach(frameNum => {
+                    const frameDiv = document.createElement('div');
+                    frameDiv.className = 'log-entry frame';
+                    frameDiv.textContent = `--- Frame ${frameNum} ---`;
+                    output.appendChild(frameDiv);
+
+                    frames[frameNum].forEach(entry => {
+                        const div = document.createElement('div');
+                        div.className = 'log-entry';
+                        div.textContent = `  $D4${entry.reg.toString(16).toUpperCase().padStart(2, '0')} = $${entry.val.toString(16).toUpperCase().padStart(2, '0')} (${this.getRegisterName(entry.reg)})`;
+                        output.appendChild(div);
+                    });
+                });
+
+                if (Object.keys(frames).length > 100) {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    div.textContent = `... and ${Object.keys(frames).length - 100} more frames`;
+                    output.appendChild(div);
+                }
+            },
+
+            getRegisterName(reg) {
+                const names = [
+                    'V1 Freq Lo', 'V1 Freq Hi', 'V1 PW Lo', 'V1 PW Hi', 'V1 Ctrl', 'V1 AD', 'V1 SR',
+                    'V2 Freq Lo', 'V2 Freq Hi', 'V2 PW Lo', 'V2 PW Hi', 'V2 Ctrl', 'V2 AD', 'V2 SR',
+                    'V3 Freq Lo', 'V3 Freq Hi', 'V3 PW Lo', 'V3 PW Hi', 'V3 Ctrl', 'V3 AD', 'V3 SR',
+                    'FC Lo', 'FC Hi', 'Res/Route', 'Mode/Vol'
+                ];
+                return names[reg] || `Reg ${reg}`;
+            },
+
+            exportLog() {
+                const data = JSON.stringify({
+                    sidFile: {
+                        name: this.sidFile.name,
+                        author: this.sidFile.author,
+                        loadAddr: this.sidFile.load_addr,
+                        initAddr: this.sidFile.init_addr,
+                        playAddr: this.sidFile.play_addr
+                    },
+                    log: this.registerLog
+                }, null, 2);
+
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = (this.sidFile.name || 'sid-log') + '.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+
+            analyzeLog() {
+                if (this.registerLog.length === 0) return;
+
+                // Build tracker data
+                const trackerData = this.buildTrackerData();
+                this.pianoRollData = trackerData;
+
+                // Build piano roll notes
+                this.buildPianoRollNotes(trackerData);
+
+                // Display all views
+                this.displayTrackerView(trackerData);
+                this.displayRawLog(trackerData);
+                this.renderPianoRoll();
+
+                // Enable convert button
+                document.getElementById('convertGT2Btn').disabled = false;
+
+                // Switch to piano roll view
+                this.switchTab('pianoroll');
+            },
+
+            buildTrackerData() {
+                // Build per-frame state for all voices
+                const frames = [];
+                const voiceState = [
+                    { freq: 0, pw: 0, ctrl: 0, ad: 0, sr: 0, note: '---', gateOn: false, instId: 0 },
+                    { freq: 0, pw: 0, ctrl: 0, ad: 0, sr: 0, note: '---', gateOn: false, instId: 0 },
+                    { freq: 0, pw: 0, ctrl: 0, ad: 0, sr: 0, note: '---', gateOn: false, instId: 0 }
+                ];
+                const prevGate = [false, false, false];
+                const lastGhostFreq = [0, 0, 0];  // last freq emitted as a ghost note per voice
+                const lastRealNote = [-1000, -1000, -1000];  // frame of last real note event per voice
+                const prevWaveform = [0, 0, 0];  // Track waveform changes
+                const prevFreq = [0, 0, 0];  // Track frequency changes for pitch effects
+                const prevPW = [0, 0, 0];  // Track pulse width changes
+                const waveformChanges = [[], [], []];  // Track mid-note waveform changes per voice
+                const noteOnsetSequences = [[], [], []];  // Track full waveform sequences after each gate-on
+                const activeOnsetSeq = [null, null, null];  // Currently building onset sequence per voice
+                const pitchEffects = [[], [], []];  // Track pitch changes (arpeggio, vibrato, portamento)
+                const pwChanges = [[], [], []];  // Track pulse width deltas per voice per frame
+                const filterChanges = [];  // Track filter state changes per frame
+                let prevFilterCutoff = 0;
+                let prevFilterResonance = 0;
+                let prevFilterRouting = 0;
+                let prevFilterMode = 0;
+                // Filter state tracking
+                const filterState = { cutoff: 0, resonance: 0, routing: 0, mode: 0, volume: 0 };
+
+                // Group log entries by frame
+                const frameGroups = {};
+                this.registerLog.forEach(entry => {
+                    if (!frameGroups[entry.frame]) frameGroups[entry.frame] = [];
+                    frameGroups[entry.frame].push(entry);
+                });
+
+                // Build instrument map from unique AD/SR/Wave combos
+                const instrumentMap = new Map();
+                let instCounter = 1;
+
+                // Process each frame
+                const maxFrame = Math.max(...Object.keys(frameGroups).map(Number));
+                for (let f = 0; f <= maxFrame; f++) {
+                    const frameEntries = frameGroups[f] || [];
+
+                    // Apply register changes for this frame
+                    frameEntries.forEach(entry => {
+                        const voice = Math.floor(entry.reg / 7);
+                        const regOffset = entry.reg % 7;
+
+                        if (voice < 3) {
+                            switch (regOffset) {
+                                case 0: // Freq Lo
+                                    voiceState[voice].freq = (voiceState[voice].freq & 0xFF00) | entry.val;
+                                    break;
+                                case 1: // Freq Hi
+                                    voiceState[voice].freq = (voiceState[voice].freq & 0x00FF) | (entry.val << 8);
+                                    break;
+                                case 2: // PW Lo
+                                    voiceState[voice].pw = (voiceState[voice].pw & 0xF00) | entry.val;
+                                    break;
+                                case 3: // PW Hi
+                                    voiceState[voice].pw = (voiceState[voice].pw & 0x0FF) | ((entry.val & 0x0F) << 8);
+                                    break;
+                                case 4: // Control
+                                    voiceState[voice].ctrl = entry.val;
+                                    voiceState[voice].gateOn = (entry.val & 0x01) !== 0;
+                                    break;
+                                case 5: // AD
+                                    voiceState[voice].ad = entry.val;
+                                    break;
+                                case 6: // SR
+                                    voiceState[voice].sr = entry.val;
+                                    break;
+                            }
+                        }
+                        // Filter registers (21-24)
+                        if (entry.reg === 21) filterState.cutoff = (filterState.cutoff & 0x7F8) | (entry.val & 0x07);
+                        if (entry.reg === 22) filterState.cutoff = (filterState.cutoff & 0x07) | (entry.val << 3);
+                        if (entry.reg === 23) { filterState.resonance = (entry.val >> 4) & 0x0F; filterState.routing = entry.val & 0x07; }
+                        if (entry.reg === 24) { filterState.mode = (entry.val >> 4) & 0x07; filterState.volume = entry.val & 0x0F; }
+                    });
+
+                    // Record filter state changes for this frame
+                    if (filterState.cutoff !== prevFilterCutoff ||
+                        filterState.resonance !== prevFilterResonance ||
+                        filterState.routing !== prevFilterRouting ||
+                        filterState.mode !== prevFilterMode) {
+                        filterChanges.push({
+                            frame: f,
+                            cutoff: filterState.cutoff >> 3,  // High 8 bits (what GT2 uses)
+                            resonance: filterState.resonance,
+                            routing: filterState.routing,
+                            mode: filterState.mode,
+                            cutoffDelta: (filterState.cutoff >> 3) - prevFilterCutoff,
+                            volume: filterState.volume
+                        });
+                        prevFilterCutoff = filterState.cutoff >> 3;
+                        prevFilterResonance = filterState.resonance;
+                        prevFilterRouting = filterState.routing;
+                        prevFilterMode = filterState.mode;
+                    }
+
+                    // Build frame data
+                    const frameData = { row: f, voices: [] };
+
+                    for (let v = 0; v < 3; v++) {
+                        const state = voiceState[v];
+                        const gateTriggered = state.gateOn && !prevGate[v];
+                        const gateReleased = !state.gateOn && prevGate[v];
+                        const prevWave = prevWaveform[v];
+                        const currentWave = (state.ctrl >> 4) & 0x0F;
+                        const waveChanged = currentWave !== prevWave && (currentWave !== 0);
+
+                        // Track note onset sequences: capture ctrl+freq for frames after gate trigger
+                        if (gateTriggered) {
+                            // Close previous sequence if any
+                            if (activeOnsetSeq[v] && activeOnsetSeq[v].steps.length >= 2) {
+                                noteOnsetSequences[v].push(activeOnsetSeq[v]);
+                            }
+                            // Start new onset sequence
+                            activeOnsetSeq[v] = {
+                                startFrame: f,
+                                freq: state.freq,
+                                ad: state.ad,
+                                sr: state.sr,
+                                steps: [{ frame: f, ctrl: state.ctrl, freq: state.freq }]
+                            };
+                        } else if (activeOnsetSeq[v]) {
+                            const elapsed = f - activeOnsetSeq[v].startFrame;
+                            if (elapsed <= 14) {
+                                // Capture ctrl+freq changes for up to 14 frames after gate-on
+                                const lastStep = activeOnsetSeq[v].steps[activeOnsetSeq[v].steps.length - 1];
+                                if (state.ctrl !== lastStep.ctrl || state.freq !== lastStep.freq) {
+                                    activeOnsetSeq[v].steps.push({ frame: f, ctrl: state.ctrl, freq: state.freq });
+                                }
+                            } else {
+                                // Onset window expired
+                                if (activeOnsetSeq[v].steps.length >= 2) {
+                                    noteOnsetSequences[v].push(activeOnsetSeq[v]);
+                                }
+                                activeOnsetSeq[v] = null;
+                            }
+                        }
+
+                        // Detect pitch changes while gate is on (arpeggio, vibrato, portamento).
+                        // Release-phase trills are handled by the onset
+                        // wavetables (captured ctrl+freq sequence + loop).
+                        let pitchChange = null;
+                        let pitchDelta = 0;
+                        if (state.gateOn && prevGate[v] && state.freq > 0 && prevFreq[v] > 0) {
+                            pitchDelta = state.freq - prevFreq[v];
+                            if (pitchDelta !== 0) {
+                                // Calculate semitone difference
+                                const semitones = 12 * Math.log2(state.freq / prevFreq[v]);
+                                pitchChange = {
+                                    frame: f,
+                                    fromFreq: prevFreq[v],
+                                    toFreq: state.freq,
+                                    delta: pitchDelta,
+                                    semitones: semitones
+                                };
+                                pitchEffects[v].push(pitchChange);
+                            }
+                        }
+
+                        // Track pulse width changes per voice
+                        const currentPW = voiceState[v].pw;
+                        if (currentPW !== prevPW[v]) {
+                            pwChanges[v].push({
+                                frame: f,
+                                pw: currentPW,
+                                delta: currentPW - prevPW[v]
+                            });
+                            prevPW[v] = currentPW;
+                        }
+
+                        prevGate[v] = state.gateOn;
+                        prevWaveform[v] = currentWave;
+                        if (state.freq > 0) prevFreq[v] = state.freq;
+
+                        // Determine note/event type
+                        let note = '---';
+                        let noteEvent = false;
+                        let keyOff = false;
+                        let arpeggioNote = false;
+
+                        if (gateTriggered && state.freq > 0) {
+                            // Gate on = new note
+                            note = this.freqToNote(state.freq);
+                            noteEvent = true;
+                        } else if (gateReleased) {
+                            // Gate off = key off event
+                            note = '===';
+                            keyOff = true;
+                        } else if (pitchChange && Math.abs(pitchChange.semitones) >= 0.5) {
+                            // Significant pitch change while gate on = arpeggio or pitch effect
+                            note = this.freqToNote(state.freq);
+                            arpeggioNote = true;
+                        }
+
+                        // Get instrument ID for this AD/SR/Wave combo
+                        const instKey = `${state.ad}-${state.sr}-${state.ctrl & 0xFE}`;
+                        if (!instrumentMap.has(instKey)) {
+                            instrumentMap.set(instKey, instCounter++);
+                        }
+                        const instId = instrumentMap.get(instKey);
+
+                        // Detect waveform - show current waveform or change
+                        let cmd = '..';
+                        if (currentWave === 1) cmd = 'T.'; // Triangle
+                        else if (currentWave === 2) cmd = 'S.'; // Sawtooth
+                        else if (currentWave === 4) cmd = 'P.'; // Pulse
+                        else if (currentWave === 8) cmd = 'N.'; // Noise
+                        else if (currentWave === 5) cmd = 'TS'; // Tri+Saw
+                        else if (currentWave === 6) cmd = 'PS'; // Pulse+Saw
+                        else if (currentWave === 0) cmd = '..'; // No waveform (gate off usually)
+
+                        // Track waveform changes for wavetable detection
+                        if (waveChanged) {
+                            // Waveform changed - potential wavetable effect (includes gate-off noise attacks)
+                            if (!waveformChanges[v]) waveformChanges[v] = [];
+                            waveformChanges[v].push({ frame: f, from: prevWave, to: currentWave, gateOn: state.gateOn });
+                        }
+
+                        frameData.voices.push({
+                            note: note,
+                            inst: noteEvent ? instId.toString(16).toUpperCase().padStart(2, '0') : '..',
+                            cmd: (noteEvent || waveChanged) ? cmd : '..',
+                            gateOn: state.gateOn,
+                            gateOff: keyOff,
+                            noteEvent: noteEvent,
+                            waveChanged: waveChanged,
+                            arpeggioNote: arpeggioNote,
+                            pitchChange: pitchChange,
+                            freq: state.freq,
+                            rawNote: noteEvent ? note : (state.freq > 0 ? this.freqToNote(state.freq) : '---'),
+                            waveform: currentWave,
+                            pw: state.pw,
+                            ad: state.ad,
+                            sr: state.sr
+                        });
+                    }
+
+                    // Ghost notes for sync/ring modulators: when voice V plays
+                    // with sync (ctrl bit 1) or ring mod (ctrl bit 2), its
+                    // timbre comes from the OSCILLATOR FREQUENCY of voice V-1
+                    // (v0<-v2, v1<-v0, v2<-v1). Players drive that modulator
+                    // voice without gating it, so gate-based note detection
+                    // drops it entirely and sync/ring sounds wrong. Emit the
+                    // modulator's frequency as notes with a silent instrument
+                    // (waveform, no gate: oscillator runs, envelope silent).
+                    for (let v = 0; v < 3; v++) {
+                        if (frameData.voices[v].noteEvent) lastRealNote[v] = f;
+                    }
+                    for (let v = 0; v < 3; v++) {
+                        const carrier = voiceState[v];
+                        if (!carrier.gateOn || !(carrier.ctrl & 0x06)) continue;
+                        const m = (v + 2) % 3;
+                        const mod = voiceState[m];
+                        if (mod.gateOn || mod.freq === 0) continue;          // audible voices keep real notes
+                        if (frameData.voices[m].note !== '---') continue;    // don't override real events
+                        // Only truly dedicated modulator stretches: a voice
+                        // that recently played its own note is still audibly
+                        // releasing - stamping ghost notes onto it would cut
+                        // the tail and insert wrong pitches
+                        if (f - lastRealNote[m] < 25) continue;
+                        const lf = lastGhostFreq[m];
+                        if (lf && Math.abs(12 * Math.log2(mod.freq / lf)) < 0.7) continue;
+                        if (!instrumentMap.has('ghost')) instrumentMap.set('ghost', instCounter++);
+                        const ghostId = instrumentMap.get('ghost');
+                        frameData.voices[m].note = this.freqToNote(mod.freq);
+                        frameData.voices[m].rawNote = frameData.voices[m].note;
+                        frameData.voices[m].inst = ghostId.toString(16).toUpperCase().padStart(2, '0');
+                        frameData.voices[m].ghostNote = true;
+                        lastGhostFreq[m] = mod.freq;
+                    }
+
+                    frames.push(frameData);
+                }
+
+                // Fix up note pitches to the note BODY: at the gate-on frame
+                // the frequency register often still holds the noise-attack /
+                // previous value (Hubbard-style players set the musical pitch
+                // 1-3 frames later). Use the frequency of the last TONAL
+                // (non-noise) frame within the onset window; pure-noise notes
+                // (drums) keep the gate-on frequency.
+                for (let f = 0; f < frames.length; f++) {
+                    for (let v = 0; v < 3; v++) {
+                        const vf = frames[f].voices[v];
+                        if (!vf.noteEvent) continue;
+                        let bodyFreq = 0;
+                        for (let k = 0; k <= 8 && f + k < frames.length; k++) {
+                            const nf = frames[f + k].voices[v];
+                            if (k > 0 && (nf.noteEvent || !nf.gateOn)) break;
+                            // Tonal waveform (tri/saw/pulse combos, not noise)
+                            if (nf.waveform >= 1 && nf.waveform <= 7 && nf.freq > 0) bodyFreq = nf.freq;
+                        }
+                        if (bodyFreq > 0 && bodyFreq !== vf.freq) {
+                            vf.note = this.freqToNote(bodyFreq);
+                            vf.rawNote = vf.note;
+                            vf.bodyFreq = bodyFreq;
+                        }
+                    }
+                }
+
+                // Calculate tempo from note timing
+                let noteGaps = [];
+                for (let v = 0; v < 3; v++) {
+                    let lastNoteFrame = -1;
+                    frames.forEach((frame, i) => {
+                        if (frame.voices[v].note !== '---') {
+                            if (lastNoteFrame >= 0) {
+                                noteGaps.push(i - lastNoteFrame);
+                            }
+                            lastNoteFrame = i;
+                        }
+                    });
+                }
+
+                // Find most common gap (likely 1 beat subdivision)
+                const gapCounts = {};
+                noteGaps.forEach(gap => {
+                    gapCounts[gap] = (gapCounts[gap] || 0) + 1;
+                });
+                const commonGap = Object.entries(gapCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .filter(([gap]) => parseInt(gap) > 1)[0];
+
+                const framesPerBeat = commonGap ? parseInt(commonGap[0]) * 4 : 24; // Assume 16th notes
+                const bpm = Math.round(50 * 60 / framesPerBeat); // 50Hz PAL
+
+                // Count key-off events
+                const keyOffCounts = [
+                    frames.filter(f => f.voices[0].note === '===').length,
+                    frames.filter(f => f.voices[1].note === '===').length,
+                    frames.filter(f => f.voices[2].note === '===').length
+                ];
+
+                // Count arpeggio notes (pitch changes while gate on)
+                const arpeggioNoteCounts = [
+                    frames.filter(f => f.voices[0].arpeggioNote).length,
+                    frames.filter(f => f.voices[1].arpeggioNote).length,
+                    frames.filter(f => f.voices[2].arpeggioNote).length
+                ];
+
+                // Analyze pitch effects per voice
+                const pitchAnalysis = [];
+                for (let v = 0; v < 3; v++) {
+                    const effects = pitchEffects[v];
+                    if (effects.length > 0) {
+                        // Classify pitch effects
+                        const analysis = this.analyzePitchEffects(effects);
+                        pitchAnalysis.push(analysis);
+                        console.log(`Voice ${v+1} pitch effects: ${effects.length} changes - ${analysis.type} (${analysis.description})`);
+                    } else {
+                        pitchAnalysis.push({ type: 'none', count: 0 });
+                    }
+
+                    // Flush remaining onset sequences
+                    if (activeOnsetSeq[v] && activeOnsetSeq[v].steps.length >= 2) {
+                        noteOnsetSequences[v].push(activeOnsetSeq[v]);
+                    }
+
+                    // Log waveform changes
+                    if (waveformChanges[v].length > 0) {
+                        console.log(`Voice ${v+1}: ${waveformChanges[v].length} waveform changes detected`);
+                    }
+                    if (noteOnsetSequences[v].length > 0) {
+                        console.log(`Voice ${v+1}: ${noteOnsetSequences[v].length} note onset sequences captured`);
+                    }
+                }
+
+                return {
+                    frames,
+                    instruments: instrumentMap,
+                    tempo: bpm,
+                    noteCounts: [
+                        frames.filter(f => f.voices[0].note !== '---' && f.voices[0].note !== '===' && !f.voices[0].arpeggioNote).length,
+                        frames.filter(f => f.voices[1].note !== '---' && f.voices[1].note !== '===' && !f.voices[1].arpeggioNote).length,
+                        frames.filter(f => f.voices[2].note !== '---' && f.voices[2].note !== '===' && !f.voices[2].arpeggioNote).length
+                    ],
+                    keyOffCounts,
+                    arpeggioNoteCounts,
+                    pitchEffects,
+                    pitchAnalysis,
+                    waveformChanges,  // For potential wavetable generation
+                    noteOnsetSequences,  // Full onset sequences per voice (ctrl+freq per frame)
+                    pwChanges,        // Pulse width deltas per voice
+                    filterChanges     // Filter state changes per frame
+                };
+            },
+
+            /**
+             * Analyze pitch effects to classify as arpeggio, vibrato, or portamento
+             */
+            analyzePitchEffects(effects) {
+                if (effects.length === 0) {
+                    return { type: 'none', count: 0, description: 'No pitch effects' };
+                }
+
+                // Calculate statistics
+                const semitoneChanges = effects.map(e => Math.abs(e.semitones));
+                const avgSemitones = semitoneChanges.reduce((a, b) => a + b, 0) / semitoneChanges.length;
+                const maxSemitones = Math.max(...semitoneChanges);
+
+                // Check for direction changes (vibrato oscillates)
+                let directionChanges = 0;
+                let lastDirection = 0;
+                for (const effect of effects) {
+                    const dir = Math.sign(effect.semitones);
+                    if (dir !== 0 && dir !== lastDirection && lastDirection !== 0) {
+                        directionChanges++;
+                    }
+                    if (dir !== 0) lastDirection = dir;
+                }
+
+                // Check for discrete semitone jumps (arpeggio)
+                const discreteJumps = semitoneChanges.filter(s => Math.abs(s - Math.round(s)) < 0.1);
+                const isDiscrete = discreteJumps.length > effects.length * 0.8;
+
+                // Classify
+                if (avgSemitones < 0.3 && directionChanges > effects.length * 0.3) {
+                    return {
+                        type: 'vibrato',
+                        count: effects.length,
+                        avgDepth: avgSemitones,
+                        description: `Vibrato: ~${(avgSemitones * 100).toFixed(0)} cents depth, ${directionChanges} oscillations`
+                    };
+                } else if (isDiscrete && maxSemitones >= 2) {
+                    // Find common intervals
+                    const intervals = new Map();
+                    for (const e of effects) {
+                        const interval = Math.round(e.semitones);
+                        intervals.set(interval, (intervals.get(interval) || 0) + 1);
+                    }
+                    const sortedIntervals = Array.from(intervals.entries()).sort((a, b) => b[1] - a[1]);
+                    const topIntervals = sortedIntervals.slice(0, 3).map(([i]) => i > 0 ? `+${i}` : i).join(', ');
+
+                    return {
+                        type: 'arpeggio',
+                        count: effects.length,
+                        intervals: sortedIntervals,
+                        description: `Arpeggio: ${effects.length} notes, intervals: ${topIntervals} semitones`
+                    };
+                } else if (directionChanges < effects.length * 0.2) {
+                    const direction = effects.reduce((sum, e) => sum + e.semitones, 0) > 0 ? 'up' : 'down';
+                    return {
+                        type: 'portamento',
+                        count: effects.length,
+                        direction: direction,
+                        description: `Portamento ${direction}: ${effects.length} steps, ${maxSemitones.toFixed(1)} semitones total`
+                    };
+                } else {
+                    return {
+                        type: 'mixed',
+                        count: effects.length,
+                        description: `Mixed pitch effects: ${effects.length} changes, avg ${avgSemitones.toFixed(2)} semitones`
+                    };
+                }
+            },
+
+            displayTrackerView(data) {
+                // Update stats with pitch effect info
+                document.getElementById('statFrames').textContent = data.frames.length;
+                document.getElementById('statTempo').textContent = `~${data.tempo} BPM`;
+
+                // Build voice stats with arpeggio counts
+                for (let v = 0; v < 3; v++) {
+                    const statEl = document.getElementById(`statV${v+1}`);
+                    let statText = `${data.noteCounts[v]} notes`;
+                    if (data.keyOffCounts[v] > 0) statText += `, ${data.keyOffCounts[v]} off`;
+                    if (data.arpeggioNoteCounts && data.arpeggioNoteCounts[v] > 0) {
+                        statText += `, ${data.arpeggioNoteCounts[v]} arp`;
+                    }
+                    if (data.pitchAnalysis && data.pitchAnalysis[v] && data.pitchAnalysis[v].type !== 'none') {
+                        statText += ` [${data.pitchAnalysis[v].type}]`;
+                    }
+                    statEl.textContent = statText;
+                }
+
+                // Log effect summary
+                if (data.waveformChanges) {
+                    const totalWaveChanges = data.waveformChanges.reduce((sum, vc) => sum + vc.length, 0);
+                    if (totalWaveChanges > 0) {
+                        console.log(`Total mid-note waveform changes: ${totalWaveChanges} (potential wavetable effects)`);
+                    }
+                }
+                if (data.pitchAnalysis) {
+                    data.pitchAnalysis.forEach((pa, v) => {
+                        if (pa.type !== 'none') {
+                            console.log(`Voice ${v+1}: ${pa.description}`);
+                        }
+                    });
+                }
+
+                // Build tracker grid
+                const body = document.getElementById('trackerBody');
+                body.innerHTML = '';
+
+                data.frames.forEach((frame, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'tracker-row';
+                    if (frame.voices.some(v => v.note !== '---')) {
+                        row.classList.add('highlight');
+                    }
+
+                    // Row number
+                    const rowNum = document.createElement('div');
+                    rowNum.className = 'tracker-row-num';
+                    rowNum.textContent = i.toString().padStart(4, '0');
+                    row.appendChild(rowNum);
+
+                    // Voice cells
+                    frame.voices.forEach((voice, v) => {
+                        const cell = document.createElement('div');
+                        cell.className = 'tracker-cell';
+
+                        const noteSpan = document.createElement('span');
+                        // Different styling for note-on, key-off, arpeggio, and empty
+                        if (voice.note === '===') {
+                            noteSpan.className = 'note gate-off';
+                        } else if (voice.arpeggioNote) {
+                            noteSpan.className = 'note arpeggio';
+                        } else if (voice.note !== '---') {
+                            noteSpan.className = 'note gate-on';
+                        } else {
+                            noteSpan.className = 'note empty';
+                        }
+                        noteSpan.textContent = voice.note;
+
+                        const instSpan = document.createElement('span');
+                        instSpan.className = voice.inst !== '..' ? 'inst' : 'inst empty';
+                        instSpan.textContent = voice.inst;
+
+                        const cmdSpan = document.createElement('span');
+                        // Highlight waveform changes
+                        if (voice.waveChanged) {
+                            cmdSpan.className = 'cmd wave-change';
+                        } else if (voice.cmd !== '..') {
+                            cmdSpan.className = 'cmd';
+                        } else {
+                            cmdSpan.className = 'cmd empty';
+                        }
+                        cmdSpan.textContent = voice.cmd;
+
+                        cell.appendChild(noteSpan);
+                        cell.appendChild(instSpan);
+                        cell.appendChild(cmdSpan);
+                        row.appendChild(cell);
+                    });
+
+                    body.appendChild(row);
+                });
+            },
+
+            displayRawLog(data) {
+                const output = document.getElementById('logOutput');
+                output.innerHTML = '<div class="log-entry frame">--- Analysis Results ---</div>';
+                output.innerHTML += `<div class="log-entry">Total frames: ${data.frames.length}</div>`;
+                output.innerHTML += `<div class="log-entry">Total register writes: ${this.registerLog.length}</div>`;
+                output.innerHTML += `<div class="log-entry">Detected tempo: ~${data.tempo} BPM</div>`;
+                output.innerHTML += `<div class="log-entry frame">--- Detected Instruments ---</div>`;
+
+                data.instruments.forEach((id, key) => {
+                    const idStr = id.toString(16).toUpperCase().padStart(2, '0');
+                    if (key === 'ghost') {
+                        output.innerHTML += `<div class="log-entry">Inst ${idStr}: Mod (silent) - sync/ring modulator</div>`;
+                        return;
+                    }
+                    const [ad, sr, wave] = key.split('-').map(v => parseInt(v));
+                    output.innerHTML += `<div class="log-entry">Inst ${idStr}: AD=$${ad.toString(16).toUpperCase().padStart(2, '0')} SR=$${sr.toString(16).toUpperCase().padStart(2, '0')} Wave=$${wave.toString(16).toUpperCase().padStart(2, '0')}</div>`;
+                });
+
+                output.innerHTML += `<div class="log-entry frame">--- Note Summary ---</div>`;
+                output.innerHTML += `<div class="log-entry">Voice 1: ${data.noteCounts[0]} notes</div>`;
+                output.innerHTML += `<div class="log-entry">Voice 2: ${data.noteCounts[1]} notes</div>`;
+                output.innerHTML += `<div class="log-entry">Voice 3: ${data.noteCounts[2]} notes</div>`;
+            },
+
+            // Piano Roll Methods
+            pianoRollData: null,
+            pianoRollNotes: [],
+
+            buildPianoRollNotes(trackerData) {
+                // Convert tracker frames to note events with duration
+                const notes = [];
+                const activeNotes = [{}, {}, {}]; // Track active notes per voice
+
+                trackerData.frames.forEach((frame, frameIdx) => {
+                    frame.voices.forEach((voice, voiceIdx) => {
+                        if (voice.note !== '---' && voice.note !== '???') {
+                            const midiNote = this.noteToMidi(voice.note);
+                            if (midiNote >= 0) {
+                                // End any previous note on this voice
+                                if (activeNotes[voiceIdx].note !== undefined) {
+                                    activeNotes[voiceIdx].duration = frameIdx - activeNotes[voiceIdx].start;
+                                    if (activeNotes[voiceIdx].duration > 0) {
+                                        notes.push({...activeNotes[voiceIdx]});
+                                    }
+                                }
+                                // Start new note
+                                activeNotes[voiceIdx] = {
+                                    voice: voiceIdx,
+                                    note: midiNote,
+                                    noteName: voice.note,
+                                    start: frameIdx,
+                                    inst: voice.inst,
+                                    duration: 0
+                                };
+                            }
+                        }
+                    });
+                });
+
+                // Close any remaining active notes
+                const totalFrames = trackerData.frames.length;
+                activeNotes.forEach((an, v) => {
+                    if (an.note !== undefined) {
+                        an.duration = totalFrames - an.start;
+                        if (an.duration > 0) {
+                            notes.push({...an});
+                        }
+                    }
+                });
+
+                this.pianoRollNotes = notes;
+                return notes;
+            },
+
+            noteToMidi(noteName) {
+                if (!noteName || noteName === '---' || noteName === '???') return -1;
+                const noteMap = { 'C-': 0, 'C#': 1, 'D-': 2, 'D#': 3, 'E-': 4, 'F-': 5, 'F#': 6, 'G-': 7, 'G#': 8, 'A-': 9, 'A#': 10, 'B-': 11 };
+                const note = noteName.substring(0, 2);
+                const octave = parseInt(noteName.substring(2));
+                if (noteMap[note] === undefined || isNaN(octave)) return -1;
+                return octave * 12 + noteMap[note];
+            },
+
+            midiToNoteName(midi) {
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const octave = Math.floor(midi / 12);
+                const note = midi % 12;
+                return noteNames[note] + octave;
+            },
+
+            renderPianoRoll() {
+                const canvas = document.getElementById('pianoRollCanvas');
+                const ctx = canvas.getContext('2d');
+                const keysDiv = document.getElementById('pianoKeys');
+
+                if (!this.pianoRollNotes || this.pianoRollNotes.length === 0) {
+                    // Show empty message on canvas
+                    canvas.width = 800;
+                    canvas.height = 300;
+                    ctx.fillStyle = '#111';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No notes detected - check console for debug info', canvas.width / 2, canvas.height / 2);
+                    keysDiv.innerHTML = '';
+                    return;
+                }
+
+                const wrapper = document.getElementById('canvasWrapper');
+
+                // Settings
+                const zoom = parseInt(document.getElementById('pianoZoom').value);
+                const showV1 = document.getElementById('voice1Check').checked;
+                const showV2 = document.getElementById('voice2Check').checked;
+                const showV3 = document.getElementById('voice3Check').checked;
+
+                const noteHeight = 12;
+                const frameWidth = zoom;
+
+                // Find note range
+                let minNote = 127, maxNote = 0;
+                this.pianoRollNotes.forEach(n => {
+                    if (n.note < minNote) minNote = n.note;
+                    if (n.note > maxNote) maxNote = n.note;
+                });
+                // Pad the range
+                minNote = Math.max(0, minNote - 5);
+                maxNote = Math.min(127, maxNote + 5);
+
+                const noteRange = maxNote - minNote + 1;
+                const totalFrames = this.pianoRollData ? this.pianoRollData.frames.length : 1000;
+
+                // Update range display
+                document.getElementById('noteRangeDisplay').textContent =
+                    `${this.midiToNoteName(minNote)} - ${this.midiToNoteName(maxNote)}`;
+
+                // Set canvas size
+                canvas.width = totalFrames * frameWidth;
+                canvas.height = noteRange * noteHeight;
+
+                // Draw background grid
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw horizontal lines (note rows) and highlight white keys
+                for (let i = 0; i < noteRange; i++) {
+                    const midi = maxNote - i;
+                    const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
+                    const y = i * noteHeight;
+
+                    if (!isBlack) {
+                        ctx.fillStyle = '#1a1a1a';
+                        ctx.fillRect(0, y, canvas.width, noteHeight);
+                    }
+
+                    ctx.strokeStyle = '#222';
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+
+                    // Highlight C notes
+                    if (midi % 12 === 0) {
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(canvas.width, y);
+                        ctx.stroke();
+                        ctx.lineWidth = 1;
+                    }
+                }
+
+                // Draw vertical beat lines
+                const framesPerBeat = 12; // ~4 frames per 16th note at 50Hz
+                for (let f = 0; f < totalFrames; f += framesPerBeat) {
+                    ctx.strokeStyle = f % (framesPerBeat * 4) === 0 ? '#444' : '#222';
+                    ctx.beginPath();
+                    ctx.moveTo(f * frameWidth, 0);
+                    ctx.lineTo(f * frameWidth, canvas.height);
+                    ctx.stroke();
+                }
+
+                // Voice colors
+                const voiceColors = ['#ff8800', '#00aaff', '#ff00aa'];
+                const voiceColorsLight = ['#ffaa44', '#44ccff', '#ff44cc'];
+
+                // Draw notes
+                this.pianoRollNotes.forEach((note) => {
+                    // Check voice visibility
+                    if (note.voice === 0 && !showV1) return;
+                    if (note.voice === 1 && !showV2) return;
+                    if (note.voice === 2 && !showV3) return;
+
+                    const x = note.start * frameWidth;
+                    const y = (maxNote - note.note) * noteHeight;
+                    const width = Math.max(note.duration * frameWidth - 1, 2);
+                    const height = noteHeight - 2;
+
+                    // Note rectangle with gradient
+                    const gradient = ctx.createLinearGradient(x, y, x, y + height);
+                    gradient.addColorStop(0, voiceColorsLight[note.voice]);
+                    gradient.addColorStop(1, voiceColors[note.voice]);
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x, y + 1, width, height);
+
+                    // Border
+                    ctx.strokeStyle = voiceColors[note.voice];
+                    ctx.strokeRect(x, y + 1, width, height);
+                });
+
+                // Build piano keys
+                keysDiv.innerHTML = '';
+                keysDiv.style.height = canvas.height + 'px';
+                for (let i = 0; i < noteRange; i++) {
+                    const midi = maxNote - i;
+                    const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
+                    const keyDiv = document.createElement('div');
+                    keyDiv.className = `piano-key ${isBlack ? 'black' : 'white'}`;
+                    keyDiv.textContent = this.midiToNoteName(midi);
+                    keysDiv.appendChild(keyDiv);
+                }
+            },
+
+            onPianoRollHover(e) {
+                if (!this.pianoRollNotes || this.pianoRollNotes.length === 0) return;
+
+                const canvas = document.getElementById('pianoRollCanvas');
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const zoom = parseInt(document.getElementById('pianoZoom').value);
+                const noteHeight = 12;
+                const frameWidth = zoom;
+
+                const frame = Math.floor(x / frameWidth);
+
+                // Find note range
+                let minNote = 127, maxNote = 0;
+                this.pianoRollNotes.forEach(n => {
+                    if (n.note < minNote) minNote = n.note;
+                    if (n.note > maxNote) maxNote = n.note;
+                });
+                minNote = Math.max(0, minNote - 5);
+                maxNote = Math.min(127, maxNote + 5);
+
+                const midiNote = maxNote - Math.floor(y / noteHeight);
+
+                // Find note at this position
+                const hoveredNote = this.pianoRollNotes.find(n =>
+                    n.note === midiNote &&
+                    frame >= n.start &&
+                    frame < n.start + n.duration
+                );
+
+                const infoDiv = document.getElementById('hoverInfo');
+                if (hoveredNote) {
+                    infoDiv.textContent = `V${hoveredNote.voice + 1}: ${hoveredNote.noteName} | Frame ${hoveredNote.start} | Dur: ${hoveredNote.duration} frames | Inst: ${hoveredNote.inst}`;
+                } else {
+                    infoDiv.textContent = `Frame: ${frame} | ${this.midiToNoteName(midiNote)}`;
+                }
+            },
+
+            analyzeNotes() {
+                const voiceNotes = [[], [], []];
+                const voiceFreqs = [0, 0, 0];
+
+                // Group log by frame
+                const frames = {};
+                this.registerLog.forEach(entry => {
+                    if (!frames[entry.frame]) frames[entry.frame] = [];
+                    frames[entry.frame].push(entry);
+                });
+
+                // Process each frame
+                Object.keys(frames).forEach(frameNum => {
+                    const frameRegs = {};
+                    frames[frameNum].forEach(entry => {
+                        frameRegs[entry.reg] = entry.val;
+                    });
+
+                    // Check each voice for frequency changes
+                    for (let v = 0; v < 3; v++) {
+                        const freqLo = v * 7;
+                        const freqHi = v * 7 + 1;
+
+                        if (frameRegs[freqLo] !== undefined || frameRegs[freqHi] !== undefined) {
+                            // Reconstruct frequency
+                            const lo = frameRegs[freqLo] !== undefined ? frameRegs[freqLo] : (voiceFreqs[v] & 0xFF);
+                            const hi = frameRegs[freqHi] !== undefined ? frameRegs[freqHi] : (voiceFreqs[v] >> 8);
+                            const freq = (hi << 8) | lo;
+
+                            if (freq !== voiceFreqs[v] && freq > 0) {
+                                voiceFreqs[v] = freq;
+                                voiceNotes[v].push({
+                                    frame: parseInt(frameNum),
+                                    freq: freq,
+                                    noteName: this.freqToNote(freq)
+                                });
+                            }
+                        }
+                    }
+                });
+
+                return voiceNotes;
+            },
+
+            freqToNote(freq) {
+                if (freq === 0) return '---';
+
+                const noteNames = ['C-', 'C#', 'D-', 'D#', 'E-', 'F-', 'F#', 'G-', 'G#', 'A-', 'A#', 'B-'];
+
+                // Calculate MIDI note from SID frequency
+                // SID freq = (Fout * 16777216) / Fclk
+                const fout = (freq * this.sidClockHz) / 16777216;
+                const midiNote = Math.round(12 * Math.log2(fout / 440) + 69);
+
+                if (midiNote < 0 || midiNote > 127) return '???';
+
+                const octave = Math.floor(midiNote / 12);
+                const note = midiNote % 12;
+
+                return noteNames[note] + octave;
+            },
+
+            analyzeInstruments() {
+                const instruments = new Map();
+
+                this.registerLog.forEach(entry => {
+                    // Look for AD/SR/Control writes
+                    if (entry.reg === 5 || entry.reg === 6 || entry.reg === 4 ||
+                        entry.reg === 12 || entry.reg === 13 || entry.reg === 11 ||
+                        entry.reg === 19 || entry.reg === 20 || entry.reg === 18) {
+
+                        const voice = Math.floor(entry.reg / 7);
+                        const regType = entry.reg % 7;
+
+                        // Create instrument signature
+                        const key = `${voice}-${entry.val}`;
+                        if (!instruments.has(key)) {
+                            instruments.set(key, {
+                                voice: voice,
+                                ad: regType === 5 ? entry.val : 0,
+                                sr: regType === 6 ? entry.val : 0,
+                                wave: regType === 4 ? entry.val : 0
+                            });
+                        }
+                    }
+                });
+
+                // Return unique instrument combinations
+                const unique = [];
+                const seen = new Set();
+                instruments.forEach(inst => {
+                    const sig = `${inst.ad}-${inst.sr}-${inst.wave}`;
+                    if (!seen.has(sig) && (inst.ad || inst.sr || inst.wave)) {
+                        seen.add(sig);
+                        unique.push(inst);
+                    }
+                });
+
+                return unique.slice(0, 32); // Max 32 instruments
+            },
+
+            updateStatus(text, type = 'stopped') {
+                const status = document.getElementById('status');
+                status.textContent = 'Status: ' + text;
+                status.className = 'status-' + type;
+            },
+
+            // GT2 Conversion Data
+            gt2Data: null,
+
+            /**
+             * Convert analyzed data to GT2 format
+             */
+            convertToGT2() {
+                if (!this.pianoRollData || !this.pianoRollData.frames.length) {
+                    this.updateStatus('No analyzed data available. Please analyze the log first.', 'error');
+                    return;
+                }
+
+                this.updateStatus('Converting to GT2 format...', 'playing');
+
+                try {
+                    const data = this.pianoRollData;
+
+                    // Step 1: Quantize frames to pattern rows
+                    const quantizedData = this.quantizeToRows(data.frames);
+                    console.log('Quantized to', quantizedData.rows.length, 'rows');
+
+                    // Step 2: Build GT2 instruments from detected combinations
+                    const gt2Instruments = this.buildGT2Instruments(data.instruments);
+                    console.log('Built', gt2Instruments.length, 'GT2 instruments');
+
+                    // Step 3: Generate wavetables from detected arpeggios
+                    const wavetables = this.buildWavetablesFromArpeggios(quantizedData.arpeggioPatterns);
+                    if (wavetables.length > 0) {
+                        console.log(`Generated ${wavetables.length} arpeggio wavetables`);
+                        this.addArpeggioCommands(quantizedData.rows, quantizedData.arpeggioPatterns, wavetables);
+                    }
+
+                    // Step 3b: Generate wavetables from note onset sequences (attack patterns)
+                    const waveformWTs = this.buildWavetablesFromOnsetSequences(
+                        data.noteOnsetSequences || [[], [], []], wavetables
+                    );
+                    const allWavetables = [...wavetables, ...waveformWTs];
+                    if (waveformWTs.length > 0) {
+                        console.log(`Generated ${waveformWTs.length} onset sequence wavetables`);
+                    }
+
+                    // Step 4: Build pulse tables from PW sweep data
+                    const pulseTables = this.buildPulseTables(data.pwChanges || [[], [], []]);
+                    if (pulseTables.length > 0) {
+                        console.log(`Generated ${pulseTables.length} pulse tables`);
+                    }
+
+                    // Step 5: Build filter tables from filter change data
+                    const filterTables = this.buildFilterTables(data.filterChanges || []);
+                    if (filterTables.length > 0) {
+                        console.log(`Generated ${filterTables.length} filter tables`);
+                    }
+
+                    // Step 6: Build speed tables from vibrato/portamento analysis
+                    const speedTables = this.buildSpeedTables(
+                        data.pitchEffects || [[], [], []],
+                        data.pitchAnalysis || []
+                    );
+                    if (speedTables.length > 0) {
+                        console.log(`Generated ${speedTables.length} speed tables`);
+                    }
+
+                    // Step 7: Add effect commands (vibrato, portamento, pulse ptr, filter ptr)
+                    // Calculate starting positions for each table type
+                    const wtblSize = allWavetables.reduce((sum, wt) => sum + wt.entries.length, 0);
+                    const ptblStartPos = 0;
+                    const ftblStartPos = 0;
+                    const stblStartPos = 0;
+                    this.addEffectCommands(
+                        quantizedData.rows, speedTables, pulseTables, filterTables,
+                        stblStartPos, ptblStartPos, ftblStartPos
+                    );
+
+                    // Step 7b: Assign table pointers to instruments
+                    // Find which instrument is most used on each voice and link tables
+                    this.assignTablePointersToInstruments(
+                        gt2Instruments, quantizedData.rows,
+                        allWavetables, pulseTables, filterTables, speedTables
+                    );
+
+                    // Step 7c: per-note onset wavetable overrides (8XY) for
+                    // notes whose onset differs from the instrument default
+                    this.addOnsetWavetableCommands(
+                        quantizedData.rows, quantizedData.framesPerRow,
+                        data.noteOnsetSequences || [[], [], []],
+                        allWavetables, gt2Instruments
+                    );
+
+                    // Step 8: Detect repeating patterns (with transpose detection)
+                    const patterns = this.detectPatterns(quantizedData.rows);
+                    console.log('Detected', patterns.patterns.length, 'patterns');
+
+                    // Step 9: Build order lists (with transpose commands)
+                    const orders = this.buildGT2Orders(patterns);
+                    console.log('Built order lists');
+
+                    // Store the GT2 data
+                    // Embed the detected tempo as an FXY command on the first
+                    // row of each voice's first pattern (.sng files have no
+                    // tempo field - GT2 songs carry tempo in the pattern data)
+                    const speedVal = quantizedData.framesPerRow & 0x7F;
+                    for (let v = 0; v < 3; v++) {
+                        const firstPat = patterns.patterns[orders[v]?.[0]];
+                        const row0 = firstPat?.data?.[0];
+                        if (row0 && !row0.cmd) { row0.cmd = 0x0F; row0.cmdData = speedVal; break; }
+                    }
+
+                    this.gt2Data = {
+                        name: this.sidFile ? this.sidFile.name : 'Ripped Song',
+                        author: this.sidFile ? this.sidFile.author : 'SID Ripper',
+                        instruments: gt2Instruments,
+                        patterns: patterns.patterns,
+                        orders: orders,
+                        tempo: quantizedData.tempo,
+                        speed: quantizedData.framesPerRow,  // GT2 speed value (frames per step)
+                        wavetables: allWavetables,
+                        pulseTables: pulseTables,
+                        filterTables: filterTables,
+                        speedTables: speedTables,
+                        arpeggioPatterns: quantizedData.arpeggioPatterns,
+                        pitchAnalysis: data.pitchAnalysis
+                    };
+
+                    // Enable the open in tracker button
+                    document.getElementById('openInTrackerBtn').disabled = false;
+
+                    // Show conversion results
+                    this.displayConversionResults();
+
+                    const tableCount = allWavetables.length + pulseTables.length + filterTables.length + speedTables.length;
+                    this.updateStatus(
+                        `Converted: ${patterns.patterns.length} patterns, ${gt2Instruments.length} instruments, ${tableCount} tables`,
+                        'stopped'
+                    );
+
+                } catch (error) {
+                    console.error('GT2 conversion failed:', error);
+                    this.updateStatus('Conversion failed: ' + error.message, 'stopped');
+                }
+            },
+
+            /**
+             * Quantize frame data to pattern rows
+             * Typically 6 frames per row at 50Hz gives ~8.3 rows/second (~125 BPM with 16th notes)
+             */
+            quantizeToRows(frames) {
+                // Detect tempo from note spacing
+                let noteGaps = [];
+                for (let v = 0; v < 3; v++) {
+                    let lastNoteFrame = -1;
+                    frames.forEach((frame, i) => {
+                        if (frame.voices[v].note !== '---') {
+                            if (lastNoteFrame >= 0) {
+                                noteGaps.push(i - lastNoteFrame);
+                            }
+                            lastNoteFrame = i;
+                        }
+                    });
+                }
+
+                // Find most common small gap (likely 16th note)
+                const gapCounts = {};
+                noteGaps.forEach(gap => {
+                    if (gap >= 2 && gap <= 24) {
+                        gapCounts[gap] = (gapCounts[gap] || 0) + 1;
+                    }
+                });
+
+                let framesPerRow = 6; // Default: ~125 BPM
+                const sortedGaps = Object.entries(gapCounts).sort((a, b) => b[1] - a[1]);
+                if (sortedGaps.length > 0) {
+                    framesPerRow = parseInt(sortedGaps[0][0]);
+                }
+
+                // Clamp to reasonable values
+                framesPerRow = Math.max(3, Math.min(12, framesPerRow));
+
+                const tempo = Math.round(50 * 60 / (framesPerRow * 4)); // Assuming 16th notes
+                console.log(`Quantizing with ${framesPerRow} frames/row (${tempo} BPM)`);
+
+                // Build quantized rows
+                const rows = [];
+                const numRows = Math.ceil(frames.length / framesPerRow);
+
+                // GT2 special note values (must match GT2 encoding in worklet)
+                const NOTE_KEYOFF = 0xBE;  // 190 - clear gate bit
+                const NOTE_REST = 0xBD;    // 189 - sustain
+
+                // Track arpeggio patterns per voice for potential wavetable generation
+                const arpeggioPatterns = [[], [], []];
+
+                for (let row = 0; row < numRows; row++) {
+                    const startFrame = row * framesPerRow;
+                    const endFrame = Math.min(startFrame + framesPerRow, frames.length);
+
+                    const rowData = {
+                        voices: [
+                            { note: 0, inst: 0, cmd: 0, cmdData: 0 },
+                            { note: 0, inst: 0, cmd: 0, cmdData: 0 },
+                            { note: 0, inst: 0, cmd: 0, cmdData: 0 }
+                        ]
+                    };
+
+                    // Collect all notes in this row's frame range for arpeggio detection
+                    const rowNotes = [[], [], []];
+
+                    for (let f = startFrame; f < endFrame; f++) {
+                        const frame = frames[f];
+                        for (let v = 0; v < 3; v++) {
+                            const voiceFrame = frame.voices[v];
+
+                            if (voiceFrame.note === '===') {
+                                // Key-off event - only record if we don't have a note yet
+                                if (rowData.voices[v].note === 0) {
+                                    rowData.voices[v].note = NOTE_KEYOFF;
+                                }
+                            } else if (voiceFrame.note !== '---' && voiceFrame.note !== '???') {
+                                const midiNote = this.noteToMidi(voiceFrame.note);
+                                if (midiNote >= 0) {
+                                    const gt2Note = Math.max(0x60, Math.min(0xBC, midiNote - 12 + 0x60));
+                                    rowNotes[v].push({
+                                        note: gt2Note,
+                                        inst: parseInt(voiceFrame.inst, 16) || 1,
+                                        frame: f,
+                                        isArpeggio: voiceFrame.arpeggioNote
+                                    });
+
+                                    // First REAL note becomes the row's main
+                                    // note. Arpeggio/trill pitch changes only
+                                    // feed arp detection - as row notes they
+                                    // would retrigger the envelope every row.
+                                    if (rowData.voices[v].note === 0 && !voiceFrame.arpeggioNote) {
+                                        rowData.voices[v].note = gt2Note;
+                                        rowData.voices[v].inst = parseInt(voiceFrame.inst, 16) || 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Detect arpeggio patterns (multiple different notes in one row)
+                    for (let v = 0; v < 3; v++) {
+                        if (rowNotes[v].length > 1) {
+                            const uniqueNotes = [...new Set(rowNotes[v].map(n => n.note))];
+                            if (uniqueNotes.length > 1) {
+                                // This row has an arpeggio pattern
+                                arpeggioPatterns[v].push({
+                                    row: row,
+                                    notes: rowNotes[v],
+                                    uniqueNotes: uniqueNotes,
+                                    baseNote: rowData.voices[v].note
+                                });
+                            }
+                        }
+                    }
+
+                    rows.push(rowData);
+                }
+
+                // Log arpeggio patterns found
+                console.log(`Quantized ${frames.length} frames to ${rows.length} rows`);
+                const keyOffCount = rows.reduce((sum, r) =>
+                    sum + r.voices.filter(v => v.note === NOTE_KEYOFF).length, 0);
+                console.log(`Total key-off events in patterns: ${keyOffCount}`);
+
+                for (let v = 0; v < 3; v++) {
+                    if (arpeggioPatterns[v].length > 0) {
+                        // Analyze the arpeggio intervals
+                        const allIntervals = new Set();
+                        arpeggioPatterns[v].forEach(ap => {
+                            const base = ap.baseNote;
+                            ap.uniqueNotes.forEach(n => {
+                                if (n !== base) allIntervals.add(n - base);
+                            });
+                        });
+                        const intervalList = Array.from(allIntervals).sort((a, b) => a - b);
+                        console.log(`Voice ${v+1}: ${arpeggioPatterns[v].length} rows with arpeggios, intervals: ${intervalList.map(i => i > 0 ? `+${i}` : i).join(', ')} semitones`);
+                    }
+                }
+
+                return { rows, framesPerRow, tempo, arpeggioPatterns };
+            },
+
+            /**
+             * Build GT2-compatible instruments from detected AD/SR/wave combinations
+             */
+            buildGT2Instruments(instrumentMap) {
+                const instruments = [];
+
+                // Always add a default instrument at index 0
+                instruments.push({
+                    name: 'Default',
+                    waveform: 0x41, // Pulse with gate
+                    firstWave: 0x41, // CRITICAL: waveform+gate byte for first frame
+                    gateTimer: 0x02,
+                    ad: 0x0A,
+                    sr: 0xA0,
+                    pulseWidth: 0x0800,
+                    vibratoDelay: 0,
+                    vibParam: 0,
+                    sync: false,
+                    ringMod: false,
+                    tables: { wave: 0, pulse: 0, filter: 0, speed: 0 }
+                });
+
+                // Convert detected instruments - sort by ID to maintain order
+                const sortedInstruments = Array.from(instrumentMap.entries())
+                    .sort((a, b) => a[1] - b[1]);
+
+                sortedInstruments.forEach(([key, id]) => {
+                    if (key === 'ghost') {
+                        // Silent sync/ring modulator: waveform selected but NO
+                        // gate bit - the oscillator runs at the note frequency
+                        // (which is all sync/ring modulation needs) while the
+                        // envelope stays silent.
+                        instruments.push({
+                            name: 'Mod (silent)',
+                            waveform: 0x40,
+                            firstWave: 0x40,
+                            gateTimer: 0x02,
+                            ad: 0x00,
+                            sr: 0x00,
+                            pulseWidth: 0x0800,
+                            vibratoDelay: 0,
+                            vibParam: 0,
+                            sync: false,
+                            ringMod: false,
+                            tables: { wave: 0, pulse: 0, filter: 0, speed: 0 }
+                        });
+                        console.log(`Instrument ${id}: Mod (silent) - sync/ring modulator ghost notes`);
+                        return;
+                    }
+                    const [ad, sr, wave] = key.split('-').map(v => parseInt(v));
+
+                    // Extract sync (bit 1) and ring-mod (bit 2) from control byte
+                    const syncBit = (wave & 0x02) !== 0;
+                    const ringBit = (wave & 0x04) !== 0;
+
+                    // Determine waveform with gate bit
+                    let waveform = 0x41; // Default pulse
+                    const waveType = (wave >> 4) & 0x0F;
+                    if (waveType === 1) waveform = 0x11; // Triangle
+                    else if (waveType === 2) waveform = 0x21; // Sawtooth
+                    else if (waveType === 4) waveform = 0x41; // Pulse
+                    else if (waveType === 8) waveform = 0x81; // Noise
+                    else if (waveType === 5) waveform = 0x51; // Tri+Pulse
+                    else if (waveType === 6) waveform = 0x61; // Saw+Pulse
+
+                    // Include sync/ring bits in waveform byte
+                    if (syncBit) waveform |= 0x02;
+                    if (ringBit) waveform |= 0x04;
+
+                    // Generate descriptive name based on characteristics
+                    const name = this.classifyInstrument(waveType, ad, sr, syncBit, ringBit);
+
+                    instruments.push({
+                        name: name,
+                        waveform: waveform,
+                        firstWave: waveform, // CRITICAL: same as waveform (includes gate bit)
+                        gateTimer: 0x02,     // Default 2-frame hard restart
+                        ad: ad,
+                        sr: sr,
+                        pulseWidth: 0x0800,
+                        vibratoDelay: 0,
+                        vibParam: 0,
+                        sync: syncBit,
+                        ringMod: ringBit,
+                        tables: { wave: 0, pulse: 0, filter: 0, speed: 0 }
+                    });
+
+                    const flags = [syncBit ? 'SYNC' : '', ringBit ? 'RING' : ''].filter(Boolean).join('+');
+                    console.log(`Instrument ${id}: ${name} (wave=${waveType}${flags ? ' ' + flags : ''}, AD=$${ad.toString(16)}, SR=$${sr.toString(16)})`);
+                });
+
+                return instruments;
+            },
+
+            /**
+             * Classify instrument based on waveform and ADSR characteristics
+             */
+            classifyInstrument(waveType, ad, sr, syncBit = false, ringBit = false) {
+                const attack = (ad >> 4) & 0x0F;
+                const decay = ad & 0x0F;
+                const sustain = (sr >> 4) & 0x0F;
+                const release = sr & 0x0F;
+
+                // Waveform names
+                const waveNames = {
+                    1: 'Tri', 2: 'Saw', 4: 'Pulse', 8: 'Noise',
+                    5: 'TriPulse', 6: 'SawPulse', 3: 'TriSaw'
+                };
+                const waveName = waveNames[waveType] || 'Wave';
+
+                // Build prefix for sync/ring
+                let prefix = '';
+                if (syncBit) prefix += 'Sync ';
+                if (ringBit) prefix += 'Ring ';
+
+                // Noise waveform = percussion/drums
+                if (waveType === 8) {
+                    if (decay <= 4 && sustain === 0) return prefix + 'Kick';
+                    if (decay <= 6 && sustain <= 4) return prefix + 'Snare';
+                    if (attack === 0 && decay <= 2) return prefix + 'HiHat';
+                    return prefix + 'Perc ' + waveName;
+                }
+
+                // Classify by ADSR envelope shape
+                // Fast attack, short decay, low/no sustain = percussive
+                if (attack <= 1 && decay <= 4 && sustain <= 2) {
+                    return prefix + 'Pluck ' + waveName;
+                }
+
+                // Fast attack, medium decay, medium sustain = bass
+                if (attack <= 2 && decay >= 4 && decay <= 10 && sustain >= 4 && sustain <= 10) {
+                    return prefix + 'Bass ' + waveName;
+                }
+
+                // Slow attack = pad/string
+                if (attack >= 8) {
+                    return prefix + 'Pad ' + waveName;
+                }
+
+                // Fast attack, high sustain = lead
+                if (attack <= 2 && sustain >= 8) {
+                    return prefix + 'Lead ' + waveName;
+                }
+
+                // Medium attack, medium sustain = organ-like
+                if (attack >= 3 && attack <= 6 && sustain >= 6) {
+                    return prefix + 'Organ ' + waveName;
+                }
+
+                // Default: just use waveform name with ADSR hint
+                if (sustain >= 10) return prefix + 'Sustained ' + waveName;
+                if (decay <= 3) return prefix + 'Short ' + waveName;
+
+                return prefix + waveName + ' ' + (attack <= 2 ? 'Fast' : 'Slow');
+            },
+
+            /**
+             * Assign table pointers to instruments based on voice usage
+             * Links tables to instruments: dominant gets arpeggio/pulse/filter/speed,
+             * ALL instruments on a voice get appropriate waveform sequence wavetables
+             */
+            assignTablePointersToInstruments(instruments, rows, wavetables, pulseTables, filterTables, speedTables) {
+                // Count instrument usage per voice
+                const voiceInstCounts = [{}, {}, {}];
+                rows.forEach(row => {
+                    for (let v = 0; v < 3; v++) {
+                        const inst = row.voices[v].inst;
+                        if (inst > 0) {
+                            voiceInstCounts[v][inst] = (voiceInstCounts[v][inst] || 0) + 1;
+                        }
+                    }
+                });
+
+                // Find dominant instrument per voice
+                const voiceDominant = [0, 0, 0];
+                for (let v = 0; v < 3; v++) {
+                    let maxCount = 0;
+                    Object.entries(voiceInstCounts[v]).forEach(([inst, count]) => {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            voiceDominant[v] = parseInt(inst);
+                        }
+                    });
+                }
+
+                // Calculate table positions (1-based GT2 pointers)
+                // Build per-wavetable position map
+                let wtPos = 0;
+                const wtPositions = []; // index -> { startPtr, voice, type, entries }
+                wavetables.forEach((wt, idx) => {
+                    wtPositions.push({
+                        startPtr: wtPos + 1,
+                        voice: wt.voice,
+                        type: wt.type || 'arpeggio',
+                        primaryWave: wt.primaryWave || 0,
+                        entries: wt.entries
+                    });
+                    wtPos += wt.entries.length;
+                });
+
+                // Pulse tables
+                let ptPos = 0;
+                const voicePulsePtr = {};
+                pulseTables.forEach(pt => {
+                    if (pt.voice !== undefined) {
+                        voicePulsePtr[pt.voice] = ptPos + 1;
+                    }
+                    ptPos += pt.entries.length;
+                });
+
+                // Filter tables
+                let ftPtr = filterTables.length > 0 ? 1 : 0;
+
+                // Speed tables
+                let stPos = 0;
+                const voiceSpeedPtr = {};
+                speedTables.forEach(st => {
+                    if (st.voice !== undefined) {
+                        voiceSpeedPtr[st.voice] = stPos + 1;
+                    }
+                    stPos += st.entries.length;
+                });
+
+                // Map: waveform byte (upper nibble) to SID wave type used in wavetable entries
+                const sidWaveToType = { 0x10: 1, 0x20: 2, 0x40: 4, 0x80: 8, 0x50: 5, 0x60: 6, 0x30: 3 };
+
+                // For each voice, assign tables to ALL instruments on that voice
+                for (let v = 0; v < 3; v++) {
+                    const instsOnVoice = Object.keys(voiceInstCounts[v]).map(Number);
+                    const isDominant = (idx) => idx === voiceDominant[v];
+
+                    // Find arpeggio and ALL waveform_sequence wavetables for this voice
+                    const voiceArpWt = wtPositions.find(w => w.voice === v && w.type === 'arpeggio');
+                    const voiceWaveSeqWts = wtPositions.filter(w => w.voice === v && w.type === 'waveform_sequence');
+
+                    instsOnVoice.forEach(instIdx => {
+                        if (instIdx <= 0 || instIdx >= instruments.length) return;
+                        const inst = instruments[instIdx];
+                        // The silent sync/ring modulator must stay gate-less
+                        // and table-free: a voice wavetable would gate it on
+                        if (inst.name === 'Mod (silent)') return;
+                        const instCtrl = inst.waveform & 0xFE; // Full ctrl minus gate (waveform + sync/ring)
+
+                        // Dominant instrument gets arpeggio wavetable, pulse, filter, speed
+                        if (isDominant(instIdx)) {
+                            if (voiceArpWt && inst.tables.wave === 0) {
+                                inst.tables.wave = voiceArpWt.startPtr;
+                            }
+                            if (voicePulsePtr[v] && inst.tables.pulse === 0) {
+                                inst.tables.pulse = voicePulsePtr[v];
+                            }
+                            if (ftPtr && inst.tables.filter === 0) {
+                                inst.tables.filter = ftPtr;
+                            }
+                            if (voiceSpeedPtr[v] && inst.tables.speed === 0) {
+                                inst.tables.speed = voiceSpeedPtr[v];
+                            }
+                        }
+
+                        // Waveform sequence wavetable: find the best-matching WT for this instrument
+                        // Match by: 1) WT whose primary waveform matches instrument, or 2) WT that contains it
+                        if (voiceWaveSeqWts.length > 0 && inst.tables.wave === 0) {
+                            let bestMatch = null;
+                            let bestMatchScore = -1;
+
+                            for (const wt of voiceWaveSeqWts) {
+                                // Score 3: primary ctrl (waveform+sync/ring) exactly matches instrument
+                                if ((wt.primaryWave || 0) === instCtrl) {
+                                    if (3 > bestMatchScore) {
+                                        bestMatch = wt;
+                                        bestMatchScore = 3;
+                                    }
+                                    continue;
+                                }
+                                // Score 2: primary waveform nibble matches (ignoring sync/ring)
+                                if (((wt.primaryWave || 0) & 0xF0) === (instCtrl & 0xF0)) {
+                                    if (2 > bestMatchScore) {
+                                        bestMatch = wt;
+                                        bestMatchScore = 2;
+                                    }
+                                    continue;
+                                }
+                                // Score 1: any entry in the WT contains this waveform
+                                for (let e = 0; e < wt.entries.length; e++) {
+                                    if (wt.entries[e].left === 0xFF) break;
+                                    if ((wt.entries[e].left & 0xFE) === instCtrl) {
+                                        if (1 > bestMatchScore) {
+                                            bestMatch = wt;
+                                            bestMatchScore = 1;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (bestMatch) {
+                                // Find the entry offset matching this instrument's ctrl byte
+                                let matchPtr = bestMatch.startPtr;
+                                for (let e = 0; e < bestMatch.entries.length; e++) {
+                                    if (bestMatch.entries[e].left === 0xFF) break;
+                                    if ((bestMatch.entries[e].left & 0xFE) === instCtrl) {
+                                        matchPtr = bestMatch.startPtr + e;
+                                        break;
+                                    }
+                                }
+                                inst.tables.wave = matchPtr;
+                            }
+                        }
+
+                        const ptrs = [];
+                        if (inst.tables.wave) ptrs.push(`WTBL=${inst.tables.wave}`);
+                        if (inst.tables.pulse) ptrs.push(`PTBL=${inst.tables.pulse}`);
+                        if (inst.tables.filter) ptrs.push(`FTBL=${inst.tables.filter}`);
+                        if (inst.tables.speed) ptrs.push(`STBL=${inst.tables.speed}`);
+                        if (ptrs.length > 0) {
+                            console.log(`Instrument ${instIdx} (${inst.name}): assigned ${ptrs.join(', ')}`);
+                        }
+                    });
+                }
+            },
+
+            /**
+             * Auto-detect optimal pattern length by scoring chunk reuse across voices
+             */
+            detectPatternLength(rows) {
+                const candidates = [8, 12, 16, 24, 32, 48, 64];
+                let bestLength = 32;
+                let bestScore = -1;
+
+                // Split into per-voice data
+                const voiceData = [[], [], []];
+                rows.forEach(row => {
+                    for (let v = 0; v < 3; v++) {
+                        voiceData[v].push(row.voices[v]);
+                    }
+                });
+
+                for (const len of candidates) {
+                    if (len > rows.length) continue;
+
+                    const hashes = new Map(); // hash -> count
+                    let totalChunks = 0;
+
+                    for (let v = 0; v < 3; v++) {
+                        const data = voiceData[v];
+                        for (let pos = 0; pos + len <= data.length; pos += len) {
+                            const chunk = data.slice(pos, pos + len);
+                            const hash = this.hashPattern(chunk);
+                            hashes.set(hash, (hashes.get(hash) || 0) + 1);
+                            totalChunks++;
+                        }
+                    }
+
+                    if (totalChunks === 0) continue;
+
+                    // Count reused chunks (appearing more than once)
+                    let reusedChunks = 0;
+                    hashes.forEach(count => {
+                        if (count > 1) reusedChunks += count;
+                    });
+
+                    let score = reusedChunks / totalChunks;
+                    // Penalize very short lengths to avoid over-fragmentation
+                    if (len < 16) score *= 0.7;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestLength = len;
+                    }
+                }
+
+                // Fall back to 32 if no reuse detected
+                if (bestScore <= 0) bestLength = 32;
+
+                console.log(`Auto-detected pattern length: ${bestLength} (reuse score: ${(bestScore * 100).toFixed(1)}%)`);
+                return bestLength;
+            },
+
+            /**
+             * Detect repeating patterns in the quantized data
+             */
+            detectPatterns(rows) {
+                const PATTERN_LENGTH = this.detectPatternLength(rows);
+                const patterns = [];
+                const patternMap = new Map(); // Hash -> pattern index
+
+                // Split into per-voice data for pattern detection
+                const voiceData = [[], [], []];
+                rows.forEach(row => {
+                    for (let v = 0; v < 3; v++) {
+                        voiceData[v].push(row.voices[v]);
+                    }
+                });
+
+                // Build patterns for each voice
+                const voicePatterns = [[], [], []];
+                // Order list entries: each is { pattern: idx } or { transpose: semitones, pattern: idx }
+                const voiceOrderEntries = [[], [], []];
+
+                for (let v = 0; v < 3; v++) {
+                    const data = voiceData[v];
+                    let pos = 0;
+
+                    while (pos < data.length) {
+                        // Extract a pattern-sized chunk
+                        const chunk = data.slice(pos, pos + PATTERN_LENGTH);
+
+                        // Pad if necessary
+                        while (chunk.length < PATTERN_LENGTH) {
+                            chunk.push({ note: 0, inst: 0, cmd: 0, cmdData: 0 });
+                        }
+
+                        // Create a hash for this pattern
+                        const hash = this.hashPattern(chunk);
+
+                        let patternIdx;
+                        let transpose = 0;
+
+                        if (patternMap.has(hash)) {
+                            // Exact match
+                            patternIdx = patternMap.get(hash);
+                        } else {
+                            // Check if this is a transposed version of an existing pattern
+                            const transposeResult = this.findTransposedPattern(chunk, patterns);
+
+                            if (transposeResult) {
+                                // This chunk is a transposition of an existing pattern
+                                patternIdx = transposeResult.patternIdx;
+                                transpose = transposeResult.semitones;
+                            } else {
+                                // New unique pattern
+                                patternIdx = patterns.length;
+                                patternMap.set(hash, patternIdx);
+                                patterns.push({
+                                    voice: v,
+                                    length: PATTERN_LENGTH,
+                                    data: chunk.map(r => ({
+                                        note: r.note,
+                                        inst: r.inst,
+                                        cmd: r.cmd,
+                                        cmdData: r.cmdData
+                                    }))
+                                });
+                            }
+                        }
+
+                        voicePatterns[v].push(patternIdx);
+                        voiceOrderEntries[v].push({ pattern: patternIdx, transpose: transpose });
+                        pos += PATTERN_LENGTH;
+                    }
+                }
+
+                const transposeCount = voiceOrderEntries.flat().filter(e => e.transpose !== 0).length;
+                if (transposeCount > 0) {
+                    console.log(`Transpose detection saved patterns: ${transposeCount} transposed entries found`);
+                }
+
+                return {
+                    patterns,
+                    voicePatterns,
+                    voiceOrderEntries,
+                    patternLength: PATTERN_LENGTH
+                };
+            },
+
+            /**
+             * Check if a chunk is a transposed version of an existing pattern
+             * Returns { patternIdx, semitones } or null
+             */
+            findTransposedPattern(chunk, existingPatterns) {
+                // Get note positions in the chunk
+                const chunkNotes = [];
+                chunk.forEach((row, i) => {
+                    if (row.note >= 0x60 && row.note <= 0xBC) {
+                        chunkNotes.push({ pos: i, note: row.note, inst: row.inst, cmd: row.cmd, cmdData: row.cmdData });
+                    }
+                });
+
+                if (chunkNotes.length < 2) return null;  // Need at least 2 notes to detect transposition
+
+                for (let pi = 0; pi < existingPatterns.length; pi++) {
+                    const pat = existingPatterns[pi];
+                    const patNotes = [];
+                    pat.data.forEach((row, i) => {
+                        if (row.note >= 0x60 && row.note <= 0xBC) {
+                            patNotes.push({ pos: i, note: row.note, inst: row.inst, cmd: row.cmd, cmdData: row.cmdData });
+                        }
+                    });
+
+                    // Must have same number of notes at same positions
+                    if (patNotes.length !== chunkNotes.length) continue;
+
+                    let allMatch = true;
+                    let transpose = null;
+
+                    for (let i = 0; i < chunkNotes.length; i++) {
+                        // Position, instrument, and command must match exactly
+                        if (chunkNotes[i].pos !== patNotes[i].pos ||
+                            chunkNotes[i].inst !== patNotes[i].inst ||
+                            chunkNotes[i].cmd !== patNotes[i].cmd ||
+                            chunkNotes[i].cmdData !== patNotes[i].cmdData) {
+                            allMatch = false;
+                            break;
+                        }
+
+                        const diff = chunkNotes[i].note - patNotes[i].note;
+                        if (transpose === null) {
+                            transpose = diff;
+                        } else if (diff !== transpose) {
+                            allMatch = false;
+                            break;
+                        }
+                    }
+
+                    // Also verify non-note rows match (key-offs, rests, empty)
+                    if (allMatch && transpose !== null && transpose !== 0) {
+                        let nonNoteMatch = true;
+                        for (let i = 0; i < chunk.length; i++) {
+                            const cn = chunk[i].note;
+                            const pn = pat.data[i].note;
+                            // Non-note entries (0, 254, 255) must be identical
+                            if ((cn === 0 || cn >= 254) && cn !== pn) {
+                                nonNoteMatch = false;
+                                break;
+                            }
+                        }
+
+                        if (nonNoteMatch && transpose >= -16 && transpose <= 13) {
+                            // GT2 TRANSPOSE range: 0xE0-0xFD = -16 to +13
+                            return { patternIdx: pi, semitones: transpose };
+                        }
+                    }
+                }
+
+                return null;
+            },
+
+            /**
+             * Create a hash for pattern comparison
+             */
+            hashPattern(patternData) {
+                return patternData.map(r => `${r.note}:${r.inst}:${r.cmd}:${r.cmdData}`).join('|');
+            },
+
+            /**
+             * Build GT2 order lists from detected patterns
+             */
+            buildGT2Orders(patternData) {
+                const orders = [[], [], []];
+
+                for (let v = 0; v < 3; v++) {
+                    const entries = patternData.voiceOrderEntries
+                        ? patternData.voiceOrderEntries[v]
+                        : patternData.voicePatterns[v].map(p => ({ pattern: p, transpose: 0 }));
+
+                    entries.forEach(entry => {
+                        if (entry.transpose && entry.transpose !== 0) {
+                            // GT2 TRANSPOSE command: 0xE0-0xFD
+                            // entry - 0xF0 gives signed semitones (-16 to +13)
+                            // So value = 0xF0 + semitones
+                            const transCmd = 0xF0 + entry.transpose;
+                            orders[v].push(transCmd);
+                        }
+                        orders[v].push(entry.pattern);
+                    });
+
+                    // Add loop command at end (loop to beginning)
+                    if (orders[v].length > 0) {
+                        orders[v].push(0xFE); // LOOPSONG marker
+                        orders[v].push(0);    // Loop to position 0
+                    }
+                }
+
+                return orders;
+            },
+
+            /**
+             * Build GT2 wavetables from detected arpeggio patterns
+             * GT2 wavetable format:
+             * - Left byte: 0x01-0x0F = delay, 0x10-0xDF = waveform+gate, 0xFF = jump
+             * - Right byte: 0x00-0x5F = relative note up, 0x60-0x7F = relative note down, 0x80 = no note change
+             */
+            buildWavetablesFromArpeggios(arpeggioPatterns) {
+                const wavetables = [];
+
+                for (let v = 0; v < 3; v++) {
+                    if (!arpeggioPatterns[v] || arpeggioPatterns[v].length === 0) continue;
+
+                    // Analyze the most common arpeggio pattern for this voice
+                    const intervalCounts = new Map();
+                    arpeggioPatterns[v].forEach(ap => {
+                        // Create a signature from the intervals
+                        const baseNote = ap.baseNote;
+                        const intervals = ap.uniqueNotes
+                            .map(n => n - baseNote)
+                            .sort((a, b) => a - b);
+                        const signature = intervals.join(',');
+
+                        intervalCounts.set(signature, (intervalCounts.get(signature) || 0) + 1);
+                    });
+
+                    // Find the most common pattern
+                    let mostCommon = null;
+                    let maxCount = 0;
+                    intervalCounts.forEach((count, sig) => {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            mostCommon = sig;
+                        }
+                    });
+
+                    if (mostCommon && maxCount >= 3) {
+                        // Generate wavetable entries for this arpeggio
+                        const intervals = mostCommon.split(',').map(Number);
+
+                        // Detect arpeggio speed from frame gaps between consecutive notes
+                        const frameGaps = [];
+                        arpeggioPatterns[v].forEach(ap => {
+                            // Check if this occurrence matches the most common pattern
+                            const baseNote = ap.baseNote;
+                            const sig = ap.uniqueNotes
+                                .map(n => n - baseNote)
+                                .sort((a, b) => a - b)
+                                .join(',');
+                            if (sig !== mostCommon) return;
+
+                            // Collect frame gaps between consecutive notes
+                            const sorted = [...ap.notes].sort((a, b) => a.frame - b.frame);
+                            for (let i = 1; i < sorted.length; i++) {
+                                const gap = sorted[i].frame - sorted[i - 1].frame;
+                                if (gap >= 1 && gap <= 15) {
+                                    frameGaps.push(gap);
+                                }
+                            }
+                        });
+
+                        // Compute median gap as arpeggio speed (clamped 1-15)
+                        let arpSpeed = 1;
+                        if (frameGaps.length > 0) {
+                            frameGaps.sort((a, b) => a - b);
+                            arpSpeed = frameGaps[Math.floor(frameGaps.length / 2)];
+                            arpSpeed = Math.max(1, Math.min(15, arpSpeed));
+                        }
+
+                        console.log(`Voice ${v+1} arpeggio speed: ${arpSpeed} frames/step (from ${frameGaps.length} gaps)`);
+
+                        const wtEntries = [];
+
+                        // Create wavetable: cycle through intervals
+                        intervals.forEach((interval, i) => {
+                            // GT2 relative note format:
+                            // 0x00-0x5F = note + 0 to +95 semitones
+                            // 0x60-0x7F = note - 32 to -1 semitones (0x60 = -32, 0x7F = -1)
+                            let relNote;
+                            if (interval >= 0) {
+                                relNote = Math.min(0x5F, interval);  // Positive: 0x00-0x5F
+                            } else {
+                                relNote = 0x80 + interval;  // Negative: convert to 0x60-0x7F range
+                                if (relNote < 0x60) relNote = 0x60;
+                            }
+
+                            wtEntries.push({
+                                left: arpSpeed,  // Detected frame delay
+                                right: relNote,
+                                description: `${interval >= 0 ? '+' : ''}${interval} semitones (${arpSpeed}f)`
+                            });
+                        });
+
+                        // Add jump back to start
+                        wtEntries.push({
+                            left: 0xFF,  // Jump command
+                            right: 0x00, // Jump to position 0
+                            description: 'Loop to start'
+                        });
+
+                        wavetables.push({
+                            voice: v,
+                            pattern: mostCommon,
+                            occurrences: maxCount,
+                            entries: wtEntries,
+                            description: `Voice ${v+1} arpeggio: ${intervals.map(i => i >= 0 ? `+${i}` : i).join(', ')} semitones (${maxCount} occurrences)`
+                        });
+
+                        console.log(`Generated wavetable for voice ${v+1}: intervals ${mostCommon}, ${wtEntries.length} entries`);
+                    }
+                }
+
+                return wavetables;
+            },
+
+            /**
+             * Build wavetable entries from note onset sequences.
+             * Captures the full attack pattern: gate-on waveform → noise attack → sustain waveform,
+             * including frequency changes (relative notes) during the sequence.
+             */
+            /**
+             * Onset signature: ctrl values AND relative pitch movement.
+             * Including per-step semitone offsets separates a plain note from
+             * an octave-trill note with the same waveform sequence - they
+             * need different wavetables.
+             */
+            onsetSignature(seq) {
+                let base = seq.freq;
+                for (const s of seq.steps) {
+                    const wf = (s.ctrl >> 4) & 0x0F;
+                    if (wf >= 1 && wf <= 7 && s.freq > 0 && !(s.ctrl & 0x08)) base = s.freq;
+                }
+                return seq.steps.map(s => {
+                    const off = (s.freq > 0 && base > 0)
+                        ? Math.round(12 * Math.log2(s.freq / base)) : 0;
+                    return (s.ctrl & 0xFE).toString(16) + ':' + off;
+                }).join(',');
+            },
+
+            buildWavetablesFromOnsetSequences(noteOnsetSequences, existingWavetables) {
+                const newWavetables = [];
+
+                for (let v = 0; v < 3; v++) {
+                    const sequences = noteOnsetSequences[v];
+                    if (!sequences || sequences.length < 3) continue;
+
+                    // Build a signature for each onset sequence based on ctrl values
+                    const patternCounts = new Map();
+                    const patternExamples = new Map();
+                    sequences.forEach(seq => {
+                        const sig = this.onsetSignature(seq);
+                        patternCounts.set(sig, (patternCounts.get(sig) || 0) + 1);
+                        if (!patternExamples.has(sig)) patternExamples.set(sig, seq);
+                    });
+
+                    // Find all patterns with >= 3 occurrences
+                    const commonPatterns = [];
+                    patternCounts.forEach((count, sig) => {
+                        if (count >= 3 && sig.split(',').length >= 2) {
+                            commonPatterns.push({ sig, count, example: patternExamples.get(sig) });
+                        }
+                    });
+
+                    if (commonPatterns.length === 0) continue;
+
+                    // Sort by count descending, generate wavetable for ALL common patterns
+                    commonPatterns.sort((a, b) => b.count - a.count);
+
+                    for (const pattern of commonPatterns) {
+                        const exampleSeq = pattern.example;
+
+                        // Build wavetable entries from the ctrl sequence.
+                        // Relative notes are computed against the note BODY
+                        // frequency (last tonal step) - the same base the
+                        // pattern row note now uses - NOT the gate-on
+                        // frequency, which is still the attack/previous value.
+                        let baseFreq = exampleSeq.freq;
+                        for (const step of exampleSeq.steps) {
+                            const wf = (step.ctrl >> 4) & 0x0F;
+                            if (wf >= 1 && wf <= 7 && step.freq > 0 && !(step.ctrl & 0x08)) baseFreq = step.freq;
+                        }
+                        const rawEntries = [];
+
+                        exampleSeq.steps.forEach((step, i) => {
+                            const ctrlByte = step.ctrl & 0xFE;  // Strip gate for waveform
+                            const gate = step.ctrl & 0x01;
+                            const waveform = ctrlByte & 0xF0;   // Upper nibble = waveform
+                            const syncRing = ctrlByte & 0x06;   // Bits 1-2 = sync/ring
+
+                            if (waveform === 0 && !gate) return;  // Skip empty frames
+                            // Skip TEST-bit frames: they are hard-restart
+                            // artifacts, and a left byte < $10 would be a
+                            // DELAY command in GT2 wavetable encoding
+                            if (ctrlByte & 0x08) return;
+
+                            // Left byte: waveform + gate (SID ctrl register value)
+                            const left = waveform | syncRing | (gate ? 0x01 : 0x00);
+
+                            // Right byte: note relationship
+                            let right = 0x80;  // Default: no note change
+                            if ((waveform & 0x80) && step.freq > 0) {
+                                // Noise frames use ABSOLUTE notes ($81-$FF =
+                                // note index 1-127): drum pitches are fixed
+                                // per drum, not relative to the melody note,
+                                // and pattern notes clamp at G#7 while noise
+                                // drums live up at A-7..B-7 - relative offsets
+                                // from a clamped base note land flat.
+                                const midi = this.noteToMidi(this.freqToNote(step.freq));
+                                if (midi >= 0) {
+                                    const idx = Math.max(1, Math.min(95, midi - 12));
+                                    right = 0x80 | idx;
+                                }
+                            } else if (i > 0 && step.freq !== exampleSeq.steps[i-1].freq && step.freq > 0 && baseFreq > 0) {
+                                // Relative semitone offset from base note. NOTE:
+                                // offset 0 must be emitted as relative +0 ($00),
+                                // not "no change" - drums oscillate back to the
+                                // base pitch and $80 would leave them stuck on
+                                // the previous offset.
+                                const semitones = Math.round(12 * Math.log2(step.freq / baseFreq));
+                                if (semitones >= -64 && semitones <= 63) {
+                                    right = semitones & 0x7F;  // Relative note (wraps in 7-bit)
+                                }
+                            }
+
+                            rawEntries.push({ left, right });
+                        });
+
+                        // The FIRST entry must establish the new note's
+                        // frequency: right $00 = relative +0 to the base note.
+                        // $80 ("no change") would keep the PREVIOUS note's
+                        // frequency - GT2 sets pitch only via the wavetable.
+                        if (rawEntries.length && rawEntries[0].right === 0x80) {
+                            rawEntries[0].right = 0x00;
+                        }
+
+                        // Deduplicate consecutive entries with same ctrl AND same note (no change)
+                        const entries = [];
+                        for (let e = 0; e < rawEntries.length; e++) {
+                            const curr = rawEntries[e];
+                            if (entries.length > 0) {
+                                const prev = entries[entries.length - 1];
+                                // Skip if same waveform byte and no note change on either
+                                if (curr.left === prev.left && curr.right === 0x80 && prev.right === 0x80) {
+                                    continue;
+                                }
+                            }
+                            entries.push(curr);
+                        }
+
+                        if (entries.length < 2) continue;
+
+                        // Detect repeating cycle at the end of entries for loop point
+                        // Try cycle lengths 2, 3, 4 (most common arpeggio periods)
+                        let loopTarget = entries.length - 1; // fallback: last entry
+                        let foundCycle = false;
+
+                        for (let cycleLen = 2; cycleLen <= 4 && !foundCycle; cycleLen++) {
+                            if (entries.length >= cycleLen * 2) {
+                                // Check if last cycleLen entries repeat the cycleLen before them
+                                let matches = true;
+                                for (let c = 0; c < cycleLen; c++) {
+                                    const a = entries[entries.length - cycleLen + c];
+                                    const b = entries[entries.length - cycleLen * 2 + c];
+                                    if (a.left !== b.left || a.right !== b.right) {
+                                        matches = false;
+                                        break;
+                                    }
+                                }
+                                if (matches) {
+                                    // Found a repeating cycle! Loop back to start of cycle
+                                    loopTarget = entries.length - cycleLen * 2;
+                                    // Trim the duplicate cycle from the end
+                                    entries.splice(entries.length - cycleLen, cycleLen);
+                                    foundCycle = true;
+                                }
+                            }
+                        }
+
+                        // If no cycle found, loop to last entry with non-zero waveform
+                        if (!foundCycle) {
+                            for (let i = entries.length - 1; i >= 0; i--) {
+                                if (entries[i].left & 0xF0) { loopTarget = i; break; }
+                            }
+                        }
+
+                        // Add loop entry
+                        entries.push({
+                            left: 0xFF,
+                            right: loopTarget
+                        });
+
+                        // Identify the primary ctrl byte of this onset pattern (waveform + sync/ring, no gate)
+                        const primaryWave = entries[0].left & 0xFE;
+
+                        const desc = entries.slice(0, -1).map(e => `$${e.left.toString(16).toUpperCase()}`).join('→');
+                        newWavetables.push({
+                            voice: v,
+                            type: 'waveform_sequence',
+                            primaryWave: primaryWave,
+                            pattern: pattern.sig,
+                            occurrences: pattern.count,
+                            entries: entries,
+                            description: `Voice ${v+1} onset: ${desc} (${pattern.count}x)`
+                        });
+
+                        console.log(`Generated onset WTBL for voice ${v+1}: ${entries.length} entries, ${desc} (${pattern.count} occurrences)`);
+                    }
+                }
+
+                return newWavetables;
+            },
+
+            /**
+             * Per-row onset wavetable overrides: a note whose captured onset
+             * signature differs from its instrument's default wavetable gets
+             * an 8XY command pointing at the matching wavetable (e.g. plain
+             * bass notes vs octave-trill notes on the same instrument).
+             */
+            addOnsetWavetableCommands(rows, framesPerRow, noteOnsetSequences, allWavetables, instruments) {
+                // Pointer layout: sequential, same as importSidRip and
+                // assignTablePointersToInstruments
+                let nextPos = 0;
+                const ptrByWt = new Map();
+                allWavetables.forEach(wt => {
+                    ptrByWt.set(wt, nextPos + 1);
+                    nextPos += wt.entries.length;
+                });
+                const bySig = [new Map(), new Map(), new Map()];
+                allWavetables.forEach(wt => {
+                    if (wt.type === 'waveform_sequence' && wt.pattern !== undefined) {
+                        bySig[wt.voice].set(wt.pattern, wt);
+                    }
+                });
+
+                let added = 0;
+                for (let v = 0; v < 3; v++) {
+                    for (const seq of (noteOnsetSequences[v] || [])) {
+                        const wt = bySig[v].get(this.onsetSignature(seq));
+                        if (!wt) continue;
+                        // Locate the note row this onset belongs to
+                        let row = null;
+                        const r0 = Math.round(seq.startFrame / framesPerRow);
+                        for (const cand of [r0, r0 - 1, r0 + 1]) {
+                            const rr = rows[cand];
+                            if (rr && rr.voices[v].note >= 0x60 && rr.voices[v].note <= 0xBC) { row = rr; break; }
+                        }
+                        if (!row) continue;
+                        const rv = row.voices[v];
+                        const instDefault = instruments[rv.inst]?.tables?.wave || 0;
+                        const ptr = ptrByWt.get(wt);
+                        if (ptr === instDefault) continue;         // instrument already plays this
+                        if (rv.cmd && rv.cmd !== 0x09) continue;   // don't clobber arp/effect cmds
+                        rv.cmd = 0x08;
+                        rv.cmdData = ptr;
+                        added++;
+                    }
+                }
+                console.log(`Added ${added} onset wavetable overrides (8XY)`);
+            },
+
+            /**
+             * Add 8XY commands (wavetable pointer) to rows that have arpeggios
+             * This modifies the rows array in place to include arpeggio commands
+             */
+            addArpeggioCommands(rows, arpeggioPatterns, wavetables) {
+                // Build a map of voice -> wavetable pointer
+                // GT2 pointer = array index + 1 (pointer 1 = array[0])
+                // Each wavetable needs contiguous space, so calculate proper start positions
+                const voiceWavetablePos = {};
+                let nextPos = 0;
+
+                wavetables.forEach((wt, idx) => {
+                    const gtPointer = nextPos + 1;  // GT2 uses 1-based pointers
+                    voiceWavetablePos[wt.voice] = gtPointer;
+                    nextPos += wt.entries.length;  // Move past this wavetable's entries
+                });
+
+                console.log('Wavetable pointers by voice:', voiceWavetablePos);
+
+                // Build a set of rows that have arpeggios for each voice
+                const arpeggioRows = [{}, {}, {}];
+                for (let v = 0; v < 3; v++) {
+                    if (arpeggioPatterns[v]) {
+                        arpeggioPatterns[v].forEach(ap => {
+                            arpeggioRows[v][ap.row] = ap;
+                        });
+                    }
+                }
+
+                // Update rows with 8XY commands
+                let commandsAdded = 0;
+                rows.forEach((row, rowIdx) => {
+                    for (let v = 0; v < 3; v++) {
+                        // Check if this row has an arpeggio for this voice
+                        if (arpeggioRows[v][rowIdx] && voiceWavetablePos[v]) {
+                            // Add 8XY command: 8 = wavetable pointer, XY = position
+                            const wtPos = voiceWavetablePos[v];
+                            row.voices[v].cmd = 0x08;  // Wavetable command
+                            row.voices[v].cmdData = wtPos;  // Wavetable position (1-255)
+                            commandsAdded++;
+                        }
+                    }
+                });
+
+                console.log(`Added ${commandsAdded} arpeggio commands (8XY) to pattern rows`);
+            },
+
+            /**
+             * Add effect commands (vibrato, portamento, pulse ptr, filter ptr) to pattern rows
+             * Only adds commands to rows that don't already have one (arpeggio 8XY takes priority)
+             */
+            addEffectCommands(rows, speedTables, pulseTables, filterTables, stblStartPos, ptblStartPos, ftblStartPos) {
+                let cmdsAdded = 0;
+
+                // Build a map of which voices need which commands
+                const voiceEffects = [{}, {}, {}];
+
+                // Speed table effects (vibrato cmd 4, portamento cmd 1/2)
+                speedTables.forEach((st, idx) => {
+                    voiceEffects[st.voice].speed = {
+                        command: st.command,
+                        stblPos: stblStartPos + idx + 1  // 1-based GT2 pointer
+                    };
+                });
+
+                // Pulse table effects (cmd 9)
+                pulseTables.forEach((pt, idx) => {
+                    voiceEffects[pt.voice].pulse = {
+                        ptblPos: ptblStartPos + idx * pt.entries.length + 1  // 1-based
+                    };
+                });
+
+                // Filter table effects (cmd A) - filter is global, apply to voice 0
+                if (filterTables.length > 0) {
+                    voiceEffects[0].filter = {
+                        ftblPos: ftblStartPos + 1  // 1-based
+                    };
+                }
+
+                // Inject commands into rows at note-on events
+                rows.forEach((row, rowIdx) => {
+                    for (let v = 0; v < 3; v++) {
+                        const voice = row.voices[v];
+                        // Only add commands to rows with notes and no existing command
+                        if (voice.note >= 0x60 && voice.note <= 0xBC && voice.cmd === 0) {
+                            const effects = voiceEffects[v];
+
+                            // Priority: vibrato/portamento > pulse > filter
+                            if (effects.speed) {
+                                voice.cmd = effects.speed.command;
+                                voice.cmdData = effects.speed.stblPos;
+                                cmdsAdded++;
+                            } else if (effects.pulse) {
+                                voice.cmd = 0x09;  // Set pulsetable pointer
+                                voice.cmdData = effects.pulse.ptblPos;
+                                cmdsAdded++;
+                            } else if (effects.filter) {
+                                voice.cmd = 0x0A;  // Set filtertable pointer
+                                voice.cmdData = effects.filter.ftblPos;
+                                cmdsAdded++;
+                            }
+                        }
+                    }
+                });
+
+                console.log(`Added ${cmdsAdded} effect commands (vibrato/portamento/pulse/filter) to pattern rows`);
+                return cmdsAdded;
+            },
+
+            /**
+             * Build pulse tables (PTBL) from detected PW sweeps
+             * GT2 PTBL format:
+             *   Left $80-$FF: Set pulse width (left & 0x7F = high byte, right = low byte)
+             *   Left $01-$7F: Modulate pulse width by signed value (left=speed hi, right=speed lo)
+             *   Left $FF: Jump (right = position, 0x00 = stop)
+             */
+            buildPulseTables(pwChanges) {
+                const pulseTables = [];
+
+                for (let v = 0; v < 3; v++) {
+                    const changes = pwChanges[v];
+                    if (!changes || changes.length < 4) continue;
+
+                    // Analyze PW behavior: find continuous sweep segments
+                    const segments = [];
+                    let currentSegment = { start: 0, deltas: [], startPW: changes[0].pw };
+
+                    for (let i = 1; i < changes.length; i++) {
+                        const delta = changes[i].delta;
+                        const gap = changes[i].frame - changes[i-1].frame;
+
+                        // If gap > 2 frames or direction changed significantly, start new segment
+                        if (gap > 2 || (currentSegment.deltas.length > 0 &&
+                            Math.sign(delta) !== Math.sign(currentSegment.deltas[currentSegment.deltas.length - 1]) &&
+                            Math.abs(delta) > 10)) {
+                            if (currentSegment.deltas.length >= 3) {
+                                segments.push({...currentSegment});
+                            }
+                            currentSegment = { start: i, deltas: [], startPW: changes[i].pw - delta };
+                        }
+                        currentSegment.deltas.push(delta);
+                    }
+                    if (currentSegment.deltas.length >= 3) {
+                        segments.push(currentSegment);
+                    }
+
+                    if (segments.length === 0) continue;
+
+                    // Find the most common sweep pattern (by average delta direction/magnitude)
+                    const entries = [];
+
+                    // Set initial pulse width
+                    const initPW = segments[0].startPW;
+                    entries.push({
+                        left: 0x80 | ((initPW >> 8) & 0x0F),
+                        right: initPW & 0xFF,
+                        description: `Set PW = $${initPW.toString(16).padStart(3, '0')}`
+                    });
+
+                    // Calculate average modulation speed from the longest segment
+                    const longestSeg = segments.reduce((a, b) => a.deltas.length > b.deltas.length ? a : b);
+                    const avgDelta = Math.round(longestSeg.deltas.reduce((a, b) => a + b, 0) / longestSeg.deltas.length);
+
+                    if (avgDelta !== 0) {
+                        // Add modulation entry
+                        // PTBL modulate: left byte = speed high (signed), right = speed low
+                        const speed16 = avgDelta & 0xFFFF;
+                        entries.push({
+                            left: (speed16 >> 8) & 0xFF,
+                            right: speed16 & 0xFF,
+                            description: `Modulate PW by ${avgDelta > 0 ? '+' : ''}${avgDelta}/frame`
+                        });
+
+                        // Add loop back to modulate entry
+                        entries.push({
+                            left: 0xFF,
+                            right: entries.length - 1,  // Loop to modulate entry (0-based in display, will be adjusted)
+                            description: 'Loop to modulate'
+                        });
+                    }
+
+                    if (entries.length > 1) {
+                        pulseTables.push({
+                            voice: v,
+                            entries: entries,
+                            sweepSpeed: avgDelta,
+                            segments: segments.length,
+                            description: `Voice ${v+1} PWM: speed ${avgDelta > 0 ? '+' : ''}${avgDelta}, ${segments.length} sweep segments`
+                        });
+                        console.log(`Generated PTBL for voice ${v+1}: ${entries.length} entries, avg delta ${avgDelta}`);
+                    }
+                }
+
+                return pulseTables;
+            },
+
+            /**
+             * Build filter tables (FTBL) from detected filter changes
+             * GT2 FTBL format:
+             *   Left $00: Set filter cutoff (right = cutoff value)
+             *   Left $80+: Set filter params (left bit 4-6=type, bit 0-3=routing; right=resonance<<4)
+             *   Left $01-$7F: Modulate cutoff by signed speed
+             *   Left $FF: Jump (right = position, 0x00 = stop)
+             */
+            buildFilterTables(filterChanges) {
+                if (!filterChanges || filterChanges.length < 4) return [];
+
+                const entries = [];
+
+                // Analyze filter sweep pattern
+                const cutoffDeltas = filterChanges.map(fc => fc.cutoffDelta).filter(d => d !== 0);
+                if (cutoffDeltas.length < 3) return [];
+
+                // Set initial filter parameters
+                const first = filterChanges[0];
+                const filterType = first.mode << 4;
+                const routingBits = first.routing;
+
+                // Entry 0: Set filter params (type + routing + resonance)
+                entries.push({
+                    left: 0x80 | filterType | routingBits,
+                    right: (first.resonance << 4),
+                    description: `Set filter: type=${first.mode}, res=${first.resonance}, route=${first.routing}`
+                });
+
+                // Entry 1: Set initial cutoff
+                entries.push({
+                    left: 0x00,
+                    right: first.cutoff & 0xFF,
+                    description: `Set cutoff = $${first.cutoff.toString(16).padStart(2, '0')}`
+                });
+
+                // Entry 2: Modulate cutoff
+                const avgCutoffDelta = Math.round(cutoffDeltas.reduce((a, b) => a + b, 0) / cutoffDeltas.length);
+                if (avgCutoffDelta !== 0) {
+                    const speed = avgCutoffDelta & 0xFF;
+                    entries.push({
+                        left: speed,
+                        right: 0x00,
+                        description: `Modulate cutoff by ${avgCutoffDelta > 0 ? '+' : ''}${avgCutoffDelta}/frame`
+                    });
+
+                    // Loop back to modulate
+                    entries.push({
+                        left: 0xFF,
+                        right: entries.length - 1,
+                        description: 'Loop to modulate'
+                    });
+                }
+
+                if (entries.length <= 2) return [];
+
+                return [{
+                    entries: entries,
+                    sweepSpeed: avgCutoffDelta,
+                    description: `Filter sweep: cutoff speed ${avgCutoffDelta > 0 ? '+' : ''}${avgCutoffDelta}, type=${first.mode}, res=${first.resonance}`
+                }];
+            },
+
+            /**
+             * Build speed tables (STBL) from detected vibrato/portamento
+             * GT2 STBL format:
+             *   Left byte = speed (bit 7: hifi mode), Right byte = depth
+             *   For portamento: left:right = 16-bit speed value
+             */
+            buildSpeedTables(pitchEffects, pitchAnalysis) {
+                const speedTables = [];
+
+                for (let v = 0; v < 3; v++) {
+                    const analysis = pitchAnalysis[v];
+                    if (!analysis || analysis.type === 'none') continue;
+
+                    const effects = pitchEffects[v];
+                    if (!effects || effects.length < 3) continue;
+
+                    if (analysis.type === 'vibrato') {
+                        // Estimate vibrato speed and depth
+                        // Count direction changes to estimate speed (period)
+                        let dirChanges = 0;
+                        let lastDir = 0;
+                        for (const e of effects) {
+                            const dir = Math.sign(e.delta);
+                            if (dir !== 0 && dir !== lastDir && lastDir !== 0) dirChanges++;
+                            if (dir !== 0) lastDir = dir;
+                        }
+
+                        // Period in frames = total frames / (direction changes / 2)
+                        const totalFrames = effects[effects.length - 1].frame - effects[0].frame;
+                        const cycles = Math.max(1, dirChanges / 2);
+                        const periodFrames = totalFrames / cycles;
+
+                        // GT2 vibrato speed: lower = slower (1-127), depth: amplitude
+                        const speed = Math.max(1, Math.min(127, Math.round(256 / periodFrames)));
+                        const maxDelta = Math.max(...effects.map(e => Math.abs(e.delta)));
+                        const depth = Math.max(1, Math.min(255, Math.round(maxDelta / 4)));
+
+                        speedTables.push({
+                            voice: v,
+                            type: 'vibrato',
+                            entries: [{ left: speed, right: depth }],
+                            command: 4,  // CMD_VIBRATO
+                            commandData: 0,  // Will be set to STBL position
+                            description: `Voice ${v+1} vibrato: speed=${speed}, depth=${depth} (~${(analysis.avgDepth * 100).toFixed(0)} cents)`
+                        });
+                    } else if (analysis.type === 'portamento') {
+                        // Calculate average portamento speed (16-bit SID frequency delta per frame)
+                        const avgSpeed = Math.round(
+                            effects.reduce((sum, e) => sum + Math.abs(e.delta), 0) / effects.length
+                        );
+
+                        const speed16 = Math.min(0xFFFF, avgSpeed);
+                        speedTables.push({
+                            voice: v,
+                            type: 'portamento',
+                            entries: [{ left: (speed16 >> 8) & 0xFF, right: speed16 & 0xFF }],
+                            command: analysis.direction === 'up' ? 1 : 2,  // CMD_PORTAUP / CMD_PORTADOWN
+                            commandData: 0,
+                            description: `Voice ${v+1} porta ${analysis.direction}: speed=$${speed16.toString(16).padStart(4, '0')}`
+                        });
+                    }
+                }
+
+                return speedTables;
+            },
+
+            /**
+             * Display conversion results in the log view
+             */
+            displayConversionResults() {
+                if (!this.gt2Data) return;
+
+                const output = document.getElementById('logOutput');
+                output.innerHTML = '<div class="log-entry frame">--- GT2 Conversion Results ---</div>';
+                output.innerHTML += `<div class="log-entry">Song: ${this.gt2Data.name}</div>`;
+                output.innerHTML += `<div class="log-entry">Author: ${this.gt2Data.author}</div>`;
+                output.innerHTML += `<div class="log-entry">Tempo: ${this.gt2Data.tempo} BPM</div>`;
+                output.innerHTML += '<div class="log-entry frame">--- Instruments ---</div>';
+
+                this.gt2Data.instruments.forEach((inst, i) => {
+                    const flags = [inst.sync ? 'SYNC' : '', inst.ringMod ? 'RING' : ''].filter(Boolean).join('+');
+                    const flagStr = flags ? ` [${flags}]` : '';
+                    output.innerHTML += `<div class="log-entry">${i}: ${inst.name} - Wave=$${inst.waveform.toString(16).toUpperCase()} AD=$${inst.ad.toString(16).toUpperCase().padStart(2, '0')} SR=$${inst.sr.toString(16).toUpperCase().padStart(2, '0')}${flagStr}</div>`;
+                });
+
+                output.innerHTML += '<div class="log-entry frame">--- Patterns ---</div>';
+                output.innerHTML += `<div class="log-entry">Total patterns: ${this.gt2Data.patterns.length}</div>`;
+
+                // Show first few patterns with command info
+                this.gt2Data.patterns.slice(0, 5).forEach((pat, i) => {
+                    const noteCount = pat.data.filter(r => r.note >= 0x60 && r.note <= 0xBC).length;
+                    const cmdCount = pat.data.filter(r => r.cmd > 0).length;
+                    const arpCount = pat.data.filter(r => r.cmd === 0x08).length;
+                    let patInfo = `Pattern ${i}: ${pat.length} rows, ${noteCount} notes`;
+                    if (cmdCount > 0) {
+                        patInfo += `, ${cmdCount} cmds`;
+                        if (arpCount > 0) patInfo += ` (${arpCount} arp)`;
+                    }
+                    output.innerHTML += `<div class="log-entry">${patInfo}</div>`;
+                });
+
+                if (this.gt2Data.patterns.length > 5) {
+                    output.innerHTML += `<div class="log-entry">... and ${this.gt2Data.patterns.length - 5} more patterns</div>`;
+                }
+
+                output.innerHTML += '<div class="log-entry frame">--- Order Lists ---</div>';
+                for (let v = 0; v < 3; v++) {
+                    const order = this.gt2Data.orders[v];
+                    const displayEntries = [];
+                    let entryCount = 0;
+                    for (let i = 0; i < order.length && displayEntries.length < 12; i++) {
+                        if (order[i] >= 0xFE) break;  // LOOPSONG/ENDSONG
+                        if (order[i] >= 0xE0 && order[i] <= 0xFD) {
+                            // Transpose command
+                            const semi = order[i] - 0xF0;
+                            displayEntries.push(`T${semi >= 0 ? '+' : ''}${semi}`);
+                        } else {
+                            displayEntries.push(order[i].toString().padStart(2, '0'));
+                            entryCount++;
+                        }
+                    }
+                    const totalPatterns = order.filter(o => o < 0xE0).length;
+                    const transCount = order.filter(o => o >= 0xE0 && o <= 0xFD).length;
+                    let info = `${totalPatterns} patterns`;
+                    if (transCount > 0) info += `, ${transCount} transposed`;
+                    output.innerHTML += `<div class="log-entry">Voice ${v + 1}: [${displayEntries.join(', ')}${totalPatterns > 10 ? '...' : ''}] (${info})</div>`;
+                }
+
+                // Show pitch analysis
+                if (this.gt2Data.pitchAnalysis && this.gt2Data.pitchAnalysis.some(pa => pa && pa.type !== 'none')) {
+                    output.innerHTML += '<div class="log-entry frame">--- Pitch Effects Detected ---</div>';
+                    this.gt2Data.pitchAnalysis.forEach((pa, v) => {
+                        if (pa && pa.type !== 'none') {
+                            const color = pa.type === 'arpeggio' ? '#0ff' : pa.type === 'vibrato' ? '#88f' : '#8f8';
+                            output.innerHTML += `<div class="log-entry" style="color: ${color}">Voice ${v+1}: ${pa.description}</div>`;
+                        }
+                    });
+                }
+
+                // Helper to format table entries
+                const fmtEntry = (e) => {
+                    if (e.left === 0xFF) return `FF→${e.right.toString(16).toUpperCase().padStart(2, '0')}`;
+                    return `${e.left.toString(16).toUpperCase().padStart(2, '0')}:${e.right.toString(16).toUpperCase().padStart(2, '0')}`;
+                };
+                const fmtTable = (entries) => entries.map(fmtEntry).join(' ');
+
+                // Show generated wavetables (WTBL)
+                if (this.gt2Data.wavetables && this.gt2Data.wavetables.length > 0) {
+                    output.innerHTML += '<div class="log-entry frame">--- Wavetables (WTBL) ---</div>';
+                    this.gt2Data.wavetables.forEach((wt, i) => {
+                        const typeLabel = wt.type === 'waveform_sequence' ? '[WaveSeq]' : '[Arpeggio]';
+                        output.innerHTML += `<div class="log-entry" style="color: #0ff">${typeLabel} ${wt.description}</div>`;
+                        output.innerHTML += `<div class="log-entry" style="color: #888; font-size: 10px;">  ${fmtTable(wt.entries)}</div>`;
+                    });
+                }
+
+                // Show generated pulse tables (PTBL)
+                if (this.gt2Data.pulseTables && this.gt2Data.pulseTables.length > 0) {
+                    output.innerHTML += '<div class="log-entry frame">--- Pulse Tables (PTBL) ---</div>';
+                    this.gt2Data.pulseTables.forEach((pt) => {
+                        output.innerHTML += `<div class="log-entry" style="color: #ff8800">${pt.description}</div>`;
+                        output.innerHTML += `<div class="log-entry" style="color: #888; font-size: 10px;">  ${fmtTable(pt.entries)}</div>`;
+                    });
+                }
+
+                // Show generated filter tables (FTBL)
+                if (this.gt2Data.filterTables && this.gt2Data.filterTables.length > 0) {
+                    output.innerHTML += '<div class="log-entry frame">--- Filter Tables (FTBL) ---</div>';
+                    this.gt2Data.filterTables.forEach((ft) => {
+                        output.innerHTML += `<div class="log-entry" style="color: #88ff88">${ft.description}</div>`;
+                        output.innerHTML += `<div class="log-entry" style="color: #888; font-size: 10px;">  ${fmtTable(ft.entries)}</div>`;
+                    });
+                }
+
+                // Show generated speed tables (STBL)
+                if (this.gt2Data.speedTables && this.gt2Data.speedTables.length > 0) {
+                    output.innerHTML += '<div class="log-entry frame">--- Speed Tables (STBL) ---</div>';
+                    this.gt2Data.speedTables.forEach((st) => {
+                        const cmdName = st.type === 'vibrato' ? '4XY' : (st.command === 1 ? '1XY' : '2XY');
+                        output.innerHTML += `<div class="log-entry" style="color: #8888ff">[${cmdName}] ${st.description}</div>`;
+                        output.innerHTML += `<div class="log-entry" style="color: #888; font-size: 10px;">  ${fmtTable(st.entries)}</div>`;
+                    });
+                }
+
+                // Count effect commands in patterns
+                const cmdCounts = { 0x01: 0, 0x02: 0, 0x04: 0, 0x08: 0, 0x09: 0, 0x0A: 0 };
+                const cmdNames = { 0x01: 'Porta Up', 0x02: 'Porta Down', 0x04: 'Vibrato', 0x08: 'Wavetable', 0x09: 'Pulse', 0x0A: 'Filter' };
+                this.gt2Data.patterns.forEach(pat => {
+                    pat.data.forEach(r => { if (cmdCounts[r.cmd] !== undefined) cmdCounts[r.cmd]++; });
+                });
+                const usedCmds = Object.entries(cmdCounts).filter(([_, c]) => c > 0);
+                if (usedCmds.length > 0) {
+                    output.innerHTML += '<div class="log-entry frame">--- Pattern Commands Summary ---</div>';
+                    usedCmds.forEach(([cmd, count]) => {
+                        output.innerHTML += `<div class="log-entry" style="color: #0f0">${cmdNames[parseInt(cmd)] || `Cmd ${cmd}`}: ${count} commands</div>`;
+                    });
+                }
+
+                output.innerHTML += '<div class="log-entry frame">--- Ready ---</div>';
+                output.innerHTML += '<div class="log-entry" style="color: #0f0;">Click "Open in Tracker" to load this data into the GT2 editor</div>';
+
+                // Switch to log view to show results
+                this.switchTab('log');
+            },
+
+            /**
+             * Open converted data in the main tracker
+             */
+            openInTracker() {
+                if (!this.gt2Data) {
+                    this.updateStatus('No GT2 data available. Please convert first.', 'error');
+                    return;
+                }
+
+                // Store the GT2 data in localStorage for the tracker to pick up
+                // (localStorage is shared across tabs, unlike sessionStorage)
+                const exportData = {
+                    type: 'sid-rip',
+                    name: this.gt2Data.name,
+                    author: this.gt2Data.author,
+                    tempo: this.gt2Data.tempo,
+                    speed: this.gt2Data.speed,  // GT2 speed (frames per step)
+                    instruments: this.gt2Data.instruments,
+                    patterns: this.gt2Data.patterns,
+                    orders: this.gt2Data.orders,
+                    wavetables: this.gt2Data.wavetables || [],
+                    pulseTables: this.gt2Data.pulseTables || [],
+                    filterTables: this.gt2Data.filterTables || [],
+                    speedTables: this.gt2Data.speedTables || [],
+                    timestamp: Date.now()
+                };
+
+                localStorage.setItem('sidRipperData', JSON.stringify(exportData));
+                console.log('Stored SID Ripper data in localStorage, size:', JSON.stringify(exportData).length);
+
+                // Open the tracker with the import parameter so the import is
+                // deterministic (an already-open tracker tab also auto-imports
+                // via the storage event; the data stays in localStorage so
+                // both paths and manual "Import SID Rip" all work).
+                window.open('index.html?import=sidrip', '_blank');
+                this.updateStatus('Opened tracker with ripped song.', 'stopped');
+            }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => SIDRipper.init());
+    </script>
+</body>
+</html>

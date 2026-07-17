@@ -9,3 +9,4 @@ gt2-src/goattrk2
 
 # Generated driver binary (rebuild with `make driver`)
 exporters/gt2/build/gt2_driver.prg
+.DS_Store

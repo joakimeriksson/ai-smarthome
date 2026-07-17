@@ -99,7 +99,9 @@ GT2 Notes:
         // Ensure AudioContext is running
         if (window.audioContext) {
             console.log('AudioContext state:', window.audioContext.state);
-            if (window.audioContext.state === 'suspended') {
+            // Safari reports 'interrupted' (not 'suspended') for a context
+            // created outside a user gesture - resume on any non-running state
+            if (window.audioContext.state !== 'running') {
                 try {
                     await window.audioContext.resume();
                     console.log('AudioContext resumed');
@@ -447,8 +449,10 @@ function importSIDRipperData() {
         console.log('  Instruments:', data.instruments?.length);
         console.log('  Orders:', data.orders);
 
-        // Clear the local storage after reading
-        localStorage.removeItem('sidRipperData');
+        // Deliberately NOT removed from localStorage: the ripper may have
+        // opened a fresh tracker tab while an existing tab also auto-imported
+        // via the storage event - deleting here made the second import find
+        // nothing (empty tracker). The next rip simply overwrites the slot.
 
         // Import instruments - extend array if needed
         if (data.instruments && data.instruments.length > 0) {
@@ -469,6 +473,11 @@ function importSIDRipperData() {
             }
 
             data.instruments.forEach((inst, i) => {
+                // Index 0 is the "no change" slot: the app convention (same
+                // as .sng import) keeps instruments[0] === null, and pattern
+                // rows use 1-based instrument numbers. The ripper's entry 0
+                // is a placeholder that no row references.
+                if (i === 0) { instruments[0] = null; return; }
                 const waveform = inst.waveform || 0x41;
                 const newInst = {
                     name: inst.name || `Inst ${i}`,
@@ -564,7 +573,12 @@ function importSIDRipperData() {
         console.log('Voice state reset for new song');
 
         // Import wavetables if present
-        if (data.wavetables && data.wavetables.length > 0 && window.gt2TableManager) {
+        // Clear the demo/default tables so rip data starts from a clean slate
+        // (pointer values in the rip's patterns and instruments assume tables
+        // packed from position 1)
+        for (let t = 0; t < 4; t++) gt2TableManager.clearTable(t);
+
+        if (data.wavetables && data.wavetables.length > 0 && gt2TableManager) {
             console.log(`Importing ${data.wavetables.length} wavetables...`);
             const TABLE_WAVE = 0;  // WTBL
 
@@ -581,7 +595,13 @@ function importSIDRipperData() {
                 wt.entries.forEach((entry, entryIdx) => {
                     const pos = startPos + entryIdx;
                     if (pos < 255) {
-                        window.gt2TableManager.setEntry(TABLE_WAVE, pos, entry.left, entry.right);
+                        // Relocate jump targets: the ripper stores them as
+                        // 0-based indices WITHIN the wavetable; GT2 jumps use
+                        // absolute 1-based table positions (0 = stop)
+                        const right = entry.left === 0xFF
+                            ? startPos + (entry.right | 0) + 1
+                            : entry.right;
+                        gt2TableManager.setEntry(TABLE_WAVE, pos, entry.left, right);
                     }
                 });
 
@@ -591,7 +611,7 @@ function importSIDRipperData() {
         }
 
         // Import pulse tables if present
-        if (data.pulseTables && data.pulseTables.length > 0 && window.gt2TableManager) {
+        if (data.pulseTables && data.pulseTables.length > 0 && gt2TableManager) {
             console.log(`Importing ${data.pulseTables.length} pulse tables...`);
             const TABLE_PULSE = 1;  // PTBL
             let nextPos = 0;
@@ -601,7 +621,8 @@ function importSIDRipperData() {
                 pt.entries.forEach((entry, entryIdx) => {
                     const pos = nextPos + entryIdx;
                     if (pos < 255) {
-                        window.gt2TableManager.setEntry(TABLE_PULSE, pos, entry.left, entry.right);
+                        const right = entry.left === 0xFF ? nextPos + (entry.right | 0) + 1 : entry.right;
+                        gt2TableManager.setEntry(TABLE_PULSE, pos, entry.left, right);
                     }
                 });
                 nextPos += pt.entries.length;
@@ -610,7 +631,7 @@ function importSIDRipperData() {
         }
 
         // Import filter tables if present
-        if (data.filterTables && data.filterTables.length > 0 && window.gt2TableManager) {
+        if (data.filterTables && data.filterTables.length > 0 && gt2TableManager) {
             console.log(`Importing ${data.filterTables.length} filter tables...`);
             const TABLE_FILTER = 2;  // FTBL
             let nextPos = 0;
@@ -620,7 +641,8 @@ function importSIDRipperData() {
                 ft.entries.forEach((entry, entryIdx) => {
                     const pos = nextPos + entryIdx;
                     if (pos < 255) {
-                        window.gt2TableManager.setEntry(TABLE_FILTER, pos, entry.left, entry.right);
+                        const right = entry.left === 0xFF ? nextPos + (entry.right | 0) + 1 : entry.right;
+                        gt2TableManager.setEntry(TABLE_FILTER, pos, entry.left, right);
                     }
                 });
                 nextPos += ft.entries.length;
@@ -629,7 +651,7 @@ function importSIDRipperData() {
         }
 
         // Import speed tables if present
-        if (data.speedTables && data.speedTables.length > 0 && window.gt2TableManager) {
+        if (data.speedTables && data.speedTables.length > 0 && gt2TableManager) {
             console.log(`Importing ${data.speedTables.length} speed tables...`);
             const TABLE_SPEED = 3;  // STBL
             let nextPos = 0;
@@ -639,7 +661,7 @@ function importSIDRipperData() {
                 st.entries.forEach((entry, entryIdx) => {
                     const pos = nextPos + entryIdx;
                     if (pos < 255) {
-                        window.gt2TableManager.setEntry(TABLE_SPEED, pos, entry.left, entry.right);
+                        gt2TableManager.setEntry(TABLE_SPEED, pos, entry.left, entry.right);
                     }
                 });
                 nextPos += st.entries.length;

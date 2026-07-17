@@ -1075,6 +1075,7 @@
 
                 // Build instrument map from unique AD/SR/Wave combos
                 const instrumentMap = new Map();
+                const instPwSamples = {};  // instId -> PW values at note-on
                 let instCounter = 1;
 
                 // Process each frame
@@ -1244,6 +1245,9 @@
                             instrumentMap.set(instKey, instCounter++);
                         }
                         const instId = instrumentMap.get(instKey);
+                        if (noteEvent && state.pw > 0) {
+                            (instPwSamples[instId] = instPwSamples[instId] || []).push(state.pw);
+                        }
 
                         // Detect waveform - show current waveform or change
                         let cmd = '..';
@@ -1428,6 +1432,7 @@
                     pitchAnalysis,
                     waveformChanges,  // For potential wavetable generation
                     noteOnsetSequences,  // Full onset sequences per voice (ctrl+freq per frame)
+                    instPwSamples,       // instId -> pulse width samples at note-on
                     pwChanges,        // Pulse width deltas per voice
                     filterChanges     // Filter state changes per frame
                 };
@@ -2011,9 +2016,28 @@
                     }
 
                     // Step 4: Build pulse tables from PW sweep data
-                    const pulseTables = this.buildPulseTables(data.pwChanges || [[], [], []]);
+                    const sweepPulseTables = this.buildPulseTables(data.pwChanges || [[], [], []]);
+                    // Per-instrument STATIC pulse width: each instrument sets
+                    // the PW its notes were captured with (median). Without
+                    // this every voice shared one sweep table and e.g. a fat
+                    // near-square bass played as a thin narrow pulse.
+                    const instPulseTables = [];
+                    Object.entries(data.instPwSamples || {}).forEach(([id, samples]) => {
+                        const s = [...samples].sort((a, b) => a - b);
+                        const pw = s[Math.floor(s.length / 2)] & 0xFFF;
+                        if (!pw) return;
+                        instPulseTables.push({
+                            instId: parseInt(id, 10),
+                            entries: [
+                                { left: 0x80 | ((pw >> 8) & 0x0F), right: pw & 0xFF },
+                                { left: 0xFF, right: 0 }
+                            ],
+                            description: `Inst ${id} PW $${pw.toString(16)}`
+                        });
+                    });
+                    const pulseTables = [...sweepPulseTables, ...instPulseTables];
                     if (pulseTables.length > 0) {
-                        console.log(`Generated ${pulseTables.length} pulse tables`);
+                        console.log(`Generated ${sweepPulseTables.length} sweep + ${instPulseTables.length} instrument pulse tables`);
                     }
 
                     // Step 5: Build filter tables from filter change data
@@ -2048,6 +2072,18 @@
                         gt2Instruments, quantizedData.rows,
                         allWavetables, pulseTables, filterTables, speedTables
                     );
+
+                    // Step 7b2: per-instrument pulse pointers (override the
+                    // per-voice sweep assignment - instrument PW is exact)
+                    {
+                        let pPos = 0;
+                        const ptrOf = new Map();
+                        pulseTables.forEach(pt => { ptrOf.set(pt, pPos + 1); pPos += pt.entries.length; });
+                        instPulseTables.forEach(pt => {
+                            const inst = gt2Instruments[pt.instId];
+                            if (inst) inst.tables.pulse = ptrOf.get(pt);
+                        });
+                    }
 
                     // Step 7c: per-note onset wavetable overrides (8XY) for
                     // notes whose onset differs from the instrument default
@@ -3262,8 +3298,9 @@
                     };
                 });
 
-                // Pulse table effects (cmd 9)
-                pulseTables.forEach((pt, idx) => {
+                // Pulse table effects: handled via per-instrument pulse
+                // pointers now (see instPulseTables); no row commands needed
+                pulseTables.filter(pt => pt.voice !== undefined).forEach((pt, idx) => {
                     voiceEffects[pt.voice].pulse = {
                         ptblPos: ptblStartPos + idx * pt.entries.length + 1  // 1-based
                     };
@@ -3288,10 +3325,6 @@
                             if (effects.speed) {
                                 voice.cmd = effects.speed.command;
                                 voice.cmdData = effects.speed.stblPos;
-                                cmdsAdded++;
-                            } else if (effects.pulse) {
-                                voice.cmd = 0x09;  // Set pulsetable pointer
-                                voice.cmdData = effects.pulse.ptblPos;
                                 cmdsAdded++;
                             } else if (effects.filter) {
                                 voice.cmd = 0x0A;  // Set filtertable pointer

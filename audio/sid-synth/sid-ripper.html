@@ -2848,13 +2848,22 @@
                         ? patternData.voiceOrderEntries[v]
                         : patternData.voicePatterns[v].map(p => ({ pattern: p, transpose: 0 }));
 
-                    entries.forEach(entry => {
-                        if (entry.transpose && entry.transpose !== 0) {
-                            // GT2 TRANSPOSE command: 0xE0-0xFD
-                            // entry - 0xF0 gives signed semitones (-16 to +13)
-                            // So value = 0xF0 + semitones
-                            const transCmd = 0xF0 + entry.transpose;
-                            orders[v].push(transCmd);
+                    // GT2 transpose PERSISTS until changed (gplay.c cptr->trans),
+                    // so emit a transpose byte whenever the value CHANGES -
+                    // including an explicit $F0 reset back to 0. Emitting it
+                    // only for non-zero entries left every pattern after a T+3
+                    // section playing 3 semitones sharp.
+                    const anyTranspose = entries.some(e => (e.transpose || 0) !== 0);
+                    let currentTranspose = 0;
+                    entries.forEach((entry, idx) => {
+                        const t = entry.transpose || 0;
+                        // Transpose persists across the LOOPSONG wrap too, so
+                        // when the song uses transposes at all, position 0
+                        // always gets an explicit byte
+                        if (t !== currentTranspose || (idx === 0 && anyTranspose)) {
+                            // GT2 TRANSPOSE command: 0xE0-0xFD, value = 0xF0 + semitones
+                            orders[v].push(0xF0 + t);
+                            currentTranspose = t;
                         }
                         orders[v].push(entry.pattern);
                     });

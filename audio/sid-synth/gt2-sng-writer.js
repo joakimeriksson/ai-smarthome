@@ -57,8 +57,14 @@ function patternRows(pattern) {
     const len = Math.min(pattern.length, MAX_PATTERN_ROWS);
     for (let r = 0; r < len; r++) {
         const row = pattern.data[r] || { note: 0, instrument: 0, command: 0, cmdData: 0 };
-        if ((row.note & 0xFF) === 0xFF) break; // existing end marker
-        rows.push([row.note & 0xFF, row.instrument & 0xFF, row.command & 0xFF, row.cmdData & 0xFF]);
+        let note = row.note & 0xFF;
+        if (note === 0xFF) break; // existing end marker
+        // The tracker uses 0 for empty rows (sustain); real GT2 stores REST
+        // ($BD) - gplay.c treats note 0 as a new-note gate-off with
+        // hard-restart ADSR, chopping the previous note. Same audible
+        // behavior in our engine, correct behavior in real GT2.
+        if (note === 0) note = 0xBD;
+        rows.push([note, row.instrument & 0xFF, row.command & 0xFF, row.cmdData & 0xFF]);
     }
     rows.push([0xFF, 0, 0, 0]);
     return rows;

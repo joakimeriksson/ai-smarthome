@@ -50,6 +50,9 @@ const subtunes = [
     [[5], [SILENT], [SILENT]],                 // 4: keyoff/keyon/rest
     [[0xF3, 0, 0xD1, 0], [SILENT], [SILENT]],  // 5: transpose +3, repeat 1 extra
     [[7], [SILENT], [8]],                      // 6: ring mod carrier (v0) + silent gate-less modulator (v2)
+    [[9, 0xF3, 9, 0xF0, 9], [SILENT], [SILENT]], // 7: MID-LIST transpose (+3 then back to 0) - advance path, not start init
+    [[10], [SILENT], [SILENT]],                // 8: global tempo command F03 on row 0
+    [[11], [SILENT], [SILENT]],                // 9: cmd 8 wavetable overrides + delay + absolute-note entries
 ];
 put(subtunes.length);
 for (const st of subtunes) {
@@ -89,8 +92,11 @@ for (const i of instruments) {
 // ---------------------------------------------------------------------------
 // Tables: 4 x (size, left[size], right[size]) — WTBL, PTBL, FTBL, STBL
 // ---------------------------------------------------------------------------
-const WTBL_L = [0x11, 0xFF, 0x21, 0xFF, 0x15, 0xFF, 0x40, 0xFF]; // 1: tri+gate / 3: saw+gate / 5: tri+ring+gate / 7: pulse NO gate (silent modulator)
-const WTBL_R = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+// 1: tri+gate / 3: saw+gate / 5: tri+ring+gate / 7: pulse NO gate (silent mod)
+// 9: pulse+gate, delay 3, gate-off, self-loop (rip-style onset with delay)
+// 13: absolute-note entry (noise at fixed pitch 60), self-loop
+const WTBL_L = [0x11, 0xFF, 0x21, 0xFF, 0x15, 0xFF, 0x40, 0xFF, 0x41, 0x03, 0x40, 0xFF, 0x81, 0xFF];
+const WTBL_R = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0x0B, 0x80 | 60, 0x0D];
 const STBL_L = [0x02, 0x09, 0x00, 0x00]; // 1: vib cmp=2  2: funktempo 9   3: porta $0040  4: toneporta $0020
 const STBL_R = [0x20, 0x06, 0x40, 0x20]; //    depth $20     right 6          lo $40          lo $20
 const tables = [
@@ -163,6 +169,23 @@ const patterns = [
         0: [N(12), 4, 0, 0], 2: [N(19), 0, 0, 0], 4: [N(14), 0, 0, 0],
         6: [N(21), 0, 0, 0], 8: [N(16), 0, 0, 0], 10: [N(23), 0, 0, 0],
         12: [N(12), 0, 0, 0], 14: [N(24), 0, 0, 0],
+    }),
+    // 9: plain melody for mid-list transpose test
+    pattern({
+        0: [N(36), 1, 0, 0], 4: [N(40), 0, 0, 0],
+        8: [N(43), 0, 0, 0], 12: [N(45), 0, 0, 0], 14: [KEYOFF, 0, 0, 0],
+    }),
+    // 10: global tempo command F03 on row 0 (rip-style tempo embedding)
+    pattern({
+        0: [N(36), 1, 0x0F, 0x03], 2: [N(40), 0, 0, 0], 4: [N(43), 0, 0, 0],
+        6: [N(36), 0, 0, 0], 8: [N(40), 0, 0, 0], 10: [N(43), 0, 0, 0],
+        12: [N(48), 0, 0, 0], 14: [KEYOFF, 0, 0, 0],
+    }),
+    // 11: cmd 8 wavetable pointer overrides: delay-onset table (ptr 9) and
+    // absolute-note table (ptr 13)
+    pattern({
+        0: [N(36), 1, 0x08, 9], 4: [N(40), 0, 0x08, 9],
+        8: [N(43), 0, 0x08, 13], 12: [N(36), 0, 0x08, 9], 14: [KEYOFF, 0, 0, 0],
     }),
 ];
 put(patterns.length);

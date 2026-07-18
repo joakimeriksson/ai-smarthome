@@ -124,8 +124,11 @@ function packTables(tableManager) {
     for (let i = 0; i < 255; i++) {
         let left = tableManager.ltable[WAVE][i] || 0;
         const right = tableManager.rtable[WAVE][i] || 0;
-        // Add +$10 offset for waveform values (not 0 and not $FF loop marker)
-        if (left > 0 && left < 0xFF) {
+        // Add +$10 offset for waveform values only. Delays ($01-$0F) stay
+        // raw - the player treats 0-$0F as delay counters and un-biases
+        // everything else with sbc #$10 (biasing a delay-3 made it wave $13,
+        // written to the SID as ctrl $03). $FF loop marker also stays raw.
+        if (left >= 0x10 && left < 0xFF) {
             left += 0x10;
         }
         result.wavetbl[i] = left;

@@ -2102,6 +2102,14 @@
                     console.log('Built order lists');
 
                     // Store the GT2 data
+                    // GT2 stores empty rows as REST ($BD, sustain). Note 0
+                    // hits gplay.c's `newnote <= LASTNOTE` branch and GATES
+                    // OFF with hard-restart ADSR every empty row - real GT2
+                    // players would chop every note short.
+                    patterns.patterns.forEach(p => p.data.forEach(r => {
+                        if (!r.note) r.note = 0xBD;
+                    }));
+
                     // Embed the detected tempo as an FXY command on the first
                     // row of each voice's first pattern (.sng files have no
                     // tempo field - GT2 songs carry tempo in the pattern data)

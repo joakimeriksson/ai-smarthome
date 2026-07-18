@@ -2584,8 +2584,11 @@ class SidProcessor extends AudioWorkletProcessor {
   processOrderlistCommands(orderList, startPos, voice) {
     const MAX_PATTERNS = 208;
     let pos = startPos;
-    let transpose = 0;
     const vs = (voice !== undefined) ? this.voiceState[voice] : null;
+    // gplay.c: cptr->trans PERSISTS across patterns - it only changes when
+    // the sequencer passes a transpose entry (line 975). Inherit the
+    // voice's current transpose instead of resetting to 0.
+    let transpose = vs ? (vs.transpose || 0) : 0;
 
     while (pos < orderList.length) {
       const entry = orderList[pos];
@@ -3999,6 +4002,10 @@ class SidProcessor extends AudioWorkletProcessor {
     const orderList = this.orderLists[voice];
     const result = this.processOrderlistCommands(orderList, this.orderPositions[voice], voice);
     const patternIndex = result.patternIndex;
+
+    // Apply orderlist transpose (gplay.c line 975 sets cptr->trans during
+    // sequencer advance; without this only the song-start transpose worked)
+    vs.transpose = result.transpose;
 
     if (patternIndex >= this.allPatterns.length || patternIndex === 0xFF) return;
     const pattern = this.allPatterns[patternIndex];

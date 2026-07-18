@@ -43,7 +43,7 @@ fi
 # corpus: song-file:subtunes
 CORPUS=(
   "sids/dojo.sng:0 1 2 3"
-  "tests/songs/features.sng:0 1 2 3 4 5 6"
+  "tests/songs/features.sng:0 1 2 3 4 5 6 7 8 9"
 )
 
 pass=0; fail=0; failed=()

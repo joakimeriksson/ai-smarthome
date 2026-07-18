@@ -572,6 +572,17 @@ function importSIDRipperData() {
         resetVoiceState();
         console.log('Voice state reset for new song');
 
+        // Show name/author in the song info bar (the .sng import path does
+        // this via gt2-importer's updateSongInfo; rips need it too)
+        if (window.gt2PatternEditor && window.gt2PatternEditor.updateSongInfo) {
+            const patternCount = data.patterns.length;
+            window.gt2PatternEditor.updateSongInfo(
+                gt2PatternManager.song.title,
+                gt2PatternManager.song.author,
+                `| Patterns: ${patternCount} | Speed: ${data.speed || 6}`
+            );
+        }
+
         // Import wavetables if present
         // Clear the demo/default tables so rip data starts from a clean slate
         // (pointer values in the rip's patterns and instruments assume tables

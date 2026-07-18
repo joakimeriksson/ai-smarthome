@@ -999,8 +999,8 @@
             exportLog() {
                 const data = JSON.stringify({
                     sidFile: {
-                        name: this.sidFile.name,
-                        author: this.sidFile.author,
+                        name: (this.sidFile.name || '').replace(/\0[^]*$/, '').trim(),
+                        author: (this.sidFile.author || '').replace(/\0[^]*$/, '').trim(),
                         loadAddr: this.sidFile.load_addr,
                         initAddr: this.sidFile.init_addr,
                         playAddr: this.sidFile.play_addr
@@ -2121,8 +2121,8 @@
                     }
 
                     this.gt2Data = {
-                        name: this.sidFile ? this.sidFile.name : 'Ripped Song',
-                        author: this.sidFile ? this.sidFile.author : 'SID Ripper',
+                        name: (this.sidFile?.name || 'Ripped Song').replace(/\0[^]*$/, '').trim(),
+                        author: (this.sidFile?.author || 'SID Ripper').replace(/\0[^]*$/, '').trim(),
                         instruments: gt2Instruments,
                         patterns: patterns.patterns,
                         orders: orders,

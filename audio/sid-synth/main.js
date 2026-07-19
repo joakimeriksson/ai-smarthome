@@ -484,8 +484,10 @@ function importSIDRipperData() {
                     waveform: waveform,
                     firstWave: inst.firstWave || waveform,  // Critical for worklet sound
                     gateTimer: inst.gateTimer || 0x02,
-                    ad: inst.ad || 0x0A,
-                    sr: inst.sr || 0xA0,
+                    // Explicit undefined checks: $00 is a VALID value
+                    // (instant attack / zero sustain) - `||` corrupted it
+                    ad: inst.ad !== undefined ? (inst.ad & 0xFF) : 0x0A,
+                    sr: inst.sr !== undefined ? (inst.sr & 0xFF) : 0xA0,
                     pulseWidth: inst.pulseWidth || 0x0800,
                     vibratoDelay: inst.vibratoDelay || 0,
                     vibParam: inst.vibParam || 0,

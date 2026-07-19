@@ -2430,6 +2430,46 @@
                         if (added) console.log(`Added ${added} per-note PWM bucket commands (9XY)`);
                     }
 
+                    // Step 7c3: dynamic ADSR row commands. Galway-style
+                    // players rewrite AD/SR during held notes (raising
+                    // sustain re-pumps the SID envelope - without this,
+                    // long tie phrases fade away). Emit 5XY/6XY commands on
+                    // free rows where the registers change mid-note.
+                    {
+                        let added = 0;
+                        for (let v = 0; v < 3; v++) {
+                            let curAd = -1, curSr = -1, gateOn = false;
+                            let sinceNote = 1000;
+                            for (let f = 0; f < data.frames.length && added < 300; f++) {
+                                const vf = data.frames[f].voices[v];
+                                sinceNote = vf.noteEvent ? 0 : sinceNote + 1;
+                                if (!vf.gateOn) { gateOn = false; continue; }
+                                if (!gateOn) { gateOn = true; curAd = vf.ad; curSr = vf.sr; continue; }
+                                const adChanged = vf.ad !== curAd;
+                                const srChanged = vf.sr !== curSr;
+                                curAd = vf.ad; curSr = vf.sr;
+                                // Note-boundary changes are instrument changes;
+                                // hard-restart writes ($0F/$00) are the player's own
+                                if (sinceNote < 3) continue;
+                                if ((vf.ad === 0x0F && vf.sr === 0x00) || (vf.ad === 0 && vf.sr === 0)) continue;
+                                if (!adChanged && !srChanged) continue;
+                                const r0 = Math.round(f / quantizedData.framesPerRow);
+                                for (const cand of [r0, r0 + 1]) {
+                                    const row = quantizedData.rows[cand];
+                                    if (!row) continue;
+                                    const rv = row.voices[v];
+                                    if (rv.cmd !== 0 || rv.note !== 0) continue;
+                                    // SR wins if both changed (envelope level)
+                                    rv.cmd = srChanged ? 0x06 : 0x05;
+                                    rv.cmdData = srChanged ? vf.sr : vf.ad;
+                                    added++;
+                                    break;
+                                }
+                            }
+                        }
+                        if (added) console.log(`Added ${added} dynamic ADSR commands (5XY/6XY)`);
+                    }
+
                     // Step 8: Detect repeating patterns (with transpose detection)
                     const patterns = this.detectPatterns(quantizedData.rows);
                     console.log('Detected', patterns.patterns.length, 'patterns');

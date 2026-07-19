@@ -2301,8 +2301,10 @@
                         const inst = gt2Instruments[parseInt(id, 10)];
                         if (!inst || (inst.tables && inst.tables.speed)) return;
                         let deltas = [], flips = 0, spanFrames = 0, firstMove = -1;
+                        let centsAmp = 0;
                         refs.slice(0, 10).forEach(ref => {
                             let prevF = 0, prevD = 0;
+                            let winMin = Infinity, winMax = -Infinity, winBase = 0;
                             for (let k = 1; k < 120; k++) {
                                 const fr = data.frames[ref.f + k];
                                 if (!fr) break;
@@ -2321,17 +2323,42 @@
                                     }
                                     spanFrames++;
                                 }
+                                if (vf.freq > 0) {
+                                    if (!winBase) winBase = vf.freq;
+                                    const c = 1200 * Math.log2(vf.freq / winBase);
+                                    if (c < winMin) winMin = c;
+                                    if (c > winMax) winMax = c;
+                                }
                                 prevF = vf.freq;
+                            }
+                            if (winMax > winMin && isFinite(winMin)) {
+                                centsAmp = Math.max(centsAmp, (winMax - winMin) / 2);
                             }
                         });
                         if (deltas.length < 12 || flips < 2) return;   // no periodic motion
                         deltas.sort((a, b) => a - b);
-                        const speed = Math.max(1, Math.min(127, deltas[Math.floor(deltas.length / 2)]));
                         const halfPeriod = Math.max(2, Math.round(deltas.length / (flips + 1)));
                         const cmp = Math.max(2, Math.min(0x7F, halfPeriod * 2));
+                        // Depth in cents (half the peak-to-peak swing).
+                        // Vibrato depth scales with pitch, so fit GT2 HIFI
+                        // vibrato (cmp bit 7: per-frame step = the note's own
+                        // semitone step >> shift) when the swing is deep -
+                        // a fixed SID-unit speed would be a semitone deep on
+                        // a bass note and inaudible an octave up.
+                        const depthCents = centsAmp;
+                        let entry, desc;
+                        if (depthCents >= 25) {
+                            const shift = Math.max(0, Math.min(7, Math.round(Math.log2(Math.max(1, halfPeriod * 100 / depthCents)))));
+                            entry = { left: 0x80 | cmp, right: shift };
+                            desc = `Inst ${id} hifi vibrato cmp=${cmp} shift=${shift} (~${Math.round(depthCents)}c)`;
+                        } else {
+                            const speed = Math.max(1, Math.min(127, deltas[Math.floor(deltas.length / 2)]));
+                            entry = { left: cmp, right: speed };
+                            desc = `Inst ${id} vibrato cmp=${cmp} speed=${speed}`;
+                        }
                         speedTables.push({
-                            entries: [{ left: cmp, right: speed }],
-                            description: `Inst ${id} vibrato cmp=${cmp} speed=${speed}`,
+                            entries: [entry],
+                            description: desc,
                             instVibrato: parseInt(id, 10)
                         });
                         inst.vibratoDelay = Math.max(2, Math.min(255, firstMove > 0 ? firstMove : 8));

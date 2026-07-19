@@ -22,4 +22,8 @@ driver:
 refdump:
 	$(MAKE) -C tools/gt2-refdump
 
-.PHONY: verify golden worklet driver refdump
+.PHONY: verify golden worklet driver refdump serve
+
+# Dev server: no-cache static serving + HVSC download proxy (tools/serve.py)
+serve:
+	python3 tools/serve.py 8471

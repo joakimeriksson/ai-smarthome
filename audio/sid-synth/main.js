@@ -610,7 +610,7 @@ function importSIDRipperData() {
                         // 0-based indices WITHIN the wavetable; GT2 jumps use
                         // absolute 1-based table positions (0 = stop)
                         const right = entry.left === 0xFF
-                            ? startPos + (entry.right | 0) + 1
+                            ? (entry.right === 0xFF ? 0 : startPos + (entry.right | 0) + 1)
                             : entry.right;
                         gt2TableManager.setEntry(TABLE_WAVE, pos, entry.left, right);
                     }
@@ -632,7 +632,7 @@ function importSIDRipperData() {
                 pt.entries.forEach((entry, entryIdx) => {
                     const pos = nextPos + entryIdx;
                     if (pos < 255) {
-                        const right = entry.left === 0xFF ? nextPos + (entry.right | 0) + 1 : entry.right;
+                        const right = entry.left === 0xFF ? (entry.right === 0xFF ? 0 : nextPos + (entry.right | 0) + 1) : entry.right;
                         gt2TableManager.setEntry(TABLE_PULSE, pos, entry.left, right);
                     }
                 });
@@ -652,7 +652,7 @@ function importSIDRipperData() {
                 ft.entries.forEach((entry, entryIdx) => {
                     const pos = nextPos + entryIdx;
                     if (pos < 255) {
-                        const right = entry.left === 0xFF ? nextPos + (entry.right | 0) + 1 : entry.right;
+                        const right = entry.left === 0xFF ? (entry.right === 0xFF ? 0 : nextPos + (entry.right | 0) + 1) : entry.right;
                         gt2TableManager.setEntry(TABLE_FILTER, pos, entry.left, right);
                     }
                 });

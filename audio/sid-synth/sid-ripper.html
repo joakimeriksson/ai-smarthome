@@ -380,6 +380,14 @@
             <button id="loadExampleBtn">Load Example (Commando)</button>
         </div>
 
+        <div class="control-section" style="min-width: 340px;">
+            <h3>HVSC (High Voltage SID Collection)</h3>
+            <input type="text" id="hvscSearch" placeholder="Search 50,000+ tunes (e.g. hubbard monty)"
+                   style="width: 100%; padding: 6px; background: #1a1a2e; color: #eee; border: 1px solid #444; border-radius: 4px; font-family: inherit;">
+            <div id="hvscStatus" style="color: #888; font-size: 12px; margin: 4px 0;">Type to load the index and search</div>
+            <div id="hvscResults" style="max-height: 180px; overflow-y: auto; font-size: 12px;"></div>
+        </div>
+
         <div class="control-section">
             <h3>Playback</h3>
             <button id="playBtn" disabled>Play</button>
@@ -568,6 +576,7 @@
             setupEventListeners() {
                 document.getElementById('sidFileInput').addEventListener('change', (e) => this.loadFile(e.target.files[0]));
                 document.getElementById('loadExampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('hvscSearch').addEventListener('input', () => this.hvscSearch());
                 document.getElementById('playBtn').addEventListener('click', () => this.play());
                 document.getElementById('stopBtn').addEventListener('click', () => this.stop());
                 document.getElementById('subsongSelect').addEventListener('change', (e) => this.changeSubsong(parseInt(e.target.value)));
@@ -637,6 +646,71 @@
                 } catch (error) {
                     console.error('Failed to load example:', error);
                     this.updateStatus('Error: ' + error.message);
+                }
+            },
+
+            // --- HVSC browser: index via /hvsc/ proxy (tools/serve.py) ---
+            hvscIndex: null,
+            hvscLoading: false,
+
+            async hvscEnsureIndex() {
+                if (this.hvscIndex || this.hvscLoading) return;
+                this.hvscLoading = true;
+                const status = document.getElementById('hvscStatus');
+                status.textContent = 'Loading HVSC index...';
+                try {
+                    const txt = await (await fetch('/hvsc/DOCUMENTS/Songlengths.md5')).text();
+                    const paths = [];
+                    for (const line of txt.split('\n')) {
+                        if (line.startsWith('; /')) paths.push(line.slice(2).trim());
+                    }
+                    this.hvscIndex = paths;
+                    status.textContent = paths.length + ' tunes indexed';
+                } catch (e) {
+                    status.textContent = 'Index failed: ' + e.message + ' (is tools/serve.py running?)';
+                }
+                this.hvscLoading = false;
+            },
+
+            async hvscSearch() {
+                await this.hvscEnsureIndex();
+                if (!this.hvscIndex) return;
+                const q = document.getElementById('hvscSearch').value.trim().toLowerCase();
+                const results = document.getElementById('hvscResults');
+                results.innerHTML = '';
+                if (q.length < 2) return;
+                const terms = q.split(/\s+/);
+                const hits = [];
+                for (const path of this.hvscIndex) {
+                    const lp = path.toLowerCase();
+                    if (terms.every(t => lp.includes(t))) {
+                        hits.push(path);
+                        if (hits.length >= 60) break;
+                    }
+                }
+                document.getElementById('hvscStatus').textContent = hits.length + ' matches' + (hits.length >= 60 ? ' (showing first 60)' : '');
+                hits.forEach(path => {
+                    const div = document.createElement('div');
+                    div.textContent = path.replace('/MUSICIANS/', '').replace('.sid', '');
+                    div.style.cssText = 'padding: 3px 6px; cursor: pointer; border-bottom: 1px solid #333; color: #0ff;';
+                    div.addEventListener('mouseenter', () => div.style.background = '#252560');
+                    div.addEventListener('mouseleave', () => div.style.background = '');
+                    div.addEventListener('click', () => this.hvscLoad(path));
+                    results.appendChild(div);
+                });
+            },
+
+            async hvscLoad(path) {
+                const status = document.getElementById('hvscStatus');
+                status.textContent = 'Downloading ' + path + '...';
+                try {
+                    const resp = await fetch('/hvsc' + path);
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const data = new Uint8Array(await resp.arrayBuffer());
+                    this.loadSIDData(data);
+                    status.textContent = 'Loaded ' + path.split('/').pop() + ' - press Capture!';
+                } catch (e) {
+                    status.textContent = 'Download failed: ' + e.message;
                 }
             },
 
@@ -1076,6 +1150,7 @@
                 // Build instrument map from unique AD/SR/Wave combos
                 const instrumentMap = new Map();
                 const instPwSamples = {};  // instId -> PW values at note-on
+                const instNoteRefs = {};   // instId -> [{v, f}] note events (for PW trajectories)
                 let instCounter = 1;
 
                 // Process each frame
@@ -1247,6 +1322,7 @@
                         const instId = instrumentMap.get(instKey);
                         if (noteEvent && state.pw > 0) {
                             (instPwSamples[instId] = instPwSamples[instId] || []).push(state.pw);
+                            (instNoteRefs[instId] = instNoteRefs[instId] || []).push({ v: v, f: f });
                         }
 
                         // Detect waveform - show current waveform or change
@@ -1433,6 +1509,7 @@
                     waveformChanges,  // For potential wavetable generation
                     noteOnsetSequences,  // Full onset sequences per voice (ctrl+freq per frame)
                     instPwSamples,       // instId -> pulse width samples at note-on
+                    instNoteRefs,        // instId -> note event positions
                     pwChanges,        // Pulse width deltas per voice
                     filterChanges     // Filter state changes per frame
                 };
@@ -2026,14 +2103,97 @@
                         const s = [...samples].sort((a, b) => a - b);
                         const pw = s[Math.floor(s.length / 2)] & 0xFFF;
                         if (!pw) return;
+
+                        // Reconstruct the average PW TRAJECTORY over this
+                        // instrument's notes (aligned at note-on) so PWM
+                        // sweeps survive - a static median plays a moving,
+                        // phasing pulse as a lifeless constant.
+                        // Use the LONGEST note's trajectory - averaging
+                        // across notes with different sweep phases flattens
+                        // the sweep into mush
+                        const refs = (data.instNoteRefs || {})[id] || [];
+                        const MAXLEN = 64;
+                        let traj = [];
+                        refs.slice(0, 24).forEach(ref => {
+                            const t = [];
+                            for (let k = 0; k < MAXLEN; k++) {
+                                const fr = data.frames[ref.f + k];
+                                if (!fr) break;
+                                const vf = fr.voices[ref.v];
+                                if (k > 0 && vf.noteEvent) break;   // next note
+                                if (vf.pw > 0) t.push(vf.pw);
+                            }
+                            if (t.length > traj.length) traj = t;
+                        });
+
+                        const entries = [{ left: 0x80 | ((pw >> 8) & 0x0F), right: pw & 0xFF }];
+                        let moving = false;
+                        if (traj.length >= 8) {
+                            const span = Math.max(...traj) - Math.min(...traj);
+                            if (span >= 32) {
+                                moving = true;
+                                // Piecewise-linear fit: one modulate entry
+                                // (left = frames, right = signed speed/frame)
+                                // per window
+                                const WINDOW = 8;
+                                let ups = 0, downs = 0;
+                                for (let i = 0; i + 1 < traj.length && entries.length < 8; i += WINDOW) {
+                                    const j = Math.min(i + WINDOW, traj.length - 1);
+                                    const slope = Math.max(-128, Math.min(127, Math.round((traj[j] - traj[i]) / (j - i))));
+                                    if (slope > 0) ups++; else if (slope < 0) downs++;
+                                    entries.push({ left: (j - i) & 0x7F, right: slope & 0xFF });
+                                }
+                                // Oscillating sweep (both directions seen):
+                                // loop back to the first modulate entry so
+                                // the PWM keeps moving - GT2 restarts the
+                                // pointer each note but Hubbard-style PWM
+                                // runs continuously. One-directional sweeps
+                                // must STOP or they'd run away.
+                                if (ups > 0 && downs > 0) {
+                                    entries.push({ left: 0xFF, right: 1 }); // loop to entry idx 1 (first modulate)
+                                }
+                            }
+                        }
+                        // right 0xFF = STOP sentinel (relocated to GT2 stop on import)
+                        if (entries[entries.length - 1].left !== 0xFF) {
+                            entries.push({ left: 0xFF, right: 0xFF });
+                        }
                         instPulseTables.push({
                             instId: parseInt(id, 10),
-                            entries: [
-                                { left: 0x80 | ((pw >> 8) & 0x0F), right: pw & 0xFF },
-                                { left: 0xFF, right: 0 }
-                            ],
-                            description: `Inst ${id} PW $${pw.toString(16)}`
+                            entries,
+                            description: `Inst ${id} PW $${pw.toString(16)}${moving ? ' +sweep' : ''}`
                         });
+
+                        // Global-LFO style PWM (Hubbard): the sweep phase
+                        // differs per NOTE. Bucket the captured note-on PW
+                        // values (high nibble) and make one set+sweep table
+                        // per bucket; notes then select their bucket with a
+                        // 9XY row command (added in step 7c2 below).
+                        if (moving) {
+                            const buckets = new Map();
+                            samples.forEach((spw, i) => {
+                                const b = (spw >> 8) & 0x0F;
+                                if (!buckets.has(b)) buckets.set(b, []);
+                                buckets.get(b).push({ pw: spw, ref: refs[i] });
+                            });
+                            if (buckets.size > 1) {
+                                const sweepLegs = entries.slice(1); // modulate windows + terminator
+                                buckets.forEach((list, b) => {
+                                    const ps = list.map(x => x.pw).sort((x, y) => x - y);
+                                    const bpw = ps[Math.floor(ps.length / 2)] & 0xFFF;
+                                    instPulseTables.push({
+                                        instId: parseInt(id, 10),
+                                        bucket: b,
+                                        noteRefs: list.map(x => x.ref),
+                                        entries: [
+                                            { left: 0x80 | ((bpw >> 8) & 0x0F), right: bpw & 0xFF },
+                                            ...sweepLegs.map(e => ({ ...e }))
+                                        ],
+                                        description: `Inst ${id} PW bucket $${b.toString(16)}xx`
+                                    });
+                                });
+                            }
+                        }
                     });
                     const pulseTables = [...sweepPulseTables, ...instPulseTables];
                     if (pulseTables.length > 0) {
@@ -2092,6 +2252,35 @@
                         data.noteOnsetSequences || [[], [], []],
                         allWavetables, gt2Instruments
                     );
+
+                    // Step 7c2: per-note PWM bucket commands (9XY) - notes
+                    // whose captured pulse phase differs from the instrument
+                    // default get their bucket's set+sweep table
+                    {
+                        let pPos = 0;
+                        const ptrOf = new Map();
+                        pulseTables.forEach(pt => { ptrOf.set(pt, pPos + 1); pPos += pt.entries.length; });
+                        let added = 0;
+                        pulseTables.forEach(pt => {
+                            if (!pt.noteRefs) return;
+                            const ptr = ptrOf.get(pt);
+                            pt.noteRefs.forEach(ref => {
+                                const r0 = Math.round(ref.f / quantizedData.framesPerRow);
+                                for (const cand of [r0, r0 - 1, r0 + 1]) {
+                                    const row = quantizedData.rows[cand];
+                                    if (!row) continue;
+                                    const rv = row.voices[ref.v];
+                                    if (rv.note >= 0x60 && rv.note <= 0xBC && !rv.cmd) {
+                                        rv.cmd = 0x09;
+                                        rv.cmdData = ptr;
+                                        added++;
+                                        break;
+                                    }
+                                }
+                            });
+                        });
+                        if (added) console.log(`Added ${added} per-note PWM bucket commands (9XY)`);
+                    }
 
                     // Step 8: Detect repeating patterns (with transpose detection)
                     const patterns = this.detectPatterns(quantizedData.rows);

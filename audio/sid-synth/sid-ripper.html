@@ -1436,30 +1436,47 @@
                 // and stay arpeggio material.
                 const noteIdxOf = (fr) => fr > 0 ? this.noteToMidi(this.freqToNote(fr)) : -1;
                 for (let v = 0; v < 3; v++) {
-                    let curIdx = -1;
+                    let lastEmitIdx = -1;      // pitch of last real/promoted note
+                    let sinceEmit = 1000;
+                    let promoted = 0;
                     for (let f = 0; f < frames.length; f++) {
                         const vf = frames[f].voices[v];
-                        if (!vf.gateOn) { curIdx = -1; continue; }
+                        sinceEmit++;
+                        if (!vf.gateOn) { lastEmitIdx = -1; continue; }
                         const idx = noteIdxOf(vf.freq);
-                        if (vf.noteEvent) { curIdx = idx; continue; }
-                        if (idx < 0) continue;
-                        if (curIdx < 0) { curIdx = idx; continue; }
-                        if (idx === curIdx) continue;
-                        const n1 = frames[f + 1] && frames[f + 1].voices[v];
-                        const n2 = frames[f + 2] && frames[f + 2].voices[v];
-                        const i1 = n1 && n1.gateOn ? noteIdxOf(n1.freq) : -99;
-                        const i2 = n2 && n2.gateOn ? noteIdxOf(n2.freq) : -99;
-                        if (i1 === idx && i2 === idx && !vf.ghostNote) {
-                            vf.note = this.freqToNote(vf.freq);
-                            vf.rawNote = vf.note;
-                            vf.noteEvent = true;
-                            vf.legato = true;
-                            vf.arpeggioNote = false;
-                            const instKey = `${vf.ad}-${vf.sr}-${(vf.ctrl || 0) & 0xFE}`;
-                            if (!instrumentMap.has(instKey)) instrumentMap.set(instKey, instCounter++);
-                            vf.inst = instrumentMap.get(instKey).toString(16).toUpperCase().padStart(2, '0');
-                            curIdx = idx;
+                        if (vf.noteEvent) { lastEmitIdx = idx; sinceEmit = 0; continue; }
+                        if (idx < 0 || lastEmitIdx < 0) { if (idx >= 0 && lastEmitIdx < 0) { lastEmitIdx = idx; sinceEmit = 0; } continue; }
+                        const diff = Math.abs(idx - lastEmitIdx);
+                        if (diff === 0 || promoted > 500 || sinceEmit < 6 || vf.ghostNote) continue;
+                        // Stability lookahead
+                        const stable = (n) => {
+                            for (let k = 1; k <= n; k++) {
+                                const nf = frames[f + k] && frames[f + k].voices[v];
+                                if (!nf || !nf.gateOn || noteIdxOf(nf.freq) !== idx) return false;
+                            }
+                            return true;
+                        };
+                        // Hysteresis: a 1-semitone move can be vibrato/drift
+                        // crossing a boundary - demand LONG stability. Bigger
+                        // leaps are real melody - short stability suffices.
+                        const ok = diff >= 2 ? stable(2) : stable(8);
+                        if (!ok) continue;
+                        vf.note = this.freqToNote(vf.freq);
+                        vf.rawNote = vf.note;
+                        vf.noteEvent = true;
+                        vf.legato = true;
+                        vf.arpeggioNote = false;
+                        const instKey = `${vf.ad}-${vf.sr}-${(vf.ctrl || 0) & 0xFE}`;
+                        if (!instrumentMap.has(instKey)) instrumentMap.set(instKey, instCounter++);
+                        vf.inst = instrumentMap.get(instKey).toString(16).toUpperCase().padStart(2, '0');
+                        const legatoId = instrumentMap.get(instKey);
+                        if (vf.pw > 0) {
+                            (instPwSamples[legatoId] = instPwSamples[legatoId] || []).push(vf.pw);
+                            (instNoteRefs[legatoId] = instNoteRefs[legatoId] || []).push({ v: v, f: f });
                         }
+                        lastEmitIdx = idx;
+                        sinceEmit = 0;
+                        promoted++;
                     }
                 }
 
@@ -2184,10 +2201,20 @@
                                 // loop back to the first modulate entry so
                                 // the PWM keeps moving - GT2 restarts the
                                 // pointer each note but Hubbard-style PWM
-                                // runs continuously. One-directional sweeps
-                                // must STOP or they'd run away.
+                                // runs continuously.
                                 if (ups > 0 && downs > 0) {
                                     entries.push({ left: 0xFF, right: 1 }); // loop to entry idx 1 (first modulate)
+                                } else if (entries.length > 1) {
+                                    // One-directional capture (sweep slower
+                                    // than one note): mirror it into a
+                                    // bounded triangle loop - matches slow
+                                    // analog-style PWM without running away
+                                    const mirrored = entries.slice(1).reverse().map(e => ({
+                                        left: e.left,
+                                        right: (0x100 - (e.right || 0)) & 0xFF || 0
+                                    }));
+                                    entries.push(...mirrored);
+                                    entries.push({ left: 0xFF, right: 1 });
                                 }
                             }
                         }
@@ -2265,6 +2292,63 @@
 
                     // Step 7b: Assign table pointers to instruments
                     // Find which instrument is most used on each voice and link tables
+                    // Step 6b: instrument VIBRATO fitting. Galway-style
+                    // leads live on slow deep vibrato; measure the periodic
+                    // sub-semitone frequency oscillation within each
+                    // instrument's held notes and fit GT2 instrument vibrato
+                    // (STBL entry: left = compare value, right = speed).
+                    Object.entries(data.instNoteRefs || {}).forEach(([id, refs]) => {
+                        const inst = gt2Instruments[parseInt(id, 10)];
+                        if (!inst || (inst.tables && inst.tables.speed)) return;
+                        let deltas = [], flips = 0, spanFrames = 0, firstMove = -1;
+                        refs.slice(0, 10).forEach(ref => {
+                            let prevF = 0, prevD = 0;
+                            for (let k = 1; k < 120; k++) {
+                                const fr = data.frames[ref.f + k];
+                                if (!fr) break;
+                                const vf = fr.voices[ref.v];
+                                // Slow vibrato spans several tie notes - only
+                                // real (non-legato) events end the window
+                                if ((vf.noteEvent && !vf.legato) || !vf.gateOn || vf.freq === 0) break;
+                                if (prevF > 0) {
+                                    const d = vf.freq - prevF;
+                                    const cents = Math.abs(1200 * Math.log2(vf.freq / prevF));
+                                    if (cents > 0 && cents < 90) {
+                                        deltas.push(Math.abs(d));
+                                        if (firstMove < 0) firstMove = k;
+                                        if (prevD !== 0 && Math.sign(d) !== Math.sign(prevD)) flips++;
+                                        prevD = d;
+                                    }
+                                    spanFrames++;
+                                }
+                                prevF = vf.freq;
+                            }
+                        });
+                        if (deltas.length < 12 || flips < 2) return;   // no periodic motion
+                        deltas.sort((a, b) => a - b);
+                        const speed = Math.max(1, Math.min(127, deltas[Math.floor(deltas.length / 2)]));
+                        const halfPeriod = Math.max(2, Math.round(deltas.length / (flips + 1)));
+                        const cmp = Math.max(2, Math.min(0x7F, halfPeriod * 2));
+                        speedTables.push({
+                            entries: [{ left: cmp, right: speed }],
+                            description: `Inst ${id} vibrato cmp=${cmp} speed=${speed}`,
+                            instVibrato: parseInt(id, 10)
+                        });
+                        inst.vibratoDelay = Math.max(2, Math.min(255, firstMove > 0 ? firstMove : 8));
+                        console.log(`Inst ${id}: fitted vibrato cmp=${cmp} speed=${speed} delay=${inst.vibratoDelay}`);
+                    });
+                    // Assign STBL pointers for fitted vibratos (sequential layout)
+                    {
+                        let sPos = 0;
+                        speedTables.forEach(st => {
+                            if (st.instVibrato !== undefined) {
+                                const inst = gt2Instruments[st.instVibrato];
+                                if (inst) { inst.tables.speed = sPos + 1; inst.vibParam = sPos + 1; }
+                            }
+                            sPos += st.entries.length;
+                        });
+                    }
+
                     this.assignTablePointersToInstruments(
                         gt2Instruments, quantizedData.rows,
                         allWavetables, pulseTables, filterTables, speedTables
@@ -2957,6 +3041,13 @@
                                 // This chunk is a transposition of an existing pattern
                                 patternIdx = transposeResult.patternIdx;
                                 transpose = transposeResult.semitones;
+                            } else if (patterns.length >= 200) {
+                                // GT2 has 208 pattern slots - a rip that
+                                // needs more is degenerate (usually effects
+                                // or flapping detection). Reuse pattern 0
+                                // and warn instead of overflowing.
+                                console.warn('Pattern cap reached (200) - truncating uniqueness');
+                                patternIdx = 0;
                             } else {
                                 // New unique pattern
                                 patternIdx = patterns.length;

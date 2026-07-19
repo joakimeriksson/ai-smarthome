@@ -53,6 +53,7 @@ const subtunes = [
     [[9, 0xF3, 9, 0xF0, 9], [SILENT], [SILENT]], // 7: MID-LIST transpose (+3 then back to 0) - advance path, not start init
     [[10], [SILENT], [SILENT]],                // 8: global tempo command F03 on row 0
     [[11], [SILENT], [SILENT]],                // 9: cmd 8 wavetable overrides + delay + absolute-note entries
+    [[12], [SILENT], [SILENT]],                // 10: tie notes (cmd 3 data 0) - legato without gate retrigger
 ];
 put(subtunes.length);
 for (const st of subtunes) {
@@ -186,6 +187,12 @@ const patterns = [
     pattern({
         0: [N(36), 1, 0x08, 9], 4: [N(40), 0, 0x08, 9],
         8: [N(43), 0, 0x08, 13], 12: [N(36), 0, 0x08, 9], 14: [KEYOFF, 0, 0, 0],
+    }),
+    // 12: legato tie notes: first note normal, then pitch jumps via cmd 3
+    // data 0 (instant toneporta) with the gate held the whole time
+    pattern({
+        0: [N(36), 1, 0, 0], 4: [N(43), 0, 0x03, 0],
+        8: [N(40), 0, 0x03, 0], 12: [N(48), 0, 0x03, 0],
     }),
 ];
 put(patterns.length);

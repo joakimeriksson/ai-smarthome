@@ -2240,8 +2240,9 @@ class SidProcessor extends AudioWorkletProcessor {
       const sidFreq = freqtbllo[vs.baseNote] | (freqtblhi[vs.baseNote] << 8);
       vs.lastnote = vs.baseNote;
 
-      if (vs.newcommand === 0x03 && vs.newcmddata > 0) {
-        // Toneportamento: set target, don't change current freq
+      if (vs.newcommand === 0x03) {
+        // Toneportamento: set target, don't change current freq.
+        // Data 0 = TIE NOTE (the realtime handler jumps instantly).
         vs.targetFrequency = sidFreq;
         vs.activeCommand = 0x03;
         vs.commandData = vs.newcmddata;
@@ -2519,6 +2520,14 @@ class SidProcessor extends AudioWorkletProcessor {
           }
         }
         // Command 3: Toneportamento (GT2 from gplay.c lines 804-843)
+        else if (cmd === 0x3 && index === 0) {
+          // gplay.c line 581: param 0 = TIE NOTE - jump to the target
+          // frequency instantly without gate retrigger (freq and vibtime
+          // written every tick, exactly like gplay)
+          vs.currentFrequency = vs.targetFrequency;
+          vs.vibtime = 0;
+          updateFreq = true;
+        }
         else if (cmd === 0x3) {
           let speed = this.readSpeedtable16bit(index);
           // GT2: Hifi mode

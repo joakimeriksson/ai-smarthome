@@ -1355,6 +1355,7 @@
                             freq: state.freq,
                             rawNote: noteEvent ? note : (state.freq > 0 ? this.freqToNote(state.freq) : '---'),
                             waveform: currentWave,
+                            ctrl: state.ctrl,
                             pw: state.pw,
                             ad: state.ad,
                             sr: state.sr
@@ -1422,6 +1423,42 @@
                             vf.note = this.freqToNote(bodyFreq);
                             vf.rawNote = vf.note;
                             vf.bodyFreq = bodyFreq;
+                        }
+                    }
+                }
+
+                // Legato note detection: Galway-style players hold the
+                // gate for entire phrases and change pitch with frequency
+                // writes only - no gate retriggers means no notes detected.
+                // Promote STABLE pitch changes under a held gate to tie-note
+                // events (they become cmd 3 data 0 rows = GT2 tie notes).
+                // Rapid alternations (trills/arps) fail the stability check
+                // and stay arpeggio material.
+                const noteIdxOf = (fr) => fr > 0 ? this.noteToMidi(this.freqToNote(fr)) : -1;
+                for (let v = 0; v < 3; v++) {
+                    let curIdx = -1;
+                    for (let f = 0; f < frames.length; f++) {
+                        const vf = frames[f].voices[v];
+                        if (!vf.gateOn) { curIdx = -1; continue; }
+                        const idx = noteIdxOf(vf.freq);
+                        if (vf.noteEvent) { curIdx = idx; continue; }
+                        if (idx < 0) continue;
+                        if (curIdx < 0) { curIdx = idx; continue; }
+                        if (idx === curIdx) continue;
+                        const n1 = frames[f + 1] && frames[f + 1].voices[v];
+                        const n2 = frames[f + 2] && frames[f + 2].voices[v];
+                        const i1 = n1 && n1.gateOn ? noteIdxOf(n1.freq) : -99;
+                        const i2 = n2 && n2.gateOn ? noteIdxOf(n2.freq) : -99;
+                        if (i1 === idx && i2 === idx && !vf.ghostNote) {
+                            vf.note = this.freqToNote(vf.freq);
+                            vf.rawNote = vf.note;
+                            vf.noteEvent = true;
+                            vf.legato = true;
+                            vf.arpeggioNote = false;
+                            const instKey = `${vf.ad}-${vf.sr}-${(vf.ctrl || 0) & 0xFE}`;
+                            if (!instrumentMap.has(instKey)) instrumentMap.set(instKey, instCounter++);
+                            vf.inst = instrumentMap.get(instKey).toString(16).toUpperCase().padStart(2, '0');
+                            curIdx = idx;
                         }
                     }
                 }
@@ -2432,7 +2469,16 @@
                                     // would retrigger the envelope every row.
                                     if (rowData.voices[v].note === 0 && !voiceFrame.arpeggioNote) {
                                         rowData.voices[v].note = gt2Note;
-                                        rowData.voices[v].inst = parseInt(voiceFrame.inst, 16) || 1;
+                                        if (voiceFrame.legato) {
+                                            // Tie note: keep instrument (0 =
+                                            // no change), cmd 3 data 0 jumps
+                                            // pitch without gate retrigger
+                                            rowData.voices[v].inst = 0;
+                                            rowData.voices[v].cmd = 0x03;
+                                            rowData.voices[v].cmdData = 0;
+                                        } else {
+                                            rowData.voices[v].inst = parseInt(voiceFrame.inst, 16) || 1;
+                                        }
                                     }
                                 }
                             }

@@ -1,197 +1,103 @@
 var graphData = null;
 var cy = null;
 var currentView = null;
+var ontology = null;
 
-fetch('/api/data')
-  .then(response => response.json())
-  .then(data => {
-    graphData = data;
-    initGraph();
+Promise.all([
+  fetch('/api/data').then(function(r) { return r.json(); }),
+  fetch('/ontology.json').then(function(r) { return r.json(); })
+]).then(function(res) {
+  graphData = res[0];
+  ontology = window.ontology = res[1];
+  initGraph();
+});
+
+// Per-type visual sizing (presentation defaults; shape/colour come from ontology).
+// A new node type still renders with these fallbacks — only ontology.json needs editing.
+var NODE_SIZE = {
+  topic:        { 'text-valign': 'bottom', 'text-margin-y': 5 },
+  researcher:   { width: 90,  height: 60, 'font-size': 12, 'text-valign': 'center', 'text-margin-y': 0 },
+  group:        { width: 130, height: 70, 'font-size': 13, 'text-valign': 'center', 'text-margin-y': 0 },
+  project:      { width: 90,  height: 90, 'font-size': 12, 'text-valign': 'center', 'text-margin-y': 0 },
+  publication:  { width: 90,  height: 90, 'font-size': 11, 'text-valign': 'center', 'text-margin-y': 0 },
+  partner:      { width: 110, height: 60, 'font-size': 12, 'text-valign': 'center', 'text-margin-y': 0 },
+  funding_call: { width: 110, height: 60, 'font-size': 12, 'text-valign': 'center', 'text-margin-y': 0 },
+  testbed:      { width: 110, height: 60, 'font-size': 12, 'text-valign': 'center', 'text-margin-y': 0 }
+};
+var KIND_SIZE = {
+  stone:       {},  // keeps the base topic look (icon circle, label below)
+  destination: { width: 170, height: 72, 'font-size': 14, 'text-valign': 'center', 'text-margin-y': 0,
+                 'text-max-width': '150px', 'background-image': 'none' },
+  enabler:     { width: 120, height: 60, 'font-size': 12, 'text-valign': 'center', 'text-margin-y': 0,
+                 'text-max-width': '110px', 'background-image': 'none' }
+};
+
+// Build the Cytoscape stylesheet from ontology.json so types/colours live in one place.
+function getNodeStyle() {
+  var styles = [
+    { selector: 'node', style: {
+        'height': 80, 'width': 80,
+        'background-color': '#00057D', 'border-color': 'white', 'border-width': 3,
+        'color': 'white', 'label': 'data(label)', 'font-size': 13,
+        'text-max-width': '110px', 'text-wrap': 'wrap',
+        'text-valign': 'bottom', 'text-halign': 'center', 'text-margin-y': 5
+      } }
+  ];
+
+  // Per node-type shape/colour from ontology + size fallbacks from NODE_SIZE.
+  Object.keys(ontology.nodeTypes).forEach(function(type) {
+    var t = ontology.nodeTypes[type];
+    var s = { 'shape': t.shape, 'background-color': t.color, 'border-color': t.border, 'color': 'white' };
+    Object.assign(s, NODE_SIZE[type] || { 'text-valign': 'center', 'text-margin-y': 0 });
+    styles.push({ selector: 'node[type="' + type + '"]', style: s });
   });
 
-function getNodeStyle() {
-  return cytoscape.stylesheet()
-    // Base node
-    .selector('node')
-      .css({
-        'height': 80,
-        'width': 80,
-        'background-color': '#00057D',
-        'border-color': 'white',
-        'border-width': 3,
-        'color': 'white',
-        'label': 'data(label)',
-        'font-size': 13,
-        'text-max-width': '110px',
-        'text-wrap': 'wrap',
-        'text-valign': 'bottom',
-        'text-halign': 'center',
-        'text-margin-y': 5
-      })
-    // Topic nodes — circle with icon (original look)
-    .selector('node[type="topic"]')
-      .css({
-        'shape': 'ellipse',
-        'background-color': '#00057D',
-        'border-color': 'white'
-      })
-    .selector('node[type="topic"][image]')
-      .css({
-        'background-image': 'data(image)',
-        'background-fit': 'cover',
-        'background-clip': 'node'
-      })
-    // Researcher nodes — rounded rectangle, green
-    .selector('node[type="researcher"]')
-      .css({
-        'shape': 'round-rectangle',
-        'background-color': '#2ecc71',
-        'border-color': '#27ae60',
-        'width': 90,
-        'height': 60,
-        'font-size': 12,
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'text-margin-y': 0,
-        'text-margin-x': 0,
-        'color': 'white'
-      })
-    // Group nodes — larger rounded rectangle, orange
-    .selector('node[type="group"]')
-      .css({
-        'shape': 'round-rectangle',
-        'background-color': '#e67e22',
-        'border-color': '#d35400',
-        'width': 130,
-        'height': 70,
-        'font-size': 13,
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'text-margin-y': 0,
-        'text-margin-x': 0,
-        'color': 'white'
-      })
-    // Project nodes — hexagon, purple
-    .selector('node[type="project"]')
-      .css({
-        'shape': 'hexagon',
-        'background-color': '#9b59b6',
-        'border-color': '#8e44ad',
-        'width': 90,
-        'height': 90,
-        'font-size': 12,
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'text-margin-y': 0,
-        'text-margin-x': 0,
-        'color': 'white'
-      })
-    // Publication nodes — diamond, red
-    .selector('node[type="publication"]')
-      .css({
-        'shape': 'diamond',
-        'background-color': '#e74c3c',
-        'border-color': '#c0392b',
-        'width': 90,
-        'height': 90,
-        'font-size': 11,
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'text-margin-y': 0,
-        'text-margin-x': 0,
-        'color': 'white'
-      })
-    // Topic center variant
-    .selector('.center')
-      .css({
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'text-wrap': 'wrap',
-        'shape': 'rectangle',
-        'width': '150px',
-        'background-color': '#3565DA',
-        'border-color': '#3565DA',
-        'text-margin-y': 0,
-        'text-margin-x': 0
-      })
-    // Edges
-    .selector('edge')
-      .css({
-        'curve-style': 'bezier',
-        'width': 3,
-        'line-color': 'rgba(255,255,255,0.6)',
-        'target-arrow-color': 'rgba(255,255,255,0.6)',
-        'target-arrow-shape': 'triangle'
-      })
-    .selector('edge[type="journey"]')
-      .css({
-        'width': 4,
-        'line-color': 'white',
-        'target-arrow-color': 'white'
-      })
-    .selector('edge[type="works_on"]')
-      .css({
-        'line-color': '#2ecc71',
-        'target-arrow-color': '#2ecc71',
-        'line-style': 'solid'
-      })
-    .selector('edge[type="member_of"]')
-      .css({
-        'line-color': '#e67e22',
-        'target-arrow-color': '#e67e22'
-      })
-    .selector('edge[type="leads"]')
-      .css({
-        'line-color': '#f1c40f',
-        'target-arrow-color': '#f1c40f',
-        'width': 4
-      })
-    .selector('edge[type="participates"]')
-      .css({
-        'line-color': '#9b59b6',
-        'target-arrow-color': '#9b59b6',
-        'line-style': 'dashed'
-      })
-    .selector('edge[type="related_to"]')
-      .css({
-        'line-color': 'rgba(255,255,255,0.3)',
-        'target-arrow-color': 'rgba(255,255,255,0.3)',
-        'line-style': 'dotted'
-      })
-    .selector('edge[type="authored"]')
-      .css({
-        'line-color': '#e74c3c',
-        'target-arrow-color': '#e74c3c'
-      })
-    // Interaction states
-    .selector('.highlighted-node')
-      .css({
-        'border-color': 'yellow',
-        'border-width': 5
-      })
-    .selector('.highlighted-edge')
-      .css({
-        'line-color': 'yellow',
-        'target-arrow-color': 'yellow',
-        'width': 6
-      })
-    .selector('.faded')
-      .css({
-        'opacity': 0.15
-      })
-    .selector('.person-linked')
-      .css({
-        'border-color': '#5cb85c',
-        'border-width': 5
-      })
-    .selector('.person-unlinked')
-      .css({
-        'opacity': 0.5
-      })
-    .selector('.neighbor-highlight')
-      .css({
-        'opacity': 1
-      });
+  // Topic icon image applies to stones; kind overrides below can turn it off.
+  styles.push({ selector: 'node[type="topic"][image]', style: {
+    'background-image': 'data(image)', 'background-fit': 'cover', 'background-clip': 'node'
+  } });
+
+  // Topic kinds (stone / destination / enabler) — declared after the image rule so
+  // destinations/enablers render as solid blocks even if they carry an icon.
+  var topicKinds = (ontology.nodeTypes.topic && ontology.nodeTypes.topic.kinds) || {};
+  Object.keys(topicKinds).forEach(function(kind) {
+    var k = topicKinds[kind];
+    var s = { 'shape': k.shape, 'background-color': k.color, 'border-color': k.border };
+    Object.assign(s, KIND_SIZE[kind] || {});
+    styles.push({ selector: 'node[type="topic"][kind="' + kind + '"]', style: s });
+  });
+
+  // Legacy centre variant retained.
+  styles.push({ selector: '.center', style: {
+    'text-valign': 'center', 'text-halign': 'center', 'text-wrap': 'wrap',
+    'shape': 'rectangle', 'width': '150px',
+    'background-color': '#3565DA', 'border-color': '#3565DA',
+    'text-margin-y': 0, 'text-margin-x': 0
+  } });
+
+  // Edges: base + per-type from ontology.
+  styles.push({ selector: 'edge', style: {
+    'curve-style': 'bezier', 'width': 3,
+    'line-color': 'rgba(255,255,255,0.6)', 'target-arrow-color': 'rgba(255,255,255,0.6)',
+    'target-arrow-shape': 'triangle'
+  } });
+  Object.keys(ontology.edgeTypes).forEach(function(type) {
+    var e = ontology.edgeTypes[type];
+    styles.push({ selector: 'edge[type="' + type + '"]', style: {
+      'line-color': e.color, 'target-arrow-color': e.color,
+      'line-style': e.style || 'solid', 'width': e.width || 3
+    } });
+  });
+
+  // Interaction states.
+  styles.push({ selector: '.highlighted-node', style: { 'border-color': 'yellow', 'border-width': 5 } });
+  styles.push({ selector: '.highlighted-edge', style: { 'line-color': 'yellow', 'target-arrow-color': 'yellow', 'width': 6 } });
+  styles.push({ selector: '.faded', style: { 'opacity': 0.15 } });
+  styles.push({ selector: '.person-linked', style: { 'border-color': '#5cb85c', 'border-width': 5 } });
+  styles.push({ selector: '.person-unlinked', style: { 'opacity': 0.5 } });
+  styles.push({ selector: '.neighbor-highlight', style: { 'opacity': 1 } });
+
+  return styles;
 }
 
 function getFilteredElements(view) {
@@ -253,6 +159,46 @@ function switchView(viewId) {
   });
 }
 
+function swatchRadius(shape) {
+  if (shape === 'ellipse') return '50%';
+  if (shape === 'round-rectangle') return '4px';
+  return '0';
+}
+
+// Build the legend from ontology.nodeTypes (+ topic kinds). data-type drives per-view
+// show/hide in switchView; topic kinds map to the 'topic' type for filtering.
+function buildLegend() {
+  var legend = document.getElementById('legend');
+  if (!legend) return;
+  legend.innerHTML = '';
+
+  function addItem(type, color, shape, label) {
+    var item = document.createElement('div');
+    item.className = 'legend-item';
+    item.dataset.type = type;
+    var sw = document.createElement('span');
+    sw.className = 'legend-swatch';
+    sw.style.background = color;
+    sw.style.borderRadius = swatchRadius(shape);
+    item.appendChild(sw);
+    item.appendChild(document.createTextNode(' ' + label));
+    legend.appendChild(item);
+  }
+
+  Object.keys(ontology.nodeTypes).forEach(function(type) {
+    var t = ontology.nodeTypes[type];
+    if (type === 'topic' && t.kinds) {
+      // Show each topic kind as its own legend entry.
+      Object.keys(t.kinds).forEach(function(kind) {
+        var k = t.kinds[kind];
+        addItem('topic', k.color, k.shape, k.label);
+      });
+    } else {
+      addItem(type, t.color, t.shape, t.label);
+    }
+  });
+}
+
 function initGraph() {
   cy = window.cy = cytoscape({
     container: document.getElementById('cy'),
@@ -282,12 +228,8 @@ function initGraph() {
     switchView(this.value);
   });
 
-  // Set legend data-type attributes
-  var legendItems = document.querySelectorAll('.legend-item');
-  var typeNames = ['topic', 'researcher', 'group', 'project', 'publication'];
-  legendItems.forEach(function(item, i) {
-    if (i < typeNames.length) item.dataset.type = typeNames[i];
-  });
+  // Build the legend from the ontology.
+  buildLegend();
 
   // Load default view
   switchView(graphData.views[0].id);
@@ -419,13 +361,41 @@ function showDetailPanel(node) {
   desc.textContent = node.data('description') || '';
 
   // Meta info
+  var d = node.data();
   var metaHtml = '';
-  if (node.data('title')) metaHtml += '<div><strong>Title:</strong> ' + escapeHtml(node.data('title')) + '</div>';
-  if (node.data('email')) metaHtml += '<div><strong>Email:</strong> ' + escapeHtml(node.data('email')) + '</div>';
-  if (node.data('year')) metaHtml += '<div><strong>Year:</strong> ' + node.data('year') + '</div>';
-  if (node.data('venue')) metaHtml += '<div><strong>Venue:</strong> ' + escapeHtml(node.data('venue')) + '</div>';
-  if (node.data('funder')) metaHtml += '<div><strong>Funder:</strong> ' + escapeHtml(node.data('funder')) + '</div>';
-  if (node.data('startYear')) metaHtml += '<div><strong>Period:</strong> ' + node.data('startYear') + ' - ' + node.data('endYear') + '</div>';
+
+  // Foresight layer: kind + stepping-stone attributes (ontology-driven).
+  if (d.type === 'topic' && ontology) {
+    var kinds = (ontology.nodeTypes.topic && ontology.nodeTypes.topic.kinds) || {};
+    if (d.kind && kinds[d.kind]) metaHtml += metaRow('Kind', kinds[d.kind].label);
+    var sa = ontology.stoneAttributes || {};
+    Object.keys(sa).forEach(function(key) {
+      var v = d[key];
+      if (v === undefined || v === null || v === '') return;
+      if (sa[key].type === 'node_ref') v = nodeLabelById(v);
+      metaHtml += metaRow(sa[key].label, v);
+    });
+  }
+
+  // Reality layer fields.
+  if (d.title) metaHtml += metaRow('Title', d.title);
+  if (d.email) metaHtml += metaRow('Email', d.email);
+  if (d.year) metaHtml += metaRow('Year', d.year);
+  if (d.venue) metaHtml += metaRow('Venue', d.venue);
+  if (d.funder) metaHtml += metaRow('Funder', d.funder);
+  if (d.startYear) metaHtml += metaRow('Period', d.startYear + ' - ' + (d.endYear || ''));
+
+  // Sensitivity (applies to every node).
+  if (d.sensitivity) metaHtml += metaRow((ontology && ontology.sensitivity.label) || 'Sensitivity', d.sensitivity);
+
+  // Provenance.
+  var pf = (ontology && ontology.provenanceFields) || {};
+  var provHtml = '';
+  Object.keys(pf).forEach(function(key) {
+    if (d[key]) provHtml += metaRow(pf[key].label, d[key]);
+  });
+  if (provHtml) metaHtml += '<div class="detail-provenance">' + provHtml + '</div>';
+
   meta.innerHTML = metaHtml;
 
   // Connections from full data (not just visible view)
@@ -496,6 +466,15 @@ function escapeHtml(str) {
   var div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function metaRow(label, value) {
+  return '<div><strong>' + escapeHtml(label) + ':</strong> ' + escapeHtml(String(value)) + '</div>';
+}
+
+function nodeLabelById(id) {
+  var n = graphData.nodes.find(function(x) { return x.data.id === id; });
+  return n ? n.data.label.replace(/\n/g, ' ') : id;
 }
 
 // --- Person link mode ---

@@ -471,3 +471,21 @@ body {
   color: white;
   margin-right: 6px;
 }
+
+/* Dynamic ontology-driven fields (kind, stepping-stone attrs, sensitivity) */
+#node-extra-fields .editor-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 2px;
+}
+
+/* Provenance block in the detail panel */
+.detail-provenance {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+}

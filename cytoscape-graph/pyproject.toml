@@ -7,6 +7,6 @@ dependencies = [
     "flask",
 ]
 
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+[tool.uv]
+# This is an app, not an installable package — don't try to build/discover it.
+package = false

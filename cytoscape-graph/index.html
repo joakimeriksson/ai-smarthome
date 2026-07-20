@@ -59,13 +59,8 @@
         <input type="text" id="node-id" placeholder="ID">
         <input type="text" id="node-label" placeholder="Label">
         <textarea id="node-description" placeholder="Description"></textarea>
-        <select id="node-type">
-          <option value="topic">Topic</option>
-          <option value="researcher">Researcher</option>
-          <option value="group">Research Group</option>
-          <option value="project">Project</option>
-          <option value="publication">Publication</option>
-        </select>
+        <select id="node-type"></select>
+        <div id="node-extra-fields"></div>
         <select id="node-image"></select>
         <button id="add-node-btn">Add Node</button>
         <button id="update-node-btn" style="display: none;">Update Node</button>
@@ -76,15 +71,7 @@
         <div id="edges-list"></div>
         <select id="edge-source"></select>
         <select id="edge-target"></select>
-        <select id="edge-type">
-          <option value="journey">Journey</option>
-          <option value="works_on">Works On</option>
-          <option value="member_of">Member Of</option>
-          <option value="leads">Leads</option>
-          <option value="participates">Participates</option>
-          <option value="related_to">Related To</option>
-          <option value="authored">Authored</option>
-        </select>
+        <select id="edge-type"></select>
         <button id="add-edge-btn">Add Edge</button>
       </div>
 
@@ -96,13 +83,7 @@
     </div>
   </div>
 
-  <div id="legend">
-    <div class="legend-item"><span class="legend-swatch" style="background:#00057D;border-radius:50%;"></span> Topic</div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#2ecc71;border-radius:4px;"></span> Researcher</div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#e67e22;border-radius:4px;"></span> Group</div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#9b59b6;"></span> Project</div>
-    <div class="legend-item"><span class="legend-swatch" style="background:#e74c3c;"></span> Publication</div>
-  </div>
+  <div id="legend"></div>
 
   <script src="cytoscape-icons.js"></script>
   <script src="code.js"></script>

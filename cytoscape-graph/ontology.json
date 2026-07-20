@@ -1,0 +1,82 @@
+{
+  "version": "1.0",
+  "description": "Single source of truth for the RISE CS foresight graph. Editor dropdowns, Cytoscape styles, validation and views should all read from this file. See PLAN.md sections 2 and 5.",
+  "layers": {
+    "foresight": ["topic"],
+    "reality": ["researcher", "group", "project", "publication", "partner", "funding_call", "testbed"]
+  },
+  "nodeTypes": {
+    "topic": {
+      "label": "Topic",
+      "note": "Foresight node. Use the 'kind' field to distinguish destination / stepping stone / enabler.",
+      "shape": "ellipse",
+      "color": "#00057D",
+      "border": "#FFFFFF",
+      "defaultIcon": null,
+      "kinds": {
+        "stone": {
+          "label": "Stepping stone",
+          "note": "The core node: a capability milestone with a horizon and readiness. Default kind.",
+          "shape": "ellipse",
+          "color": "#00057D",
+          "border": "#FFFFFF"
+        },
+        "destination": {
+          "label": "Destination (north star)",
+          "note": "A goal the department orients toward. Few of these. Rendered as an anchored block on the right of the roadmap view.",
+          "shape": "round-rectangle",
+          "color": "#1F3A5F",
+          "border": "#1F3A5F"
+        },
+        "enabler": {
+          "label": "Enabler / trend / driver",
+          "note": "External force that motivates a destination or gates a stone (trend, driver, regulation).",
+          "shape": "round-rectangle",
+          "color": "#E9A23B",
+          "border": "#C9871F"
+        }
+      }
+    },
+    "researcher": { "label": "Researcher", "shape": "round-rectangle", "color": "#2ecc71", "border": "#27ae60" },
+    "group":      { "label": "Research group", "shape": "round-rectangle", "color": "#e67e22", "border": "#d35400" },
+    "project":    { "label": "Project", "shape": "hexagon", "color": "#9b59b6", "border": "#8e44ad" },
+    "publication":{ "label": "Publication / result", "shape": "diamond", "color": "#e74c3c", "border": "#c0392b" },
+    "partner":    { "label": "Partner", "shape": "round-rectangle", "color": "#6C63C4", "border": "#564FB0", "note": "New in v1." },
+    "funding_call":{ "label": "Funding call / instrument", "shape": "round-rectangle", "color": "#4C6EF5", "border": "#3B5BDB", "note": "New in v1." },
+    "testbed":    { "label": "Testbed / infrastructure", "shape": "round-rectangle", "color": "#51616F", "border": "#3B4753", "note": "New in v1." }
+  },
+  "edgeTypes": {
+    "journey":      { "label": "Journey / depends-on", "note": "Sequences stepping stones toward a destination — the roadmap backbone.", "color": "#FFFFFF", "style": "solid", "width": 4 },
+    "advances":     { "label": "Advances", "note": "project -> stone, or stone -> destination. NEW in v1.", "color": "#3565DA", "style": "solid", "width": 3 },
+    "works_on":     { "label": "Works on", "note": "researcher -> stone (competence/contribution).", "color": "#2ecc71", "style": "solid", "width": 3 },
+    "member_of":    { "label": "Member of", "note": "researcher -> group.", "color": "#e67e22", "style": "solid", "width": 3 },
+    "leads":        { "label": "Leads", "note": "researcher/partner -> project.", "color": "#f1c40f", "style": "solid", "width": 4 },
+    "participates": { "label": "Participates", "note": "researcher/partner -> project.", "color": "#9b59b6", "style": "dashed", "width": 3 },
+    "related_to":   { "label": "Related to", "note": "generic association.", "color": "rgba(255,255,255,0.3)", "style": "dotted", "width": 3 },
+    "authored":     { "label": "Authored", "note": "researcher -> publication.", "color": "#e74c3c", "style": "solid", "width": 3 },
+    "evidences":    { "label": "Evidences", "note": "publication -> stone (proof a stone is being reached). NEW in v1.", "color": "#e74c3c", "style": "dashed", "width": 3 },
+    "enabledBy":    { "label": "Enabled by / gates", "note": "enabler/trend -> stone. NEW in v1.", "color": "#E9A23B", "style": "dashed", "width": 3 },
+    "funds":        { "label": "Funds", "note": "funding_call -> project. NEW in v1.", "color": "#4C6EF5", "style": "solid", "width": 3 },
+    "supports":     { "label": "Supports", "note": "testbed -> project. NEW in v1.", "color": "#51616F", "style": "solid", "width": 3 }
+  },
+  "stoneAttributes": {
+    "horizon":    { "label": "Horizon", "enum": ["now", "next", "beyond"], "help": "now = 0-2 yrs, next = 2-5 yrs, beyond = 5-10 yrs. Drives left-right position in the roadmap view." },
+    "trl":        { "label": "TRL", "type": "integer", "min": 1, "max": 9, "help": "Technology Readiness Level." },
+    "status":     { "label": "Status", "enum": ["aspiration", "in_progress", "achieved", "parked"] },
+    "confidence": { "label": "Confidence", "enum": ["high", "medium", "low"] },
+    "priority":   { "label": "Strategic priority", "enum": ["core", "watch", "optional"] },
+    "owner":      { "label": "Owner", "type": "node_ref", "refTypes": ["researcher", "group"], "help": "Person/unit accountable for keeping this node current." }
+  },
+  "sensitivity": {
+    "label": "Sensitivity",
+    "enum": ["public", "internal", "restricted"],
+    "default": "internal",
+    "help": "Governs public visibility. Only 'public' nodes appear in a curated public build. Applies to every node."
+  },
+  "provenanceFields": {
+    "source":    { "label": "Source", "help": "URL / citation / 'orcid' / 'diva' / 'manual'." },
+    "updatedBy": { "label": "Updated by", "help": "User id (set from SSO once auth is in place)." },
+    "updatedAt": { "label": "Updated at", "help": "ISO 8601 timestamp." }
+  },
+  "goodSteppingStone": "A capability milestone (not a product, not a task), phrased as an outcome, with a horizon, a stated confidence, and at least one link (advances a destination or journey-depends on another stone)."
+}

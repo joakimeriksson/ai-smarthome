@@ -27,16 +27,176 @@ document.addEventListener('DOMContentLoaded', function() {
   var insertTarget = null;
   var selectedNodeId = null;
 
-  var typeBgColors = {
-    topic: '#00057D',
-    researcher: '#2ecc71',
-    group: '#e67e22',
-    project: '#9b59b6',
-    publication: '#e74c3c'
-  };
+  var extraFieldsEl = document.getElementById('node-extra-fields');
+
+  // --- Ontology-driven helpers ------------------------------------------------
+  function ont() { return window.ontology || { nodeTypes: {}, edgeTypes: {}, stoneAttributes: {}, sensitivity: {} }; }
+
+  function typeColor(type) {
+    var nt = ont().nodeTypes;
+    return (nt[type] && nt[type].color) || '#666';
+  }
+
+  // Populate the node-type and edge-type dropdowns from the ontology (once).
+  function buildTypeDropdowns() {
+    var o = ont();
+    if (nodeTypeSelect.options.length === 0) {
+      Object.keys(o.nodeTypes).forEach(function(type) {
+        var opt = document.createElement('option');
+        opt.value = type;
+        opt.textContent = o.nodeTypes[type].label || type;
+        nodeTypeSelect.appendChild(opt);
+      });
+    }
+    if (edgeTypeSelect.options.length === 0) {
+      Object.keys(o.edgeTypes).forEach(function(type) {
+        var opt = document.createElement('option');
+        opt.value = type;
+        opt.textContent = o.edgeTypes[type].label || type;
+        edgeTypeSelect.appendChild(opt);
+      });
+    }
+  }
+
+  function makeSelect(id, values, labels, includeBlank) {
+    var sel = document.createElement('select');
+    sel.id = id;
+    if (includeBlank !== false) {
+      var blank = document.createElement('option');
+      blank.value = ''; blank.textContent = '—';
+      sel.appendChild(blank);
+    }
+    values.forEach(function(v, i) {
+      var o = document.createElement('option');
+      o.value = v; o.textContent = labels ? labels[i] : v;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  function makeField(fieldKey, labelText, inputEl) {
+    var wrap = document.createElement('div');
+    wrap.className = 'editor-field';
+    wrap.dataset.field = fieldKey;
+    var lab = document.createElement('label');
+    lab.textContent = labelText;
+    wrap.appendChild(lab);
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+
+  // Build the kind + stepping-stone + sensitivity fields from the ontology.
+  // Rebuilt each time the editor opens so node_ref (owner) options stay fresh.
+  function buildExtraFields() {
+    var o = ont();
+    if (!extraFieldsEl) return;
+    extraFieldsEl.innerHTML = '';
+
+    // Kind (topic only).
+    var kinds = (o.nodeTypes.topic && o.nodeTypes.topic.kinds) || {};
+    var kindVals = Object.keys(kinds);
+    var kindSel = makeSelect('node-kind', kindVals, kindVals.map(function(k) { return kinds[k].label; }));
+    kindSel.addEventListener('change', updateExtraFieldVisibility);
+    extraFieldsEl.appendChild(makeField('node-kind', 'Kind (topic)', kindSel));
+
+    // Stepping-stone attributes.
+    var sa = o.stoneAttributes || {};
+    Object.keys(sa).forEach(function(key) {
+      var def = sa[key], input;
+      if (def.enum) {
+        input = makeSelect('node-attr-' + key, def.enum);
+      } else if (def.type === 'integer') {
+        input = document.createElement('input');
+        input.type = 'number'; input.id = 'node-attr-' + key;
+        if (def.min != null) input.min = def.min;
+        if (def.max != null) input.max = def.max;
+      } else if (def.type === 'node_ref') {
+        var refTypes = def.refTypes || [];
+        var refs = (currentGraphData ? currentGraphData.nodes : []).filter(function(n) {
+          return refTypes.indexOf(n.data.type) >= 0;
+        });
+        input = makeSelect('node-attr-' + key,
+          refs.map(function(n) { return n.data.id; }),
+          refs.map(function(n) { return (n.data.label || n.data.id).replace(/\n/g, ' '); }));
+      } else {
+        input = document.createElement('input');
+        input.type = 'text'; input.id = 'node-attr-' + key;
+      }
+      extraFieldsEl.appendChild(makeField('node-attr-' + key, def.label || key, input));
+    });
+
+    // Sensitivity (every node).
+    var sens = o.sensitivity || {};
+    var sensSel = makeSelect('node-sensitivity', sens.enum || [], null, false);
+    sensSel.value = sens.default || '';
+    extraFieldsEl.appendChild(makeField('node-sensitivity', sens.label || 'Sensitivity', sensSel));
+
+    updateExtraFieldVisibility();
+  }
+
+  // Kind shows for topics; stone attributes show for kind=stone; sensitivity always.
+  function updateExtraFieldVisibility() {
+    if (!extraFieldsEl) return;
+    var isTopic = nodeTypeSelect.value === 'topic';
+    var kindSel = document.getElementById('node-kind');
+    var isStone = isTopic && (!kindSel || !kindSel.value || kindSel.value === 'stone');
+    extraFieldsEl.querySelectorAll('.editor-field').forEach(function(f) {
+      var key = f.dataset.field;
+      if (key === 'node-kind') f.style.display = isTopic ? 'block' : 'none';
+      else if (key.indexOf('node-attr-') === 0) f.style.display = isStone ? 'block' : 'none';
+      else f.style.display = 'block';
+    });
+  }
+
+  // Read the extra fields into a node data object (delete blanks).
+  function applyExtraFields(data) {
+    var o = ont();
+    if (nodeTypeSelect.value === 'topic') {
+      var kindSel = document.getElementById('node-kind');
+      data.kind = (kindSel && kindSel.value) || 'stone';
+      var sa = o.stoneAttributes || {};
+      Object.keys(sa).forEach(function(key) {
+        var el = document.getElementById('node-attr-' + key);
+        var v = el ? el.value : '';
+        if (v === '') { delete data[key]; return; }
+        if (sa[key].type === 'integer') v = parseInt(v, 10);
+        data[key] = v;
+      });
+    } else {
+      delete data.kind;
+    }
+    var sensEl = document.getElementById('node-sensitivity');
+    if (sensEl) data.sensitivity = sensEl.value || (o.sensitivity && o.sensitivity.default) || 'internal';
+  }
+
+  // Set the extra fields from a node data object.
+  function populateExtraFields(data) {
+    var o = ont();
+    var kindSel = document.getElementById('node-kind');
+    if (kindSel) kindSel.value = data.kind || '';
+    var sa = o.stoneAttributes || {};
+    Object.keys(sa).forEach(function(key) {
+      var el = document.getElementById('node-attr-' + key);
+      if (el) el.value = (data[key] != null ? data[key] : '');
+    });
+    var sensEl = document.getElementById('node-sensitivity');
+    if (sensEl) sensEl.value = data.sensitivity || (o.sensitivity && o.sensitivity.default) || 'internal';
+    updateExtraFieldVisibility();
+  }
+
+  // Provenance stamped on every editor mutation (updatedBy = SSO user once auth lands).
+  function stampProvenance(data) {
+    data.updatedAt = new Date().toISOString();
+    data.updatedBy = 'manual';
+    if (!data.source) data.source = 'manual';
+  }
+
+  nodeTypeSelect.addEventListener('change', updateExtraFieldVisibility);
 
   editGraphBtn.addEventListener('click', function() {
     currentGraphData = JSON.parse(JSON.stringify(graphData));
+    buildTypeDropdowns();
+    buildExtraFields();
     populateEditor();
     fetchImages();
     editorContainer.style.display = 'block';
@@ -87,6 +247,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     };
 
+    applyExtraFields(newNode.data);
+    stampProvenance(newNode.data);
+
     if (nodeTypeSelect.value === 'topic') {
       newNode.classes = 'top-right';
     }
@@ -111,10 +274,13 @@ document.addEventListener('DOMContentLoaded', function() {
   updateNodeBtn.addEventListener('click', function() {
     var nodeIndex = currentGraphData.nodes.findIndex(function(n) { return n.data.id === selectedNodeId; });
     if (nodeIndex !== -1) {
-      currentGraphData.nodes[nodeIndex].data.label = nodeLabelInput.value;
-      currentGraphData.nodes[nodeIndex].data.description = nodeDescriptionInput.value;
-      currentGraphData.nodes[nodeIndex].data.type = nodeTypeSelect.value;
-      currentGraphData.nodes[nodeIndex].data.image = nodeImageSelect.value || undefined;
+      var nd = currentGraphData.nodes[nodeIndex].data;
+      nd.label = nodeLabelInput.value;
+      nd.description = nodeDescriptionInput.value;
+      nd.type = nodeTypeSelect.value;
+      nd.image = nodeImageSelect.value || undefined;
+      applyExtraFields(nd);
+      stampProvenance(nd);
     }
     populateEditor();
     clearNodeInputs();
@@ -124,13 +290,13 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   addEdgeBtn.addEventListener('click', function() {
-    currentGraphData.edges.push({
-      data: {
-        source: edgeSourceSelect.value,
-        target: edgeTargetSelect.value,
-        type: edgeTypeSelect.value
-      }
-    });
+    var edgeData = {
+      source: edgeSourceSelect.value,
+      target: edgeTargetSelect.value,
+      type: edgeTypeSelect.value
+    };
+    stampProvenance(edgeData);
+    currentGraphData.edges.push({ data: edgeData });
     populateEditor();
   });
 
@@ -151,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       var badge = document.createElement('span');
       badge.classList.add('editor-type-badge');
-      badge.style.backgroundColor = typeBgColors[node.data.type] || '#666';
+      badge.style.backgroundColor = typeColor(node.data.type);
       badge.textContent = node.data.type;
 
       var text = document.createTextNode(' ' + (node.data.label || node.data.id).replace(/\n/g, ' '));
@@ -220,6 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
       nodeDescriptionInput.value = node.data.description || '';
       nodeTypeSelect.value = node.data.type || 'topic';
       nodeImageSelect.value = node.data.image || '';
+      populateExtraFields(node.data);
       selectedNodeId = nodeId;
       addNodeBtn.style.display = 'none';
       updateNodeBtn.style.display = 'inline-block';
@@ -263,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
     nodeDescriptionInput.value = '';
     nodeTypeSelect.value = 'topic';
     nodeImageSelect.selectedIndex = 0;
+    populateExtraFields({});
     addNodeBtn.textContent = 'Add Node';
   }
 });

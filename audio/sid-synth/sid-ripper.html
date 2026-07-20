@@ -2362,7 +2362,7 @@
                             instVibrato: parseInt(id, 10)
                         });
                         inst.vibratoDelay = Math.max(2, Math.min(255, firstMove > 0 ? firstMove : 8));
-                        console.log(`Inst ${id}: fitted vibrato cmp=${cmp} speed=${speed} delay=${inst.vibratoDelay}`);
+                        console.log(`Fitted: ${desc}, delay=${inst.vibratoDelay}`);
                     });
                     // Assign STBL pointers for fitted vibratos (sequential layout)
                     {

@@ -2577,6 +2577,22 @@
                     if (score > bestScore) { bestScore = score; framesPerRow = cand; }
                 }
 
+                // FIDELITY MODE: freely-timed music (rubato-Galway, Ocean
+                // Loader...) has no row grid to find - when the best divisor
+                // explains too few gaps, stop quantizing musically and use
+                // the finest practical grid instead. Rhythm then lands
+                // within +-1 frame and pitch bends become smooth tie-note
+                // staircases. Costs pattern slots, not correctness.
+                let fidelityMode = false;
+                if (usableGaps.length >= 8) {
+                    const explainedFrac = Math.floor(bestScore) / usableGaps.length;
+                    if (explainedFrac < 0.6) {
+                        fidelityMode = true;
+                        framesPerRow = 3;
+                        console.log(`Fidelity mode: grid explains only ${(100*explainedFrac).toFixed(0)}% of note gaps - using ${framesPerRow} frames/row`);
+                    }
+                }
+
                 const tempo = Math.round(50 * 60 / (framesPerRow * 4)); // Assuming 16th notes
                 console.log(`Quantizing with ${framesPerRow} frames/row (${tempo} BPM)`);
 
@@ -2689,7 +2705,7 @@
                     }
                 }
 
-                return { rows, framesPerRow, tempo, arpeggioPatterns };
+                return { rows, framesPerRow, tempo, arpeggioPatterns, fidelityMode };
             },
 
             /**

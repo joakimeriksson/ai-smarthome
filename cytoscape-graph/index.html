@@ -4,7 +4,7 @@
   <link href="style.css" rel="stylesheet" />
   <meta charset=utf-8 />
   <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
-  <title>Technology Journey</title>
+  <title>CS Department Explorer</title>
   <script src="cytoscape.min.js"></script>
   <script src="https://unpkg.com/klayjs@0.4.1/klay.js"></script>
   <script src="https://unpkg.com/cytoscape-klay@3.1.2/cytoscape-klay.js"></script>
@@ -12,8 +12,36 @@
 <body>
 
   <div id="cy"></div>
-  <button id="edit-graph-btn">Edit Graph</button>
-  <button id="show-persons-btn">Show Persons</button>
+
+  <div id="view-switcher">
+    <select id="view-select"></select>
+  </div>
+
+  <div id="person-link-bar">
+    <div id="person-link-search-wrap">
+      <input type="text" id="person-link-search" placeholder="Search person to link nodes..." autocomplete="off">
+      <div id="person-link-results"></div>
+    </div>
+    <div id="person-link-active" style="display: none;">
+      <span id="person-link-name"></span>
+      <span id="person-link-hint">Click nodes to toggle links</span>
+      <button id="person-link-done">Done</button>
+    </div>
+  </div>
+
+  <div id="right-buttons">
+    <button id="edit-graph-btn">Edit Graph</button>
+    <button id="show-persons-btn">Show Persons</button>
+  </div>
+
+  <div id="detail-panel" style="display: none;">
+    <button id="close-detail-btn">&times;</button>
+    <h3 id="detail-title"></h3>
+    <div id="detail-type-badge"></div>
+    <div id="detail-description"></div>
+    <div id="detail-meta"></div>
+    <div id="detail-connections"></div>
+  </div>
 
   <div id="persons-display-container" style="display: none;">
     <h3>Persons</h3>
@@ -24,13 +52,20 @@
   <div id="editor-container" style="display: none;">
     <div id="editor">
       <h2>Graph Editor</h2>
-      
+
       <div class="editor-section">
         <h3>Nodes</h3>
         <div id="nodes-list"></div>
         <input type="text" id="node-id" placeholder="ID">
         <input type="text" id="node-label" placeholder="Label">
         <textarea id="node-description" placeholder="Description"></textarea>
+        <select id="node-type">
+          <option value="topic">Topic</option>
+          <option value="researcher">Researcher</option>
+          <option value="group">Research Group</option>
+          <option value="project">Project</option>
+          <option value="publication">Publication</option>
+        </select>
         <select id="node-image"></select>
         <button id="add-node-btn">Add Node</button>
         <button id="update-node-btn" style="display: none;">Update Node</button>
@@ -41,17 +76,16 @@
         <div id="edges-list"></div>
         <select id="edge-source"></select>
         <select id="edge-target"></select>
+        <select id="edge-type">
+          <option value="journey">Journey</option>
+          <option value="works_on">Works On</option>
+          <option value="member_of">Member Of</option>
+          <option value="leads">Leads</option>
+          <option value="participates">Participates</option>
+          <option value="related_to">Related To</option>
+          <option value="authored">Authored</option>
+        </select>
         <button id="add-edge-btn">Add Edge</button>
-      </div>
-
-      <div class="editor-section">
-        <h3>Persons</h3>
-        <div id="persons-list"></div>
-        <input type="text" id="person-name" placeholder="Person Name">
-        <input type="email" id="person-email" placeholder="Email (unique)">
-        <select id="person-linked-nodes" multiple size="5"></select>
-        <button id="add-person-btn">Add Person</button>
-        <button id="update-person-btn" style="display: none;">Update Person</button>
       </div>
 
       <div class="editor-controls">
@@ -60,6 +94,14 @@
         <button id="close-editor-btn">Close without saving</button>
       </div>
     </div>
+  </div>
+
+  <div id="legend">
+    <div class="legend-item"><span class="legend-swatch" style="background:#00057D;border-radius:50%;"></span> Topic</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#2ecc71;border-radius:4px;"></span> Researcher</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#e67e22;border-radius:4px;"></span> Group</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#9b59b6;"></span> Project</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#e74c3c;"></span> Publication</div>
   </div>
 
   <script src="cytoscape-icons.js"></script>

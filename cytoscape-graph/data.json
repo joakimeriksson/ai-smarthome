@@ -1,8 +1,53 @@
 {
+  "views": [
+    {
+      "id": "tech-journey",
+      "label": "Tech Journey",
+      "nodeTypes": ["topic"],
+      "edgeTypes": ["journey"],
+      "layout": "klay"
+    },
+    {
+      "id": "people-topics",
+      "label": "People & Topics",
+      "nodeTypes": ["researcher", "topic"],
+      "edgeTypes": ["works_on", "journey"],
+      "layout": "cose"
+    },
+    {
+      "id": "research-groups",
+      "label": "Research Groups",
+      "nodeTypes": ["group", "researcher"],
+      "edgeTypes": ["member_of"],
+      "layout": "cose"
+    },
+    {
+      "id": "projects",
+      "label": "Projects",
+      "nodeTypes": ["project", "researcher", "topic"],
+      "edgeTypes": ["leads", "participates", "related_to"],
+      "layout": "cose"
+    },
+    {
+      "id": "publications",
+      "label": "Publications",
+      "nodeTypes": ["publication", "researcher"],
+      "edgeTypes": ["authored"],
+      "layout": "cose"
+    },
+    {
+      "id": "everything",
+      "label": "Full Map",
+      "nodeTypes": ["topic", "researcher", "group", "project", "publication"],
+      "edgeTypes": ["journey", "works_on", "member_of", "leads", "participates", "related_to", "authored"],
+      "layout": "cose"
+    }
+  ],
   "nodes": [
     {
       "data": {
         "id": "robotics",
+        "type": "topic",
         "label": "Humanoid\nRobotics",
         "description": "Advanced robotics systems with human-like capabilities. Focus on natural interaction and movement.",
         "image": "imgs/bot-svgrepo-com.svg"
@@ -12,6 +57,7 @@
     {
       "data": {
         "id": "tools",
+        "type": "topic",
         "label": "Open Source\nTools and Tech",
         "description": "Community-driven development tools and frameworks. Supporting collaborative tech innovation.",
         "image": "imgs/server-svgrepo-com.svg"
@@ -21,6 +67,7 @@
     {
       "data": {
         "id": "edgeai",
+        "type": "topic",
         "label": "AI on the Edge",
         "description": "Intelligent processing at device level. Reducing latency and cloud dependency.",
         "image": "imgs/computer-chip-svgrepo-com-2.svg"
@@ -30,7 +77,8 @@
     {
       "data": {
         "id": "edge",
-        "label": "EdgeComputing",
+        "type": "topic",
+        "label": "Edge Computing",
         "description": "Distributed computing architecture. Processing data closer to the source.",
         "image": "imgs/computer-chip-svgrepo-com.svg"
       },
@@ -39,6 +87,7 @@
     {
       "data": {
         "id": "sustainable",
+        "type": "topic",
         "label": "Sustainable World",
         "description": "Environmental technology solutions. Creating eco-friendly tech ecosystems.",
         "image": "imgs/tabler-icon-topology-star-3.svg"
@@ -48,7 +97,8 @@
     {
       "data": {
         "id": "csw",
-        "label": "Connected Sustainable World",
+        "type": "topic",
+        "label": "Connected\nSustainable World",
         "description": "Integrated sustainable technologies. Building smart, efficient futures."
       },
       "classes": "center"
@@ -56,6 +106,7 @@
     {
       "data": {
         "id": "llm",
+        "type": "topic",
         "label": "Large Language\nModels",
         "description": "Advanced AI language processing. Natural language understanding and generation.",
         "image": "imgs/wrench-screwdriver-tool-options-svgrepo-com.svg"
@@ -65,6 +116,7 @@
     {
       "data": {
         "id": "cloud",
+        "type": "topic",
         "label": "Cloud Services",
         "description": "Scalable cloud infrastructure. Flexible computing resources on demand.",
         "image": "imgs/server-cloud-svgrepo-com.svg"
@@ -74,6 +126,7 @@
     {
       "data": {
         "id": "sensors",
+        "type": "topic",
         "label": "Smart Sensors",
         "description": "Advanced IoT sensing technologies. Enabling real-time environmental and system monitoring.",
         "image": "imgs/sensor-svgrepo-com.svg"
@@ -83,6 +136,7 @@
     {
       "data": {
         "id": "harvest",
+        "type": "topic",
         "label": "Energy Harvesting",
         "description": "Ambient energy collection systems. Converting environmental energy into usable power.",
         "image": "imgs/solar-energy-svgrepo-com.svg"
@@ -92,7 +146,8 @@
     {
       "data": {
         "id": "lowpower",
-        "label": "Ultra-Low Power Computing",
+        "type": "topic",
+        "label": "Ultra-Low Power\nComputing",
         "description": "Minimal energy consumption processors. Optimized for maximum efficiency operations.",
         "image": "imgs/computer-screen.svg"
       },
@@ -101,7 +156,8 @@
     {
       "data": {
         "id": "intermittent",
-        "label": "Intermittent Computing",
+        "type": "topic",
+        "label": "Intermittent\nComputing",
         "description": "Computing systems that operate with unreliable power. Maintaining progress despite frequent power interruptions.",
         "image": "imgs/battery-half-fill-1471-svgrepo-com.svg"
       },
@@ -110,6 +166,7 @@
     {
       "data": {
         "id": "mesh",
+        "type": "topic",
         "label": "Mesh\nNetworking",
         "description": "Self-organizing device networks. Enabling resilient and efficient data communication.",
         "image": "imgs/computer-screen.svg"
@@ -119,6 +176,7 @@
     {
       "data": {
         "id": "zeroIoT",
+        "type": "topic",
         "label": "Zero Energy IoT",
         "description": "Self-sustaining Internet of Things devices. Operating perpetually without external power sources."
       },
@@ -127,9 +185,9 @@
     {
       "data": {
         "id": "riscVEdge",
-        "label": "RISC\u2011V Edge\nMCUs",
-        "description": "Open\u2011ISA microcontrollers with AI/Vector extensions for ultra\u2011low\u2011power IoT nodes.",
-        "earlyEvidence": "SiFive X300 \"Hawk\" dual\u2011core RV64 + NPU sampled Q3\u20112025.",
+        "type": "topic",
+        "label": "RISC-V Edge\nMCUs",
+        "description": "Open-ISA microcontrollers with AI/Vector extensions for ultra-low-power IoT nodes.",
         "image": "imgs/riscv-chip.svg"
       },
       "classes": "top-right"
@@ -137,9 +195,9 @@
     {
       "data": {
         "id": "tinyLLMaccel",
-        "label": "\u00b5LLM HW\nAccelerators",
-        "description": "On\u2011chip NPU blocks tuned for 4\u2011bit transformer inference under 50 mW.",
-        "earlyEvidence": "Alibaba T\u2011Head TH1520 ran Llama\u20112\u20117B\u2011Q4 at 2.3 t/s in 2026 demo.",
+        "type": "topic",
+        "label": "uLLM HW\nAccelerators",
+        "description": "On-chip NPU blocks tuned for 4-bit transformer inference under 50 mW.",
         "image": "imgs/ai-accelerator.svg"
       },
       "classes": "top-right"
@@ -147,9 +205,9 @@
     {
       "data": {
         "id": "neuromorphicCore",
+        "type": "topic",
         "label": "Neuromorphic\nCores",
-        "description": "Event\u2011driven SNN silicon delivering sub\u2011\u00b5J inference for reflex loops.",
-        "earlyEvidence": "Intel Loihi\u20112 SDK 2.0 public (2026).",
+        "description": "Event-driven SNN silicon delivering sub-uJ inference for reflex loops.",
         "image": "imgs/camera-svgrepo-com.svg"
       },
       "classes": "top-right"
@@ -157,9 +215,9 @@
     {
       "data": {
         "id": "eventVision",
-        "label": "Event\u2011based\nSensors",
-        "description": "Dynamic\u2011vision & tactile arrays producing sparse, micro\u2011second events.",
-        "earlyEvidence": "Prophesee Gen4 EVT reached 124 dB DR (2026).",
+        "type": "topic",
+        "label": "Event-based\nSensors",
+        "description": "Dynamic-vision and tactile arrays producing sparse, micro-second events.",
         "image": "imgs/event-camera.svg"
       },
       "classes": "top-right"
@@ -167,9 +225,9 @@
     {
       "data": {
         "id": "energyHarvest",
-        "label": "Energy\u2011Harvest\nPeripherals",
-        "description": "PV, RF & vibro harvesters powering untethered modules.",
-        "earlyEvidence": "EU BATMAT \u20ac18 M project kick\u2011off 2027.",
+        "type": "topic",
+        "label": "Energy-Harvest\nPeripherals",
+        "description": "PV, RF and vibro harvesters powering untethered modules.",
         "image": "imgs/solar-energy-svgrepo-com.svg"
       },
       "classes": "top-right"
@@ -177,18 +235,18 @@
     {
       "data": {
         "id": "photonicsAI",
+        "type": "topic",
         "label": "Photonic AI\nCards",
-        "description": "Silicon\u2011photonics inference boards >10 TOPS/W for nightly model distillation.",
-        "earlyEvidence": "Lightmatter Envise sampling to cloud vendors 2028."
+        "description": "Silicon-photonics inference boards >10 TOPS/W for nightly model distillation."
       },
       "classes": "center"
     },
     {
       "data": {
         "id": "tinyLLMrt",
-        "label": "\u00b5LLM Runtime",
-        "description": "Quantised LLM firmware (& eLLM) running in <8 MB flash.",
-        "earlyEvidence": "Nordic demoed Llama\u2011Tiny on nRF54H20 (2025).",
+        "type": "topic",
+        "label": "uLLM Runtime",
+        "description": "Quantised LLM firmware running in <8 MB flash.",
         "image": "imgs/microchip-ai.svg"
       },
       "classes": "top-right"
@@ -196,9 +254,9 @@
     {
       "data": {
         "id": "detMeshStack",
+        "type": "topic",
         "label": "Deterministic\nMesh Stack",
-        "description": "NR+ / TSN Wi\u2011Fi hybrid stack guaranteeing <1 ms jitter.",
-        "earlyEvidence": "Wirepas 2.0 hit 10 M nodes (2025).",
+        "description": "NR+ / TSN Wi-Fi hybrid stack guaranteeing <1 ms jitter.",
         "image": "imgs/mesh-network.svg"
       },
       "classes": "top-right"
@@ -206,9 +264,9 @@
     {
       "data": {
         "id": "fedLearning",
+        "type": "topic",
         "label": "Federated\nEdge Learning",
-        "description": "Privacy\u2011preserving on\u2011device training + secure aggregation.",
-        "earlyEvidence": "Google\u2011OpenFL ran FL on 250 Pi fleet (2025).",
+        "description": "Privacy-preserving on-device training + secure aggregation.",
         "image": "imgs/shield-network-svgrepo-com.svg"
       },
       "classes": "top-right"
@@ -216,9 +274,9 @@
     {
       "data": {
         "id": "neuroSDK",
+        "type": "topic",
         "label": "Neuromorphic\nSDK",
-        "description": "Tool\u2011chain to map perception & reflex graphs onto SNN hardware.",
-        "earlyEvidence": "Loihi\u20112 Lava SDK added PyTorch front\u2011end (2026).",
+        "description": "Tool-chain to map perception and reflex graphs onto SNN hardware.",
         "image": "imgs/sdk.svg"
       },
       "classes": "top-right"
@@ -226,9 +284,9 @@
     {
       "data": {
         "id": "multiBotRL",
-        "label": "Multi\u2011bot RL\nFramework",
-        "description": "Fleet\u2011scale sim\u2011to\u2011real policy learning over resilient mesh.",
-        "earlyEvidence": "Figure AI & OpenAI fleet RL paper (2028).",
+        "type": "topic",
+        "label": "Multi-bot RL\nFramework",
+        "description": "Fleet-scale sim-to-real policy learning over resilient mesh.",
         "image": "imgs/multi-robot.svg"
       },
       "classes": "top-right"
@@ -236,40 +294,619 @@
     {
       "data": {
         "id": "safetyXAI",
+        "type": "topic",
         "label": "Safety / XAI\nCompliance",
-        "description": "Run\u2011time explainability, self\u2011diagnostics & EU AI Act conformity.",
-        "earlyEvidence": "ISO TR 31501 draft on robot XAI (2029)."
+        "description": "Run-time explainability, self-diagnostics and EU AI Act conformity."
       },
       "classes": "center"
+    },
+
+    {
+      "data": {
+        "id": "grp-ai",
+        "type": "group",
+        "label": "AI & Machine\nLearning",
+        "description": "Research group focused on artificial intelligence, deep learning, NLP, and computer vision."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-systems",
+        "type": "group",
+        "label": "Systems &\nNetworking",
+        "description": "Research group on distributed systems, networking protocols, and cloud infrastructure."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-iot",
+        "type": "group",
+        "label": "IoT & Embedded\nSystems",
+        "description": "Research group on Internet of Things, embedded computing, and sensor networks."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-security",
+        "type": "group",
+        "label": "Cybersecurity",
+        "description": "Research group on network security, cryptography, privacy, and secure systems."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-hci",
+        "type": "group",
+        "label": "Human-Computer\nInteraction",
+        "description": "Research group on user interfaces, accessibility, and interactive systems."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-se",
+        "type": "group",
+        "label": "Software\nEngineering",
+        "description": "Research group on software architecture, testing, DevOps, and code quality."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-theory",
+        "type": "group",
+        "label": "Theory &\nAlgorithms",
+        "description": "Research group on computational complexity, algorithms, and formal methods."
+      }
+    },
+    {
+      "data": {
+        "id": "grp-data",
+        "type": "group",
+        "label": "Data Science &\nVisualization",
+        "description": "Research group on data analytics, visualization, and knowledge discovery."
+      }
+    },
+
+    {
+      "data": {
+        "id": "r-eriksson",
+        "type": "researcher",
+        "label": "Joakim\nEriksson",
+        "description": "Professor. IoT systems, edge AI, low-power networking, open-source tools.",
+        "email": "joakim.eriksson@cs.example.edu",
+        "title": "Professor",
+        "url": "https://cs.example.edu/~eriksson"
+      }
+    },
+    {
+      "data": {
+        "id": "r-chen",
+        "type": "researcher",
+        "label": "Wei\nChen",
+        "description": "Professor. Deep learning, computer vision, neural architecture search.",
+        "email": "wei.chen@cs.example.edu",
+        "title": "Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-mueller",
+        "type": "researcher",
+        "label": "Anna\nMueller",
+        "description": "Associate Professor. Natural language processing, transformer models, multilingual AI.",
+        "email": "anna.mueller@cs.example.edu",
+        "title": "Associate Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-okonkwo",
+        "type": "researcher",
+        "label": "Chidi\nOkonkwo",
+        "description": "Associate Professor. Distributed systems, consensus protocols, cloud-native architectures.",
+        "email": "chidi.okonkwo@cs.example.edu",
+        "title": "Associate Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-santos",
+        "type": "researcher",
+        "label": "Maria\nSantos",
+        "description": "Associate Professor. Network security, intrusion detection, privacy-preserving computation.",
+        "email": "maria.santos@cs.example.edu",
+        "title": "Associate Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-kim",
+        "type": "researcher",
+        "label": "Soo-Jin\nKim",
+        "description": "Assistant Professor. Energy harvesting, intermittent computing, batteryless systems.",
+        "email": "soojin.kim@cs.example.edu",
+        "title": "Assistant Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-berg",
+        "type": "researcher",
+        "label": "Lars\nBerg",
+        "description": "Professor. Mesh networking, 6LoWPAN, LPWAN protocols, smart city infrastructure.",
+        "email": "lars.berg@cs.example.edu",
+        "title": "Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-patel",
+        "type": "researcher",
+        "label": "Priya\nPatel",
+        "description": "Assistant Professor. Federated learning, differential privacy, edge intelligence.",
+        "email": "priya.patel@cs.example.edu",
+        "title": "Assistant Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-johansson",
+        "type": "researcher",
+        "label": "Erik\nJohansson",
+        "description": "Professor. Software testing, continuous integration, DevOps research.",
+        "email": "erik.johansson@cs.example.edu",
+        "title": "Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-wong",
+        "type": "researcher",
+        "label": "Lisa\nWong",
+        "description": "Associate Professor. Human-robot interaction, accessible interfaces, UX research.",
+        "email": "lisa.wong@cs.example.edu",
+        "title": "Associate Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-garcia",
+        "type": "researcher",
+        "label": "Carlos\nGarcia",
+        "description": "Assistant Professor. Reinforcement learning, multi-agent systems, robot swarms.",
+        "email": "carlos.garcia@cs.example.edu",
+        "title": "Assistant Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-nilsson",
+        "type": "researcher",
+        "label": "Sara\nNilsson",
+        "description": "Associate Professor. Algorithm design, graph theory, optimization.",
+        "email": "sara.nilsson@cs.example.edu",
+        "title": "Associate Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-tanaka",
+        "type": "researcher",
+        "label": "Yuki\nTanaka",
+        "description": "Assistant Professor. Neuromorphic computing, spiking neural networks, event-driven processors.",
+        "email": "yuki.tanaka@cs.example.edu",
+        "title": "Assistant Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-andersson",
+        "type": "researcher",
+        "label": "Karin\nAndersson",
+        "description": "Professor. Cloud computing, serverless architectures, resource management.",
+        "email": "karin.andersson@cs.example.edu",
+        "title": "Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-smith",
+        "type": "researcher",
+        "label": "David\nSmith",
+        "description": "PhD Student. On-device LLM inference, model compression, quantization.",
+        "email": "david.smith@cs.example.edu",
+        "title": "PhD Student"
+      }
+    },
+    {
+      "data": {
+        "id": "r-larsson",
+        "type": "researcher",
+        "label": "Fredrik\nLarsson",
+        "description": "PhD Student. RISC-V accelerators, hardware-software co-design.",
+        "email": "fredrik.larsson@cs.example.edu",
+        "title": "PhD Student"
+      }
+    },
+    {
+      "data": {
+        "id": "r-ali",
+        "type": "researcher",
+        "label": "Fatima\nAli",
+        "description": "Postdoc. Explainable AI, fairness in ML, trustworthy systems.",
+        "email": "fatima.ali@cs.example.edu",
+        "title": "Postdoc"
+      }
+    },
+    {
+      "data": {
+        "id": "r-dubois",
+        "type": "researcher",
+        "label": "Pierre\nDubois",
+        "description": "Associate Professor. Data visualization, visual analytics, scientific computing.",
+        "email": "pierre.dubois@cs.example.edu",
+        "title": "Associate Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-hassan",
+        "type": "researcher",
+        "label": "Omar\nHassan",
+        "description": "Assistant Professor. Cryptographic protocols, blockchain, zero-knowledge proofs.",
+        "email": "omar.hassan@cs.example.edu",
+        "title": "Assistant Professor"
+      }
+    },
+    {
+      "data": {
+        "id": "r-lund",
+        "type": "researcher",
+        "label": "Maja\nLund",
+        "description": "PhD Student. Sustainable computing, green IT, carbon-aware scheduling.",
+        "email": "maja.lund@cs.example.edu",
+        "title": "PhD Student"
+      }
+    },
+
+    {
+      "data": {
+        "id": "proj-zeroiot",
+        "type": "project",
+        "label": "ZeroNet",
+        "description": "EU Horizon project: Zero-energy IoT networks for smart agriculture. 2024-2028.",
+        "funder": "EU Horizon",
+        "startYear": 2024,
+        "endYear": 2028
+      }
+    },
+    {
+      "data": {
+        "id": "proj-edgellm",
+        "type": "project",
+        "label": "EdgeLLM",
+        "description": "National grant: Deploying large language models on resource-constrained edge devices. 2025-2027.",
+        "funder": "National Science Foundation",
+        "startYear": 2025,
+        "endYear": 2027
+      }
+    },
+    {
+      "data": {
+        "id": "proj-saferobot",
+        "type": "project",
+        "label": "SafeRobot",
+        "description": "Industry collaboration: Safety-certified AI for autonomous robot fleets. 2025-2029.",
+        "funder": "Industry consortium",
+        "startYear": 2025,
+        "endYear": 2029
+      }
+    },
+    {
+      "data": {
+        "id": "proj-privml",
+        "type": "project",
+        "label": "PrivML",
+        "description": "National grant: Privacy-preserving machine learning at the network edge. 2023-2026.",
+        "funder": "Research Council",
+        "startYear": 2023,
+        "endYear": 2026
+      }
+    },
+    {
+      "data": {
+        "id": "proj-greencloud",
+        "type": "project",
+        "label": "GreenCloud",
+        "description": "EU project: Carbon-aware cloud resource management and scheduling. 2024-2027.",
+        "funder": "EU Horizon",
+        "startYear": 2024,
+        "endYear": 2027
+      }
+    },
+    {
+      "data": {
+        "id": "proj-neuromorph",
+        "type": "project",
+        "label": "NeuroEdge",
+        "description": "Bilateral grant: Neuromorphic edge processors for real-time perception. 2025-2028.",
+        "funder": "Bilateral Research Fund",
+        "startYear": 2025,
+        "endYear": 2028
+      }
+    },
+    {
+      "data": {
+        "id": "proj-smartcity",
+        "type": "project",
+        "label": "SmartCityMesh",
+        "description": "Municipal collaboration: Large-scale mesh networks for urban sensing. 2023-2026.",
+        "funder": "City of Stockholm",
+        "startYear": 2023,
+        "endYear": 2026
+      }
+    },
+    {
+      "data": {
+        "id": "proj-xai",
+        "type": "project",
+        "label": "TrustAI",
+        "description": "EU project: Explainable and trustworthy AI for critical infrastructure. 2024-2027.",
+        "funder": "EU Horizon",
+        "startYear": 2024,
+        "endYear": 2027
+      }
+    },
+
+    {
+      "data": {
+        "id": "pub-zeroiot-sensys",
+        "type": "publication",
+        "label": "Zero-Energy IoT:\nA Survey",
+        "description": "Comprehensive survey of batteryless IoT architectures and energy harvesting techniques.",
+        "year": 2025,
+        "venue": "SenSys"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-edgellm-mlsys",
+        "type": "publication",
+        "label": "TinyLLM: Sub-8MB\nLanguage Models",
+        "description": "Novel quantization and pruning pipeline achieving GPT-level quality in 8 MB flash footprint.",
+        "year": 2025,
+        "venue": "MLSys"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-fedlearn-sp",
+        "type": "publication",
+        "label": "FedSecure:\nPrivate FL",
+        "description": "Differential privacy guarantees for federated learning with formal verification.",
+        "year": 2024,
+        "venue": "IEEE S&P"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-mesh-ipsn",
+        "type": "publication",
+        "label": "Urban Mesh at\nScale",
+        "description": "Deployment study of 10,000-node mesh network for urban environmental monitoring.",
+        "year": 2025,
+        "venue": "IPSN"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-neuromorph-nat",
+        "type": "publication",
+        "label": "SNN Reflex\nLoops",
+        "description": "Sub-microsecond reflex control using spiking neural networks on Loihi-2.",
+        "year": 2026,
+        "venue": "Nature Electronics"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-robot-icra",
+        "type": "publication",
+        "label": "Multi-Robot RL\nTransfer",
+        "description": "Sim-to-real transfer learning for heterogeneous robot fleet coordination.",
+        "year": 2025,
+        "venue": "ICRA"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-xai-aaai",
+        "type": "publication",
+        "label": "Runtime XAI for\nSafety-Critical AI",
+        "description": "Framework for real-time explainability in safety-critical autonomous systems.",
+        "year": 2025,
+        "venue": "AAAI"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-intermittent-asplos",
+        "type": "publication",
+        "label": "Checkpoint-Free\nIntermittent OS",
+        "description": "Operating system design for intermittent computing without explicit checkpointing.",
+        "year": 2024,
+        "venue": "ASPLOS"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-cloud-socc",
+        "type": "publication",
+        "label": "Carbon-Aware\nScheduling",
+        "description": "Dynamic workload scheduling based on real-time carbon intensity of power grids.",
+        "year": 2025,
+        "venue": "SoCC"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-riscv-dac",
+        "type": "publication",
+        "label": "RISC-V NPU\nCo-Design",
+        "description": "Hardware-software co-design of neural processing unit on RISC-V for edge inference.",
+        "year": 2025,
+        "venue": "DAC"
+      }
     }
   ],
   "edges": [
-    { "data": { "source": "robotics", "target": "tools" } },
-    { "data": { "source": "tools", "target": "edgeai" } },
-    { "data": { "source": "tools", "target": "llm" } },
-    { "data": { "source": "llm", "target": "cloud" } },
-    { "data": { "source": "edgeai", "target": "edge" } },
-    { "data": { "source": "edge", "target": "sustainable" } },
-    { "data": { "source": "sustainable", "target": "csw" } },
-    { "data": { "source": "sensors", "target": "harvest" } },
-    { "data": { "source": "harvest", "target": "lowpower" } },
-    { "data": { "source": "lowpower", "target": "intermittent" } },
-    { "data": { "source": "intermittent", "target": "mesh" } },
-    { "data": { "source": "mesh", "target": "zeroIoT" } },
-    { "data": { "source": "riscVEdge", "target": "tinyLLMaccel" } },
-    { "data": { "source": "tinyLLMaccel", "target": "neuromorphicCore" } },
-    { "data": { "source": "neuromorphicCore", "target": "eventVision" } },
-    { "data": { "source": "eventVision", "target": "energyHarvest" } },
-    { "data": { "source": "energyHarvest", "target": "photonicsAI" } },
-    { "data": { "source": "tinyLLMrt", "target": "detMeshStack" } },
-    { "data": { "source": "detMeshStack", "target": "fedLearning" } },
-    { "data": { "source": "fedLearning", "target": "neuroSDK" } },
-    { "data": { "source": "neuroSDK", "target": "multiBotRL" } },
-    { "data": { "source": "multiBotRL", "target": "safetyXAI" } }
-  ],
-  "persons": [
-    { "name": "Alice Smith", "email": "alice.smith@example.com", "linkedNodes": ["robotics", "llm"] },
-    { "name": "Bob Johnson", "email": "bob.johnson@example.com", "linkedNodes": ["edgeai", "cloud"] },
-    { "name": "Charlie Brown", "email": "charlie.brown@example.com", "linkedNodes": ["sustainable", "zeroIoT"] }
+    { "data": { "source": "robotics", "target": "tools", "type": "journey" } },
+    { "data": { "source": "tools", "target": "edgeai", "type": "journey" } },
+    { "data": { "source": "tools", "target": "llm", "type": "journey" } },
+    { "data": { "source": "llm", "target": "cloud", "type": "journey" } },
+    { "data": { "source": "edgeai", "target": "edge", "type": "journey" } },
+    { "data": { "source": "edge", "target": "sustainable", "type": "journey" } },
+    { "data": { "source": "sustainable", "target": "csw", "type": "journey" } },
+    { "data": { "source": "sensors", "target": "harvest", "type": "journey" } },
+    { "data": { "source": "harvest", "target": "lowpower", "type": "journey" } },
+    { "data": { "source": "lowpower", "target": "intermittent", "type": "journey" } },
+    { "data": { "source": "intermittent", "target": "mesh", "type": "journey" } },
+    { "data": { "source": "mesh", "target": "zeroIoT", "type": "journey" } },
+    { "data": { "source": "riscVEdge", "target": "tinyLLMaccel", "type": "journey" } },
+    { "data": { "source": "tinyLLMaccel", "target": "neuromorphicCore", "type": "journey" } },
+    { "data": { "source": "neuromorphicCore", "target": "eventVision", "type": "journey" } },
+    { "data": { "source": "eventVision", "target": "energyHarvest", "type": "journey" } },
+    { "data": { "source": "energyHarvest", "target": "photonicsAI", "type": "journey" } },
+    { "data": { "source": "tinyLLMrt", "target": "detMeshStack", "type": "journey" } },
+    { "data": { "source": "detMeshStack", "target": "fedLearning", "type": "journey" } },
+    { "data": { "source": "fedLearning", "target": "neuroSDK", "type": "journey" } },
+    { "data": { "source": "neuroSDK", "target": "multiBotRL", "type": "journey" } },
+    { "data": { "source": "multiBotRL", "target": "safetyXAI", "type": "journey" } },
+
+    { "data": { "source": "r-eriksson", "target": "grp-iot", "type": "member_of" } },
+    { "data": { "source": "r-chen", "target": "grp-ai", "type": "member_of" } },
+    { "data": { "source": "r-mueller", "target": "grp-ai", "type": "member_of" } },
+    { "data": { "source": "r-okonkwo", "target": "grp-systems", "type": "member_of" } },
+    { "data": { "source": "r-santos", "target": "grp-security", "type": "member_of" } },
+    { "data": { "source": "r-kim", "target": "grp-iot", "type": "member_of" } },
+    { "data": { "source": "r-berg", "target": "grp-iot", "type": "member_of" } },
+    { "data": { "source": "r-patel", "target": "grp-ai", "type": "member_of" } },
+    { "data": { "source": "r-johansson", "target": "grp-se", "type": "member_of" } },
+    { "data": { "source": "r-wong", "target": "grp-hci", "type": "member_of" } },
+    { "data": { "source": "r-garcia", "target": "grp-ai", "type": "member_of" } },
+    { "data": { "source": "r-nilsson", "target": "grp-theory", "type": "member_of" } },
+    { "data": { "source": "r-tanaka", "target": "grp-iot", "type": "member_of" } },
+    { "data": { "source": "r-andersson", "target": "grp-systems", "type": "member_of" } },
+    { "data": { "source": "r-smith", "target": "grp-ai", "type": "member_of" } },
+    { "data": { "source": "r-larsson", "target": "grp-iot", "type": "member_of" } },
+    { "data": { "source": "r-ali", "target": "grp-ai", "type": "member_of" } },
+    { "data": { "source": "r-dubois", "target": "grp-data", "type": "member_of" } },
+    { "data": { "source": "r-hassan", "target": "grp-security", "type": "member_of" } },
+    { "data": { "source": "r-lund", "target": "grp-systems", "type": "member_of" } },
+
+    { "data": { "source": "r-eriksson", "target": "edgeai", "type": "works_on" } },
+    { "data": { "source": "r-eriksson", "target": "tools", "type": "works_on" } },
+    { "data": { "source": "r-eriksson", "target": "tinyLLMrt", "type": "works_on" } },
+    { "data": { "source": "r-eriksson", "target": "zeroIoT", "type": "works_on" } },
+    { "data": { "source": "r-chen", "target": "edgeai", "type": "works_on" } },
+    { "data": { "source": "r-chen", "target": "llm", "type": "works_on" } },
+    { "data": { "source": "r-mueller", "target": "llm", "type": "works_on" } },
+    { "data": { "source": "r-mueller", "target": "tinyLLMrt", "type": "works_on" } },
+    { "data": { "source": "r-okonkwo", "target": "cloud", "type": "works_on" } },
+    { "data": { "source": "r-okonkwo", "target": "detMeshStack", "type": "works_on" } },
+    { "data": { "source": "r-santos", "target": "fedLearning", "type": "works_on" } },
+    { "data": { "source": "r-santos", "target": "mesh", "type": "works_on" } },
+    { "data": { "source": "r-kim", "target": "intermittent", "type": "works_on" } },
+    { "data": { "source": "r-kim", "target": "harvest", "type": "works_on" } },
+    { "data": { "source": "r-kim", "target": "energyHarvest", "type": "works_on" } },
+    { "data": { "source": "r-berg", "target": "mesh", "type": "works_on" } },
+    { "data": { "source": "r-berg", "target": "sensors", "type": "works_on" } },
+    { "data": { "source": "r-berg", "target": "detMeshStack", "type": "works_on" } },
+    { "data": { "source": "r-patel", "target": "fedLearning", "type": "works_on" } },
+    { "data": { "source": "r-patel", "target": "edgeai", "type": "works_on" } },
+    { "data": { "source": "r-johansson", "target": "tools", "type": "works_on" } },
+    { "data": { "source": "r-wong", "target": "robotics", "type": "works_on" } },
+    { "data": { "source": "r-wong", "target": "safetyXAI", "type": "works_on" } },
+    { "data": { "source": "r-garcia", "target": "multiBotRL", "type": "works_on" } },
+    { "data": { "source": "r-garcia", "target": "robotics", "type": "works_on" } },
+    { "data": { "source": "r-nilsson", "target": "lowpower", "type": "works_on" } },
+    { "data": { "source": "r-tanaka", "target": "neuromorphicCore", "type": "works_on" } },
+    { "data": { "source": "r-tanaka", "target": "neuroSDK", "type": "works_on" } },
+    { "data": { "source": "r-tanaka", "target": "eventVision", "type": "works_on" } },
+    { "data": { "source": "r-andersson", "target": "cloud", "type": "works_on" } },
+    { "data": { "source": "r-andersson", "target": "sustainable", "type": "works_on" } },
+    { "data": { "source": "r-smith", "target": "tinyLLMrt", "type": "works_on" } },
+    { "data": { "source": "r-smith", "target": "tinyLLMaccel", "type": "works_on" } },
+    { "data": { "source": "r-larsson", "target": "riscVEdge", "type": "works_on" } },
+    { "data": { "source": "r-larsson", "target": "tinyLLMaccel", "type": "works_on" } },
+    { "data": { "source": "r-ali", "target": "safetyXAI", "type": "works_on" } },
+    { "data": { "source": "r-ali", "target": "llm", "type": "works_on" } },
+    { "data": { "source": "r-dubois", "target": "edge", "type": "works_on" } },
+    { "data": { "source": "r-hassan", "target": "fedLearning", "type": "works_on" } },
+    { "data": { "source": "r-hassan", "target": "mesh", "type": "works_on" } },
+    { "data": { "source": "r-lund", "target": "sustainable", "type": "works_on" } },
+    { "data": { "source": "r-lund", "target": "cloud", "type": "works_on" } },
+
+    { "data": { "source": "r-eriksson", "target": "proj-zeroiot", "type": "leads" } },
+    { "data": { "source": "r-kim", "target": "proj-zeroiot", "type": "participates" } },
+    { "data": { "source": "r-berg", "target": "proj-zeroiot", "type": "participates" } },
+    { "data": { "source": "r-chen", "target": "proj-edgellm", "type": "leads" } },
+    { "data": { "source": "r-smith", "target": "proj-edgellm", "type": "participates" } },
+    { "data": { "source": "r-mueller", "target": "proj-edgellm", "type": "participates" } },
+    { "data": { "source": "r-garcia", "target": "proj-saferobot", "type": "leads" } },
+    { "data": { "source": "r-wong", "target": "proj-saferobot", "type": "participates" } },
+    { "data": { "source": "r-ali", "target": "proj-saferobot", "type": "participates" } },
+    { "data": { "source": "r-patel", "target": "proj-privml", "type": "leads" } },
+    { "data": { "source": "r-santos", "target": "proj-privml", "type": "participates" } },
+    { "data": { "source": "r-hassan", "target": "proj-privml", "type": "participates" } },
+    { "data": { "source": "r-andersson", "target": "proj-greencloud", "type": "leads" } },
+    { "data": { "source": "r-lund", "target": "proj-greencloud", "type": "participates" } },
+    { "data": { "source": "r-tanaka", "target": "proj-neuromorph", "type": "leads" } },
+    { "data": { "source": "r-larsson", "target": "proj-neuromorph", "type": "participates" } },
+    { "data": { "source": "r-berg", "target": "proj-smartcity", "type": "leads" } },
+    { "data": { "source": "r-okonkwo", "target": "proj-smartcity", "type": "participates" } },
+    { "data": { "source": "r-ali", "target": "proj-xai", "type": "leads" } },
+    { "data": { "source": "r-wong", "target": "proj-xai", "type": "participates" } },
+
+    { "data": { "source": "proj-zeroiot", "target": "zeroIoT", "type": "related_to" } },
+    { "data": { "source": "proj-zeroiot", "target": "harvest", "type": "related_to" } },
+    { "data": { "source": "proj-zeroiot", "target": "intermittent", "type": "related_to" } },
+    { "data": { "source": "proj-edgellm", "target": "tinyLLMrt", "type": "related_to" } },
+    { "data": { "source": "proj-edgellm", "target": "tinyLLMaccel", "type": "related_to" } },
+    { "data": { "source": "proj-edgellm", "target": "llm", "type": "related_to" } },
+    { "data": { "source": "proj-saferobot", "target": "multiBotRL", "type": "related_to" } },
+    { "data": { "source": "proj-saferobot", "target": "safetyXAI", "type": "related_to" } },
+    { "data": { "source": "proj-saferobot", "target": "robotics", "type": "related_to" } },
+    { "data": { "source": "proj-privml", "target": "fedLearning", "type": "related_to" } },
+    { "data": { "source": "proj-greencloud", "target": "cloud", "type": "related_to" } },
+    { "data": { "source": "proj-greencloud", "target": "sustainable", "type": "related_to" } },
+    { "data": { "source": "proj-neuromorph", "target": "neuromorphicCore", "type": "related_to" } },
+    { "data": { "source": "proj-neuromorph", "target": "eventVision", "type": "related_to" } },
+    { "data": { "source": "proj-smartcity", "target": "mesh", "type": "related_to" } },
+    { "data": { "source": "proj-smartcity", "target": "sensors", "type": "related_to" } },
+    { "data": { "source": "proj-xai", "target": "safetyXAI", "type": "related_to" } },
+
+    { "data": { "source": "r-eriksson", "target": "pub-zeroiot-sensys", "type": "authored" } },
+    { "data": { "source": "r-kim", "target": "pub-zeroiot-sensys", "type": "authored" } },
+    { "data": { "source": "r-berg", "target": "pub-zeroiot-sensys", "type": "authored" } },
+    { "data": { "source": "r-smith", "target": "pub-edgellm-mlsys", "type": "authored" } },
+    { "data": { "source": "r-chen", "target": "pub-edgellm-mlsys", "type": "authored" } },
+    { "data": { "source": "r-mueller", "target": "pub-edgellm-mlsys", "type": "authored" } },
+    { "data": { "source": "r-patel", "target": "pub-fedlearn-sp", "type": "authored" } },
+    { "data": { "source": "r-santos", "target": "pub-fedlearn-sp", "type": "authored" } },
+    { "data": { "source": "r-hassan", "target": "pub-fedlearn-sp", "type": "authored" } },
+    { "data": { "source": "r-berg", "target": "pub-mesh-ipsn", "type": "authored" } },
+    { "data": { "source": "r-okonkwo", "target": "pub-mesh-ipsn", "type": "authored" } },
+    { "data": { "source": "r-tanaka", "target": "pub-neuromorph-nat", "type": "authored" } },
+    { "data": { "source": "r-larsson", "target": "pub-neuromorph-nat", "type": "authored" } },
+    { "data": { "source": "r-garcia", "target": "pub-robot-icra", "type": "authored" } },
+    { "data": { "source": "r-wong", "target": "pub-robot-icra", "type": "authored" } },
+    { "data": { "source": "r-ali", "target": "pub-xai-aaai", "type": "authored" } },
+    { "data": { "source": "r-wong", "target": "pub-xai-aaai", "type": "authored" } },
+    { "data": { "source": "r-kim", "target": "pub-intermittent-asplos", "type": "authored" } },
+    { "data": { "source": "r-eriksson", "target": "pub-intermittent-asplos", "type": "authored" } },
+    { "data": { "source": "r-andersson", "target": "pub-cloud-socc", "type": "authored" } },
+    { "data": { "source": "r-lund", "target": "pub-cloud-socc", "type": "authored" } },
+    { "data": { "source": "r-larsson", "target": "pub-riscv-dac", "type": "authored" } },
+    { "data": { "source": "r-tanaka", "target": "pub-riscv-dac", "type": "authored" } }
   ]
 }

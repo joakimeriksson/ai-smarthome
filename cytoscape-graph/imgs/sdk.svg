@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
   <!-- code window -->
   <rect x="8" y="10" width="48" height="44" rx="4" fill="none" stroke="white" stroke-width="2.5"/>
   <line x1="8" y1="20" x2="56" y2="20" stroke="white" stroke-width="2"/>

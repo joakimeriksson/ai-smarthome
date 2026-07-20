@@ -1,0 +1,7 @@
+orcid_config.json
+__pycache__/
+*.pyc
+.DS_Store
+*.egg-info/
+.venv/
+uv.lock

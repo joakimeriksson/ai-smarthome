@@ -1,42 +1,42 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const editGraphBtn = document.getElementById('edit-graph-btn');
-  const editorContainer = document.getElementById('editor-container');
-  const closeEditorBtn = document.getElementById('close-editor-btn');
-  const saveEditorBtn = document.getElementById('save-editor-btn');
-  const exportJsonBtn = document.getElementById('export-json-btn');
+document.addEventListener('DOMContentLoaded', function() {
+  var editGraphBtn = document.getElementById('edit-graph-btn');
+  var editorContainer = document.getElementById('editor-container');
+  var closeEditorBtn = document.getElementById('close-editor-btn');
+  var saveEditorBtn = document.getElementById('save-editor-btn');
+  var exportJsonBtn = document.getElementById('export-json-btn');
 
-  const nodesList = document.getElementById('nodes-list');
-  const edgesList = document.getElementById('edges-list');
+  var nodesList = document.getElementById('nodes-list');
+  var edgesList = document.getElementById('edges-list');
 
-  const nodeIdInput = document.getElementById('node-id');
-  const nodeLabelInput = document.getElementById('node-label');
-  const nodeDescriptionInput = document.getElementById('node-description');
-  const nodeImageSelect = document.getElementById('node-image');
-  const addNodeBtn = document.getElementById('add-node-btn');
-  const updateNodeBtn = document.getElementById('update-node-btn');
+  var nodeIdInput = document.getElementById('node-id');
+  var nodeLabelInput = document.getElementById('node-label');
+  var nodeDescriptionInput = document.getElementById('node-description');
+  var nodeTypeSelect = document.getElementById('node-type');
+  var nodeImageSelect = document.getElementById('node-image');
+  var addNodeBtn = document.getElementById('add-node-btn');
+  var updateNodeBtn = document.getElementById('update-node-btn');
 
-  const edgeSourceSelect = document.getElementById('edge-source');
-  const edgeTargetSelect = document.getElementById('edge-target');
-  const addEdgeBtn = document.getElementById('add-edge-btn');
+  var edgeSourceSelect = document.getElementById('edge-source');
+  var edgeTargetSelect = document.getElementById('edge-target');
+  var edgeTypeSelect = document.getElementById('edge-type');
+  var addEdgeBtn = document.getElementById('add-edge-btn');
 
-  const personsList = document.getElementById('persons-list');
-  const personNameInput = document.getElementById('person-name');
-  const personEmailInput = document.getElementById('person-email');
-  const personLinkedNodesSelect = document.getElementById('person-linked-nodes');
-  const addPersonBtn = document.getElementById('add-person-btn');
-  const updatePersonBtn = document.getElementById('update-person-btn');
+  var currentGraphData;
+  var insertMode = false;
+  var insertSource = null;
+  var insertTarget = null;
+  var selectedNodeId = null;
 
-  let currentGraphData;
-  let insertMode = false;
-  let insertSource = null;
-  let insertTarget = null;
-  let selectedNodeId = null; // To keep track of the node being edited
-  let selectedPersonEmail = null; // To keep track of the person being edited
+  var typeBgColors = {
+    topic: '#00057D',
+    researcher: '#2ecc71',
+    group: '#e67e22',
+    project: '#9b59b6',
+    publication: '#e74c3c'
+  };
 
-  editGraphBtn.addEventListener('click', () => {
+  editGraphBtn.addEventListener('click', function() {
     currentGraphData = JSON.parse(JSON.stringify(graphData));
-    console.log('Opening editor. Initial graphData:', graphData);
-    console.log('Opening editor. currentGraphData (copy):', currentGraphData);
     populateEditor();
     fetchImages();
     editorContainer.style.display = 'block';
@@ -44,88 +44,59 @@ document.addEventListener('DOMContentLoaded', () => {
     addNodeBtn.style.display = 'inline-block';
     updateNodeBtn.style.display = 'none';
     clearNodeInputs();
-    addPersonBtn.style.display = 'inline-block';
-    updatePersonBtn.style.display = 'none';
-    clearPersonInputs();
   });
 
-  document.addEventListener('insertNode', (event) => {
-    currentGraphData = JSON.parse(JSON.stringify(graphData));
-    populateEditor();
-    fetchImages();
-    editorContainer.style.display = 'block';
-    insertMode = true;
-    insertSource = event.detail.source;
-    insertTarget = event.detail.target;
-    addNodeBtn.style.display = 'inline-block';
-    updateNodeBtn.style.display = 'none';
-    addNodeBtn.textContent = `Insert Node between ${insertSource} and ${insertTarget}`;
-    nodeIdInput.value = `${insertSource}-${insertTarget}-new`; // Suggest an ID
-    nodeLabelInput.value = `New Node`;
-  });
-
-  closeEditorBtn.addEventListener('click', () => {
+  closeEditorBtn.addEventListener('click', function() {
     editorContainer.style.display = 'none';
     insertMode = false;
-    insertSource = null;
-    insertTarget = null;
     clearNodeInputs();
-    clearPersonInputs();
   });
 
-  saveEditorBtn.addEventListener('click', () => {
+  saveEditorBtn.addEventListener('click', function() {
     graphData = JSON.parse(JSON.stringify(currentGraphData));
-    window.cy.elements().remove();
-    window.cy.add(graphData.nodes);
-    window.cy.add(graphData.edges);
-    window.cy.layout({ name: 'klay', directed: true, padding: 10, klay: { spacing: 120, fixedAlignment: "LEFTDOWN" } }).run();
 
-    // Persist to server
-    fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(graphData)
-    }).then(res => {
-      if (!res.ok) console.error('Failed to save data');
-    });
+    // Re-render current view
+    if (currentView) {
+      switchView(currentView.id);
+    }
 
+    persistData();
     editorContainer.style.display = 'none';
     insertMode = false;
-    insertSource = null;
-    insertTarget = null;
     clearNodeInputs();
-    clearPersonInputs();
   });
 
-  exportJsonBtn.addEventListener('click', () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentGraphData, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "data.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  exportJsonBtn.addEventListener('click', function() {
+    var dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(currentGraphData, null, 2));
+    var a = document.createElement('a');
+    a.setAttribute('href', dataStr);
+    a.setAttribute('download', 'data.json');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   });
 
-  addNodeBtn.addEventListener('click', () => {
-    const newNode = {
+  addNodeBtn.addEventListener('click', function() {
+    var newNode = {
       data: {
         id: nodeIdInput.value,
+        type: nodeTypeSelect.value,
         label: nodeLabelInput.value,
         description: nodeDescriptionInput.value,
         image: nodeImageSelect.value || undefined
-      },
-      classes: 'top-right'
+      }
     };
 
+    if (nodeTypeSelect.value === 'topic') {
+      newNode.classes = 'top-right';
+    }
+
     if (insertMode) {
-      // Remove the old edge
-      currentGraphData.edges = currentGraphData.edges.filter(edge => 
-        !(edge.data.source === insertSource && edge.data.target === insertTarget)
-      );
-      // Add two new edges
-      currentGraphData.edges.push({ data: { source: insertSource, target: newNode.data.id } });
-      currentGraphData.edges.push({ data: { source: newNode.data.id, target: insertTarget } });
+      currentGraphData.edges = currentGraphData.edges.filter(function(edge) {
+        return !(edge.data.source === insertSource && edge.data.target === insertTarget);
+      });
+      currentGraphData.edges.push({ data: { source: insertSource, target: newNode.data.id, type: 'journey' } });
+      currentGraphData.edges.push({ data: { source: newNode.data.id, target: insertTarget, type: 'journey' } });
       insertMode = false;
       insertSource = null;
       insertTarget = null;
@@ -137,11 +108,12 @@ document.addEventListener('DOMContentLoaded', () => {
     clearNodeInputs();
   });
 
-  updateNodeBtn.addEventListener('click', () => {
-    const nodeIndex = currentGraphData.nodes.findIndex(node => node.data.id === selectedNodeId);
+  updateNodeBtn.addEventListener('click', function() {
+    var nodeIndex = currentGraphData.nodes.findIndex(function(n) { return n.data.id === selectedNodeId; });
     if (nodeIndex !== -1) {
       currentGraphData.nodes[nodeIndex].data.label = nodeLabelInput.value;
       currentGraphData.nodes[nodeIndex].data.description = nodeDescriptionInput.value;
+      currentGraphData.nodes[nodeIndex].data.type = nodeTypeSelect.value;
       currentGraphData.nodes[nodeIndex].data.image = nodeImageSelect.value || undefined;
     }
     populateEditor();
@@ -151,124 +123,102 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedNodeId = null;
   });
 
-  addEdgeBtn.addEventListener('click', () => {
-    const newEdge = {
+  addEdgeBtn.addEventListener('click', function() {
+    currentGraphData.edges.push({
       data: {
         source: edgeSourceSelect.value,
-        target: edgeTargetSelect.value
+        target: edgeTargetSelect.value,
+        type: edgeTypeSelect.value
       }
-    };
-    currentGraphData.edges.push(newEdge);
+    });
     populateEditor();
-  });
-
-  addPersonBtn.addEventListener('click', () => {
-    const newPerson = {
-      name: personNameInput.value,
-      email: personEmailInput.value,
-      linkedNodes: Array.from(personLinkedNodesSelect.selectedOptions).map(option => option.value)
-    };
-
-    // Basic validation for unique email
-    if (currentGraphData.persons.some(p => p.email === newPerson.email)) {
-      alert('Person with this email already exists!');
-      return;
-    }
-
-    currentGraphData.persons.push(newPerson);
-    populateEditor();
-    clearPersonInputs();
-  });
-
-  updatePersonBtn.addEventListener('click', () => {
-    const personIndex = currentGraphData.persons.findIndex(p => p.email === selectedPersonEmail);
-    if (personIndex !== -1) {
-      currentGraphData.persons[personIndex].name = personNameInput.value;
-      currentGraphData.persons[personIndex].linkedNodes = Array.from(personLinkedNodesSelect.selectedOptions).map(option => option.value);
-    }
-    populateEditor();
-    clearPersonInputs();
-    addPersonBtn.style.display = 'inline-block';
-    updatePersonBtn.style.display = 'none';
-    selectedPersonEmail = null;
   });
 
   function populateEditor() {
     nodesList.innerHTML = '';
     edgeSourceSelect.innerHTML = '';
     edgeTargetSelect.innerHTML = '';
-    personLinkedNodesSelect.innerHTML = '';
 
-    currentGraphData.nodes.forEach(node => {
-      const nodeDiv = document.createElement('div');
+    // Sort nodes by type then label
+    var sortedNodes = currentGraphData.nodes.slice().sort(function(a, b) {
+      if (a.data.type !== b.data.type) return a.data.type.localeCompare(b.data.type);
+      return (a.data.label || '').localeCompare(b.data.label || '');
+    });
+
+    sortedNodes.forEach(function(node) {
+      var nodeDiv = document.createElement('div');
       nodeDiv.classList.add('editor-item');
-      nodeDiv.textContent = `ID: ${node.data.id}, Label: ${node.data.label}`;
-      nodeDiv.dataset.nodeId = node.data.id; // Store ID for easy access
 
-      const editBtn = document.createElement('button');
+      var badge = document.createElement('span');
+      badge.classList.add('editor-type-badge');
+      badge.style.backgroundColor = typeBgColors[node.data.type] || '#666';
+      badge.textContent = node.data.type;
+
+      var text = document.createTextNode(' ' + (node.data.label || node.data.id).replace(/\n/g, ' '));
+
+      var leftSpan = document.createElement('span');
+      leftSpan.appendChild(badge);
+      leftSpan.appendChild(text);
+      nodeDiv.appendChild(leftSpan);
+
+      var btnWrap = document.createElement('span');
+
+      var editBtn = document.createElement('button');
       editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => editNode(node.data.id));
-      nodeDiv.appendChild(editBtn);
+      editBtn.addEventListener('click', function() { editNode(node.data.id); });
+      btnWrap.appendChild(editBtn);
 
-      const deleteBtn = document.createElement('button');
+      var deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
-      deleteBtn.addEventListener('click', () => deleteNode(node.data.id));
-      nodeDiv.appendChild(deleteBtn);
+      deleteBtn.addEventListener('click', function() { deleteNode(node.data.id); });
+      btnWrap.appendChild(deleteBtn);
 
+      nodeDiv.appendChild(btnWrap);
       nodesList.appendChild(nodeDiv);
+    });
 
-      const option = document.createElement('option');
-      option.value = node.data.id;
-      option.textContent = node.data.label;
-      edgeSourceSelect.appendChild(option.cloneNode(true));
-      edgeTargetSelect.appendChild(option.cloneNode(true));
-      personLinkedNodesSelect.appendChild(option);
+    // Populate source/target selects
+    currentGraphData.nodes.forEach(function(node) {
+      var label = (node.data.label || node.data.id).replace(/\n/g, ' ');
+      var optText = '[' + node.data.type + '] ' + label;
+
+      var opt1 = document.createElement('option');
+      opt1.value = node.data.id;
+      opt1.textContent = optText;
+      edgeSourceSelect.appendChild(opt1);
+
+      var opt2 = document.createElement('option');
+      opt2.value = node.data.id;
+      opt2.textContent = optText;
+      edgeTargetSelect.appendChild(opt2);
     });
 
     edgesList.innerHTML = '';
-    currentGraphData.edges.forEach(edge => {
-      const edgeDiv = document.createElement('div');
+    currentGraphData.edges.forEach(function(edge) {
+      var edgeDiv = document.createElement('div');
       edgeDiv.classList.add('editor-item');
-      edgeDiv.textContent = `${edge.data.source} -> ${edge.data.target}`;
 
-      const deleteBtn = document.createElement('button');
+      var text = document.createTextNode(edge.data.source + ' --[' + edge.data.type + ']--> ' + edge.data.target);
+      var leftSpan = document.createElement('span');
+      leftSpan.appendChild(text);
+      edgeDiv.appendChild(leftSpan);
+
+      var deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
-      deleteBtn.addEventListener('click', () => deleteEdge(edge.data.source, edge.data.target));
+      deleteBtn.addEventListener('click', function() { deleteEdge(edge.data.source, edge.data.target, edge.data.type); });
       edgeDiv.appendChild(deleteBtn);
 
       edgesList.appendChild(edgeDiv);
     });
-
-    populatePersonsList();
-  }
-
-  function populatePersonsList() {
-    personsList.innerHTML = '';
-    currentGraphData.persons.forEach(person => {
-      const personDiv = document.createElement('div');
-      personDiv.classList.add('editor-item');
-      personDiv.textContent = `Name: ${person.name}, Email: ${person.email} (Nodes: ${person.linkedNodes.join(', ')})`;
-
-      const editBtn = document.createElement('button');
-      editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => editPerson(person.email));
-      personDiv.appendChild(editBtn);
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.addEventListener('click', () => deletePerson(person.email));
-      personDiv.appendChild(deleteBtn);
-
-      personsList.appendChild(personDiv);
-    });
   }
 
   function editNode(nodeId) {
-    const node = currentGraphData.nodes.find(n => n.data.id === nodeId);
+    var node = currentGraphData.nodes.find(function(n) { return n.data.id === nodeId; });
     if (node) {
       nodeIdInput.value = node.data.id;
       nodeLabelInput.value = node.data.label;
-      nodeDescriptionInput.value = node.data.description;
+      nodeDescriptionInput.value = node.data.description || '';
+      nodeTypeSelect.value = node.data.type || 'topic';
       nodeImageSelect.value = node.data.image || '';
       selectedNodeId = nodeId;
       addNodeBtn.style.display = 'none';
@@ -277,56 +227,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function deleteNode(nodeId) {
-    currentGraphData.nodes = currentGraphData.nodes.filter(node => node.data.id !== nodeId);
-    currentGraphData.edges = currentGraphData.edges.filter(edge => 
-      edge.data.source !== nodeId && edge.data.target !== nodeId
-    );
-    // Also remove this node from any linked persons
-    currentGraphData.persons.forEach(person => {
-      person.linkedNodes = person.linkedNodes.filter(id => id !== nodeId);
+    currentGraphData.nodes = currentGraphData.nodes.filter(function(n) { return n.data.id !== nodeId; });
+    currentGraphData.edges = currentGraphData.edges.filter(function(e) {
+      return e.data.source !== nodeId && e.data.target !== nodeId;
     });
     populateEditor();
     clearNodeInputs();
   }
 
-  function deleteEdge(sourceId, targetId) {
-    currentGraphData.edges = currentGraphData.edges.filter(edge => 
-      !(edge.data.source === sourceId && edge.data.target === targetId)
-    );
+  function deleteEdge(sourceId, targetId, type) {
+    var idx = currentGraphData.edges.findIndex(function(e) {
+      return e.data.source === sourceId && e.data.target === targetId && e.data.type === type;
+    });
+    if (idx >= 0) currentGraphData.edges.splice(idx, 1);
     populateEditor();
-  }
-
-  function editPerson(email) {
-    const person = currentGraphData.persons.find(p => p.email === email);
-    if (person) {
-      personNameInput.value = person.name;
-      personEmailInput.value = person.email;
-      personEmailInput.disabled = true; // Email is unique ID, prevent editing
-      
-      // Select linked nodes
-      Array.from(personLinkedNodesSelect.options).forEach(option => {
-        option.selected = person.linkedNodes.includes(option.value);
-      });
-
-      selectedPersonEmail = email;
-      addPersonBtn.style.display = 'none';
-      updatePersonBtn.style.display = 'inline-block';
-    }
-  }
-
-  function deletePerson(email) {
-    currentGraphData.persons = currentGraphData.persons.filter(person => person.email !== email);
-    populateEditor();
-    clearPersonInputs();
   }
 
   function fetchImages() {
     fetch('/api/images')
-      .then(response => response.json())
-      .then(images => {
+      .then(function(response) { return response.json(); })
+      .then(function(images) {
         nodeImageSelect.innerHTML = '<option value="">No Image</option>';
-        images.forEach(image => {
-          const option = document.createElement('option');
+        images.forEach(function(image) {
+          var option = document.createElement('option');
           option.value = image;
           option.textContent = image.split('/').pop();
           nodeImageSelect.appendChild(option);
@@ -338,17 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
     nodeIdInput.value = '';
     nodeLabelInput.value = '';
     nodeDescriptionInput.value = '';
+    nodeTypeSelect.value = 'topic';
     nodeImageSelect.selectedIndex = 0;
     addNodeBtn.textContent = 'Add Node';
-  }
-
-  function clearPersonInputs() {
-    personNameInput.value = '';
-    personEmailInput.value = '';
-    personEmailInput.disabled = false;
-    Array.from(personLinkedNodesSelect.options).forEach(option => {
-      option.selected = false;
-    });
-    addPersonBtn.textContent = 'Add Person';
   }
 });

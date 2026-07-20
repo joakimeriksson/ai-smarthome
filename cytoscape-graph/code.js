@@ -569,19 +569,58 @@ function setupPersonLinkMode() {
     if (existingIdx >= 0) {
       graphData.edges.splice(existingIdx, 1);
     } else {
-      graphData.edges.push({ data: { source: linkModePerson.data.id, target: clickedNodeId, type: 'works_on' } });
+      var edgeData = { source: linkModePerson.data.id, target: clickedNodeId, type: 'works_on' };
+      stampProvenance(edgeData);
+      graphData.edges.push({ data: edgeData });
     }
     updateLinkModeHighlights();
-    persistData();
+    persistDataDebounced();
   };
 }
 
+// Stamp provenance on a node/edge data object (updatedBy = SSO user once auth lands).
+function stampProvenance(data) {
+  data.updatedAt = new Date().toISOString();
+  data.updatedBy = 'manual';
+  if (!data.source) data.source = 'manual';
+}
+
+function reloadData() {
+  return fetch('/api/data')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      graphData = data;
+      if (currentView) switchView(currentView.id);
+    });
+}
+
 function persistData() {
-  fetch('/api/data', {
+  return fetch('/api/data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(graphData)
   }).then(function(res) {
-    if (!res.ok) console.error('Failed to save data');
+    if (res.status === 409) {
+      // Another editor saved first — reload the latest so we don't clobber it.
+      console.warn('Save conflict: graph changed elsewhere; reloading latest.');
+      return reloadData();
+    }
+    if (!res.ok) {
+      console.error('Failed to save data:', res.status);
+      return;
+    }
+    return res.json().then(function(body) {
+      if (body && typeof body.version !== 'undefined') graphData.version = body.version;
+    });
   });
+}
+
+// Person-link toggles fire rapidly; batch the writes into one save.
+var persistTimer = null;
+function persistDataDebounced(delay) {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(function() {
+    persistTimer = null;
+    persistData();
+  }, delay || 600);
 }

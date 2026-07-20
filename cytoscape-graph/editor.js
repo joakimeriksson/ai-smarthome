@@ -184,12 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateExtraFieldVisibility();
   }
 
-  // Provenance stamped on every editor mutation (updatedBy = SSO user once auth lands).
-  function stampProvenance(data) {
-    data.updatedAt = new Date().toISOString();
-    data.updatedBy = 'manual';
-    if (!data.source) data.source = 'manual';
-  }
+  // stampProvenance() is provided globally by code.js and shared here.
 
   nodeTypeSelect.addEventListener('change', updateExtraFieldVisibility);
 

@@ -2304,7 +2304,7 @@
                         let centsAmp = 0;
                         refs.slice(0, 10).forEach(ref => {
                             let prevF = 0, prevD = 0;
-                            let winMin = Infinity, winMax = -Infinity, winBase = 0;
+                            let winMin = Infinity, winMax = -Infinity, winBase = 0, winSkip = 6;
                             for (let k = 1; k < 120; k++) {
                                 const fr = data.frames[ref.f + k];
                                 if (!fr) break;
@@ -2323,6 +2323,18 @@
                                     }
                                     spanFrames++;
                                 }
+                                if (vf.noteEvent) {
+                                    // Segment boundary (tie/melody jump):
+                                    // flush swing, restart the window base -
+                                    // vibrato depth must never include the
+                                    // melody's own movement
+                                    if (winMax > winMin && isFinite(winMin)) {
+                                        centsAmp = Math.max(centsAmp, (winMax - winMin) / 2);
+                                    }
+                                    winMin = Infinity; winMax = -Infinity; winBase = 0;
+                                    winSkip = 6;   // onset pitch-bend attack is not vibrato
+                                }
+                                if (winSkip > 0) { winSkip--; prevF = vf.freq; continue; }
                                 if (vf.freq > 0) {
                                     if (!winBase) winBase = vf.freq;
                                     const c = 1200 * Math.log2(vf.freq / winBase);
@@ -2348,7 +2360,8 @@
                         const depthCents = centsAmp;
                         let entry, desc;
                         if (depthCents >= 25) {
-                            const shift = Math.max(0, Math.min(7, Math.round(Math.log2(Math.max(1, halfPeriod * 100 / depthCents)))));
+                            const depth = Math.min(150, depthCents);
+                            const shift = Math.max(2, Math.min(7, Math.round(Math.log2(Math.max(1, halfPeriod * 100 / depth)))));
                             entry = { left: 0x80 | cmp, right: shift };
                             desc = `Inst ${id} hifi vibrato cmp=${cmp} shift=${shift} (~${Math.round(depthCents)}c)`;
                         } else {

@@ -3339,102 +3339,84 @@
                 for (let v = 0; v < 3; v++) {
                     if (!arpeggioPatterns[v] || arpeggioPatterns[v].length === 0) continue;
 
-                    // Analyze the most common arpeggio pattern for this voice
-                    const intervalCounts = new Map();
+                    // Group arp rows by their interval signature (relative to
+                    // the row's base note). GT2 has one shared WTBL and a fast
+                    // lead cycles through SEVERAL chord shapes - emitting only
+                    // the single most-common shape (old behavior) pointed every
+                    // other arp row at the wrong chord, so most lead notes came
+                    // out on wrong pitches. Build one wavetable per recurring
+                    // signature instead; addArpeggioCommands then points each
+                    // row at ITS own shape.
+                    const bySig = new Map();
                     arpeggioPatterns[v].forEach(ap => {
-                        // Create a signature from the intervals
-                        const baseNote = ap.baseNote;
-                        const intervals = ap.uniqueNotes
-                            .map(n => n - baseNote)
-                            .sort((a, b) => a - b);
-                        const signature = intervals.join(',');
-
-                        intervalCounts.set(signature, (intervalCounts.get(signature) || 0) + 1);
+                        const signature = ap.uniqueNotes
+                            .map(n => n - ap.baseNote)
+                            .sort((a, b) => a - b)
+                            .join(',');
+                        if (!bySig.has(signature)) bySig.set(signature, []);
+                        bySig.get(signature).push(ap);
                     });
 
-                    // Find the most common pattern
-                    let mostCommon = null;
-                    let maxCount = 0;
-                    intervalCounts.forEach((count, sig) => {
-                        if (count > maxCount) {
-                            maxCount = count;
-                            mostCommon = sig;
-                        }
-                    });
+                    // Most-common first: the leading arp wavetable becomes the
+                    // instrument's default (assignTablePointersToInstruments),
+                    // covering rare shapes that don't earn their own table. Cap
+                    // the count so a through-composed line can't flood the WTBL.
+                    const sigs = [...bySig.entries()].sort((a, b) => b[1].length - a[1].length);
+                    const MAX_ARP_WT = 12;
+                    let built = 0;
+                    for (const [signature, aps] of sigs) {
+                        if (aps.length < 3) break;      // sorted desc: the rest are rarer still
+                        if (built >= MAX_ARP_WT) break;
+                        const intervals = signature.split(',').map(Number);
 
-                    if (mostCommon && maxCount >= 3) {
-                        // Generate wavetable entries for this arpeggio
-                        const intervals = mostCommon.split(',').map(Number);
-
-                        // Detect arpeggio speed from frame gaps between consecutive notes
+                        // Detect arpeggio speed from this signature's frame gaps
                         const frameGaps = [];
-                        arpeggioPatterns[v].forEach(ap => {
-                            // Check if this occurrence matches the most common pattern
-                            const baseNote = ap.baseNote;
-                            const sig = ap.uniqueNotes
-                                .map(n => n - baseNote)
-                                .sort((a, b) => a - b)
-                                .join(',');
-                            if (sig !== mostCommon) return;
-
-                            // Collect frame gaps between consecutive notes
+                        aps.forEach(ap => {
                             const sorted = [...ap.notes].sort((a, b) => a.frame - b.frame);
                             for (let i = 1; i < sorted.length; i++) {
                                 const gap = sorted[i].frame - sorted[i - 1].frame;
-                                if (gap >= 1 && gap <= 15) {
-                                    frameGaps.push(gap);
-                                }
+                                if (gap >= 1 && gap <= 15) frameGaps.push(gap);
                             }
                         });
-
-                        // Compute median gap as arpeggio speed (clamped 1-15)
                         let arpSpeed = 1;
                         if (frameGaps.length > 0) {
                             frameGaps.sort((a, b) => a - b);
-                            arpSpeed = frameGaps[Math.floor(frameGaps.length / 2)];
-                            arpSpeed = Math.max(1, Math.min(15, arpSpeed));
+                            arpSpeed = Math.max(1, Math.min(15, frameGaps[Math.floor(frameGaps.length / 2)]));
                         }
 
-                        console.log(`Voice ${v+1} arpeggio speed: ${arpSpeed} frames/step (from ${frameGaps.length} gaps)`);
-
                         const wtEntries = [];
-
-                        // Create wavetable: cycle through intervals
-                        intervals.forEach((interval, i) => {
+                        intervals.forEach(interval => {
                             // GT2 relative note format:
                             // 0x00-0x5F = note + 0 to +95 semitones
                             // 0x60-0x7F = note - 32 to -1 semitones (0x60 = -32, 0x7F = -1)
                             let relNote;
                             if (interval >= 0) {
-                                relNote = Math.min(0x5F, interval);  // Positive: 0x00-0x5F
+                                relNote = Math.min(0x5F, interval);
                             } else {
-                                relNote = 0x80 + interval;  // Negative: convert to 0x60-0x7F range
+                                relNote = 0x80 + interval;
                                 if (relNote < 0x60) relNote = 0x60;
                             }
-
                             wtEntries.push({
-                                left: arpSpeed,  // Detected frame delay
+                                left: arpSpeed,
                                 right: relNote,
                                 description: `${interval >= 0 ? '+' : ''}${interval} semitones (${arpSpeed}f)`
                             });
                         });
 
-                        // Add jump back to start
-                        wtEntries.push({
-                            left: 0xFF,  // Jump command
-                            right: 0x00, // Jump to position 0
-                            description: 'Loop to start'
-                        });
+                        // Loop back to this table's OWN start (right = local
+                        // index 0; the importer relocates it to the table base)
+                        wtEntries.push({ left: 0xFF, right: 0x00, description: 'Loop to start' });
 
                         wavetables.push({
                             voice: v,
-                            pattern: mostCommon,
-                            occurrences: maxCount,
+                            type: 'arpeggio',
+                            pattern: signature,
+                            occurrences: aps.length,
                             entries: wtEntries,
-                            description: `Voice ${v+1} arpeggio: ${intervals.map(i => i >= 0 ? `+${i}` : i).join(', ')} semitones (${maxCount} occurrences)`
+                            description: `Voice ${v+1} arp ${signature} (${aps.length}x)`
                         });
-
-                        console.log(`Generated wavetable for voice ${v+1}: intervals ${mostCommon}, ${wtEntries.length} entries`);
+                        built++;
+                        console.log(`Generated arp WTBL for voice ${v+1}: ${signature}, ${wtEntries.length} entries (${aps.length} occurrences)`);
                     }
                 }
 
@@ -3725,44 +3707,43 @@
              * This modifies the rows array in place to include arpeggio commands
              */
             addArpeggioCommands(rows, arpeggioPatterns, wavetables) {
-                // Build a map of voice -> wavetable pointer
-                // GT2 pointer = array index + 1 (pointer 1 = array[0])
-                // Each wavetable needs contiguous space, so calculate proper start positions
-                const voiceWavetablePos = {};
+                // Absolute 1-based WTBL pointer per wavetable. Arp wavetables
+                // lead the WTBL layout (allWavetables = [...arp, ...onset]), so
+                // positions accumulated within the arp array are already the
+                // final absolute positions - same convention as
+                // addOnsetWavetableCommands / assignTablePointersToInstruments.
                 let nextPos = 0;
+                const ptrByWt = new Map();
+                wavetables.forEach(wt => { ptrByWt.set(wt, nextPos + 1); nextPos += wt.entries.length; });
 
-                wavetables.forEach((wt, idx) => {
-                    const gtPointer = nextPos + 1;  // GT2 uses 1-based pointers
-                    voiceWavetablePos[wt.voice] = gtPointer;
-                    nextPos += wt.entries.length;  // Move past this wavetable's entries
+                // Per voice: signature -> pointer (only arp-type wavetables)
+                const ptrBySig = [new Map(), new Map(), new Map()];
+                wavetables.forEach(wt => {
+                    if ((wt.type || 'arpeggio') === 'arpeggio' && wt.pattern !== undefined) {
+                        ptrBySig[wt.voice].set(wt.pattern, ptrByWt.get(wt));
+                    }
                 });
 
-                console.log('Wavetable pointers by voice:', voiceWavetablePos);
-
-                // Build a set of rows that have arpeggios for each voice
-                const arpeggioRows = [{}, {}, {}];
-                for (let v = 0; v < 3; v++) {
-                    if (arpeggioPatterns[v]) {
-                        arpeggioPatterns[v].forEach(ap => {
-                            arpeggioRows[v][ap.row] = ap;
-                        });
-                    }
-                }
-
-                // Update rows with 8XY commands
+                // Point each arp ROW at the wavetable for ITS OWN chord shape.
+                // Rows whose signature was too rare to earn a table keep no arp
+                // command and fall back to the instrument's default wavetable
+                // (the most-common shape).
                 let commandsAdded = 0;
-                rows.forEach((row, rowIdx) => {
-                    for (let v = 0; v < 3; v++) {
-                        // Check if this row has an arpeggio for this voice
-                        if (arpeggioRows[v][rowIdx] && voiceWavetablePos[v]) {
-                            // Add 8XY command: 8 = wavetable pointer, XY = position
-                            const wtPos = voiceWavetablePos[v];
-                            row.voices[v].cmd = 0x08;  // Wavetable command
-                            row.voices[v].cmdData = wtPos;  // Wavetable position (1-255)
-                            commandsAdded++;
-                        }
-                    }
-                });
+                for (let v = 0; v < 3; v++) {
+                    (arpeggioPatterns[v] || []).forEach(ap => {
+                        const sig = ap.uniqueNotes
+                            .map(n => n - ap.baseNote)
+                            .sort((a, b) => a - b)
+                            .join(',');
+                        const ptr = ptrBySig[v].get(sig);
+                        if (!ptr) return;
+                        const row = rows[ap.row];
+                        if (!row) return;
+                        row.voices[v].cmd = 0x08;      // Wavetable pointer command
+                        row.voices[v].cmdData = ptr;
+                        commandsAdded++;
+                    });
+                }
 
                 console.log(`Added ${commandsAdded} arpeggio commands (8XY) to pattern rows`);
             },

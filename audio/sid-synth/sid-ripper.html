@@ -2500,14 +2500,28 @@
                         if (!r.note) r.note = 0xBD;
                     }));
 
-                    // Embed the detected tempo as an FXY command on the first
-                    // row of each voice's first pattern (.sng files have no
-                    // tempo field - GT2 songs carry tempo in the pattern data)
+                    // Embed the detected tempo as an FXY command near the start
+                    // (.sng files have no tempo field - GT2 songs carry tempo in
+                    // the pattern data). The order list may START with command
+                    // bytes (transpose 0xE0-0xFD, repeat 0xD0-0xDF, loop 0xFE),
+                    // so orders[v][0] is NOT necessarily a pattern index - find
+                    // the first real pattern index (0x00-0xCF) that plays. Then
+                    // place the tempo on the earliest FREE cmd slot (prefer row
+                    // 0 of any voice; fall back to a later row) so a busy lead
+                    // whose row 0 already carries an effect can't drop it - a
+                    // missing FXY leaves the song at GT2 default tempo 6.
                     const speedVal = quantizedData.framesPerRow & 0x7F;
-                    for (let v = 0; v < 3; v++) {
-                        const firstPat = patterns.patterns[orders[v]?.[0]];
-                        const row0 = firstPat?.data?.[0];
-                        if (row0 && !row0.cmd) { row0.cmd = 0x0F; row0.cmdData = speedVal; break; }
+                    const firstPatOf = (v) => {
+                        const ord = orders[v] || [];
+                        const idx = ord.find(e => e <= 0xCF);
+                        return idx === undefined ? null : patterns.patterns[idx];
+                    };
+                    let tempoPlaced = false;
+                    for (let row = 0; row < 8 && !tempoPlaced; row++) {
+                        for (let v = 0; v < 3 && !tempoPlaced; v++) {
+                            const r = firstPatOf(v)?.data?.[row];
+                            if (r && !r.cmd) { r.cmd = 0x0F; r.cmdData = speedVal; tempoPlaced = true; }
+                        }
                     }
 
                     this.gt2Data = {
@@ -2670,12 +2684,25 @@
                         if (rowNotes[v].length > 1) {
                             const uniqueNotes = [...new Set(rowNotes[v].map(n => n.note))];
                             if (uniqueNotes.length > 1) {
+                                // Arpeggio base note: the row's main note is the
+                                // reference the wavetable offsets are relative to.
+                                // But arpeggio-only rows never SET a main note
+                                // (that path is skipped for arp frames above), so
+                                // it can be 0 or a KEYOFF - then `uniqueNote -
+                                // base` becomes the absolute note (~163) and the
+                                // wavetable builder clamps every offset to +95
+                                // ($5F), freezing the voice on one wrong pitch
+                                // (Last Ninja's arp lead). Fall back to the LOWEST
+                                // note played - arps are relative to their root.
+                                const rn = rowData.voices[v].note;
+                                const baseNote = (rn >= 0x60 && rn <= 0xBC)
+                                    ? rn : Math.min(...uniqueNotes);
                                 // This row has an arpeggio pattern
                                 arpeggioPatterns[v].push({
                                     row: row,
                                     notes: rowNotes[v],
                                     uniqueNotes: uniqueNotes,
-                                    baseNote: rowData.voices[v].note
+                                    baseNote: baseNote
                                 });
                             }
                         }
@@ -3559,6 +3586,27 @@
                             }
                             entries.push({ left: e.left, right: e.right });
                             prevFrame = e.frame;
+                        }
+
+                        // Strip a TRAILING run of static gate-off holds (a
+                        // waveform entry with the gate bit clear and no pitch
+                        // movement): that is the note's RELEASE, which the
+                        // pattern's keyoff plus the instrument ADSR already
+                        // handle. Baking it into the instrument's wavetable
+                        // self-releases EVERY note a few frames in - Last Ninja's
+                        // pulse/tri leads blipped for ~5 frames instead of
+                        // sustaining. A gate-off that CHANGES pitch or waveform
+                        // (drum decay, tom pitch sweep) is real timbre and is
+                        // kept; onset sequences never re-gate after a gate-off
+                        // (verified across the corpus), so the run is always pure
+                        // release.
+                        while (entries.length > 1) {
+                            const e = entries[entries.length - 1];
+                            const isWaveform = e.left >= 0x10 && e.left < 0xF0;
+                            const gateOff = (e.left & 0x01) === 0;
+                            const noPitchMove = e.right === 0x00 || e.right === 0x80;
+                            if (isWaveform && gateOff && noPitchMove) entries.pop();
+                            else break;
                         }
 
                         if (entries.length < 2) continue;

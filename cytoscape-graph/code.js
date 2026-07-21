@@ -136,6 +136,147 @@ function getLayout(view) {
   };
 }
 
+// --- Roadmap swimlane layout ------------------------------------------------
+// Columns = horizon (now / next / beyond) + a destinations anchor on the right.
+// Rows = lanes, one per journey chain (the destination each stone flows to),
+// so journey edges read left-to-right like an Ericsson technology-journey slide.
+var ROADMAP_COLX = { now: 0, next: 360, beyond: 720, destination: 1080 };
+var ROADMAP_LANE_H = 300;
+var ROADMAP_SUB = 140;
+
+function computeRoadmapPositions(elements) {
+  var nodesById = {};
+  elements.nodes.forEach(function(n) { nodesById[n.data.id] = n.data; });
+
+  // Forward journey adjacency (restricted to the elements in this view).
+  var fwd = {};
+  elements.edges.forEach(function(e) {
+    if (e.data.type === 'journey') (fwd[e.data.source] = fwd[e.data.source] || []).push(e.data.target);
+  });
+
+  // Follow journey edges forward to the first destination reached (the lane).
+  function reachDest(id, seen) {
+    var d = nodesById[id];
+    if (d && d.kind === 'destination') return id;
+    seen = seen || {};
+    if (seen[id]) return null;
+    seen[id] = true;
+    var outs = fwd[id] || [];
+    for (var i = 0; i < outs.length; i++) {
+      var r = reachDest(outs[i], seen);
+      if (r) return r;
+    }
+    return null;
+  }
+
+  // Lane index per destination, in node order; orphans share a trailing lane.
+  var laneOrder = [], laneIndex = {};
+  elements.nodes.forEach(function(n) {
+    if (n.data.kind === 'destination' && !(n.data.id in laneIndex)) {
+      laneIndex[n.data.id] = laneOrder.length;
+      laneOrder.push(n.data.id);
+    }
+  });
+  var orphanLane = laneOrder.length;
+
+  var laneOf = {};
+  elements.nodes.forEach(function(n) {
+    if (n.data.kind === 'destination') { laneOf[n.data.id] = laneIndex[n.data.id]; return; }
+    var dest = reachDest(n.data.id);
+    laneOf[n.data.id] = (dest != null && dest in laneIndex) ? laneIndex[dest] : orphanLane;
+  });
+
+  function colKey(d) { return d.kind === 'destination' ? 'destination' : (d.horizon || 'now'); }
+
+  // Group by (lane, column) so multiple stones in a cell spread vertically.
+  var cell = {};
+  elements.nodes.forEach(function(n) {
+    var k = laneOf[n.data.id] + '|' + colKey(n.data);
+    (cell[k] = cell[k] || []).push(n.data.id);
+  });
+
+  var positions = {};
+  Object.keys(cell).forEach(function(k) {
+    var ids = cell[k];
+    var parts = k.split('|'), lane = +parts[0], col = parts[1];
+    var baseY = lane * ROADMAP_LANE_H;
+    ids.forEach(function(id, j) {
+      positions[id] = { x: ROADMAP_COLX[col], y: baseY + (j - (ids.length - 1) / 2) * ROADMAP_SUB };
+    });
+  });
+
+  var cols = [
+    { key: 'now', label: 'NOW', x: ROADMAP_COLX.now },
+    { key: 'next', label: 'NEXT', x: ROADMAP_COLX.next },
+    { key: 'beyond', label: 'BEYOND', x: ROADMAP_COLX.beyond },
+    { key: 'destination', label: 'DESTINATIONS', x: ROADMAP_COLX.destination }
+  ];
+  var dividers = [
+    (ROADMAP_COLX.now + ROADMAP_COLX.next) / 2,
+    (ROADMAP_COLX.next + ROADMAP_COLX.beyond) / 2,
+    (ROADMAP_COLX.beyond + ROADMAP_COLX.destination) / 2
+  ];
+  return { positions: positions, cols: cols, dividers: dividers };
+}
+
+function applyRoadmapLayout(elements) {
+  var rm = computeRoadmapPositions(elements);
+  cy.nodes().forEach(function(n) {
+    var p = rm.positions[n.id()];
+    if (p) n.position(p);
+  });
+  cy.layout({ name: 'preset' }).run();
+  cy.fit(undefined, 70);
+  // Nudge content down so the first lane clears the fixed band-header strip.
+  cy.panBy({ x: 0, y: 45 });
+  showRoadmapBands(rm.cols, rm.dividers);
+  updateRoadmapBands();
+}
+
+// --- Roadmap band overlay (headers + column dividers, synced to viewport) ----
+var roadmapBandsEl = null;
+var roadmapModel = null;
+
+function ensureRoadmapBands() {
+  if (!roadmapBandsEl) {
+    roadmapBandsEl = document.createElement('div');
+    roadmapBandsEl.id = 'roadmap-bands';
+    document.body.appendChild(roadmapBandsEl);
+  }
+  return roadmapBandsEl;
+}
+
+function showRoadmapBands(cols, dividers) {
+  roadmapModel = { cols: cols, dividers: dividers };
+  var el = ensureRoadmapBands();
+  el.style.display = 'block';
+  el.innerHTML = '';
+  dividers.forEach(function() {
+    var ln = document.createElement('div');
+    ln.className = 'roadmap-divider';
+    el.appendChild(ln);
+  });
+  cols.forEach(function(c) {
+    var h = document.createElement('div');
+    h.className = 'roadmap-band-label';
+    h.textContent = c.label;
+    el.appendChild(h);
+  });
+}
+
+function hideRoadmapBands() {
+  if (roadmapBandsEl) roadmapBandsEl.style.display = 'none';
+}
+
+function updateRoadmapBands() {
+  if (!roadmapBandsEl || roadmapBandsEl.style.display === 'none' || !roadmapModel) return;
+  var z = cy.zoom(), pan = cy.pan();
+  var lines = roadmapBandsEl.querySelectorAll('.roadmap-divider');
+  roadmapModel.dividers.forEach(function(mx, i) { if (lines[i]) lines[i].style.left = (mx * z + pan.x) + 'px'; });
+  var labels = roadmapBandsEl.querySelectorAll('.roadmap-band-label');
+  roadmapModel.cols.forEach(function(c, i) { if (labels[i]) labels[i].style.left = (c.x * z + pan.x) + 'px'; });
+}
+
 function switchView(viewId) {
   var view = graphData.views.find(function(v) { return v.id === viewId; });
   if (!view) return;
@@ -144,8 +285,14 @@ function switchView(viewId) {
   cy.elements().remove();
   cy.add(elements.nodes);
   cy.add(elements.edges);
-  cy.layout(getLayout(view)).run();
-  cy.fit(undefined, 40);
+
+  if (view.layout === 'roadmap') {
+    applyRoadmapLayout(elements);
+  } else {
+    hideRoadmapBands();
+    cy.layout(getLayout(view)).run();
+    cy.fit(undefined, 40);
+  }
 
   // Update legend visibility
   var legendItems = document.querySelectorAll('.legend-item');
@@ -265,7 +412,10 @@ function initGraph() {
 
   cy.on('viewport', function() {
     tooltip.style.display = 'none';
+    updateRoadmapBands();
   });
+
+  window.addEventListener('resize', updateRoadmapBands);
 
   // --- Detail panel on tap ---
   cy.on('tap', 'node', function(evt) {

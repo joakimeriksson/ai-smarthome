@@ -1,6 +1,17 @@
 {
   "views": [
     {
+      "id": "roadmap",
+      "label": "Roadmap",
+      "nodeTypes": [
+        "topic"
+      ],
+      "edgeTypes": [
+        "journey"
+      ],
+      "layout": "roadmap"
+    },
+    {
       "id": "tech-journey",
       "label": "Tech Journey",
       "nodeTypes": [
@@ -94,7 +105,8 @@
         "description": "Advanced robotics systems with human-like capabilities. Focus on natural interaction and movement.",
         "image": "imgs/bot-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -106,7 +118,8 @@
         "description": "Community-driven development tools and frameworks. Supporting collaborative tech innovation.",
         "image": "imgs/server-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -118,7 +131,8 @@
         "description": "Intelligent processing at device level. Reducing latency and cloud dependency.",
         "image": "imgs/computer-chip-svgrepo-com-2.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -130,7 +144,8 @@
         "description": "Distributed computing architecture. Processing data closer to the source.",
         "image": "imgs/computer-chip-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -142,7 +157,8 @@
         "description": "Environmental technology solutions. Creating eco-friendly tech ecosystems.",
         "image": "imgs/tabler-icon-topology-star-3.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "beyond"
       },
       "classes": "top-right"
     },
@@ -165,7 +181,8 @@
         "description": "Advanced AI language processing. Natural language understanding and generation.",
         "image": "imgs/wrench-screwdriver-tool-options-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -189,7 +206,8 @@
         "description": "Advanced IoT sensing technologies. Enabling real-time environmental and system monitoring.",
         "image": "imgs/sensor-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -201,7 +219,8 @@
         "description": "Ambient energy collection systems. Converting environmental energy into usable power.",
         "image": "imgs/solar-energy-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -213,7 +232,8 @@
         "description": "Minimal energy consumption processors. Optimized for maximum efficiency operations.",
         "image": "imgs/computer-screen.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -225,7 +245,8 @@
         "description": "Computing systems that operate with unreliable power. Maintaining progress despite frequent power interruptions.",
         "image": "imgs/battery-half-fill-1471-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -237,7 +258,8 @@
         "description": "Self-organizing device networks. Enabling resilient and efficient data communication.",
         "image": "imgs/computer-screen.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "beyond"
       },
       "classes": "top-right"
     },
@@ -260,7 +282,8 @@
         "description": "Open-ISA microcontrollers with AI/Vector extensions for ultra-low-power IoT nodes.",
         "image": "imgs/riscv-chip.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -272,7 +295,8 @@
         "description": "On-chip NPU blocks tuned for 4-bit transformer inference under 50 mW.",
         "image": "imgs/ai-accelerator.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -284,7 +308,8 @@
         "description": "Event-driven SNN silicon delivering sub-uJ inference for reflex loops.",
         "image": "imgs/camera-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -296,7 +321,8 @@
         "description": "Dynamic-vision and tactile arrays producing sparse, micro-second events.",
         "image": "imgs/event-camera.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -308,7 +334,8 @@
         "description": "PV, RF and vibro harvesters powering untethered modules.",
         "image": "imgs/solar-energy-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "beyond"
       },
       "classes": "top-right"
     },
@@ -331,7 +358,8 @@
         "description": "Quantised LLM firmware running in <8 MB flash.",
         "image": "imgs/microchip-ai.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -343,7 +371,8 @@
         "description": "NR+ / TSN Wi-Fi hybrid stack guaranteeing <1 ms jitter.",
         "image": "imgs/mesh-network.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "now"
       },
       "classes": "top-right"
     },
@@ -355,7 +384,8 @@
         "description": "Privacy-preserving on-device training + secure aggregation.",
         "image": "imgs/shield-network-svgrepo-com.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -367,7 +397,8 @@
         "description": "Tool-chain to map perception and reflex graphs onto SNN hardware.",
         "image": "imgs/sdk.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "next"
       },
       "classes": "top-right"
     },
@@ -379,7 +410,8 @@
         "description": "Fleet-scale sim-to-real policy learning over resilient mesh.",
         "image": "imgs/multi-robot.svg",
         "kind": "stone",
-        "sensitivity": "internal"
+        "sensitivity": "internal",
+        "horizon": "beyond"
       },
       "classes": "top-right"
     },

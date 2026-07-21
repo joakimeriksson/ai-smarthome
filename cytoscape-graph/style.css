@@ -481,6 +481,31 @@ body {
   margin-bottom: 2px;
 }
 
+/* Roadmap view band headers + column dividers overlay */
+#roadmap-bands {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.roadmap-divider {
+  position: absolute;
+  top: 112px; bottom: 0;
+  width: 1px;
+  background: rgba(255,255,255,0.09);
+}
+.roadmap-band-label {
+  position: absolute;
+  top: 96px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+}
+
 /* Provenance block in the detail panel */
 .detail-provenance {
   margin-top: 8px;

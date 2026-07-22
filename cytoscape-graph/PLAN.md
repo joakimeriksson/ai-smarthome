@@ -157,16 +157,16 @@ anyone at RISE" = just log in.
 ## 4. Task backlog (phased, with acceptance criteria)
 
 ### Phase 0 — data model & safety
-- [ ] **`ontology.json` as single source of truth** (types, edge types, attribute enums, colours, icons). `editor.js` + `code.js` read from it. *Done when adding a node type requires editing only `ontology.json`.*
-- [ ] **`kind` on topics + `migrate_data.py`** (default `stone`; mark current goals `destination`). *Done when existing `data.json` loads unchanged and destinations render distinctly.*
-- [ ] **Stepping-stone attributes** (`horizon`, `trl`, `status`, `confidence`, `priority`, `owner`, `sensitivity`) in schema, editor form, and detail panel. *Done when a stone can be fully edited in-browser and its attributes show in the detail panel.*
-- [ ] **Fix the persistence race.** Today `POST /api/data` rewrites the whole file (last-writer-wins), and person-link mode calls `persistData()` on every toggle. Move to atomic writes + optimistic concurrency (version/etag) or git-commit-per-save; make edits granular (PATCH a node/edge) and debounce link toggles. *Done when two concurrent editors don't clobber each other.*
-- [ ] **Provenance** (`source`, `updatedBy`, `updatedAt`) written on every mutation.
+- [x] **`ontology.json` as single source of truth** (types, edge types, attribute enums, colours, icons). `editor.js` + `code.js` read from it. *Done when adding a node type requires editing only `ontology.json`.*
+- [x] **`kind` on topics + `migrate_data.py`** (default `stone`; mark current goals `destination`). *Done when existing `data.json` loads unchanged and destinations render distinctly.*
+- [x] **Stepping-stone attributes** (`horizon`, `trl`, `status`, `confidence`, `priority`, `owner`, `sensitivity`) in schema, editor form, and detail panel. *Machinery done. Data lags: only `horizon` + `sensitivity` are populated; `trl`/`status`/`confidence`/`priority`/`owner` are unset everywhere — see the "Stones missing readiness data" insight.*
+- [x] **Fix the persistence race.** ~~Today `POST /api/data` rewrites the whole file~~ → atomic write + optimistic concurrency (409 on version conflict, client reloads), link toggles debounced. *Still whole-file: granular PATCH per node/edge is not done, and `import_orcid.py` still writes non-atomically, ignoring the version — a feed run can clobber concurrent web edits.*
+- [x] **Provenance** (`source`, `updatedBy`, `updatedAt`) written on every mutation *from the editor / link mode / migrations*. Note: `source` collides with an edge's `source` node id, so edges carry only `updatedBy`/`updatedAt`. `import_orcid.py` still stamps nothing.
 
 ### Phase 1 — roadmap view & prove the value
-- [ ] **"Roadmap" view**: klay layout banded by `horizon` (now / next / beyond), destinations anchored right — the Ericsson-style swimlane generated from the graph.
-- [ ] **Reality-layer types** (`partner`, `funding_call`, `testbed`) + edges (`advances`, `funds`, `supports`, `enabledBy`, `evidences`) in editor/styles/legend.
-- [ ] **Live queries** surfaced in the UI: "stones with no advancing project" (capability gaps), "who works on X" (expert map), "stones by horizon/TRL". Saved views or a small query panel.
+- [x] **"Roadmap" view**: banded by `horizon` (now / next / beyond), destinations anchored right — the Ericsson-style swimlane generated from the graph. One lane per journey chain, each drawn as a straight horizontal line; branches diverge into their own row.
+- [x] **Reality-layer types** (`partner`, `funding_call`, `testbed`) + edges (`advances`, `funds`, `supports`, `enabledBy`, `evidences`) in editor/styles/legend *and in the views* — Full Map declares `"*"` (every ontology type), plus a "Delivery & Gaps" view. *No `partner`/`funding_call`/`testbed` nodes or `funds`/`supports`/`evidences`/`enabledBy` edges exist in the data yet.*
+- [x] **Live queries** surfaced in the UI — the **Insights** panel (`queries.js`): capability gaps (no advancing project, no expert, isolated, unreached destinations, publications evidencing no stone, missing readiness) and overviews (by horizon, by TRL, expert map). Results click through to the node.
 - [ ] **Curated public build**: read-only export filtered by `sensitivity`.
 
 ### Phase 2 — multi-user & feeds
@@ -181,12 +181,14 @@ anyone at RISE" = just log in.
 
 ## 5. Known issues in the current code (fix as you touch them)
 
-- `server.py` runs `app.run(debug=True)` — dev only; disable for any shared deployment.
-- No authentication; `GET/POST /api/data` is open. Gate behind SSO before multi-user.
-- `POST /api/data` overwrites the entire file with no locking/versioning → **data-loss race** with concurrent editors.
-- `code.js` `persistData()` fires on every person-link toggle → heavy full-file writes; batch/debounce.
-- `@app.route('/<path:path>')` serves arbitrary files from the app dir — restrict to known asset folders (`imgs/`, JS, CSS) to avoid serving unintended files.
-- `data.js` is dead code — remove or clearly keep as an offline fallback only.
+- ~~`server.py` runs `app.run(debug=True)`~~ — **fixed**: off unless `FLASK_DEBUG=1`.
+- No authentication; `GET/POST /api/data` is open. Gate behind SSO before multi-user. **Open.**
+- ~~`POST /api/data` overwrites the entire file with no locking/versioning~~ — **fixed**: atomic write + optimistic concurrency (409). Still whole-file, not per-node PATCH.
+- ~~`code.js` `persistData()` fires on every person-link toggle~~ — **fixed**: debounced (600 ms).
+- ~~`@app.route('/<path:path>')` serves arbitrary files~~ — **fixed**: extension whitelist + private-file blocklist.
+- `data.js` is dead code — remove or clearly keep as an offline fallback only. **Open.**
+- `import_orcid.py` bypasses the persistence hardening: non-atomic full-file write, ignores `version`, stamps no provenance. **Open.**
+- `data.json` has no `version` key until the first save (the server treats a missing version as 0). **Open, benign.**
 
 ---
 

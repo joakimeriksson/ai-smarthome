@@ -110,115 +110,131 @@ const VIB_LEAD = (() => { const p = here(STBL); push(STBL, 0x08, 0x18); return p
 const VIB_NONE = 0;
 
 // ---------------------------------------------------------------- instruments
-// 0-based array: instruments[0] is GT2 instrument 1.
+// Timbres measured from Hubbard's own tunes (Commando + Monty on the Run) with
+// tools/sid-dump.js: all three voices are PULSE, never triangle/saw; noise only
+// for drums. Fast attack, short decay, mid sustain, medium release. The bass
+// runs a NARROW pulse (~$180 = thin and buzzy so it cuts through) while lead and
+// arp sit wide (~$800-$B40). Commando uses no filter at all - the SID's filter
+// varied between chips, so Hubbard largely avoided it.
 const instruments = [
-    { name: 'Arp Lead',  ad: 0x0A, sr: 0xA9, firstWave: PULSE, gateTimer: 0x02,
-      tables: { wave: ARP_MIN, pulse: PW_LEAD, filter: 0, speed: VIB_LEAD }, vibratoDelay: 12 },
-    { name: 'PWM Bass',  ad: 0x08, sr: 0x6A, firstWave: PULSE, gateTimer: 0x02,
+    { name: 'Hub Lead',  ad: 0x06, sr: 0x4B, firstWave: PULSE, gateTimer: 0x02,
+      tables: { wave: 0, pulse: PW_LEAD, filter: 0, speed: VIB_LEAD }, vibratoDelay: 14 },
+    { name: 'Hub Bass',  ad: 0x08, sr: 0x59, firstWave: PULSE, gateTimer: 0x02,
       tables: { wave: 0, pulse: PW_BASS, filter: 0, speed: VIB_NONE } },
+    { name: 'Arp Chord', ad: 0x06, sr: 0x4B, firstWave: PULSE, gateTimer: 0x02,
+      tables: { wave: ARP_MIN, pulse: PW_STAB, filter: 0, speed: VIB_NONE } },
     { name: 'Kick',      ad: 0x00, sr: 0x88, firstWave: NOISE, gateTimer: 0x02,
       tables: { wave: WT_KICK, pulse: 0, filter: 0, speed: VIB_NONE } },
     { name: 'Snare',     ad: 0x00, sr: 0x9A, firstWave: NOISE, gateTimer: 0x02,
       tables: { wave: WT_SNARE, pulse: 0, filter: 0, speed: VIB_NONE } },
     { name: 'Hat',       ad: 0x00, sr: 0x56, firstWave: NOISE, gateTimer: 0x02,
       tables: { wave: WT_HAT, pulse: 0, filter: 0, speed: VIB_NONE } },
-    { name: 'Stab',      ad: 0x02, sr: 0x8A, firstWave: PULSE, gateTimer: 0x02,
-      tables: { wave: ARP_MIN7, pulse: PW_STAB, filter: 0, speed: VIB_NONE } },
 ];
-const I_LEAD = 1, I_BASS = 2, I_KICK = 3, I_SNARE = 4, I_HAT = 5, I_STAB = 6;
+const I_LEAD = 1, I_BASS = 2, I_ARP = 3, I_KICK = 4, I_SNARE = 5, I_HAT = 6;
 
 // ---------------------------------------------------------------- song
-// A minor, i - VI - III - VII: the C64 progression.
-const CHORDS = [
-    { root: 'A', oct: 3, arp: ARP_MIN, bass: ['A', 2] },
-    { root: 'F', oct: 3, arp: ARP_MAJ, bass: ['F', 2] },
-    { root: 'C', oct: 4, arp: ARP_MAJ, bass: ['C', 2] },
-    { root: 'G', oct: 3, arp: ARP_SUS, bass: ['G', 2] },
+// ORIGINAL music written in Hubbard's idiom - his techniques and timbres, not
+// his notes. The idiom, measured from Monty on the Run: melody notes held ~48
+// frames riding on a 1-FRAME arpeggio shimmer (Monty's voice 2 changes pitch on
+// 1404 frames at 1-frame gaps), over a relentless eighth-note pulse bass.
+//
+// A natural minor with a harmonic-minor V (E major) in the last bar - the
+// "heroic" lift Hubbard reached for constantly.
+const ROWS = 16;                 // one bar of sixteenths
+const SPEED = 4;                 // 4 frames/row -> driving, ~187 BPM feel
+
+// bar -> { chord tones for the arp, bass root, arp table }
+const BARS = [
+    { arp: ARP_MIN, bass: ['A', 2], deg: ['A', 3] },   // Am
+    { arp: ARP_MIN, bass: ['A', 2], deg: ['A', 3] },   // Am
+    { arp: ARP_MAJ, bass: ['F', 2], deg: ['F', 3] },   // F
+    { arp: ARP_MAJ, bass: ['G', 2], deg: ['G', 3] },   // G
+    { arp: ARP_MIN, bass: ['A', 2], deg: ['A', 3] },   // Am
+    { arp: ARP_MIN, bass: ['A', 2], deg: ['A', 3] },   // Am
+    { arp: ARP_MAJ, bass: ['G', 2], deg: ['G', 3] },   // G
+    { arp: ARP_MAJ, bass: ['E', 3], deg: ['E', 3] },   // E  (harmonic-minor V)
 ];
-const ROWS = 16;
+
+// The hook: [row, note, octave, length]. Long notes with syncopated answers.
+const HOOK = [
+    [[0, 'A', 4, 8], [8, 'C', 5, 4], [12, 'B', 4, 4]],
+    [[0, 'A', 4, 6], [6, 'E', 5, 6], [12, 'D', 5, 4]],
+    [[0, 'C', 5, 8], [8, 'A', 4, 8]],
+    [[0, 'B', 4, 4], [4, 'D', 5, 4], [8, 'G', 4, 8]],
+    [[0, 'E', 5, 8], [8, 'C', 5, 4], [12, 'A', 4, 4]],
+    [[0, 'A', 5, 8], [8, 'G', 5, 4], [12, 'E', 5, 4]],
+    [[0, 'D', 5, 8], [8, 'B', 4, 8]],
+    [[0, 'E', 5, 4], [4, 'Gs', 5, 4], [8, 'B', 5, 8]],
+];
+
 const patterns = [];
 const P = (p) => (patterns.push(p), patterns.length - 1);
 
-// --- lead: a real melody over each chord, arp wavetable per chord shape
-const LEAD_FIGURE = [           // row -> scale step offset, or null = hold
-    0, null, 3, null, 7, null, 3, null,
-    5, null, 3, null, 0, null, null, KEYOFF,
-];
-const leadPats = CHORDS.map((ch, ci) => P(pattern(ROWS, d => {
-    LEAD_FIGURE.forEach((step, r) => {
-        if (step === KEYOFF) { d[r] = row(KEYOFF); return; }
-        if (step === null) return;
-        const n = note(ch.root, ch.oct) + step;
-        // 8xy points this row at THIS chord's arp table; only emit it when the
-        // shape changes (re-issuing 8xy resets the table and freezes the arp)
-        const armArp = (r === 0);
-        d[r] = row(n, I_LEAD, armArp ? 0x08 : 0, armArp ? ch.arp : 0);
+// --- voice 0: the lead hook
+const leadPats = HOOK.map(bar => P(pattern(ROWS, d => {
+    bar.forEach(([r, name, oct, len]) => {
+        d[r] = row(note(name, oct), I_LEAD);
+        if (r + len < ROWS) d[r + len] = row(KEYOFF);
     });
 })));
 
-// --- bass: driving eighths with an octave lift on the back half
-const bassPats = CHORDS.map((ch) => P(pattern(ROWS, d => {
-    for (let r = 0; r < ROWS; r += 2) {
-        const up = r >= 8 && (r % 4 === 2);
-        d[r] = row(note(ch.bass[0], ch.bass[1]) + (up ? 12 : 0), I_BASS);
-        d[r + 1] = row(KEYOFF);
-    }
+// --- voice 1: relentless eighth-note bass, root with octave kicks on the
+// off-beats and a fifth to lead back round
+const bassPats = BARS.map(b => P(pattern(ROWS, d => {
+    const root = note(b.bass[0], b.bass[1]);
+    const FIG = [0, null, 12, null, 0, null, 0, null, 0, null, 12, null, 0, null, 7, null];
+    FIG.forEach((iv, r) => {
+        if (iv === null) { d[r] = row(KEYOFF); return; }
+        d[r] = row(root + iv, I_BASS);
+    });
 })));
 
-// --- drums: kick on 1 & 3, snare on 2 & 4, hats on the off-beats
-const drumPat = P(pattern(ROWS, d => {
-    for (let r = 0; r < ROWS; r++) {
-        if (r % 8 === 0) d[r] = row(note('C', 3), I_KICK);
-        else if (r % 8 === 4) d[r] = row(note('D', 4), I_SNARE);
-        else if (r % 2 === 1) d[r] = row(note('A', 5), I_HAT);
-    }
-}));
-// fill variant: extra kick + snare roll into the turnaround
-const drumFill = P(pattern(ROWS, d => {
-    for (let r = 0; r < ROWS; r++) {
-        if (r % 8 === 0) d[r] = row(note('C', 3), I_KICK);
-        else if (r === 4) d[r] = row(note('D', 4), I_SNARE);
-        else if (r >= 12) d[r] = row(note('D', 4) + (r - 12), I_SNARE);
-        else if (r % 2 === 1) d[r] = row(note('A', 5), I_HAT);
-    }
-}));
+// --- voice 2: 1-frame arp shimmer, interrupted by kick and snare. The arp
+// wavetable LOOPS, so one trigger sustains the chord until the next note - the
+// drums simply steal the voice for a few frames, exactly as Hubbard did with
+// only three channels to spend.
+const arpPats = BARS.map(b => P(pattern(ROWS, d => {
+    const c = note(b.deg[0], b.deg[1]);
+    d[0]  = row(note('C', 3), I_KICK);
+    d[2]  = row(c, I_ARP, 0x08, b.arp);     // 8xy selects THIS chord's arp table
+    d[6]  = row(note('A', 5), I_HAT);
+    d[8]  = row(note('D', 4), I_SNARE);
+    d[10] = row(c, I_ARP, 0x08, b.arp);
+    d[14] = row(note('A', 5), I_HAT);
+})));
 
-// --- intro: bass + filter alone, so the sweep is audible before the drums hit
+// --- a four-bar intro: bass and arp only, so the groove arrives before the hook
 const introBass = P(pattern(ROWS, d => {
-    for (let r = 0; r < ROWS; r += 4) { d[r] = row(note('A', 2), I_BASS); d[r + 3] = row(KEYOFF); }
+    const root = note('A', 2);
+    for (let r = 0; r < ROWS; r += 2) { d[r] = row(root + (r % 8 === 4 ? 12 : 0), I_BASS); d[r + 1] = row(KEYOFF); }
 }));
-const introLead = P(pattern(ROWS, d => {
-    d[0] = row(note('A', 4), I_LEAD, 0x08, ARP_MIN7);
-    d[8] = row(note('E', 4), I_LEAD);
-    d[15] = row(KEYOFF);
-}));
-const stabPat = P(pattern(ROWS, d => {
-    d[0] = row(note('A', 4), I_STAB, 0x08, ARP_MIN7);
-    d[6] = row(note('G', 4), I_STAB);
-    d[10] = row(note('E', 4), I_STAB);
-    d[15] = row(KEYOFF);
+const introArp = P(pattern(ROWS, d => {
+    d[0] = row(note('C', 3), I_KICK);
+    d[2] = row(note('A', 3), I_ARP, 0x08, ARP_MIN7);
+    d[8] = row(note('D', 4), I_SNARE);
+    d[10] = row(note('A', 3), I_ARP, 0x08, ARP_MIN7);
 }));
 const empty = P(pattern(ROWS, () => {}));
 
-// Tempo (Fxy) and the one-shot filter arm (Axy) go on the very first rows.
-// The filter is GLOBAL and free-running: arm it ONCE or the cycle restarts.
+// Tempo goes on the first row that plays. The filter stays OUT of the way -
+// Commando uses none - but arm one gentle sweep so the feature is demoed.
 patterns[introBass].data[0].command = 0x0F;
-patterns[introBass].data[0].cmdData = 0x06;   // 6 frames/row
-patterns[introLead].data[0] = row(note('A', 4), I_LEAD, 0x0A, FILTER_SWEEP);
+patterns[introBass].data[0].cmdData = SPEED;
+patterns[introArp].data[0] = row(note('C', 3), I_KICK, 0x0A, FILTER_SWEEP);
 
-// Order lists. 0xE0-0xFD = transpose (0xF0 + semitones); 0xFF = end/loop.
+// Order-list transpose byte: 0xE0-0xFD, value = 0xF0 + signed semitones
 const TRANSPOSE = (semis) => 0xF0 + semis;
-const A = leadPats, B = bassPats;
+
+const A = leadPats, B = bassPats, C = arpPats;
 const orderLists = [
-    // voice 0: intro, main x2, then the same lifted +3 semitones
-    [introLead, empty, ...A, ...A, TRANSPOSE(3), ...A, TRANSPOSE(0), stabPat, 0xFF],
-    [introBass, introBass, ...B, ...B, TRANSPOSE(3), ...B, TRANSPOSE(0), introBass, 0xFF],
-    [empty, empty, drumPat, drumPat, drumPat, drumFill, drumPat, drumPat, drumPat, drumFill,
-     drumPat, drumPat, drumPat, drumFill, drumPat, 0xFF],
+    // lead rests through the intro, then the hook twice, second time up a fourth
+    [empty, empty, empty, empty, ...A, TRANSPOSE(5), ...A, TRANSPOSE(0), 0xFF],
+    [introBass, introBass, introBass, introBass, ...B, TRANSPOSE(5), ...B, TRANSPOSE(0), 0xFF],
+    [introArp, introArp, introArp, introArp, ...C, TRANSPOSE(5), ...C, TRANSPOSE(0), 0xFF],
 ];
 
 const song = {
-    name: 'Neon Dojo',
+    name: 'Hubbard Drive',
     author: 'SID Tracker',
     copyright: '2026 - generated by tools/make-default-song.js',
     subtunes: [{ orderLists }],

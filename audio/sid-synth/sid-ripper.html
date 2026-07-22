@@ -3397,6 +3397,15 @@
                             arpSpeed = Math.max(1, Math.min(15, frameGaps[Math.floor(frameGaps.length / 2)]));
                         }
 
+                        // GT2 delay entries last one frame LONGER than their
+                        // value: WAVEEXEC compares before incrementing
+                        // (`if (cptr->wavetime != wave) { wavetime++; skip }`),
+                        // so left=0 holds one frame, left=1 holds two. Writing
+                        // the measured gap directly made every arpeggio run at
+                        // half speed - Monty's every-frame octave trill became
+                        // a 2-frame one.
+                        const arpDelay = Math.max(0, Math.min(15, arpSpeed - 1));
+
                         const wtEntries = [];
                         intervals.forEach(interval => {
                             // GT2 relative note format:
@@ -3410,7 +3419,7 @@
                                 if (relNote < 0x60) relNote = 0x60;
                             }
                             wtEntries.push({
-                                left: arpSpeed,
+                                left: arpDelay,
                                 right: relNote,
                                 description: `${interval >= 0 ? '+' : ''}${interval} semitones (${arpSpeed}f)`
                             });
@@ -3741,19 +3750,47 @@
                 // Rows whose signature was too rare to earn a table keep no arp
                 // command and fall back to the instrument's default wavetable
                 // (the most-common shape).
+                //
+                // CRITICAL: emit 8XY only when the pointer actually CHANGES.
+                // GT2's CMD_SETWAVEPTR does `ptr[WTBL] = data; wavetime = 0`,
+                // so repeating the command every row RESTARTS the wavetable
+                // every row. An arpeggio whose cycle is longer than one row
+                // then never advances past its first entry and freezes on the
+                // base note - Monty's octave trill carried 8XY on 479
+                // consecutive rows and played a dead static pitch. Letting the
+                // table free-run across the REST rows is what makes it
+                // arpeggiate at all.
                 let commandsAdded = 0;
                 for (let v = 0; v < 3; v++) {
+                    // row -> desired pointer for this voice
+                    const arpByRow = new Map();
                     (arpeggioPatterns[v] || []).forEach(ap => {
                         const sig = ap.uniqueNotes
                             .map(n => n - ap.baseNote)
                             .sort((a, b) => a - b)
                             .join(',');
                         const ptr = ptrBySig[v].get(sig);
-                        if (!ptr) return;
-                        const row = rows[ap.row];
-                        if (!row) return;
-                        row.voices[v].cmd = 0x08;      // Wavetable pointer command
-                        row.voices[v].cmdData = ptr;
+                        if (ptr) arpByRow.set(ap.row, ptr);
+                    });
+                    if (!arpByRow.size) continue;
+
+                    let activePtr = -1;   // wavetable currently running on this voice
+                    rows.forEach((row, ri) => {
+                        const rv = row.voices[v];
+                        // A real (non-tie) note re-inits ptr[WTBL] from the
+                        // instrument, so whatever we armed is gone. GT2 skips
+                        // that init for toneportamento/tie rows (cmd 3), which
+                        // therefore keep the running table.
+                        const isNote = rv.note >= 0x60 && rv.note <= 0xBC;
+                        if (isNote && rv.cmd !== 0x03) activePtr = -1;
+
+                        const want = arpByRow.get(ri);
+                        if (want === undefined) return;
+                        if (want === activePtr) return;         // already running - do not restart
+                        if (rv.cmd === 0x03) return;            // never clobber a tie note
+                        rv.cmd = 0x08;                          // Wavetable pointer command
+                        rv.cmdData = want;
+                        activePtr = want;
                         commandsAdded++;
                     });
                 }

@@ -623,13 +623,14 @@ body {
 }
 .roadmap-divider {
   position: absolute;
-  top: 112px; bottom: 0;
+  top: 166px; bottom: 0;
   width: 1px;
   background: rgba(255,255,255,0.09);
 }
+/* Sits below the top-right button column so the DESTINATIONS label is never covered. */
 .roadmap-band-label {
   position: absolute;
-  top: 96px;
+  top: 150px;
   transform: translateX(-50%);
   font-size: 12px;
   font-weight: 700;

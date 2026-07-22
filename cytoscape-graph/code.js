@@ -137,85 +137,116 @@ function getLayout(view) {
 }
 
 // --- Roadmap swimlane layout ------------------------------------------------
-// Columns = horizon (now / next / beyond) + a destinations anchor on the right.
-// Rows = lanes, one per journey chain (the destination each stone flows to),
-// so journey edges read left-to-right like an Ericsson technology-journey slide.
-var ROADMAP_COLX = { now: 0, next: 360, beyond: 720, destination: 1080 };
-var ROADMAP_LANE_H = 300;
-var ROADMAP_SUB = 140;
+// Ericsson technology-journey style: one journey per row, drawn as a STRAIGHT
+// horizontal line of stones ending in its destination. Horizon bands (now /
+// next / beyond) give the columns, so a stone's x still reads as "when".
+// Within a band a chain's stones spread sideways into sub-slots — never
+// stacked vertically, which is what would bend the line.
+// Keep the total width modest: a wider graph forces a lower fit-zoom, and below
+// ~0.7 Cytoscape stops painting the SVG stone icons.
+var ROADMAP_SLOT_W = 180;   // x-distance between two stones in the same band
+var ROADMAP_BAND_GAP = 95;  // extra breathing room between bands (holds the divider)
+var ROADMAP_LANE_H = 190;   // y-distance between journeys
+var ROADMAP_BANDS = [
+  { key: 'now',         label: 'NOW · 0–2 YRS' },
+  { key: 'next',        label: 'NEXT · 2–5 YRS' },
+  { key: 'beyond',      label: 'BEYOND · 5–10 YRS' },
+  { key: 'destination', label: 'DESTINATIONS' }
+];
+var ROADMAP_MAX_CHAINS = 400; // guard against combinatorial blow-up on dense graphs
 
 function computeRoadmapPositions(elements) {
   var nodesById = {};
   elements.nodes.forEach(function(n) { nodesById[n.data.id] = n.data; });
 
+  // Destinations always occupy the anchor band on the right.
+  function bandOf(d) { return d.kind === 'destination' ? 'destination' : (d.horizon || 'now'); }
+
   // Forward journey adjacency (restricted to the elements in this view).
-  var fwd = {};
+  var fwd = {}, hasIncoming = {};
   elements.edges.forEach(function(e) {
-    if (e.data.type === 'journey') (fwd[e.data.source] = fwd[e.data.source] || []).push(e.data.target);
+    if (e.data.type !== 'journey') return;
+    (fwd[e.data.source] = fwd[e.data.source] || []).push(e.data.target);
+    hasIncoming[e.data.target] = true;
   });
 
-  // Follow journey edges forward to the first destination reached (the lane).
-  function reachDest(id, seen) {
-    var d = nodesById[id];
-    if (d && d.kind === 'destination') return id;
-    seen = seen || {};
-    if (seen[id]) return null;
-    seen[id] = true;
-    var outs = fwd[id] || [];
-    for (var i = 0; i < outs.length; i++) {
-      var r = reachDest(outs[i], seen);
-      if (r) return r;
-    }
-    return null;
+  // Enumerate every root -> sink journey chain; each becomes one straight lane.
+  var chains = [];
+  function walk(id, acc, onPath) {
+    if (chains.length >= ROADMAP_MAX_CHAINS) return;
+    var extended = false;
+    (fwd[id] || []).forEach(function(t) {
+      if (onPath[t]) return;          // cycle guard
+      onPath[t] = true;
+      walk(t, acc.concat([t]), onPath);
+      delete onPath[t];
+      extended = true;
+    });
+    if (!extended) chains.push(acc);  // reached a sink — the chain is complete
   }
-
-  // Lane index per destination, in node order; orphans share a trailing lane.
-  var laneOrder = [], laneIndex = {};
   elements.nodes.forEach(function(n) {
-    if (n.data.kind === 'destination' && !(n.data.id in laneIndex)) {
-      laneIndex[n.data.id] = laneOrder.length;
-      laneOrder.push(n.data.id);
-    }
-  });
-  var orphanLane = laneOrder.length;
-
-  var laneOf = {};
-  elements.nodes.forEach(function(n) {
-    if (n.data.kind === 'destination') { laneOf[n.data.id] = laneIndex[n.data.id]; return; }
-    var dest = reachDest(n.data.id);
-    laneOf[n.data.id] = (dest != null && dest in laneIndex) ? laneIndex[dest] : orphanLane;
+    var id = n.data.id;
+    if (hasIncoming[id] || !(fwd[id] || []).length) return;
+    var onPath = {}; onPath[id] = true;
+    walk(id, [id], onPath);
   });
 
-  function colKey(d) { return d.kind === 'destination' ? 'destination' : (d.horizon || 'now'); }
-
-  // Group by (lane, column) so multiple stones in a cell spread vertically.
-  var cell = {};
-  elements.nodes.forEach(function(n) {
-    var k = laneOf[n.data.id] + '|' + colKey(n.data);
-    (cell[k] = cell[k] || []).push(n.data.id);
-  });
-
-  var positions = {};
-  Object.keys(cell).forEach(function(k) {
-    var ids = cell[k];
-    var parts = k.split('|'), lane = +parts[0], col = parts[1];
-    var baseY = lane * ROADMAP_LANE_H;
-    ids.forEach(function(id, j) {
-      positions[id] = { x: ROADMAP_COLX[col], y: baseY + (j - (ids.length - 1) / 2) * ROADMAP_SUB };
+  // Each chain claims a lane for the nodes no earlier chain has claimed, so a
+  // branch (shared prefix) diverges into its own row instead of overlapping.
+  var laneOf = {}, slotOf = {}, laneCount = 0;
+  chains.forEach(function(chain) {
+    if (!chain.some(function(id) { return !(id in laneOf); })) return;
+    var lane = laneCount++;
+    var used = {};
+    chain.forEach(function(id) {
+      // Advance the band's slot counter for every node on the chain — including
+      // already-claimed ones — so slots stay aligned across branches.
+      var b = bandOf(nodesById[id]);
+      var slot = used[b] || 0;
+      used[b] = slot + 1;
+      if (!(id in laneOf)) { laneOf[id] = lane; slotOf[id] = slot; }
     });
   });
 
-  var cols = [
-    { key: 'now', label: 'NOW', x: ROADMAP_COLX.now },
-    { key: 'next', label: 'NEXT', x: ROADMAP_COLX.next },
-    { key: 'beyond', label: 'BEYOND', x: ROADMAP_COLX.beyond },
-    { key: 'destination', label: 'DESTINATIONS', x: ROADMAP_COLX.destination }
-  ];
-  var dividers = [
-    (ROADMAP_COLX.now + ROADMAP_COLX.next) / 2,
-    (ROADMAP_COLX.next + ROADMAP_COLX.beyond) / 2,
-    (ROADMAP_COLX.beyond + ROADMAP_COLX.destination) / 2
-  ];
+  // Nodes on no chain (the curation backlog, PLAN §2.6) share one trailing lane.
+  var orphanLane = null, orphanUsed = {};
+  elements.nodes.forEach(function(n) {
+    if (n.data.id in laneOf) return;
+    if (orphanLane === null) orphanLane = laneCount++;
+    var b = bandOf(n.data);
+    var slot = orphanUsed[b] || 0;
+    orphanUsed[b] = slot + 1;
+    laneOf[n.data.id] = orphanLane;
+    slotOf[n.data.id] = slot;
+  });
+
+  // Band widths adapt to the deepest slot actually used in each band.
+  var bandSlots = {};
+  ROADMAP_BANDS.forEach(function(b) { bandSlots[b.key] = 1; });
+  elements.nodes.forEach(function(n) {
+    var b = bandOf(n.data);
+    bandSlots[b] = Math.max(bandSlots[b] || 1, slotOf[n.data.id] + 1);
+  });
+
+  var bandX = {}, cols = [], dividers = [], x = 0;
+  ROADMAP_BANDS.forEach(function(b, i) {
+    bandX[b.key] = x;
+    var lastX = x + (bandSlots[b.key] - 1) * ROADMAP_SLOT_W;
+    cols.push({ key: b.key, label: b.label, x: (x + lastX) / 2 });
+    if (i < ROADMAP_BANDS.length - 1) dividers.push(lastX + (ROADMAP_SLOT_W + ROADMAP_BAND_GAP) / 2);
+    x = lastX + ROADMAP_SLOT_W + ROADMAP_BAND_GAP;
+  });
+
+  // One shared y per lane — this is what keeps each journey a straight line.
+  var positions = {};
+  elements.nodes.forEach(function(n) {
+    var d = n.data;
+    positions[d.id] = {
+      x: bandX[bandOf(d)] + slotOf[d.id] * ROADMAP_SLOT_W,
+      y: laneOf[d.id] * ROADMAP_LANE_H
+    };
+  });
+
   return { positions: positions, cols: cols, dividers: dividers };
 }
 

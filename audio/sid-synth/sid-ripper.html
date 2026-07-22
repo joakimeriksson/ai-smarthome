@@ -3585,8 +3585,11 @@
                         let prevFrame = null;
                         for (const e of rawEntries) {
                             if (prevFrame !== null) {
+                                // A GT2 delay entry holds for value+1 frames
+                                // (WAVEEXEC compares before incrementing), so
+                                // cover N frames with left = N-1.
                                 let gap = e.frame - prevFrame - 1;
-                                while (gap > 0) { const d = Math.min(15, gap); entries.push({ left: d, right: 0x80 }); gap -= d; }
+                                while (gap > 0) { const d = Math.min(16, gap); entries.push({ left: d - 1, right: 0x80 }); gap -= d; }
                             }
                             entries.push({ left: e.left, right: e.right });
                             prevFrame = e.frame;

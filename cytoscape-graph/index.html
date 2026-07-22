@@ -31,7 +31,14 @@
 
   <div id="right-buttons">
     <button id="edit-graph-btn">Edit Graph</button>
+    <button id="insights-btn">Insights</button>
     <button id="show-persons-btn">Show Persons</button>
+  </div>
+
+  <div id="query-panel" style="display: none;">
+    <button id="close-query-panel-btn">&times;</button>
+    <h3 id="query-panel-title">Insights</h3>
+    <div id="query-panel-body"></div>
   </div>
 
   <div id="detail-panel" style="display: none;">
@@ -87,6 +94,7 @@
 
   <script src="cytoscape-icons.js"></script>
   <script src="code.js"></script>
+  <script src="queries.js"></script>
   <script src="editor.js"></script>
 
 </body>

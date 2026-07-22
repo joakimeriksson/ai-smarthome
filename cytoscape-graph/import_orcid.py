@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
 """Import researchers and publications from ORCID into data.json.
 
-Two ways to pick people:
-  --orcids unit.txt          # explicit ORCID iDs, one per line (precise — use this for a unit)
+Three ways to pick people:
+  --names roster.txt         # a list of people's names -> resolve to ORCID iDs for review
+  --orcids unit.txt          # explicit ORCID iDs, one per line (what actually imports)
   --search "Org name"        # ORCID affiliation search (noisy; review with --dry-run first)
 
-Typical run for one unit:
-  python import_orcid.py --orcids my_unit.txt --group "RISE Cyber-Physical Systems" --dry-run
-  python import_orcid.py --orcids my_unit.txt --group "RISE Cyber-Physical Systems"
+Typical run for one unit, starting from a roster of names:
+
+  # 1. resolve names -> ORCID iDs. Writes resolved_roster.txt. Imports nothing.
+  python import_orcid.py --names roster.txt --affiliation-hint "RISE,KTH,Uppsala"
+
+  # 2. review resolved_roster.txt by hand: confirm the RESOLVED lines, uncomment
+  #    any LIKELY/UNCERTAIN ones you recognise, delete the rest.
+
+  # 3. import the reviewed list
+  python import_orcid.py --orcids resolved_roster.txt --group "RISE Computer Science" --dry-run
+  python import_orcid.py --orcids resolved_roster.txt --group "RISE Computer Science"
+
+Name resolution is deliberately a separate, human-reviewed step: names are not
+unique, and silently importing the wrong person's publications is worse than
+importing nobody. --names never writes to data.json.
 
 Only data the researcher has made public on ORCID is fetched. Imported nodes are
 stamped sensitivity=internal, so nothing reaches a public build without an
@@ -19,10 +32,12 @@ import hashlib
 import json
 import os
 import re
+import re
 import shutil
 import sys
 import tempfile
 import time
+import unicodedata
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -104,6 +119,265 @@ def search_by_affiliation(query, token, max_results=200):
             orcid_ids.append(orcid_id)
     print(f"Found {len(orcid_ids)} ORCID profiles for '{query}'")
     return orcid_ids
+
+
+def strip_accents(s):
+    """Fold diacritics so a roster's 'Hook' can match ORCID's 'Höök'."""
+    return "".join(c for c in unicodedata.normalize("NFKD", s)
+                   if not unicodedata.combining(c)).lower()
+
+
+def parse_roster(path):
+    """Parse a roster file into [{name, title, location}].
+
+    Blocks are separated by blank lines; the first line of a block is the name
+    and any following lines are hints (title, location) — which is how a unit
+    listing is usually pasted. A plain one-name-per-line file also works, since
+    each line then forms its own block.
+    """
+    with open(path, encoding="utf-8") as f:
+        lines = [ln.rstrip() for ln in f]
+
+    entries, block = [], []
+
+    def flush():
+        if not block:
+            return
+        name = block[0].strip()
+        rest = [b.strip() for b in block[1:] if b.strip()]
+        # Trailing location line ("Kista") is not a job title.
+        title = rest[0] if rest and len(rest) > 1 else ""
+        location = rest[-1] if rest else ""
+        entries.append({"name": name, "title": title, "location": location})
+
+    for ln in lines:
+        if ln.strip().startswith("#"):
+            continue
+        if not ln.strip():
+            flush()
+            block = []
+        else:
+            block.append(ln)
+    flush()
+    return [e for e in entries if e["name"]]
+
+
+def search_by_name(name, token, hints=None):
+    """Return ORCID candidates for a person's name.
+
+    Uses expanded-search, which — unlike the plain search endpoint — returns
+    `institution-name` per hit. That affiliation field is what makes a common
+    name resolvable, so it is the whole reason this uses expanded-search.
+    """
+    parts = name.split()
+    if len(parts) < 2:
+        return []
+    given, family = parts[0], parts[-1]
+    # Multi-word surnames ("Ben Abdesslem") — try the full tail as family too.
+    family_alt = " ".join(parts[1:]) if len(parts) > 2 else None
+
+    hints = hints or []
+    queries = [f'given-names:"{given}" AND family-name:"{family}"']
+    if family_alt:
+        queries.append(f'given-names:"{given}" AND family-name:"{family_alt}"')
+    for h in hints[:2]:
+        queries.append(f'family-name:"{family}" AND affiliation-org-name:"{h}"')
+    queries.append(f'"{name}"')
+
+    seen, candidates = set(), []
+    for q in queries:
+        data = api_get("expanded-search/?q=" + urllib.parse.quote(q) + "&rows=20", token)
+        for r in (data or {}).get("expanded-result") or []:
+            oid = r.get("orcid-id")
+            if not oid or oid in seen:
+                continue
+            seen.add(oid)
+            candidates.append({
+                "orcid": oid,
+                "name": f"{r.get('given-names') or ''} {r.get('family-names') or ''}".strip(),
+                "institutions": r.get("institution-name") or [],
+            })
+        if candidates and q == queries[0]:
+            break  # strict name match already worked; skip the looser queries
+
+    # Try Swedish diacritic spellings when the ASCII roster name found nothing,
+    # or found only people who are clearly elsewhere ("Hook" vs "Höök").
+    hint_hit = any(matches_hint(" | ".join(c["institutions"]), hints) for c in candidates)
+    if hints and not hint_hit or not candidates:
+        for fam in name_variants(family)[1:]:
+            q = f'given-names:"{given}" AND family-name:"{fam}"'
+            data = api_get("expanded-search/?q=" + urllib.parse.quote(q) + "&rows=10", token)
+            for r in (data or {}).get("expanded-result") or []:
+                oid = r.get("orcid-id")
+                if not oid or oid in seen:
+                    continue
+                seen.add(oid)
+                candidates.append({
+                    "orcid": oid,
+                    "name": f"{r.get('given-names') or ''} {r.get('family-names') or ''}".strip(),
+                    "institutions": r.get("institution-name") or [],
+                    "spelling": fam,
+                })
+            if any(matches_hint(" | ".join(c["institutions"]), hints) for c in candidates):
+                break
+    return candidates
+
+
+# Deep-verify at most this many candidates per name (one API call each).
+DEEP_VERIFY_LIMIT = 6
+
+
+def fetch_affiliations(orcid_id, token):
+    """All organisation names on a record: employments + educations, past included.
+
+    expanded-search only reports a summary institution list, which is frequently
+    empty even when the record has a full employment history — so a search-only
+    match badly under-reports affiliation.
+    """
+    data = api_get(f"{orcid_id}/record", token)
+    if not data:
+        return []
+    orgs = []
+    activities = data.get("activities-summary", {}) or {}
+    for section, key in (("employments", "employment-summary"),
+                         ("educations", "education-summary")):
+        for group in (activities.get(section, {}) or {}).get("affiliation-group", []) or []:
+            for s in group.get("summaries", []) or []:
+                org = ((s.get(key) or {}).get("organization") or {}).get("name")
+                if org:
+                    orgs.append(org)
+    return orgs
+
+
+def matches_hint(text, hints):
+    """Whole-word affiliation match on accent-folded text.
+
+    Word boundaries are essential, not cosmetic: a plain substring test matched
+    the hint 'SICS' inside 'Institute of Nuclear Physics' and confidently
+    resolved a particle physicist as a RISE colleague.
+    """
+    t = strip_accents(text)
+    for h in hints:
+        h = strip_accents(h.strip())
+        if h and re.search(r"\b" + re.escape(h) + r"\b", t):
+            return True
+    return False
+
+
+# Swedish vowels that a roster typed in ASCII commonly loses ("Hook" -> "Höök").
+DIACRITIC_VARIANTS = {"a": "aåä", "o": "oö", "u": "uü", "e": "eé"}
+MAX_NAME_VARIANTS = 16
+
+
+def name_variants(word):
+    """Bounded ASCII -> Swedish-diacritic expansions of a single name word."""
+    variants = [""]
+    for ch in word:
+        opts = DIACRITIC_VARIANTS.get(ch.lower(), ch)
+        if len(variants) * len(opts) > MAX_NAME_VARIANTS:
+            opts = ch  # stop expanding rather than explode combinatorially
+        variants = [v + (o.upper() if ch.isupper() else o) for v in variants for o in opts]
+    return variants
+
+
+def score_candidates(entry, candidates, hints, token=None, deep=True):
+    """Classify a name's candidates. Returns (status, matches, all_candidates).
+
+    A candidate is 'strong' when any affiliation hint appears in its institutions
+    — checked first against the search summary, then, if that misses, against the
+    full employment/education history fetched from the record.
+
+    Statuses:
+      RESOLVED  one strong candidate — safe to import
+      LIKELY    no affiliation evidence, but the name matched exactly one record
+      AMBIGUOUS several strong candidates
+      UNCERTAIN several candidates, none confirmed
+    """
+    strong = [c for c in candidates if matches_hint(" | ".join(c["institutions"]), hints)]
+
+    # Search summaries often omit affiliation; confirm against the full record.
+    if not strong and deep and token is not None and 0 < len(candidates) <= DEEP_VERIFY_LIMIT:
+        for c in candidates:
+            if c["institutions"]:
+                continue  # summary had affiliation and it did not match
+            orgs = fetch_affiliations(c["orcid"], token)
+            if orgs:
+                c["institutions"] = orgs
+                c["deep"] = True
+            if matches_hint(" | ".join(orgs), hints):
+                strong.append(c)
+
+    if len(strong) == 1:
+        return "RESOLVED", strong, candidates
+    if len(strong) > 1:
+        return "AMBIGUOUS", strong, candidates
+    if not candidates:
+        return "NOT_FOUND", [], []
+    # A distinctive name with exactly one public record and NO affiliation data
+    # anywhere is probably right — nothing confirms it, but nothing contradicts
+    # it either. If the record does list institutions and none matched, that is
+    # evidence against, so it stays UNCERTAIN.
+    if len(candidates) == 1 and not candidates[0]["institutions"]:
+        return "LIKELY", candidates, candidates
+    return "UNCERTAIN", [], candidates
+
+
+MARKS = {"RESOLVED": "OK", "LIKELY": "~ ", "AMBIGUOUS": "??", "UNCERTAIN": "??", "NOT_FOUND": "--"}
+
+
+def resolve_roster(entries, token, hints=None):
+    hints = hints or []
+    results = []
+    for i, e in enumerate(entries, 1):
+        print(f"[{i}/{len(entries)}] {e['name']}...", flush=True)
+        cands = search_by_name(e["name"], token, hints=hints)
+        status, strong, allc = score_candidates(e, cands, hints, token=token)
+        results.append({**e, "status": status, "matches": strong, "candidates": allc})
+        detail = strong[0]["orcid"] if strong else f"{len(allc)} candidate(s)"
+        print(f"    [{MARKS[status]}] {status:10} {detail}")
+    return results
+
+
+def write_resolution_file(results, path, hint=None):
+    """Write a reviewable file that --orcids can consume directly.
+
+    Resolved people are live lines; everything else is commented out with its
+    candidates listed, so reviewing means uncommenting the right line.
+    """
+    lines = [
+        "# ORCID resolution for review.",
+        "# Live (uncommented) lines are imported by:",
+        "#   python import_orcid.py --orcids <this file> --group \"<your unit>\"",
+        f"# Affiliation hints used: {hint or '(none)'}",
+        "#",
+        "# RESOLVED  = affiliation confirmed against the full ORCID record. Live below.",
+        "# LIKELY    = exactly one record for this name, and it lists no affiliation at",
+        "#             all — probably right, but unconfirmed. Uncomment to accept.",
+        "# UNCERTAIN = several candidates, or the only one is affiliated elsewhere.",
+        "# AMBIGUOUS = several candidates all at the hinted institution.",
+        "# NOT_FOUND = no public ORCID record matched this name.",
+        "",
+    ]
+    order = {"RESOLVED": 0, "LIKELY": 1, "AMBIGUOUS": 2, "UNCERTAIN": 3, "NOT_FOUND": 4}
+    for r in sorted(results, key=lambda x: (order[x["status"]], x["name"])):
+        lines.append(f"# --- {r['name']}  [{r['status']}]"
+                     + (f"  ({r['title']})" if r["title"] else ""))
+        if r["status"] == "RESOLVED":
+            m = r["matches"][0]
+            insts = ", ".join(m["institutions"][:3]) or "(none)"
+            lines.append(f"#     {m['name']} | {insts[:90]}")
+            lines.append(m["orcid"])
+        else:
+            for c in r["candidates"][:6]:
+                insts = ", ".join(c["institutions"][:2]) or "(no institution listed)"
+                lines.append(f"#   {c['orcid']}  {c['name']} | {insts[:70]}")
+            if not r["candidates"]:
+                lines.append("#   (no candidates)")
+        lines.append("")
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    return path
 
 
 def fetch_profile(orcid_id, token):
@@ -457,6 +731,9 @@ def main():
     parser = argparse.ArgumentParser(description="Import ORCID data into data.json")
     parser.add_argument("--search", help="Search ORCID by affiliation name")
     parser.add_argument("--orcids", help="File with ORCID IDs (one per line)")
+    parser.add_argument("--names", help="Roster file of people's names to resolve to ORCID iDs")
+    parser.add_argument("--affiliation-hint", default="RISE",
+                        help="Institution substring used to disambiguate names (default: RISE)")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
     parser.add_argument("--max-works", type=int, default=50, help="Max publications per researcher")
     parser.add_argument("--group", help="Unit name: creates a group node + member_of edges")
@@ -464,7 +741,7 @@ def main():
                         help=f"Remove the seeded placeholder researchers ({DEMO_EMAIL_DOMAIN}) first")
     args = parser.parse_args()
 
-    if not args.search and not args.orcids:
+    if not args.search and not args.orcids and not args.names:
         parser.print_help()
         sys.exit(1)
 
@@ -476,6 +753,32 @@ def main():
         print("Using ORCID public API (no credentials needed).\n")
 
     orcid_ids = []
+
+    if args.names:
+        entries = parse_roster(args.names)
+        hints = [h.strip() for h in args.affiliation_hint.split(",") if h.strip()]
+        print(f"Resolving {len(entries)} names from {args.names} "
+              f"(hints: {', '.join(hints)})\n")
+        results = resolve_roster(entries, token, hints=hints)
+
+        counts = {}
+        for r in results:
+            counts[r["status"]] = counts.get(r["status"], 0) + 1
+        print("\n--- Resolution summary ---")
+        for status in ("RESOLVED", "LIKELY", "AMBIGUOUS", "UNCERTAIN", "NOT_FOUND"):
+            if counts.get(status):
+                print(f"  {status:10} {counts[status]}")
+
+        stem = os.path.splitext(os.path.basename(args.names))[0]
+        out = os.path.join(BASE_DIR, f"resolved_{stem}.txt")
+        write_resolution_file(results, out, hint=", ".join(hints))
+        print(f"\nReview file written: {os.path.basename(out)}")
+
+        # Resolution is a review step: never import straight from a name list.
+        print("Review it, uncomment the iDs you accept, then run:")
+        print(f"  python import_orcid.py --orcids {os.path.basename(out)} "
+              f"--group \"<your unit>\"")
+        sys.exit(0)
 
     if args.search:
         orcid_ids = search_by_affiliation(args.search, token)

@@ -1,0 +1,84 @@
+# ORCID resolution for review.
+# Live (uncommented) lines are imported by:
+#   python import_orcid.py --orcids <this file> --group "<your unit>"
+# Affiliation hints used: RISE, SICS, KTH, Uppsala, Politecnico di Milano
+#
+# RESOLVED  = affiliation confirmed against the full ORCID record. Live below.
+# LIKELY    = exactly one record for this name, and it lists no affiliation at
+#             all — probably right, but unconfirmed. Uncomment to accept.
+# UNCERTAIN = several candidates, or the only one is affiliated elsewhere.
+# AMBIGUOUS = several candidates all at the hinted institution.
+# NOT_FOUND = no public ORCID record matched this name.
+
+# --- Akhila Rao  [RESOLVED]  (Forskare)
+#     Akhila Rao | KTH Royal Institute of Technology
+0000-0003-1992-4740
+
+# --- Dejan Kostic  [RESOLVED]
+#     Dejan Kostic | Duke University, KTH Royal Institute of Technology
+0000-0002-1256-1070
+
+# --- Diletta Romano  [RESOLVED]  (Doktorand)
+#     diletta romano | RISE Research Institutes of Sweden, Uppsala universitet
+0009-0000-2460-3381
+
+# --- Fehmi Ben Abdesslem  [RESOLVED]
+#     Fehmi Ben Abdesslem | RISE Research Institutes of Sweden AB, University College London, Université Paris-Sorbonn
+0000-0001-7866-143X
+
+# --- Kristina Hook  [RESOLVED]  (Senior Forskare)
+#     Kristina Höök | KTH Royal Institute of Technology, Kungliga Tekniska Högskolan Skolan för datavetenskap oc
+0000-0002-0002-4825
+
+# --- Luca Mottola  [RESOLVED]
+#     LUCA MOTTOLA | Politecnico di Milano
+0000-0003-4560-9541
+
+# --- Mariano Scazzariello  [RESOLVED]
+#     MARIANO SCAZZARIELLO | KTH Royal Institute of Technology, RISE Research Institutes of Sweden, Royal Institute of 
+0000-0002-9780-873X
+
+# --- Mattias Jacobsson  [RESOLVED]
+#     Mattias Jacobsson | Kungliga Tekniska Högskolan, RISE Division Digitala system, Swedish Institute of Computer 
+0000-0001-5110-6882
+
+# --- Miriana Passarotto  [RESOLVED]  (Doktorand)
+#     Miriana Passarotto | RISE Research Institutes of Sweden
+0009-0001-7447-2938
+
+# --- Nicolas Tsiftes  [RESOLVED]
+#     Nicolas Tsiftes | RISE Research Institutes of Sweden AB, Stockholm University, Uppsala University
+0000-0003-3139-2564
+
+# --- Sarder Fakhrul Abedin  [RESOLVED]
+#     Sarder Fakhrul Abedin | IEEE, KIISE, Kristianstad University
+0000-0002-2966-6469
+
+# --- Joel Höglund  [LIKELY]  (Researcher)
+#   0000-0002-9491-8183  Joel Höglund | (no institution listed)
+
+# --- Niclas Finne  [LIKELY]
+#   0000-0003-4044-4207  Niclas Finne | (no institution listed)
+
+# --- Thiemo Voigt  [LIKELY]
+#   0000-0002-2586-8573  Thiemo Voigt | (no institution listed)
+
+# --- Anna Ståhl  [UNCERTAIN]
+#   0000-0001-6203-0780  Anna Ståhl | (no institution listed)
+#   0000-0003-3828-1189  Anna-Carin Fagerlind Ståhl | (no institution listed)
+
+# --- Konstantin Popov  [UNCERTAIN]
+#   0000-0003-1583-3868  Konstantin Popov | Moscow State University of Civil Engineering
+#   0000-0002-3701-8242  Konstantin Popov | (no institution listed)
+#   0000-0001-7582-5937  Konstantin Popov | Siberian State Medical Univercity, Siberian State Medical University
+#   0000-0002-9431-5139  Konstantin Popov | (no institution listed)
+#   0000-0002-0018-5506  Konstantin Popov | (no institution listed)
+#   0000-0002-2729-2256  Konstantin Popov | (no institution listed)
+
+# --- Shuai Zhu  [UNCERTAIN]  (Forsknings- och utvecklingsingenjör)
+#   0000-0001-8657-1434  shuai zhu | (no institution listed)
+#   0000-0002-1102-8100  Shuai Zhu | (no institution listed)
+#   0000-0003-1197-7880  Shuai Zhu | (no institution listed)
+#   0000-0003-4483-8238  Shuai Zhu | (no institution listed)
+#   0000-0001-6455-9987  Shuai Zhu | (no institution listed)
+#   0000-0002-3428-2638  Shuai Zhu | Jiangnan University

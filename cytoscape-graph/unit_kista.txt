@@ -1,0 +1,59 @@
+# RISE Kista unit roster.
+# Blocks separated by blank lines: first line = name, any following lines are
+# hints (title, location) used to enrich the imported node.
+
+Akhila Rao
+Forskare
+Kista
+
+Anna Ståhl
+Kista
+
+Dejan Kostic
+Kista
+
+Diletta Romano
+Doktorand
+Kista
+
+Fehmi Ben Abdesslem
+Kista
+
+Joel Höglund
+Researcher
+Kista
+
+Konstantin Popov
+Kista
+
+Kristina Hook
+Senior Forskare
+Kista
+
+Luca Mottola
+Kista
+
+Mariano Scazzariello
+Kista
+
+Mattias Jacobsson
+Kista
+
+Miriana Passarotto
+Doktorand
+Kista
+
+Niclas Finne
+Kista
+
+Nicolas Tsiftes
+Kista
+
+Sarder Fakhrul Abedin
+Kista
+
+Shuai Zhu
+Forsknings- och utvecklingsingenjör
+Kista
+
+Thiemo Voigt

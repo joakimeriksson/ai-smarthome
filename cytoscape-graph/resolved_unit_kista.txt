@@ -54,17 +54,21 @@
 #     Sarder Fakhrul Abedin | IEEE, KIISE, Kristianstad University
 0000-0002-2966-6469
 
-# --- Joel Höglund  [LIKELY]  (Researcher)
+# --- Joel Höglund  [ACCEPTED]  (Researcher)
 #   0000-0002-9491-8183  Joel Höglund | (no institution listed)
+0000-0002-9491-8183
 
-# --- Niclas Finne  [LIKELY]
+# --- Niclas Finne  [ACCEPTED]
 #   0000-0003-4044-4207  Niclas Finne | (no institution listed)
+0000-0003-4044-4207
 
-# --- Thiemo Voigt  [LIKELY]
+# --- Thiemo Voigt  [ACCEPTED]
 #   0000-0002-2586-8573  Thiemo Voigt | (no institution listed)
+0000-0002-2586-8573
 
-# --- Anna Ståhl  [UNCERTAIN]
+# --- Anna Ståhl  [CONFIRMED by hand]
 #   0000-0001-6203-0780  Anna Ståhl | (no institution listed)
+0000-0001-6203-0780
 #   0000-0003-3828-1189  Anna-Carin Fagerlind Ståhl | (no institution listed)
 
 # --- Konstantin Popov  [UNCERTAIN]

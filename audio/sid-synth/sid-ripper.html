@@ -2661,7 +2661,20 @@
                                     // note. Arpeggio/trill pitch changes only
                                     // feed arp detection - as row notes they
                                     // would retrigger the envelope every row.
-                                    if (rowData.voices[v].note === 0 && !voiceFrame.arpeggioNote) {
+                                    // A note also OVERRIDES a KEYOFF already
+                                    // claimed in this row: gate-rhythmic players
+                                    // (Hubbard) release 1-2 frames before the
+                                    // next note gates on, so on a fine grid the
+                                    // keyoff and the note land in the SAME row.
+                                    // The keyoff got there first and used to
+                                    // discard the note entirely - Monty on the
+                                    // Run lost every note whose frame fell late
+                                    // in its row (11 of 32 on voice 2). The
+                                    // release is implicit in re-articulation
+                                    // (GT2 hard-restart re-gates anyway), so the
+                                    // note is what must survive.
+                                    const slot = rowData.voices[v].note;
+                                    if ((slot === 0 || slot === NOTE_KEYOFF) && !voiceFrame.arpeggioNote) {
                                         rowData.voices[v].note = gt2Note;
                                         if (voiceFrame.legato) {
                                             // Tie note: keep instrument (0 =

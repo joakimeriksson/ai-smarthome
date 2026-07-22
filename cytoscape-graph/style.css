@@ -354,6 +354,10 @@ body {
   right: 12px;
   z-index: 10;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 48%;
+  row-gap: 6px;
   gap: 12px;
   background: rgba(0, 5, 80, 0.8);
   padding: 8px 14px;

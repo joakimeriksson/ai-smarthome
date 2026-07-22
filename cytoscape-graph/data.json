@@ -53,11 +53,17 @@
       "nodeTypes": [
         "project",
         "researcher",
-        "topic"
+        "topic",
+        "partner",
+        "funding_call",
+        "testbed"
       ],
       "edgeTypes": [
         "leads",
         "participates",
+        "advances",
+        "funds",
+        "supports",
         "related_to"
       ],
       "layout": "cose"
@@ -67,32 +73,35 @@
       "label": "Publications",
       "nodeTypes": [
         "publication",
-        "researcher"
+        "researcher",
+        "topic"
       ],
       "edgeTypes": [
-        "authored"
+        "authored",
+        "evidences"
+      ],
+      "layout": "cose"
+    },
+    {
+      "id": "delivery",
+      "label": "Delivery & Gaps",
+      "nodeTypes": [
+        "topic",
+        "project",
+        "publication"
+      ],
+      "edgeTypes": [
+        "journey",
+        "advances",
+        "evidences"
       ],
       "layout": "cose"
     },
     {
       "id": "everything",
       "label": "Full Map",
-      "nodeTypes": [
-        "topic",
-        "researcher",
-        "group",
-        "project",
-        "publication"
-      ],
-      "edgeTypes": [
-        "journey",
-        "works_on",
-        "member_of",
-        "leads",
-        "participates",
-        "related_to",
-        "authored"
-      ],
+      "nodeTypes": "*",
+      "edgeTypes": "*",
       "layout": "cose"
     }
   ],
@@ -1659,119 +1668,153 @@
       "data": {
         "source": "proj-zeroiot",
         "target": "zeroIoT",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-zeroiot",
         "target": "harvest",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-zeroiot",
         "target": "intermittent",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-edgellm",
         "target": "tinyLLMrt",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-edgellm",
         "target": "tinyLLMaccel",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-edgellm",
         "target": "llm",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-saferobot",
         "target": "multiBotRL",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-saferobot",
         "target": "safetyXAI",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-saferobot",
         "target": "robotics",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-privml",
         "target": "fedLearning",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-greencloud",
         "target": "cloud",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-greencloud",
         "target": "sustainable",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-neuromorph",
         "target": "neuromorphicCore",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-neuromorph",
         "target": "eventVision",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-smartcity",
         "target": "mesh",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-smartcity",
         "target": "sensors",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {
       "data": {
         "source": "proj-xai",
         "target": "safetyXAI",
-        "type": "related_to"
+        "type": "advances",
+        "updatedBy": "migrate_data.py",
+        "updatedAt": "2026-07-22T13:59:50+00:00"
       }
     },
     {

@@ -100,13 +100,22 @@ function getNodeStyle() {
   return styles;
 }
 
+// A view may declare "*" for nodeTypes/edgeTypes, meaning "every type in the
+// ontology". Full Map uses this so a type added to ontology.json renders
+// immediately instead of being silently invisible (PLAN §2.5).
+function viewTypes(spec, ontologyKey) {
+  return spec === '*' ? Object.keys(ontology[ontologyKey]) : spec;
+}
+
 function getFilteredElements(view) {
+  var nodeTypes = viewTypes(view.nodeTypes, 'nodeTypes');
+  var edgeTypes = viewTypes(view.edgeTypes, 'edgeTypes');
   var nodes = graphData.nodes.filter(function(n) {
-    return view.nodeTypes.indexOf(n.data.type) >= 0;
+    return nodeTypes.indexOf(n.data.type) >= 0;
   });
   var nodeIds = nodes.map(function(n) { return n.data.id; });
   var edges = graphData.edges.filter(function(e) {
-    return view.edgeTypes.indexOf(e.data.type) >= 0 &&
+    return edgeTypes.indexOf(e.data.type) >= 0 &&
            nodeIds.indexOf(e.data.source) >= 0 &&
            nodeIds.indexOf(e.data.target) >= 0;
   });
@@ -326,10 +335,11 @@ function switchView(viewId) {
   }
 
   // Update legend visibility
+  var visibleTypes = viewTypes(view.nodeTypes, 'nodeTypes');
   var legendItems = document.querySelectorAll('.legend-item');
   legendItems.forEach(function(item) {
     var type = item.dataset.type;
-    if (type && view.nodeTypes.indexOf(type) >= 0) {
+    if (type && visibleTypes.indexOf(type) >= 0) {
       item.style.display = 'flex';
     } else if (type) {
       item.style.display = 'none';
@@ -760,10 +770,13 @@ function setupPersonLinkMode() {
 }
 
 // Stamp provenance on a node/edge data object (updatedBy = SSO user once auth lands).
+// The provenance field `source` collides with an edge's `source` node id, so it is
+// only written on nodes; edges carry updatedBy/updatedAt only.
 function stampProvenance(data) {
   data.updatedAt = new Date().toISOString();
   data.updatedBy = 'manual';
-  if (!data.source) data.source = 'manual';
+  var isEdge = data.source !== undefined && data.target !== undefined;
+  if (!isEdge && !data.source) data.source = 'manual';
 }
 
 function reloadData() {

@@ -74,7 +74,7 @@
     "help": "Governs public visibility. Only 'public' nodes appear in a curated public build. Applies to every node."
   },
   "provenanceFields": {
-    "source":    { "label": "Source", "help": "URL / citation / 'orcid' / 'diva' / 'manual'." },
+    "source":    { "label": "Source", "help": "URL / citation / 'orcid' / 'diva' / 'manual'. Nodes only — on edges this key is the source node id, so edges carry updatedBy/updatedAt only." },
     "updatedBy": { "label": "Updated by", "help": "User id (set from SSO once auth is in place)." },
     "updatedAt": { "label": "Updated at", "help": "ISO 8601 timestamp." }
   },

@@ -109,6 +109,20 @@
     },
     {
       group: 'Capability gaps',
+      id: 'gap-pub-no-evidence',
+      label: 'Publications evidencing no stone',
+      help: 'Publications not linked to any stepping stone via "evidences" — results the roadmap cannot see yet.',
+      run: function () {
+        return graphData.nodes
+          .filter(function (p) {
+            if (p.data.type !== 'publication') return false;
+            return !outgoing(p.data.id).some(function (e) { return e.data.type === 'evidences'; });
+          })
+          .map(function (p) { return { id: p.data.id, label: lbl(p), note: p.data.year || '' }; });
+      }
+    },
+    {
+      group: 'Capability gaps',
       id: 'gap-no-readiness',
       label: 'Stones missing readiness data',
       help: 'Stones with no TRL and no confidence set — incomplete records to curate.',

@@ -121,6 +121,22 @@ def search_by_affiliation(query, token, max_results=200):
     return orcid_ids
 
 
+def normalize_name(s):
+    """Tidy ORCID display names for use as graph labels.
+
+    People type their own ORCID names, so records arrive as "LUCA MOTTOLA" or
+    "diletta romano". Only all-caps / all-lowercase names are re-cased; anything
+    already mixed-case is left alone so "Ben Abdesslem" and "McDonald" survive.
+    """
+    s = (s or "").strip()
+    if not s:
+        return s
+    letters = [c for c in s if c.isalpha()]
+    if letters and (all(c.isupper() for c in letters) or all(c.islower() for c in letters)):
+        return " ".join(w[:1].upper() + w[1:] for w in s.lower().split())
+    return s
+
+
 def strip_accents(s):
     """Fold diacritics so a roster's 'Hook' can match ORCID's 'Höök'."""
     return "".join(c for c in unicodedata.normalize("NFKD", s)
@@ -423,8 +439,8 @@ def fetch_profile(orcid_id, token):
 
     return {
         "orcid": orcid_id,
-        "given": given,
-        "family": family,
+        "given": normalize_name(given),
+        "family": normalize_name(family),
         "description": description,
         "role": current_role,
         "org": current_org,

@@ -1,21 +1,42 @@
 #!/usr/bin/env python3
-"""Import researchers and publications from ORCID into data.json."""
+"""Import researchers and publications from ORCID into data.json.
+
+Two ways to pick people:
+  --orcids unit.txt          # explicit ORCID iDs, one per line (precise — use this for a unit)
+  --search "Org name"        # ORCID affiliation search (noisy; review with --dry-run first)
+
+Typical run for one unit:
+  python import_orcid.py --orcids my_unit.txt --group "RISE Cyber-Physical Systems" --dry-run
+  python import_orcid.py --orcids my_unit.txt --group "RISE Cyber-Physical Systems"
+
+Only data the researcher has made public on ORCID is fetched. Imported nodes are
+stamped sensitivity=internal, so nothing reaches a public build without an
+explicit curation step (PLAN.md section 3).
+"""
 
 import argparse
 import hashlib
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 import time
 import urllib.request
 import urllib.parse
 import urllib.error
+from datetime import datetime, timezone
 
-DATA_FILE = os.path.join(os.path.dirname(__file__), "data.json")
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "orcid_config.json")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, "data.json")
+ONTOLOGY_FILE = os.path.join(BASE_DIR, "ontology.json")
+CONFIG_FILE = os.path.join(BASE_DIR, "orcid_config.json")
 ORCID_API = "https://pub.orcid.org/v3.0"
 HEADERS = {"Accept": "application/orcid+json"}
+
+# Demo/seed researchers carry this fake mail domain; --prune-demo removes them.
+DEMO_EMAIL_DOMAIN = "@cs.example.edu"
 
 
 def load_config():
@@ -214,14 +235,72 @@ def truncate_label(title, max_len=30):
     return label + "..." if label != title else title
 
 
+def default_sensitivity():
+    try:
+        with open(ONTOLOGY_FILE, encoding="utf-8") as f:
+            return json.load(f).get("sensitivity", {}).get("default", "internal")
+    except (OSError, json.JSONDecodeError):
+        return "internal"
+
+
+def stamp_provenance(d, source="orcid"):
+    """PLAN section 2.4. `source` is only written on nodes — on an edge that key
+    is the source node id (same collision guarded in migrate_data.py / code.js)."""
+    is_edge = "source" in d and "target" in d
+    if not is_edge:
+        d.setdefault("source", source)
+    d["updatedBy"] = "import_orcid.py"
+    d["updatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
 def load_data():
-    with open(DATA_FILE) as f:
+    with open(DATA_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+def save_data(data, backup=True):
+    """Atomic write + version bump, matching server.py's persistence contract.
+
+    Bumping `version` means a browser holding a pre-import copy gets a 409 on its
+    next save instead of silently clobbering everything this import added.
+    """
+    if backup:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        dest = f"{DATA_FILE}.bak-{stamp}"
+        shutil.copy2(DATA_FILE, dest)
+        print(f"Backup written: {os.path.basename(dest)}")
+
+    data["version"] = data.get("version", 0) + 1
+
+    fd, tmp = tempfile.mkstemp(dir=BASE_DIR, prefix=".data-", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, DATA_FILE)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+    print(f"data.json now at version {data['version']}")
+
+
+def prune_demo_researchers(data):
+    """Remove the seeded placeholder researchers (and every edge touching them)."""
+    demo_ids = {
+        n["data"]["id"] for n in data["nodes"]
+        if n["data"].get("type") == "researcher"
+        and str(n["data"].get("email", "")).endswith(DEMO_EMAIL_DOMAIN)
+    }
+    if not demo_ids:
+        return 0, 0
+
+    before_edges = len(data["edges"])
+    data["nodes"] = [n for n in data["nodes"] if n["data"]["id"] not in demo_ids]
+    data["edges"] = [
+        e for e in data["edges"]
+        if e["data"]["source"] not in demo_ids and e["data"]["target"] not in demo_ids
+    ]
+    return len(demo_ids), before_edges - len(data["edges"])
 
 
 def merge_into_data(data, researchers, publications, edges):
@@ -259,11 +338,31 @@ def merge_into_data(data, researchers, publications, edges):
     return added_nodes, added_edges
 
 
-def run_import(orcid_ids, token, dry_run=False):
+def make_group_id(name):
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return f"g-{slug}"
+
+
+def run_import(orcid_ids, token, dry_run=False, max_works=50, group=None,
+               prune_demo=False):
     all_researchers = []
     all_publications = []
     all_edges = []
     pub_index = {}  # doi/hash -> pub node id (for dedup)
+    sensitivity = default_sensitivity()
+
+    # The unit itself, so imported people hang off one group node.
+    group_node = None
+    if group:
+        group_data = {
+            "id": make_group_id(group),
+            "type": "group",
+            "label": group,
+            "description": f"Unit imported alongside its ORCID researchers.",
+            "sensitivity": sensitivity,
+        }
+        stamp_provenance(group_data)
+        group_node = {"data": group_data}
 
     for i, orcid_id in enumerate(orcid_ids):
         print(f"\n[{i+1}/{len(orcid_ids)}] Fetching {orcid_id}...")
@@ -275,65 +374,83 @@ def run_import(orcid_ids, token, dry_run=False):
         r_id = make_researcher_id(profile["given"], profile["family"])
         print(f"  {profile['given']} {profile['family']} ({profile['org']})")
 
-        researcher_node = {
-            "data": {
-                "id": r_id,
-                "type": "researcher",
-                "label": f"{profile['given']}\n{profile['family']}",
-                "description": profile["description"],
-                "orcid": orcid_id,
-                "title": profile["role"] or "Researcher",
-            }
+        researcher_data = {
+            "id": r_id,
+            "type": "researcher",
+            "label": f"{profile['given']}\n{profile['family']}",
+            "description": profile["description"],
+            "orcid": orcid_id,
+            "title": profile["role"] or "Researcher",
+            "sensitivity": sensitivity,
         }
-        all_researchers.append(researcher_node)
+        stamp_provenance(researcher_data, source=f"orcid:{orcid_id}")
+        all_researchers.append({"data": researcher_data})
 
-        works = fetch_works(orcid_id, token)
+        if group_node:
+            member_edge = {
+                "source": r_id,
+                "target": group_node["data"]["id"],
+                "type": "member_of",
+            }
+            stamp_provenance(member_edge)
+            all_edges.append({"data": member_edge})
+
+        works = fetch_works(orcid_id, token, max_works=max_works)
         print(f"  {len(works)} publications")
 
         for w in works:
             pub_id = make_pub_id(w["doi"], w["title"], w["year"])
 
             if pub_id not in pub_index:
-                pub_node = {
-                    "data": {
-                        "id": pub_id,
-                        "type": "publication",
-                        "label": truncate_label(w["title"]),
-                        "description": w["title"],
-                        "year": w["year"],
-                        "venue": w["venue"] or None,
-                    }
+                pub_data = {
+                    "id": pub_id,
+                    "type": "publication",
+                    "label": truncate_label(w["title"]),
+                    "description": w["title"],
+                    "year": w["year"],
+                    "venue": w["venue"] or None,
+                    "sensitivity": sensitivity,
                 }
                 if w["doi"]:
-                    pub_node["data"]["doi"] = w["doi"]
-                all_publications.append(pub_node)
+                    pub_data["doi"] = w["doi"]
+                stamp_provenance(pub_data, source=f"orcid:{orcid_id}")
+                all_publications.append({"data": pub_data})
                 pub_index[pub_id] = True
 
-            all_edges.append({
-                "data": {
-                    "source": r_id,
-                    "target": pub_id,
-                    "type": "authored",
-                }
-            })
+            authored_edge = {"source": r_id, "target": pub_id, "type": "authored"}
+            stamp_provenance(authored_edge)
+            all_edges.append({"data": authored_edge})
+
+    if group_node:
+        all_researchers.insert(0, group_node)
 
     print(f"\n--- Summary ---")
-    print(f"Researchers: {len(all_researchers)}")
+    print(f"Researchers: {len(all_researchers) - (1 if group_node else 0)}")
     print(f"Publications: {len(all_publications)}")
-    print(f"Authored edges: {len(all_edges)}")
+    print(f"Edges (authored + member_of): {len(all_edges)}")
 
     if dry_run:
         print("\n[DRY RUN] No changes written.")
         print("\nResearchers found:")
         for r in all_researchers:
             d = r["data"]
+            if d["type"] != "researcher":
+                continue
             print(f"  {d['label'].replace(chr(10), ' ')} (ORCID: {d['orcid']})")
+        if prune_demo:
+            n_demo, n_demo_edges = prune_demo_researchers(load_data())
+            print(f"\n--prune-demo would remove {n_demo} placeholder researchers "
+                  f"and {n_demo_edges} edges.")
         return
 
     data = load_data()
+    if prune_demo:
+        n_demo, n_demo_edges = prune_demo_researchers(data)
+        print(f"\nPruned {n_demo} placeholder researchers and {n_demo_edges} edges.")
+
     added_nodes, added_edges = merge_into_data(data, all_researchers, all_publications, all_edges)
     save_data(data)
-    print(f"\nAdded {added_nodes} nodes, {added_edges} edges to data.json")
+    print(f"Added {added_nodes} nodes, {added_edges} edges to data.json")
 
 
 def main():
@@ -342,6 +459,9 @@ def main():
     parser.add_argument("--orcids", help="File with ORCID IDs (one per line)")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
     parser.add_argument("--max-works", type=int, default=50, help="Max publications per researcher")
+    parser.add_argument("--group", help="Unit name: creates a group node + member_of edges")
+    parser.add_argument("--prune-demo", action="store_true",
+                        help=f"Remove the seeded placeholder researchers ({DEMO_EMAIL_DOMAIN}) first")
     args = parser.parse_args()
 
     if not args.search and not args.orcids:
@@ -372,7 +492,8 @@ def main():
         print("No ORCID IDs to process.")
         sys.exit(0)
 
-    run_import(orcid_ids, token, dry_run=args.dry_run)
+    run_import(orcid_ids, token, dry_run=args.dry_run, max_works=args.max_works,
+               group=args.group, prune_demo=args.prune_demo)
 
 
 if __name__ == "__main__":

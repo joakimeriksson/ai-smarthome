@@ -2999,9 +2999,12 @@
                             if (voicePulsePtr[v] && inst.tables.pulse === 0) {
                                 inst.tables.pulse = voicePulsePtr[v];
                             }
-                            if (ftPtr && inst.tables.filter === 0) {
-                                inst.tables.filter = ftPtr;
-                            }
+                            // NOTE: deliberately NOT assigning inst.tables.filter.
+                            // GT2 re-arms the GLOBAL filterptr from the
+                            // instrument at every note-on (gplay.c TICK0), which
+                            // restarts a free-running filter cycle on every note.
+                            // The filter is armed once via a row 0x0A command in
+                            // addEffectCommands instead.
                             if (voiceSpeedPtr[v] && inst.tables.speed === 0) {
                                 inst.tables.speed = voiceSpeedPtr[v];
                             }
@@ -3834,6 +3837,36 @@
                     };
                 }
 
+                // Arm the GLOBAL filter table exactly ONCE, before the per-note
+                // pass. Two reasons this needs its own pass:
+                //  - CMD_SETFILTERPTR resets filterptr AND filtertime, so
+                //    re-issuing it per note restarts a free-running filter cycle
+                //    before it completes (Terra Cresta's 64-frame pattern was
+                //    retriggered every ~7 frames).
+                //  - It must not compete with vibrato/portamento for a row slot.
+                //    The old code only tried voice 0 rows that had a note and no
+                //    command, and lost every time to the speed command - Wizball
+                //    built a correct filter table that was never armed, so the
+                //    song played completely dry.
+                // Commands execute at TICK0 whether or not the row has a note,
+                // so take the earliest free cmd slot on any voice.
+                if (voiceEffects[0].filter) {
+                    const ftblPos = voiceEffects[0].filter.ftblPos;
+                    let armed = false;
+                    for (let ri = 0; ri < rows.length && !armed; ri++) {
+                        for (let v = 0; v < 3 && !armed; v++) {
+                            const rv = rows[ri].voices[v];
+                            if (rv.cmd === 0) {
+                                rv.cmd = 0x0A;          // Set filtertable pointer
+                                rv.cmdData = ftblPos;
+                                armed = true;
+                                cmdsAdded++;
+                            }
+                        }
+                    }
+                    console.log(armed ? `Filter armed once via A${ftblPos.toString(16)}` : 'WARNING: no free slot to arm filter');
+                }
+
                 // Inject commands into rows at note-on events
                 rows.forEach((row, rowIdx) => {
                     for (let v = 0; v < 3; v++) {
@@ -3847,11 +3880,8 @@
                                 voice.cmd = effects.speed.command;
                                 voice.cmdData = effects.speed.stblPos;
                                 cmdsAdded++;
-                            } else if (effects.filter) {
-                                voice.cmd = 0x0A;  // Set filtertable pointer
-                                voice.cmdData = effects.filter.ftblPos;
-                                cmdsAdded++;
                             }
+                            // (filter is armed once, above - never per note)
                         }
                     }
                 });
@@ -3958,55 +3988,107 @@
             buildFilterTables(filterChanges) {
                 if (!filterChanges || filterChanges.length < 4) return [];
 
-                const entries = [];
+                // Dominant filter setup. The OLD code took filterChanges[0],
+                // which is the init frame and can read back all-zero.
+                const tally = (key) => {
+                    const h = new Map();
+                    for (const fc of filterChanges) h.set(fc[key], (h.get(fc[key]) || 0) + 1);
+                    return [...h.entries()].sort((a, b) => b[1] - a[1])[0][0];
+                };
+                const mode = tally('mode'), routing = tally('routing'), resonance = tally('resonance');
 
-                // Analyze filter sweep pattern
-                const cutoffDeltas = filterChanges.map(fc => fc.cutoffDelta).filter(d => d !== 0);
-                if (cutoffDeltas.length < 3) return [];
+                // Nothing routed and no filter type: the song really is unfiltered
+                if (!routing && !mode) return [];
 
-                // Set initial filter parameters
-                const first = filterChanges[0];
-                const filterType = first.mode << 4;
-                const routingBits = first.routing;
-
-                // Entry 0: Set filter params (type + routing + resonance)
-                entries.push({
-                    left: 0x80 | filterType | routingBits,
-                    right: (first.resonance << 4),
-                    description: `Set filter: type=${first.mode}, res=${first.resonance}, route=${first.routing}`
-                });
-
-                // Entry 1: Set initial cutoff
-                entries.push({
-                    left: 0x00,
-                    right: first.cutoff & 0xFF,
-                    description: `Set cutoff = $${first.cutoff.toString(16).padStart(2, '0')}`
-                });
-
-                // Entry 2: Modulate cutoff
-                const avgCutoffDelta = Math.round(cutoffDeltas.reduce((a, b) => a + b, 0) / cutoffDeltas.length);
-                if (avgCutoffDelta !== 0) {
-                    const speed = avgCutoffDelta & 0xFF;
-                    entries.push({
-                        left: speed,
-                        right: 0x00,
-                        description: `Modulate cutoff by ${avgCutoffDelta > 0 ? '+' : ''}${avgCutoffDelta}/frame`
-                    });
-
-                    // Loop back to modulate
-                    entries.push({
-                        left: 0xFF,
-                        right: entries.length - 1,
-                        description: 'Loop to modulate'
-                    });
+                // Per-frame cutoff trajectory (filterChanges are recorded only
+                // on change, so hold the last value across gaps)
+                const lastFrame = filterChanges[filterChanges.length - 1].frame;
+                const nFrames = Math.min(lastFrame + 1, 3000);
+                const traj = new Array(nFrames);
+                {
+                    let ci = 0, cur = filterChanges[0].cutoff & 0xFF;
+                    for (let f = 0; f < nFrames; f++) {
+                        while (ci < filterChanges.length && filterChanges[ci].frame <= f) {
+                            cur = filterChanges[ci].cutoff & 0xFF; ci++;
+                        }
+                        traj[f] = cur;
+                    }
                 }
 
-                if (entries.length <= 2) return [];
+                // Filter patterns are usually an exact repeating cycle (Galway's
+                // Terra Cresta is a 64-frame pattern that repeats bit-for-bit).
+                // Find the SHORTEST exact cycle so one period can be encoded
+                // note-for-note and looped, instead of averaged away.
+                const globalRange = Math.max(...traj) - Math.min(...traj);
+                let period = 0;
+                for (let lag = 2; lag <= 256 && lag * 2 <= nFrames; lag++) {
+                    let diff = 0, n = 0;
+                    for (let i = 0; i + lag < nFrames; i++) { diff += Math.abs(traj[i] - traj[i + lag]); n++; }
+                    if (!n || diff / n > 0.5) continue;
+                    // A candidate period must also CONTAIN the movement. A
+                    // slowly-drifting filter (Wizball: 124 changes in 1500
+                    // frames) sits still most frames, so tiny lags score a
+                    // near-perfect autocorrelation while explaining nothing -
+                    // that detected a bogus 2-frame "cycle" and froze the filter.
+                    const seg = traj.slice(0, lag);
+                    const segRange = Math.max(...seg) - Math.min(...seg);
+                    if (globalRange > 4 && segRange < globalRange * 0.8) continue;
+                    period = lag; break;
+                }
+                // No exact cycle: encode the WHOLE captured trajectory. Run-length
+                // merging collapses the long static stretches of a slow sweep, so
+                // this still fits - and a prefix-only span would loop a fragment.
+                const span = period || nFrames;
+
+                const entries = [];
+                // Entry 0: set filter params. GT2 (gplay.c 269-270) reads
+                //   filtertype = LEFT & 0x70;  filterctrl = RIGHT;
+                // so RESONANCE **and ROUTING** both belong in the right byte.
+                // The old code put routing in the left byte, where & 0x70
+                // discards it - every ripped song ended up with routing 0, ie.
+                // no voice actually passing through the filter.
+                entries.push({
+                    left: 0x80 | ((mode << 4) & 0x70),
+                    right: ((resonance & 0x0F) << 4) | (routing & 0x07),
+                    description: `Set filter: type=${mode}, res=${resonance}, route=${routing}`
+                });
+                // Entry 1: initial cutoff. GT2 consumes this in the SAME frame
+                // as the set-params entry above, so together they cost 1 frame.
+                entries.push({
+                    left: 0x00,
+                    right: traj[0],
+                    description: `Set cutoff = $${traj[0].toString(16)}`
+                });
+
+                // Encode the cycle frame-accurately: merge runs of EQUAL
+                // per-frame delta into one modulate entry (left = ticks,
+                // right = signed delta/frame); anything too big for a modulate
+                // becomes a set-cutoff (which also costs exactly 1 frame).
+                const MAX_ENTRIES = 240;   // FTBL is 255 and the filter owns it alone
+                for (let i = 1; i < span && entries.length < MAX_ENTRIES; ) {
+                    const d = traj[i] - traj[i - 1];
+                    if (d < -127 || d > 127) {
+                        entries.push({ left: 0x00, right: traj[i], description: `Set cutoff = $${traj[i].toString(16)}` });
+                        i++;
+                        continue;
+                    }
+                    let run = 1;
+                    while (i + run < span && run < 127 && (traj[i + run] - traj[i + run - 1]) === d) run++;
+                    entries.push({ left: run, right: d & 0xFF, description: `Modulate ${run}f by ${d > 0 ? '+' : ''}${d}` });
+                    i += run;
+                }
+
+                // Loop back to entry 0: re-running set-params is harmless and
+                // replays the cycle from exactly the same state each period.
+                entries.push({ left: 0xFF, right: 0x00, description: 'Loop to start' });
+
+                console.log(`Filter: type=${mode} res=${resonance} route=${routing}, ` +
+                    `${period ? `exact ${period}-frame cycle` : `${span}-frame approx`}, ${entries.length} FTBL entries`);
 
                 return [{
                     entries: entries,
-                    sweepSpeed: avgCutoffDelta,
-                    description: `Filter sweep: cutoff speed ${avgCutoffDelta > 0 ? '+' : ''}${avgCutoffDelta}, type=${first.mode}, res=${first.resonance}`
+                    period: period,
+                    description: `Filter ${period ? `cycle ${period}f` : `sweep ${span}f`}: type=${mode}, res=${resonance}, route=${routing}`
                 }];
             },
 

@@ -19,6 +19,8 @@
 //        node tools/make-default-song.js --js out.js      also emit an ES module
 //                                                          for the app to import
 import { writeSng } from '../gt2-sng-writer.js';
+import { generateArpeggio, generatePWM, generateFilterSweep, generateVibrato,
+         generateDrum, WAVEFORMS } from '../table-generators.js';
 import { writeFileSync } from 'node:fs';
 
 // ---------------------------------------------------------------- note helpers
@@ -44,69 +46,50 @@ function push(t, l, r) { L[t].push(l & 0xFF); R[t].push(r & 0xFF); return L[t].l
 // returns the 1-based pointer of the NEXT entry to be written
 const here = (t) => L[t].length + 1;
 
-// --- WTBL: arpeggios. A waveform entry advances every frame, so an N-entry
-// loop is an N-frame arp - the classic C64 "chord from one voice".
-function arp(waveform, intervals) {
-    const start = here(WTBL);
-    intervals.forEach(iv => push(WTBL, waveform, iv & 0x7F));
-    push(WTBL, 0xFF, start);       // loop back to this table's own start
+// The byte-level table layout lives in ../table-generators.js - the SAME pure
+// module the browser table editor drives, so the traps (delay = value+1 frames,
+// jump targets are absolute 1-based pointers, routing belongs in the FTBL right
+// byte, drums need absolute notes) are encoded once instead of twice.
+function emit(t, result) {
+    const start = here(t);
+    result.entries.forEach(e => push(t, e.left, e.right));
     return start;
 }
-const PULSE = 0x41, TRI = 0x11, SAW = 0x21, NOISE = 0x81;
-const ARP_MIN = arp(PULSE, [0, 3, 7]);      // minor triad
-const ARP_MAJ = arp(PULSE, [0, 4, 7]);      // major triad
-const ARP_SUS = arp(PULSE, [0, 5, 7]);      // sus4 - lifts the turnaround
-const ARP_MIN7 = arp(PULSE, [0, 3, 7, 10]); // minor 7th
+/** generators take startPos as a 0-BASED array index; here() is 1-based */
+const at = (t) => L[t].length;
 
-// --- WTBL: drum onsets. Noise burst that drops in pitch, then a short tonal
-// body; the trailing silent entry lets the ADSR release do the rest.
-function drum(steps) {
-    const start = here(WTBL);
-    steps.forEach(([w, n]) => push(WTBL, w, n & 0xFF));
-    push(WTBL, 0xFF, 0x00);        // 0 = stop: one-shot, not a loop
-    return start;
-}
-// Right byte 0x81-0xFF = ABSOLUTE note (right & 0x7F), so drums keep their
-// pitch no matter what note the pattern row holds - and survive order-list
-// transposes, which would otherwise detune the kit.
-const ABS = (n) => 0x80 | (n & 0x7F);
-//                noise transient, then a tonal body that drops = the classic
-//                C64 kick; ~note 40 down to ~note 22, not sub-DC
-const WT_KICK = drum([[NOISE, ABS(40)], [TRI, ABS(31)], [TRI, ABS(26)], [TRI, ABS(22)]]);
-const WT_SNARE = drum([[NOISE, ABS(62)], [NOISE, ABS(58)], [NOISE, ABS(54)], [NOISE, ABS(50)]]);
-const WT_HAT = drum([[NOISE, ABS(84)], [NOISE, ABS(80)]]);
+const PULSE = WAVEFORMS.pulse, TRI = WAVEFORMS.triangle, NOISE = WAVEFORMS.noise;
 
-// --- PTBL: pulse-width sweeps. left>=0x80 sets PW ((left&0x0F)<<8 | right),
-// left 0x01-0x7F modulates for N frames by signed right.
-function pwm(startPW, legs) {
-    const start = here(PTBL);
-    push(PTBL, 0x80 | ((startPW >> 8) & 0x0F), startPW & 0xFF);
-    legs.forEach(([frames, speed]) => push(PTBL, frames, speed));
-    push(PTBL, 0xFF, start + 1);   // loop past the set, so the sweep is seamless
-    return start;
-}
-const PW_LEAD = pwm(0x600, [[64, 6], [64, -6]]);   // slow shimmer
-const PW_BASS = pwm(0x900, [[48, -4], [48, 4]]);   // fat, slower
-const PW_STAB = pwm(0x300, [[24, 12], [24, -12]]); // narrow, nasal
+// --- WTBL: arpeggios. One waveform entry per chord tone = one frame each, so
+// an N-tone loop is an N-frame arp - the classic C64 "chord from one voice".
+const arp = (chord) =>
+    emit(WTBL, generateArpeggio({ chord, waveform: PULSE, stepFrames: 1, startPos: at(WTBL) }));
+const ARP_MIN  = arp([0, 3, 7]);       // minor triad
+const ARP_MAJ  = arp([0, 4, 7]);       // major triad
+const ARP_SUS  = arp([0, 5, 7]);       // sus4 - lifts the turnaround
+const ARP_MIN7 = arp([0, 3, 7, 10]);   // minor 7th
 
-// --- FTBL: the global resonant low-pass. left>=0x80 sets type|routing/res,
-// left 0x00 sets cutoff, left 0x01-0x7F modulates.
-const FILTER_SWEEP = (() => {
-    const start = here(FTBL);
-    // type = left & 0x70 (0x10 = low-pass); right = resonance<<4 | routing.
-    // Routing 0b011 = voices 1+2 through the filter, drums stay dry and punchy.
-    push(FTBL, 0x80 | 0x10, (0x0A << 4) | 0x03);
-    push(FTBL, 0x00, 0x30);                 // cutoff
-    push(FTBL, 48, +2);                     // open
-    push(FTBL, 24, +3);
-    push(FTBL, 48, -2);                     // close
-    push(FTBL, 24, -3);
-    push(FTBL, 0xFF, start + 2);            // loop the sweep, keep the settings
-    return start;
-})();
+// --- WTBL: drum onsets (one-shot, absolute notes so the kit survives the
+// order-list transposes)
+const WT_KICK  = emit(WTBL, generateDrum({ kind: 'kick' }));
+const WT_SNARE = emit(WTBL, generateDrum({ kind: 'snare' }));
+const WT_HAT   = emit(WTBL, generateDrum({ kind: 'hat' }));
 
-// --- STBL: vibrato (left = compare value, right = freq delta per frame)
-const VIB_LEAD = (() => { const p = here(STBL); push(STBL, 0x08, 0x18); return p; })();
+// --- PTBL: pulse-width sweeps, seamless triangles that keep the PW value
+// across the loop
+const PW_LEAD = emit(PTBL, generatePWM({ center: 0x6C0, depth: 384, rate: 64, startPos: at(PTBL) }));
+const PW_BASS = emit(PTBL, generatePWM({ center: 0x960, depth: 192, rate: 48, startPos: at(PTBL) }));
+const PW_STAB = emit(PTBL, generatePWM({ center: 0x390, depth: 288, rate: 24, startPos: at(PTBL) }));
+
+// --- FTBL: the global resonant low-pass. Routing 0b011 = voices 1+2 through
+// the filter, so the drums stay dry and punchy.
+const FILTER_SWEEP = emit(FTBL, generateFilterSweep({
+    mode: 'lowpass', resonance: 10, routing: 0b011,
+    low: 0x30, high: 0xC0, rate: 48, startPos: at(FTBL),
+}));
+
+// --- STBL: vibrato (parameter slot, not a program - one entry, no jump)
+const VIB_LEAD = emit(STBL, generateVibrato({ periodFrames: 8, depth: 96 }));
 const VIB_NONE = 0;
 
 // ---------------------------------------------------------------- instruments

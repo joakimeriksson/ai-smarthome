@@ -1,6 +1,8 @@
 // table-editor-gt2.js - GoatTracker2 Table Editor UI
 
 import { gt2TableManager, TABLE_TYPES, TABLE_NAMES } from './table-manager-gt2.js';
+import { generate, GENERATORS_BY_TABLE, CHORDS, WAVEFORMS, FILTER_MODES, DRUM_KINDS }
+    from './table-generators.js';
 
 let currentTableType = TABLE_TYPES.WAVE;
 let isEditorOpen = false;
@@ -46,10 +48,17 @@ function initializeControls() {
     document.getElementById('saveTableButton').addEventListener('click', saveChanges);
     document.getElementById('cancelTableButton').addEventListener('click', closeTableEditor);
 
-    // Presets
-    document.getElementById('presetLinearButton').addEventListener('click', () => applyPreset('linear'));
-    document.getElementById('presetSineButton').addEventListener('click', () => applyPreset('sine'));
-    document.getElementById('presetTriangleButton').addEventListener('click', () => applyPreset('triangle'));
+    // Resize (this button had no listener at all - the Length field did nothing)
+    document.getElementById('resizeTableButton').addEventListener('click', () => {
+        const table = gt2TableManager.getTable(currentTableType);
+        if (!table) return;
+        table.length = parseInt(document.getElementById('tableLength').value, 10) || 16;
+        loadCurrentTable();
+    });
+
+    // Generators
+    document.getElementById('generatorSelect').addEventListener('change', renderGeneratorParams);
+    document.getElementById('generatorInsertButton').addEventListener('click', insertGenerated);
 }
 
 function openTableEditor() {
@@ -78,6 +87,9 @@ function loadCurrentTable() {
 
     // Show hex reference for current table type
     updateHexReference();
+
+    // Offer only the generators that apply to this table type
+    renderGeneratorOptions();
 }
 
 function updateHexReference() {
@@ -328,103 +340,153 @@ function clearCurrentTable() {
     }
 }
 
-function applyPreset(presetType) {
+// ---------------------------------------------------------------- generators
+// The old "Presets" buttons were dead in two ways: three of the five had no
+// listener at all, and applyPreset() called gt2TableManager.getTable(), which
+// did not exist - so every click threw. They are replaced by parameterised
+// generators backed by table-generators.js (the same pure module
+// tools/make-default-song.js uses, so there is one implementation of the byte
+// layout and its many traps).
+
+// Field specs per generator: [key, label, type, default, options?]
+const GENERATOR_FIELDS = {
+    arpeggio: [
+        ['chord', 'Chord', 'select', 'minor', () => Object.keys(CHORDS)],
+        ['waveform', 'Waveform', 'select', WAVEFORMS.pulse,
+            () => Object.entries(WAVEFORMS).map(([k, v]) => [v, k])],
+        ['stepFrames', 'Frames/step', 'number', 1, { min: 1, max: 17 }],
+    ],
+    drum: [
+        ['kind', 'Kind', 'select', 'kick', () => DRUM_KINDS],
+    ],
+    pwm: [
+        ['center', 'Centre PW', 'number', 0x800, { min: 0, max: 4095 }],
+        ['depth', 'Depth', 'number', 0x400, { min: 1, max: 4095 }],
+        ['rate', 'Frames/leg', 'number', 32, { min: 1, max: 127 }],
+    ],
+    filter: [
+        ['mode', 'Mode', 'select', 'lowpass', () => Object.keys(FILTER_MODES)],
+        ['resonance', 'Resonance', 'number', 10, { min: 0, max: 15 }],
+        ['routing', 'Voices (bitmask)', 'number', 1, { min: 0, max: 7 }],
+        ['low', 'Cutoff low', 'number', 0x20, { min: 0, max: 255 }],
+        ['high', 'Cutoff high', 'number', 0xC0, { min: 0, max: 255 }],
+        ['rate', 'Frames/leg', 'number', 48, { min: 1, max: 127 }],
+    ],
+    vibrato: [
+        ['periodFrames', 'Period (frames)', 'number', 12, { min: 1, max: 127 }],
+        ['depth', 'Depth (SID units)', 'number', 0x30, { min: 1, max: 2000 }],
+    ],
+};
+
+const GENERATOR_LABELS = {
+    arpeggio: 'Arpeggio / trill',
+    drum: 'Drum (one-shot)',
+    pwm: 'PWM sweep',
+    filter: 'Filter sweep',
+    vibrato: 'Vibrato',
+};
+
+function renderGeneratorOptions() {
+    const sel = document.getElementById('generatorSelect');
+    if (!sel) return;
+    const names = GENERATORS_BY_TABLE[currentTableType] || [];
+    sel.innerHTML = '';
+    names.forEach(n => {
+        const o = document.createElement('option');
+        o.value = n;
+        o.textContent = GENERATOR_LABELS[n] || n;
+        sel.appendChild(o);
+    });
+    document.getElementById('tableGeneratorPanel').style.display = names.length ? '' : 'none';
+    renderGeneratorParams();
+}
+
+function renderGeneratorParams() {
+    const host = document.getElementById('generatorParams');
+    const name = document.getElementById('generatorSelect').value;
+    if (!host || !name) return;
+    host.innerHTML = '';
+    for (const [key, label, type, def, opts] of (GENERATOR_FIELDS[name] || [])) {
+        const lab = document.createElement('label');
+        lab.textContent = label + ':';
+        lab.style.marginLeft = '8px';
+        host.appendChild(lab);
+
+        let input;
+        if (type === 'select') {
+            input = document.createElement('select');
+            for (const entry of opts()) {
+                const [value, text] = Array.isArray(entry) ? entry : [entry, entry];
+                const o = document.createElement('option');
+                o.value = value;
+                o.textContent = text;
+                input.appendChild(o);
+            }
+        } else {
+            input = document.createElement('input');
+            input.type = 'number';
+            if (opts) { input.min = opts.min; input.max = opts.max; }
+            input.style.width = '72px';
+        }
+        input.value = def;
+        input.dataset.key = key;
+        input.addEventListener('input', updateGeneratorPreview);
+        input.addEventListener('change', updateGeneratorPreview);
+        host.appendChild(input);
+    }
+    updateGeneratorPreview();
+}
+
+function readGeneratorParams() {
+    const name = document.getElementById('generatorSelect').value;
+    const startPos = parseInt(document.getElementById('generatorStart').value, 10) || 0;
+    const params = { startPos };
+    document.querySelectorAll('#generatorParams [data-key]').forEach(el => {
+        const v = el.value;
+        // numeric-valued selects (waveform) and number inputs both coerce here
+        params[el.dataset.key] = (el.tagName === 'INPUT' || /^\d+$/.test(v)) ? Number(v) : v;
+    });
+    return { name, params, startPos };
+}
+
+function updateGeneratorPreview() {
+    const preview = document.getElementById('generatorPreview');
+    if (!preview) return;
+    try {
+        const { name, params, startPos } = readGeneratorParams();
+        const result = generate(name, params);
+        const lines = result.entries.map((e, i) =>
+            `  [${startPos + i}] $${e.left.toString(16).padStart(2, '0')} ` +
+            `$${e.right.toString(16).padStart(2, '0')}  ${e.description || ''}`);
+        preview.textContent = `${result.description}\n${lines.join('\n')}`;
+        preview.style.color = '#8c8';
+    } catch (err) {
+        preview.textContent = err.message;
+        preview.style.color = '#c88';
+    }
+}
+
+function insertGenerated() {
     const table = gt2TableManager.getTable(currentTableType);
     if (!table) return;
-
-    if (!confirm(`Apply ${presetType} preset?`)) return;
-
-    switch (currentTableType) {
-        case TABLE_TYPES.WAVE:
-            applyWavePreset(table, presetType);
-            break;
-        case TABLE_TYPES.PULSE:
-            applyPulsePreset(table, presetType);
-            break;
-        case TABLE_TYPES.FILTER:
-            applyFilterPreset(table, presetType);
-            break;
+    const { name, params, startPos } = readGeneratorParams();
+    let result;
+    try {
+        result = generate(name, params);
+    } catch (err) {
+        alert(`Generator failed: ${err.message}`);
+        return;
     }
-
+    const end = startPos + result.entries.length;
+    if (end > 255) {
+        alert(`Does not fit: needs ${result.entries.length} entries at step ${startPos} (max 255).`);
+        return;
+    }
+    result.entries.forEach((e, i) => table.setEntry(startPos + i, e.left, e.right));
+    // Keep the generated block visible in the grid
+    if (table.length < end) table.length = Math.min(255, end + 2);
+    console.log(`Generated ${name} at ${startPos}: ${result.description}`);
     loadCurrentTable();
-}
-
-function applyWavePreset(table, preset) {
-    table.clear();
-
-    switch (preset) {
-        case 'linear':
-            // Arpeggio up octave
-            table.setEntry(0, 0x21, 0x00); // Saw, base
-            table.setEntry(1, 0x00, 0x04); // +4
-            table.setEntry(2, 0x00, 0x07); // +7
-            table.setEntry(3, 0x00, 0x0C); // +12 (octave)
-            table.setEntry(4, 0xFF, 0x01); // Jump
-            break;
-        case 'sine':
-            // Wave cycling
-            table.setEntry(0, 0x11, 0x00); // Tri+Gate
-            table.setEntry(1, 0x21, 0x00); // Saw+Gate
-            table.setEntry(2, 0x41, 0x00); // Pul+Gate
-            table.setEntry(3, 0xFF, 0x00); // Loop
-            break;
-        case 'triangle':
-            // Triangle arpeggio
-            table.setEntry(0, 0x11, 0x00);
-            table.setEntry(1, 0x01, 0x03);
-            table.setEntry(2, 0x01, 0x07);
-            table.setEntry(3, 0x01, 0x03);
-            table.setEntry(4, 0xFF, 0x01);
-            break;
-    }
-}
-
-function applyPulsePreset(table, preset) {
-    table.clear();
-
-    switch (preset) {
-        case 'linear':
-            table.setEntry(0, 0x80, 0x10); // Set $010
-            table.setEntry(1, 0x80, 0x80); // Mod to $800
-            table.setEntry(2, 0xFF, 0x01);
-            break;
-        case 'sine':
-            table.setEntry(0, 0x88, 0x00); // Start $800
-            table.setEntry(1, 0x20, 0x40); // 32 ticks, +64
-            table.setEntry(2, 0x40, 0xE0); // 64 ticks, -32
-            table.setEntry(3, 0xFF, 0x01);
-            break;
-        case 'triangle':
-            table.setEntry(0, 0x80, 0x00); // $000
-            table.setEntry(1, 0x30, 0x20); // 48 ticks, +32
-            table.setEntry(2, 0x30, 0xE0); // 48 ticks, -32
-            table.setEntry(3, 0xFF, 0x01);
-            break;
-    }
-}
-
-function applyFilterPreset(table, preset) {
-    table.clear();
-
-    switch (preset) {
-        case 'linear':
-            table.setEntry(0, 0x80, 0x00); // $000
-            table.setEntry(1, 0x40, 0x10); // 64 ticks, +16
-            table.setEntry(2, 0xFF, 0x01);
-            break;
-        case 'sine':
-            table.setEntry(0, 0x84, 0x00); // $400
-            table.setEntry(1, 0x20, 0x20); // 32 ticks, +32
-            table.setEntry(2, 0x40, 0xE0); // 64 ticks, -32
-            table.setEntry(3, 0xFF, 0x01);
-            break;
-        case 'triangle':
-            table.setEntry(0, 0x80, 0x00);
-            table.setEntry(1, 0x30, 0x08);
-            table.setEntry(2, 0x30, 0xF8); // -8
-            table.setEntry(3, 0xFF, 0x01);
-            break;
-    }
 }
 
 function saveChanges() {

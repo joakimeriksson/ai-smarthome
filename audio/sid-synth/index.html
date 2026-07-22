@@ -143,15 +143,19 @@
                     <!-- Hex reference populated by JavaScript -->
                 </div>
 
-                <div class="table-presets">
-                    <h3>Presets</h3>
-                    <div class="preset-buttons">
-                        <button id="presetLinearButton">Linear</button>
-                        <button id="presetSineButton">Sine</button>
-                        <button id="presetTriangleButton">Triangle</button>
-                        <button id="presetSawButton">Sawtooth</button>
-                        <button id="presetRandomButton">Random</button>
+                <div class="table-presets" id="tableGeneratorPanel">
+                    <h3>Generate</h3>
+                    <div class="param-row">
+                        <label for="generatorSelect">Type:</label>
+                        <select id="generatorSelect"></select>
+                        <label for="generatorStart">at step:</label>
+                        <input type="number" id="generatorStart" min="0" max="254" value="0"
+                               style="width: 64px;">
+                        <button id="generatorInsertButton">Insert</button>
                     </div>
+                    <div class="param-row" id="generatorParams"></div>
+                    <div id="generatorPreview"
+                         style="font-size: 12px; color: #8c8; margin-top: 6px; white-space: pre-wrap;"></div>
                 </div>
             </div>
             <div class="modal-footer">

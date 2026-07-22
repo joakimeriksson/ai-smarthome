@@ -136,6 +136,49 @@ export class GT2TableManager {
             this.rtable[tableType].fill(0);
         }
     }
+
+    /**
+     * Editable view of one table type. The table editor drives this - without
+     * it every call threw "getTable is not a function" and the editor rendered
+     * an empty grid (the whole panel, including its preset buttons, was dead).
+     *
+     * `length` is only how many rows the EDITOR shows; the underlying array is
+     * always MAX_TABLELEN. It defaults to just past the last used entry so the
+     * grid opens on real data instead of 255 blank rows.
+     */
+    getTable(tableType) {
+        if (tableType < 0 || tableType >= MAX_TABLES) return null;
+        const mgr = this;
+        if (!this.viewLengths) this.viewLengths = new Array(MAX_TABLES).fill(0);
+        if (!this.viewLengths[tableType]) {
+            let last = 0;
+            for (let i = 0; i < MAX_TABLELEN; i++) {
+                if (this.ltable[tableType][i] || this.rtable[tableType][i]) last = i + 1;
+            }
+            this.viewLengths[tableType] = Math.max(16, Math.min(MAX_TABLELEN, last + 4));
+        }
+        return {
+            type: tableType,
+            name: TABLE_NAMES[tableType],
+            get length() { return mgr.viewLengths[tableType]; },
+            set length(n) {
+                mgr.viewLengths[tableType] = Math.max(1, Math.min(MAX_TABLELEN, n | 0));
+            },
+            getEntry: (pos) => mgr.getEntry(tableType, pos),
+            setEntry: (pos, l, r) => mgr.setEntry(tableType, pos, l, r),
+            clear: () => mgr.clearTable(tableType),
+        };
+    }
+
+    /**
+     * Read one byte by GT2 POINTER (1-based; pointer 0 = "no table").
+     * pattern-commands.js reads STBL speed/vibrato params through this.
+     */
+    getTableValue(tableType, pointer, isLeft) {
+        if (!pointer) return 0;
+        const entry = this.getEntry(tableType, pointer - 1);
+        return isLeft ? entry.left : entry.right;
+    }
 }
 
 // Table execution state for each voice (matches GoatTracker CHN struct)

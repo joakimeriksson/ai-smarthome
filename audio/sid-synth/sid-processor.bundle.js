@@ -4167,19 +4167,24 @@ class SidProcessor extends AudioWorkletProcessor {
           vs.gate = 0xFF;
         }
 
-        // Reset table state (gplay.c lines 368-402)
-        vs.ptr = [0, 0, 0, 0];
+        // Reset table state (gplay.c lines 368-402).
+        // NOTE the asymmetry in gplay.c: ptr[WTBL] is assigned UNCONDITIONALLY
+        // (`cptr->ptr[WTBL] = iptr->ptr[WTBL];`), but ptr[PTBL] and filterptr
+        // are only touched inside `if (iptr->ptr[PTBL])` / `if (iptr->ptr[FTBL])`.
+        // A running pulsetable therefore SURVIVES a note whose instrument has
+        // no pulse table. Clearing it here diverged from GT2 and made a
+        // free-running PWM impossible to express (a 9XY-armed table was killed
+        // by the very next note).
+        vs.ptr[0] = 0;
+        vs.ptr[2] = 0;
+        vs.ptr[3] = 0;
         vs.waveActive = false;
-        vs.pulseActive = false;
         vs.filterActive = false;
         vs.speedActive = false;
         vs.wavetime = 0;
-        vs.pulsetime = 0;
         vs.filtertime = 0;
         vs.speedtime = 0;
         vs.tableNote = 0;
-        vs.pulseModTicks = 0;
-        vs.pulseModSpeed = 0;
 
         // Init wavetable (gplay.c lines 371-380)
         if (iptr.tables && iptr.tables.wave > 0) {
@@ -4193,6 +4198,9 @@ class SidProcessor extends AudioWorkletProcessor {
         if (iptr.tables && iptr.tables.pulse > 0) {
           vs.ptr[1] = iptr.tables.pulse;
           vs.pulseActive = true;
+          vs.pulsetime = 0;
+          vs.pulseModTicks = 0;
+          vs.pulseModSpeed = 0;
         }
 
         // Init filtertable - GLOBAL (gplay.c lines 393-402)
@@ -4200,12 +4208,10 @@ class SidProcessor extends AudioWorkletProcessor {
           this.globalFilter.ptr = iptr.tables.filter;
           this.globalFilter.time = 0;
           this.globalFilter.triggerVoice = voice;
-        } else {
-          // No filter table - clear this voice from routing
-          const voiceBit = 1 << voice;
-          this.globalFilter.ctrl = (this.globalFilter.ctrl & 0xF8) | ((this.globalFilter.ctrl & 0x07) & ~voiceBit);
-          this.poke(0x17, this.globalFilter.ctrl);
         }
+        // NO else-branch: gplay.c does nothing when the instrument has no
+        // filter table. Un-routing the voice here was invented behaviour that
+        // stripped voices from a globally-armed filter on every note-on.
 
         // Init speedtable
         if (iptr.tables && iptr.tables.speed > 0) {

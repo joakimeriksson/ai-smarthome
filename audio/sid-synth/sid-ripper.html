@@ -2183,38 +2183,26 @@
                         const entries = [{ left: 0x80 | ((pw >> 8) & 0x0F), right: pw & 0xFF }];
                         let moving = false;
                         if (traj.length >= 8) {
-                            const span = Math.max(...traj) - Math.min(...traj);
-                            if (span >= 32) {
+                            const spanPW = Math.max(...traj) - Math.min(...traj);
+                            if (spanPW >= 32) {
                                 moving = true;
-                                // Piecewise-linear fit: one modulate entry
-                                // (left = frames, right = signed speed/frame)
-                                // per window
-                                const WINDOW = 8;
-                                let ups = 0, downs = 0;
-                                for (let i = 0; i + 1 < traj.length && entries.length < 8; i += WINDOW) {
-                                    const j = Math.min(i + WINDOW, traj.length - 1);
-                                    const slope = Math.max(-128, Math.min(127, Math.round((traj[j] - traj[i]) / (j - i))));
-                                    if (slope > 0) ups++; else if (slope < 0) downs++;
-                                    entries.push({ left: (j - i) & 0x7F, right: slope & 0xFF });
-                                }
-                                // Oscillating sweep (both directions seen):
-                                // loop back to the first modulate entry so
-                                // the PWM keeps moving - GT2 restarts the
-                                // pointer each note but Hubbard-style PWM
-                                // runs continuously.
-                                if (ups > 0 && downs > 0) {
-                                    entries.push({ left: 0xFF, right: 1 }); // loop to entry idx 1 (first modulate)
-                                } else if (entries.length > 1) {
-                                    // One-directional capture (sweep slower
-                                    // than one note): mirror it into a
-                                    // bounded triangle loop - matches slow
-                                    // analog-style PWM without running away
-                                    const mirrored = entries.slice(1).reverse().map(e => ({
-                                        left: e.left,
-                                        right: (0x100 - (e.right || 0)) & 0xFF || 0
-                                    }));
-                                    entries.push(...mirrored);
-                                    entries.push({ left: 0xFF, right: 1 });
+                                // Encode the captured PW trajectory EXACTLY
+                                // (see encodeTrajectory). If the sweep repeats
+                                // on a fixed cycle, encode one period so the
+                                // loop is seamless; otherwise take what we
+                                // captured. GT2 restarts ptr[PTBL] at every
+                                // note but does NOT reset the pulse VALUE, so
+                                // looping back past the leading set keeps a
+                                // free-running sweep moving across notes.
+                                const cyc = this.detectCycle(traj, Math.min(128, traj.length >> 1));
+                                const useSpan = cyc || traj.length;
+                                const mod = this.encodeTrajectory(
+                                    traj, useSpan,
+                                    (v) => ({ left: 0x80 | ((v >> 8) & 0x0F), right: v & 0xFF }),
+                                    24);
+                                if (mod.length) {
+                                    entries.push(...mod);
+                                    entries.push({ left: 0xFF, right: 1 });  // loop to first modulate
                                 }
                             }
                         }
@@ -2404,6 +2392,7 @@
                             const inst = gt2Instruments[pt.instId];
                             if (inst) inst.tables.pulse = ptrOf.get(pt);
                         });
+
                     }
 
                     // Step 7c: per-note onset wavetable overrides (8XY) for
@@ -3985,6 +3974,55 @@
              *   Left $01-$7F: Modulate cutoff by signed speed
              *   Left $FF: Jump (right = position, 0x00 = stop)
              */
+            /**
+             * Shortest EXACT repeating cycle in a per-frame value trajectory,
+             * or 0 if there is none. Used for both the filter cutoff and pulse
+             * width, which C64 players typically drive from a fixed-length
+             * pattern (Terra Cresta's filter AND its voice-0 PWM both repeat
+             * bit-for-bit every 64 frames).
+             * A candidate must also CONTAIN the movement: a slowly-drifting
+             * value sits still most frames, so tiny lags score a near-perfect
+             * autocorrelation while explaining nothing.
+             */
+            detectCycle(traj, maxLag) {
+                const range = Math.max(...traj) - Math.min(...traj);
+                for (let lag = 2; lag <= maxLag && lag * 2 <= traj.length; lag++) {
+                    let diff = 0, n = 0;
+                    for (let i = 0; i + lag < traj.length; i++) { diff += Math.abs(traj[i] - traj[i + lag]); n++; }
+                    if (!n || diff / n > 0.5) continue;
+                    const seg = traj.slice(0, lag);
+                    if (range > 4 && (Math.max(...seg) - Math.min(...seg)) < range * 0.8) continue;
+                    return lag;
+                }
+                return 0;
+            },
+
+            /**
+             * Encode a per-frame value trajectory as GT2 table entries,
+             * FRAME-ACCURATELY: runs of equal per-frame delta collapse into one
+             * modulate entry (left = ticks, right = signed delta), and a jump
+             * too large for a modulate becomes an absolute set (also 1 frame).
+             * Both GT2 table types share these semantics.
+             *
+             * This replaced a piecewise-linear fit over fixed 8-frame windows,
+             * which averaged a steady ramp into slightly-wrong slopes: Terra
+             * Cresta's clean +30/frame PWM came back as "8f +30, 8f +30, 5f -1",
+             * and the -1 steps vanish under the hardware `& 0xFE` mask on the PW
+             * low byte, so the sweep visibly stalled (872 of 1499 changes).
+             */
+            encodeTrajectory(traj, span, mkSet, maxEntries) {
+                const out = [];
+                for (let i = 1; i < span && out.length < maxEntries; ) {
+                    const d = traj[i] - traj[i - 1];
+                    if (d < -127 || d > 127) { out.push(mkSet(traj[i])); i++; continue; }
+                    let run = 1;
+                    while (i + run < span && run < 127 && (traj[i + run] - traj[i + run - 1]) === d) run++;
+                    out.push({ left: run, right: d & 0xFF, description: `Modulate ${run}f by ${d > 0 ? '+' : ''}${d}` });
+                    i += run;
+                }
+                return out;
+            },
+
             buildFilterTables(filterChanges) {
                 if (!filterChanges || filterChanges.length < 4) return [];
 
@@ -4019,22 +4057,7 @@
                 // Terra Cresta is a 64-frame pattern that repeats bit-for-bit).
                 // Find the SHORTEST exact cycle so one period can be encoded
                 // note-for-note and looped, instead of averaged away.
-                const globalRange = Math.max(...traj) - Math.min(...traj);
-                let period = 0;
-                for (let lag = 2; lag <= 256 && lag * 2 <= nFrames; lag++) {
-                    let diff = 0, n = 0;
-                    for (let i = 0; i + lag < nFrames; i++) { diff += Math.abs(traj[i] - traj[i + lag]); n++; }
-                    if (!n || diff / n > 0.5) continue;
-                    // A candidate period must also CONTAIN the movement. A
-                    // slowly-drifting filter (Wizball: 124 changes in 1500
-                    // frames) sits still most frames, so tiny lags score a
-                    // near-perfect autocorrelation while explaining nothing -
-                    // that detected a bogus 2-frame "cycle" and froze the filter.
-                    const seg = traj.slice(0, lag);
-                    const segRange = Math.max(...seg) - Math.min(...seg);
-                    if (globalRange > 4 && segRange < globalRange * 0.8) continue;
-                    period = lag; break;
-                }
+                const period = this.detectCycle(traj, 256);
                 // No exact cycle: encode the WHOLE captured trajectory. Run-length
                 // merging collapses the long static stretches of a slow sweep, so
                 // this still fits - and a prefix-only span would loop a fragment.
@@ -4060,23 +4083,11 @@
                     description: `Set cutoff = $${traj[0].toString(16)}`
                 });
 
-                // Encode the cycle frame-accurately: merge runs of EQUAL
-                // per-frame delta into one modulate entry (left = ticks,
-                // right = signed delta/frame); anything too big for a modulate
-                // becomes a set-cutoff (which also costs exactly 1 frame).
-                const MAX_ENTRIES = 240;   // FTBL is 255 and the filter owns it alone
-                for (let i = 1; i < span && entries.length < MAX_ENTRIES; ) {
-                    const d = traj[i] - traj[i - 1];
-                    if (d < -127 || d > 127) {
-                        entries.push({ left: 0x00, right: traj[i], description: `Set cutoff = $${traj[i].toString(16)}` });
-                        i++;
-                        continue;
-                    }
-                    let run = 1;
-                    while (i + run < span && run < 127 && (traj[i + run] - traj[i + run - 1]) === d) run++;
-                    entries.push({ left: run, right: d & 0xFF, description: `Modulate ${run}f by ${d > 0 ? '+' : ''}${d}` });
-                    i += run;
-                }
+                // FTBL is 255 entries and the filter owns it alone
+                entries.push(...this.encodeTrajectory(
+                    traj, span,
+                    (v) => ({ left: 0x00, right: v, description: `Set cutoff = $${v.toString(16)}` }),
+                    240 - entries.length));
 
                 // Loop back to entry 0: re-running set-params is harmless and
                 // replays the cycle from exactly the same state each period.

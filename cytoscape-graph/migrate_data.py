@@ -29,7 +29,9 @@ Usage:
 import argparse
 import json
 import os
+import re
 import shutil
+import unicodedata
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -81,6 +83,77 @@ def stamp_provenance(d, source):
     d["updatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+PREPRINT_HOSTS = ("techrxiv", "preprints", "arxiv", "biorxiv", "ssrn", "researchsquare")
+
+
+def title_key(d):
+    text = d.get("description") or d.get("label") or ""
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()[:90]
+
+
+def _version_penalty(d):
+    """Lower is more canonical: prefer the published paper over its preprints."""
+    doi = str(d.get("doi") or "").lower()
+    p = 0
+    if any(h in doi for h in PREPRINT_HOSTS):
+        p += 4
+    if re.search(r"\.v\d+$", doi):
+        p += 2
+    if not doi:
+        p += 1
+    return (p, len(d.get("id", "")))
+
+
+def dedupe_publications(data):
+    """Collapse publications that are the same paper under different DOIs.
+
+    ORCID lists preprint versions (TechRxiv v1/v2/v3, PeerJ Preprints) next to
+    the published article, each with its own DOI, so DOI-based dedup misses them.
+    Edges are rewired to the surviving node before the duplicates are dropped, so
+    no authorship is lost.
+    """
+    groups = {}
+    for n in data["nodes"]:
+        if n["data"].get("type") == "publication":
+            groups.setdefault(title_key(n["data"]), []).append(n["data"])
+
+    alias, removed = {}, set()
+    for key, nodes in groups.items():
+        if len(nodes) < 2 or not key:
+            continue
+        nodes = sorted(nodes, key=_version_penalty)
+        keeper = nodes[0]["id"]
+        for dup in nodes[1:]:
+            alias[dup["id"]] = keeper
+            removed.add(dup["id"])
+
+    if not alias:
+        return {"pubs_removed": 0, "edges_rewired": 0, "edges_removed": 0}
+
+    data["nodes"] = [n for n in data["nodes"] if n["data"]["id"] not in removed]
+
+    rewired = 0
+    seen, kept_edges = set(), []
+    for e in data["edges"]:
+        d = e["data"]
+        for end in ("source", "target"):
+            if d[end] in alias:
+                d[end] = alias[d[end]]
+                rewired += 1
+        key = (d["source"], d["target"], d.get("type"))
+        if key in seen or d["source"] == d["target"]:
+            continue
+        seen.add(key)
+        kept_edges.append(e)
+
+    dropped = len(data["edges"]) - len(kept_edges)
+    data["edges"] = kept_edges
+    return {"pubs_removed": len(removed), "edges_rewired": rewired,
+            "edges_removed": dropped}
+
+
 def reclassify_edges(data):
     """project -> topic `related_to` edges become `advances` (ontology v1)."""
     types = {n["data"]["id"]: n["data"].get("type") for n in data["nodes"]}
@@ -99,7 +172,10 @@ def reclassify_edges(data):
 # Views added/extended by --wire-views. Full Map uses "*" so any type added to
 # ontology.json later shows up without another migration.
 VIEW_UPDATES = {
-    "everything": {"nodeTypes": "*", "edgeTypes": "*"},
+    # Publications are the evidence layer, not the map: 455 of them bury the
+    # 26 topics. They keep their own view and re-enter via `evidences`.
+    "everything": {"nodeTypes": "*", "edgeTypes": "*",
+                   "excludeNodeTypes": ["publication"]},
     "projects": {
         "nodeTypes": ["project", "researcher", "topic", "partner", "funding_call", "testbed"],
         "edgeTypes": ["leads", "participates", "advances", "funds", "supports", "related_to"],
@@ -116,6 +192,9 @@ DELIVERY_VIEW = {
     "nodeTypes": ["topic", "project", "publication"],
     "edgeTypes": ["journey", "advances", "evidences"],
     "layout": "cose",
+    # Only what is connected: this view answers "what is being delivered", so an
+    # unlinked publication is noise, not a gap.
+    "dropIsolated": True,
 }
 
 
@@ -176,6 +255,8 @@ def main():
                     help="Retype project->topic related_to edges as advances")
     ap.add_argument("--wire-views", action="store_true",
                     help="Expose ontology v1 reality types/edges in the views")
+    ap.add_argument("--dedupe-publications", action="store_true",
+                    help="Collapse the same paper imported under different DOIs (preprint versions)")
     ap.add_argument("--dry-run", action="store_true", help="Preview without writing")
     ap.add_argument("--no-backup", action="store_true", help="Skip writing a .bak copy")
     args = ap.parse_args()
@@ -198,6 +279,8 @@ def main():
 
     retyped = reclassify_edges(data) if args.reclassify_edges else 0
     view_changes = wire_views(data) if args.wire_views else {"views_updated": 0, "views_added": 0}
+    dedupe = (dedupe_publications(data) if args.dedupe_publications
+              else {"pubs_removed": 0, "edges_rewired": 0, "edges_removed": 0})
 
     print("\nChanges:")
     print(f"  kind added to topics : {changes['kind_added']}")
@@ -205,6 +288,9 @@ def main():
     print(f"  sensitivity stamped  : {changes['sensitivity_added']}")
     print(f"  related_to->advances : {retyped}")
     print(f"  views updated/added  : {view_changes['views_updated']}/{view_changes['views_added']}")
+    if args.dedupe_publications:
+        print(f"  duplicate pubs removed: {dedupe['pubs_removed']} "
+              f"(edges rewired {dedupe['edges_rewired']}, redundant edges dropped {dedupe['edges_removed']})")
 
     if args.dry_run:
         print("\n[DRY RUN] Nothing written.")

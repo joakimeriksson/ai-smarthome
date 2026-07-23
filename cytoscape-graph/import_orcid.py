@@ -593,18 +593,34 @@ def prune_demo_researchers(data):
     return len(demo_ids), before_edges - len(data["edges"])
 
 
+def title_key(d):
+    """Normalised title, used to collapse the same paper under different DOIs.
+
+    ORCID records list preprint versions (TechRxiv v1/v2/v3, PeerJ Preprints)
+    alongside the published paper. Each has its own DOI, so DOI-based dedup lets
+    one paper in five times — which then inflates every count derived from
+    publications. The title is what actually identifies the work.
+    """
+    text = d.get("description") or d.get("label") or ""
+    return strip_accents(re.sub(r"[^a-zA-Z0-9]+", " ", text)).strip()[:90]
+
+
 def merge_into_data(data, researchers, publications, edges):
     existing_node_ids = {n["data"]["id"] for n in data["nodes"]}
     existing_edges = {
         (e["data"]["source"], e["data"]["target"], e["data"]["type"])
         for e in data["edges"]
     }
-
-    # Remove placeholder researchers (r-* nodes not from ORCID)
-    # Keep them for now — user can remove manually if desired
+    # Existing publications indexed by title, so a re-import of the same paper
+    # under a different DOI attaches to the node already in the graph.
+    title_index = {}
+    for n in data["nodes"]:
+        if n["data"].get("type") == "publication":
+            title_index.setdefault(title_key(n["data"]), n["data"]["id"])
 
     added_nodes = 0
     added_edges = 0
+    alias = {}  # duplicate publication id -> canonical id
 
     for r in researchers:
         if r["data"]["id"] not in existing_node_ids:
@@ -613,18 +629,30 @@ def merge_into_data(data, researchers, publications, edges):
             added_nodes += 1
 
     for p in publications:
-        if p["data"]["id"] not in existing_node_ids:
+        pid = p["data"]["id"]
+        key = title_key(p["data"])
+        canonical = title_index.get(key)
+        if canonical and canonical != pid:
+            alias[pid] = canonical
+            continue
+        if pid not in existing_node_ids:
             data["nodes"].append(p)
-            existing_node_ids.add(p["data"]["id"])
+            existing_node_ids.add(pid)
+            title_index[key] = pid
             added_nodes += 1
 
     for e in edges:
-        key = (e["data"]["source"], e["data"]["target"], e["data"]["type"])
+        src = alias.get(e["data"]["source"], e["data"]["source"])
+        tgt = alias.get(e["data"]["target"], e["data"]["target"])
+        e["data"]["source"], e["data"]["target"] = src, tgt
+        key = (src, tgt, e["data"]["type"])
         if key not in existing_edges:
             data["edges"].append(e)
             existing_edges.add(key)
             added_edges += 1
 
+    if alias:
+        print(f"  ({len(alias)} duplicate publication(s) collapsed by title)")
     return added_nodes, added_edges
 
 

@@ -1,0 +1,153 @@
+# Topics and interests derived from each researcher's own publication titles.
+# Recurring terms only (a term must appear in 2+ of their papers).
+#
+# This is authoring raw material, not something to import: use it to write
+# stepping stones that reflect what the unit actually does, then link people
+# to them (person-link mode, or suggest_links.py --evidences once the stones
+# carry matching labels/keywords).
+
+## Kristina Höök  (195 publications)
+    22x  interaction
+    21x  soma
+    13x  research
+    12x  body
+    12x  human
+     9x  somaesthetic
+     8x  experience
+     7x  aesthetics
+     7x  computing
+     7x  lessons
+
+## Luca Mottola  (113 publications)
+    37x  sensor networks
+    36x  wireless sensor
+    10x  internet things
+    10x  software
+     9x  directional
+     7x  energy
+     7x  poster abstract
+     7x  sensor network
+     7x  power wireless
+     7x  monitoring
+
+## Dejan Kostic  (73 publications)
+    10x  distributed
+     8x  network
+     7x  openflow
+     7x  testing
+     6x  software
+     6x  service chains
+     5x  synthesizing service
+     5x  energy
+     4x  scheduling
+     3x  networking
+
+## Sarder Fakhrul Abedin  (57 publications)
+    12x  deep reinforcement
+    12x  reinforcement learning
+     9x  game
+     8x  industrial
+     8x  energy
+     7x  networks
+     7x  intelligent
+     6x  resource
+     6x  multi
+     6x  edge computing
+
+## Fehmi Ben Abdesslem  (53 publications)
+     9x  mobile
+     5x  data
+     4x  communication
+     4x  clustering
+     4x  wireless
+     3x  cellular network
+     3x  multi access
+     3x  vehicles
+     3x  cellular networks
+     3x  measuring
+
+## Mariano Scazzariello  (18 publications)
+     2x  stateful packet
+     2x  packet processing
+     2x  llms
+     2x  network functions
+     2x  srv6
+     2x  behavior
+     2x  latency
+     2x  live
+     2x  switches
+     2x  megalos scalable
+
+## Nicolas Tsiftes  (6 publications)
+     2x  networks
+     2x  backscatter
+     2x  data
+     2x  smart homes
+
+## Mattias Jacobsson  (5 publications)
+     5x  data
+     2x  work
+     2x  stewardship waste
+     2x  waste management
+     2x  environmental
+
+## Joakim Eriksson  (2 publications)
+   (no term recurs across their papers)
+
+## Soo-Jin Kim  (2 publications)
+   (no term recurs across their papers)
+
+## Lars Berg  (2 publications)
+   (no term recurs across their papers)
+
+## Yuki Tanaka  (2 publications)
+     2x  neural
+
+## Fredrik Larsson  (2 publications)
+     2x  neural
+
+## Lisa Wong  (2 publications)
+     2x  real
+
+## Miriana Passarotto  (2 publications)
+   (no term recurs across their papers)
+
+## Joel Höglund  (2 publications)
+   (no term recurs across their papers)
+
+## David Smith  (1 publications)
+   (no term recurs across their papers)
+
+## Wei Chen  (1 publications)
+   (no term recurs across their papers)
+
+## Anna Mueller  (1 publications)
+   (no term recurs across their papers)
+
+## Priya Patel  (1 publications)
+   (no term recurs across their papers)
+
+## Maria Santos  (1 publications)
+   (no term recurs across their papers)
+
+## Omar Hassan  (1 publications)
+   (no term recurs across their papers)
+
+## Chidi Okonkwo  (1 publications)
+   (no term recurs across their papers)
+
+## Carlos Garcia  (1 publications)
+   (no term recurs across their papers)
+
+## Fatima Ali  (1 publications)
+   (no term recurs across their papers)
+
+## Karin Andersson  (1 publications)
+   (no term recurs across their papers)
+
+## Maja Lund  (1 publications)
+   (no term recurs across their papers)
+
+## Diletta Romano  (1 publications)
+   (no term recurs across their papers)
+

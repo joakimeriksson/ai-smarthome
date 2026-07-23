@@ -102,14 +102,19 @@ function getNodeStyle() {
 
 // A view may declare "*" for nodeTypes/edgeTypes, meaning "every type in the
 // ontology". Full Map uses this so a type added to ontology.json renders
-// immediately instead of being silently invisible (PLAN §2.5).
-function viewTypes(spec, ontologyKey) {
-  return spec === '*' ? Object.keys(ontology[ontologyKey]) : spec;
+// immediately instead of being silently invisible (PLAN §2.5). `excludeNodeTypes`
+// subtracts from that — Full Map drops `publication` because 455 papers bury the
+// 26 topics that are the point of the map; they keep their own view, and re-enter
+// the picture through the stones they `evidences`.
+function viewTypes(spec, ontologyKey, exclude) {
+  var types = spec === '*' ? Object.keys(ontology[ontologyKey]) : spec;
+  if (!exclude || !exclude.length) return types;
+  return types.filter(function(t) { return exclude.indexOf(t) < 0; });
 }
 
 function getFilteredElements(view) {
-  var nodeTypes = viewTypes(view.nodeTypes, 'nodeTypes');
-  var edgeTypes = viewTypes(view.edgeTypes, 'edgeTypes');
+  var nodeTypes = viewTypes(view.nodeTypes, 'nodeTypes', view.excludeNodeTypes);
+  var edgeTypes = viewTypes(view.edgeTypes, 'edgeTypes', view.excludeEdgeTypes);
   var nodes = graphData.nodes.filter(function(n) {
     return nodeTypes.indexOf(n.data.type) >= 0;
   });
@@ -119,6 +124,16 @@ function getFilteredElements(view) {
            nodeIds.indexOf(e.data.source) >= 0 &&
            nodeIds.indexOf(e.data.target) >= 0;
   });
+
+  // `dropIsolated` keeps a view to what is actually connected. Delivery & Gaps
+  // uses it so only publications that evidence a stone appear, instead of 438
+  // unlinked papers tiling the canvas. Views where an unlinked node IS the
+  // point (Roadmap — the curation backlog, PLAN §2.6) must not set it.
+  if (view.dropIsolated) {
+    var linked = {};
+    edges.forEach(function(e) { linked[e.data.source] = linked[e.data.target] = true; });
+    nodes = nodes.filter(function(n) { return linked[n.data.id]; });
+  }
   return { nodes: nodes, edges: edges };
 }
 
@@ -335,7 +350,7 @@ function switchView(viewId) {
   }
 
   // Update legend visibility
-  var visibleTypes = viewTypes(view.nodeTypes, 'nodeTypes');
+  var visibleTypes = viewTypes(view.nodeTypes, 'nodeTypes', view.excludeNodeTypes);
   var legendItems = document.querySelectorAll('.legend-item');
   legendItems.forEach(function(item) {
     var type = item.dataset.type;

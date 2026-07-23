@@ -1,0 +1,90 @@
+# Suggested links from publications. NOTHING has been written.
+# Apply the accepted lines with:
+#   python suggest_links.py --evidences --apply --accept suggested_evidences.txt
+#
+# STRONG = the stone's full name (or a curated keyword) appears in the title.
+# MEDIUM = 2+ distinctive terms from the stone appear. Check these.
+# Delete or comment out (#) any line you reject, then apply.
+#
+# works_on is derived: >=2 evidencing papers, or 1 STRONG.
+
+## evidences  (publication -> stone)
+# [STRONG] Risk-Aware Energy Scheduling...
+#        -> Edge Computing   (matched: edge computing)
+evidences pub-10-1109-tnsm-2021-3049381 edge
+# [STRONG] A multi-agent system toward...
+#        -> Edge Computing   (matched: edge computing)
+evidences pub-10-1109-globecom38437-2019-9013574 edge
+# [STRONG] Artificial Intelligence-based...
+#        -> Edge Computing   (matched: edge computing)
+evidences pub-10-23919-apnoms-2019-8892984 edge
+# [STRONG] When Edge Computing Meets...
+#        -> Edge Computing   (matched: edge computing)
+evidences pub-10-1109-jiot-2019-2899673 edge
+# [STRONG] Zero-Energy IoT: A Survey
+#        -> Energy Harvesting   (matched: energy harvesting)
+evidences pub-zeroiot-sensys harvest
+# [STRONG] Energy harvesting and wireless...
+#        -> Energy Harvesting   (matched: energy harvesting)
+evidences pub-10-1145-2915918 harvest
+# [STRONG] Checkpoint-Free Intermittent OS
+#        -> Intermittent Computing   (matched: intermittent computing)
+evidences pub-intermittent-asplos intermittent
+# [STRONG] Dynamic Voltage and Frequency...
+#        -> Intermittent Computing   (matched: intermittent computing)
+evidences pub-10-1145-3714470 intermittent
+# [STRONG] Poster Abstract: Energy vs....
+#        -> Intermittent Computing   (matched: intermittent computing)
+evidences pub-10-1145-3625687-3628381 intermittent
+# [STRONG] Deploying Stateful Network...
+#        -> Large Language Models   (matched: large language models)
+evidences pub-10-1145-3642970-3655836 llm
+# [MEDIUM] Zero-Energy IoT: A Survey
+#        -> Energy-Harvest Peripherals   (matched: energy, harvest)
+evidences pub-zeroiot-sensys energyHarvest
+# [MEDIUM] Energy harvesting and wireless...
+#        -> Energy-Harvest Peripherals   (matched: energy, harvest)
+evidences pub-10-1145-2915918 energyHarvest
+# [MEDIUM] FedSecure: Private FL
+#        -> Federated Edge Learning   (matched: federated, learn)
+evidences pub-fedlearn-sp fedLearning
+# [MEDIUM] Fast Server Learning Rate...
+#        -> Federated Edge Learning   (matched: federated, learn)
+evidences pub-10-1007-978-3-031-28996-5-7 fedLearning
+# [MEDIUM] MetaFed: Population-Based Meta...
+#        -> Federated Edge Learning   (matched: edge, federated, learn)
+evidences pub-10-36227-techrxiv-21362439 fedLearning
+# [MEDIUM] ConvReflex: Efficient...
+#        -> Ultra-Low Power Computing   (matched: power, ultra)
+evidences pub-10-1145-3774906-3802781 lowpower
+# [MEDIUM] Joint power and blocklength...
+#        -> Ultra-Low Power Computing   (matched: power, ultra)
+# REJECTED (human review): "ultra" here is ultra-RELIABLE (URLLC), not ultra-low-power
+# evidences pub-10-1109-iswcs49558-2021-9562249 lowpower
+# [MEDIUM] Urban Mesh at Scale
+#        -> Mesh Networking   (matched: mesh, network)
+evidences pub-mesh-ipsn mesh
+# [MEDIUM] EPEW: An extended prototyping...
+#        -> Mesh Networking   (matched: mesh, network)
+evidences pub-765b735b04 mesh
+# [MEDIUM] RISC-V NPU Co-Design
+#        -> RISC-V Edge MCUs   (matched: edge, risc)
+evidences pub-riscv-dac riscVEdge
+
+## works_on  (researcher -> stone), derived from the above
+# Sarder Fakhrul Abedin -> Edge Computing  (4 paper(s))
+works_on r-sarder-fakhrul-abedin edge
+# Luca Mottola -> Intermittent Computing  (2 paper(s))
+works_on r-luca-mottola intermittent
+# Joakim Eriksson -> Energy Harvesting  (1 paper(s))
+works_on r-eriksson harvest
+# Joakim Eriksson -> Intermittent Computing  (1 paper(s))
+works_on r-eriksson intermittent
+# Lars Berg -> Energy Harvesting  (1 paper(s))
+works_on r-berg harvest
+# Dejan Kostic -> Large Language Models  (1 paper(s))
+works_on r-dejan-kostic llm
+# Mariano Scazzariello -> Large Language Models  (1 paper(s))
+works_on r-mariano-scazzariello llm
+# Luca Mottola -> Energy Harvesting  (1 paper(s))
+works_on r-luca-mottola harvest

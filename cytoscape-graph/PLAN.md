@@ -165,7 +165,9 @@ anyone at RISE" = just log in.
 
 ### Phase 1 — roadmap view & prove the value
 - [x] **"Roadmap" view**: banded by `horizon` (now / next / beyond), destinations anchored right — the Ericsson-style swimlane generated from the graph. One lane per journey chain, each drawn as a straight horizontal line; branches diverge into their own row.
-- [x] **Reality-layer types** (`partner`, `funding_call`, `testbed`) + edges (`advances`, `funds`, `supports`, `enabledBy`, `evidences`) in editor/styles/legend *and in the views* — Full Map declares `"*"` (every ontology type), plus a "Delivery & Gaps" view. *No `partner`/`funding_call`/`testbed` nodes or `funds`/`supports`/`evidences`/`enabledBy` edges exist in the data yet.*
+- [x] **Reality-layer types** (`partner`, `funding_call`, `testbed`) + edges (`advances`, `funds`, `supports`, `enabledBy`, `evidences`) in editor/styles/legend *and in the views* — Full Map declares `"*"` (every ontology type), plus a "Delivery & Gaps" view. *No `partner`/`funding_call`/`testbed` nodes or `funds`/`supports`/`enabledBy` edges exist in the data yet.*
+- [x] **Bridge the layers from publications** (`suggest_links.py`): match publication titles to stones → proposed `evidences`, and derive `works_on` from them; `--topics` extracts each researcher's recurring terms. Both stop at a review file. *19 `evidences` + 8 `works_on` applied so far.*
+- [ ] **Author stones that fit the unit.** The 21 stones are still the invented demo set; `researcher_topics.txt` shows the unit's real output (sensor networks, soma design, packet processing, federated/RL) barely intersects them. Until they are rewritten, matching has little to bite on.
 - [x] **Live queries** surfaced in the UI — the **Insights** panel (`queries.js`): capability gaps (no advancing project, no expert, isolated, unreached destinations, publications evidencing no stone, missing readiness) and overviews (by horizon, by TRL, expert map). Results click through to the node.
 - [ ] **Curated public build**: read-only export filtered by `sensitivity`.
 

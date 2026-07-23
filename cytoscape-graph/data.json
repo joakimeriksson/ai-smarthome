@@ -95,14 +95,18 @@
         "advances",
         "evidences"
       ],
-      "layout": "cose"
+      "layout": "cose",
+      "dropIsolated": true
     },
     {
       "id": "everything",
       "label": "Full Map",
       "nodeTypes": "*",
       "edgeTypes": "*",
-      "layout": "cose"
+      "layout": "cose",
+      "excludeNodeTypes": [
+        "publication"
+      ]
     }
   ],
   "nodes": [
@@ -2082,36 +2086,6 @@
     },
     {
       "data": {
-        "id": "pub-10-48550-arxiv-2503-16960",
-        "type": "publication",
-        "label": "Somatic Safety: An Embodied...",
-        "description": "Somatic Safety: An Embodied Approach Towards Safe Human-Robot Interaction",
-        "year": 2025,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arXiv.2503.16960",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:40+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-48550-arxiv-2503-15370",
-        "type": "publication",
-        "label": "Tangles: Unpacking Extended...",
-        "description": "Tangles: Unpacking Extended Collision Experiences with Soma Trajectories",
-        "year": 2025,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arXiv.2503.15370",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:40+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-3686169-3686174",
         "type": "publication",
         "label": "Designerly Ways of Knowing-...",
@@ -2949,21 +2923,6 @@
     },
     {
       "data": {
-        "id": "pub-10-36227-techrxiv-175616128-87412093-v1",
-        "type": "publication",
-        "label": "ACHILLES: A Machine Learning...",
-        "description": "ACHILLES: A Machine Learning Framework for Explainable and Generalized Automotive Intrusion Detection System",
-        "year": 2025,
-        "venue": "Techrxiv",
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.175616128.87412093/v1",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1109-tmlcn-2025-3635578",
         "type": "publication",
         "label": "Resource Optimization in...",
@@ -2979,21 +2938,6 @@
     },
     {
       "data": {
-        "id": "pub-10-36227-techrxiv-174650513-36264593-v1",
-        "type": "publication",
-        "label": "Resource Optimization in...",
-        "description": "Resource Optimization in Multi-Hop IAB Networks: Balancing Data Freshness and Spectral Efficiency",
-        "year": 2025,
-        "venue": "Techrxiv",
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.174650513.36264593/v1",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-7d4fb56caa",
         "type": "publication",
         "label": "Towards Ultra-Reliable 6G in-X...",
@@ -3001,21 +2945,6 @@
         "year": 2025,
         "venue": "Arxiv",
         "sensitivity": "internal",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-48550-arxiv-2507-12031",
-        "type": "publication",
-        "label": "Towards Ultra-Reliable 6G in-X...",
-        "description": "Towards Ultra-Reliable 6G in-X Subnetworks: Dynamic Link Adaptation by Deep Reinforcement Learning",
-        "year": 2025,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arXiv.2507.12031",
         "source": "orcid:0000-0002-2966-6469",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -3046,21 +2975,6 @@
         "venue": "IEEE International Conference on Emerging Technologies and Factory Automation ETFA",
         "sensitivity": "internal",
         "doi": "10.1109/ETFA61755.2024.10711099",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-36227-techrxiv-21252117-v2",
-        "type": "publication",
-        "label": "Remote-Timber: An Outlook for...",
-        "description": "Remote-Timber: An Outlook for Teleoperated Forestry with First 5G Measurements",
-        "year": 2023,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.21252117.v2",
         "source": "orcid:0000-0002-2966-6469",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -3106,51 +3020,6 @@
         "venue": "IEEE Industrial Electronics Magazine",
         "sensitivity": "internal",
         "doi": "10.1109/MIE.2023.3284202",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-36227-techrxiv-21362439-v2",
-        "type": "publication",
-        "label": "MetaFed: Population-Based Meta...",
-        "description": "MetaFed: Population-Based Meta Federated Learning Framework for Edge Intelligence",
-        "year": 2022,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.21362439.v2",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-36227-techrxiv-21362439-v1",
-        "type": "publication",
-        "label": "MetaFed: Population-Based Meta...",
-        "description": "MetaFed: Population-Based Meta Federated Learning Framework for Edge Intelligence",
-        "year": 2022,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.21362439.v1",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-36227-techrxiv-21252117-v1",
-        "type": "publication",
-        "label": "Remote-Timber: An Outlook for...",
-        "description": "Remote-Timber: An Outlook for Teleoperated Forestry with First 5G Measurements",
-        "year": 2022,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.21252117.v1",
         "source": "orcid:0000-0002-2966-6469",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -3278,36 +3147,6 @@
     },
     {
       "data": {
-        "id": "pub-10-36227-techrxiv-21252117",
-        "type": "publication",
-        "label": "Remote-Timber: An Outlook for...",
-        "description": "Remote-Timber: An Outlook for Teleoperated Forestry with First 5G Measurements",
-        "year": 2022,
-        "venue": "Techrxiv",
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.21252117",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-36227-techrxiv-17089265-v1",
-        "type": "publication",
-        "label": "Factory 5G: A Review of...",
-        "description": "Factory 5G: A Review of Industrial-Centric Features and Deployment Options",
-        "year": 2021,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.17089265.v1",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "r-anna-st-hl",
         "type": "researcher",
         "label": "Anna\nStåhl",
@@ -3402,66 +3241,6 @@
         "venue": "Proceedings of the 12th European Conference on Computer Systems, EuroSys 2017",
         "sensitivity": "internal",
         "doi": "10.1145/3064176.3064209",
-        "source": "orcid:0000-0002-1256-1070",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-7287-peerj-preprints-2477v3",
-        "type": "publication",
-        "label": "SNF: Synthesizing high...",
-        "description": "SNF: Synthesizing high performance NFV service chains",
-        "year": 2016,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.7287/peerj.preprints.2477v3",
-        "source": "orcid:0000-0002-1256-1070",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-7287-peerj-preprints-2477",
-        "type": "publication",
-        "label": "SNF: Synthesizing high...",
-        "description": "SNF: Synthesizing high performance NFV service chains",
-        "year": 2016,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.7287/peerj.preprints.2477",
-        "source": "orcid:0000-0002-1256-1070",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-7287-peerj-preprints-2477v2",
-        "type": "publication",
-        "label": "SNF: Synthesizing high...",
-        "description": "SNF: Synthesizing high performance NFV service chains",
-        "year": 2016,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.7287/peerj.preprints.2477v2",
-        "source": "orcid:0000-0002-1256-1070",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-7287-peerj-preprints-2477v1",
-        "type": "publication",
-        "label": "SNF: Synthesizing high...",
-        "description": "SNF: Synthesizing high performance NFV service chains",
-        "year": 2016,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.7287/peerj.preprints.2477v1",
         "source": "orcid:0000-0002-1256-1070",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:09+00:00"
@@ -3986,20 +3765,6 @@
         "venue": "Proceedings of the 2007 Workshop on Peer-to-Peer Streaming and IP-TV, P2P-TV'07",
         "sensitivity": "internal",
         "doi": "10.1145/1326320.1326326",
-        "source": "orcid:0000-0002-1256-1070",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-1b6eb8d343",
-        "type": "publication",
-        "label": "Staged deployment in mirage,...",
-        "description": "Staged deployment in mirage, an integrated software upgrade testing and distribution system",
-        "year": 2007,
-        "venue": "SOSP'07 - Proceedings of 21st ACM SIGOPS Symposium on Operating Systems Principles",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-1256-1070",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:09+00:00"
@@ -5215,20 +4980,6 @@
     },
     {
       "data": {
-        "id": "pub-2880963531",
-        "type": "publication",
-        "label": "Daring to Change: Creating a...",
-        "description": "Daring to Change: Creating a Slower More Sustainable Academic Life",
-        "year": 2018,
-        "venue": "Extended Abstracts of the 2018 CHI Conference on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-3170427-3186322",
         "type": "publication",
         "label": "Daring to change: Creating a...",
@@ -5262,34 +5013,6 @@
         "type": "publication",
         "label": "Designing with the Body:...",
         "description": "Designing with the Body: Somaesthetic Interaction Design",
-        "year": 2018,
-        "venue": null,
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-1c84e3fe30",
-        "type": "publication",
-        "label": "Embracing First-Person...",
-        "description": "Embracing First-Person Perspectives in Soma-Based Design",
-        "year": 2018,
-        "venue": "Informatics",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-011b150417",
-        "type": "publication",
-        "label": "HCI and Affective Health:...",
-        "description": "HCI and Affective Health: Taking stock of a decade of studies and charting future research directions",
         "year": 2018,
         "venue": null,
         "sensitivity": "internal",
@@ -5343,40 +5066,12 @@
     },
     {
       "data": {
-        "id": "pub-ceba9782eb",
-        "type": "publication",
-        "label": "Does HCI scale?: scale hacking...",
-        "description": "Does HCI scale?: scale hacking and the relevance of HCI",
-        "year": 2017,
-        "venue": "interactions",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-265d8460cb",
         "type": "publication",
         "label": "Felt Time, From Sourdough...",
         "description": "Felt Time, From Sourdough Baking to Interaction Design",
         "year": 2017,
         "venue": null,
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-044f65a1cb",
-        "type": "publication",
-        "label": "In search of the elusive CHI...",
-        "description": "In search of the elusive CHI design paper",
-        "year": 2017,
-        "venue": "http://dl.acm.org/citation.cfm?id=3039901",
         "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
@@ -5414,20 +5109,6 @@
     },
     {
       "data": {
-        "id": "pub-78a0556e93",
-        "type": "publication",
-        "label": "Soma-based design theory",
-        "description": "Soma-based design theory",
-        "year": 2017,
-        "venue": "Proceedings of the 2017 CHI Conference Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-3027063-3027082",
         "type": "publication",
         "label": "Soma-based design theory",
@@ -5436,20 +5117,6 @@
         "venue": "Conference on Human Factors in Computing Systems - Proceedings",
         "sensitivity": "internal",
         "doi": "10.1145/3027063.3027082",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-5790e63192",
-        "type": "publication",
-        "label": "What makes a good CHI design...",
-        "description": "What makes a good CHI design paper?",
-        "year": 2017,
-        "venue": "interactions",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -5500,20 +5167,6 @@
     },
     {
       "data": {
-        "id": "pub-81876c427c",
-        "type": "publication",
-        "label": "Move to be Moved",
-        "description": "Move to be Moved",
-        "year": 2016,
-        "venue": "Proceedings of the 2016 CHI Conference Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2851581-2856470",
         "type": "publication",
         "label": "Move to be moved",
@@ -5522,20 +5175,6 @@
         "venue": "Conference on Human Factors in Computing Systems - Proceedings",
         "sensitivity": "internal",
         "doi": "10.1145/2851581.2856470",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-0957e51b35",
-        "type": "publication",
-        "label": "Repurposing Bits and Pieces of...",
-        "description": "Repurposing Bits and Pieces of the Digital",
-        "year": 2016,
-        "venue": null,
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -5573,48 +5212,6 @@
     },
     {
       "data": {
-        "id": "pub-b0be1aa1c6",
-        "type": "publication",
-        "label": "Somaesthetic appreciation...",
-        "description": "Somaesthetic appreciation design",
-        "year": 2016,
-        "venue": "Proceedings of the 2016 CHI Conference on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-db9b098988",
-        "type": "publication",
-        "label": "The Aesthetics of Heat:...",
-        "description": "The Aesthetics of Heat: Guiding Awareness with Thermal Stimuli",
-        "year": 2016,
-        "venue": "Proceedings of the TEI'16: Tenth International Conference on Tangible, Embedded, and Embodied Interaction",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-7d5cb57d6f",
-        "type": "publication",
-        "label": "The IKEA Catalogue: Design...",
-        "description": "The IKEA Catalogue: Design fiction in academic and industrial collaborations",
-        "year": 2016,
-        "venue": "Proceedings of the 19th International Conference on Supporting Group Work",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2957276-2957298",
         "type": "publication",
         "label": "The IKEA catalogue: Design...",
@@ -5623,20 +5220,6 @@
         "venue": "Proceedings of the International ACM SIGGROUP Conference on Supporting Group Work",
         "sensitivity": "internal",
         "doi": "10.1145/2957276.2957298",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-8a71e5f366",
-        "type": "publication",
-        "label": "The Soma Mat and Breathing...",
-        "description": "The Soma Mat and Breathing Light",
-        "year": 2016,
-        "venue": "Proceedings of the 2016 CHI Conference Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -5730,20 +5313,6 @@
     },
     {
       "data": {
-        "id": "pub-4d2018dd2d",
-        "type": "publication",
-        "label": "Framing IxD knowledge",
-        "description": "Framing IxD knowledge",
-        "year": 2015,
-        "venue": "interactions",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2824892",
         "type": "publication",
         "label": "Framing IxD knowledge",
@@ -5765,20 +5334,6 @@
         "description": "IInsights",
         "year": 2015,
         "venue": "Check out the new acmqueue app",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-4f74ee0bf5",
-        "type": "publication",
-        "label": "Knowledge production in...",
-        "description": "Knowledge production in interaction design",
-        "year": 2015,
-        "venue": "Proceedings of the 33rd Annual ACM Conference Extended Abstracts on Human Factors in Computing Systems",
         "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
@@ -5810,20 +5365,6 @@
         "venue": "Interactions",
         "sensitivity": "internal",
         "doi": "10.1145/2770888",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-e5e548b9ab",
-        "type": "publication",
-        "label": "The Case for Play in the...",
-        "description": "The Case for Play in the Developing World: Lessons from Rah Island, Vanuatu",
-        "year": 2015,
-        "venue": "Indigenous People and Mobile Technologies",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -5890,20 +5431,6 @@
     },
     {
       "data": {
-        "id": "pub-eb82f4bd1d",
-        "type": "publication",
-        "label": "Designing for the experiential...",
-        "description": "Designing for the experiential body",
-        "year": 2014,
-        "venue": "CHI'14 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2559206-2579402",
         "type": "publication",
         "label": "Designing for the experiential...",
@@ -5948,20 +5475,6 @@
     },
     {
       "data": {
-        "id": "pub-c1a0b48d5b",
-        "type": "publication",
-        "label": "Interacting with the vocal...",
-        "description": "Interacting with the vocal chorder: re-empowering the opera diva",
-        "year": 2014,
-        "venue": "CHI'14 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2556288-2557152",
         "type": "publication",
         "label": "Metaphone: Machine aesthetics...",
@@ -5970,34 +5483,6 @@
         "venue": "Conference on Human Factors in Computing Systems - Proceedings",
         "sensitivity": "internal",
         "doi": "10.1145/2556288.2557152",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-477621f188",
-        "type": "publication",
-        "label": "Metaphone: machine aesthetics...",
-        "description": "Metaphone: machine aesthetics meets interaction design",
-        "year": 2014,
-        "venue": "Proceedings of the SIGCHI Conference on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-f515eacb88",
-        "type": "publication",
-        "label": "My self and you: Tension in...",
-        "description": "My self and you: Tension in bodily sharing of experience",
-        "year": 2014,
-        "venue": "ACM Transactions on Computer-Human Interaction (TOCHI)",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -6035,62 +5520,6 @@
     },
     {
       "data": {
-        "id": "pub-aecbae7041",
-        "type": "publication",
-        "label": "The vocal chorder.",
-        "description": "The vocal chorder.",
-        "year": 2014,
-        "venue": "interactions",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-407dc1cfa2",
-        "type": "publication",
-        "label": "The vocal chorder: Empowering...",
-        "description": "The vocal chorder: Empowering opera singers with a large interactive instrument",
-        "year": 2014,
-        "venue": "Proceedings of the SIGCHI Conference on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-0d48af0fa3",
-        "type": "publication",
-        "label": "Touch me: workshop on tactile...",
-        "description": "Touch me: workshop on tactile user experience evaluation methods",
-        "year": 2014,
-        "venue": "CHI'14 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-815346026a",
-        "type": "publication",
-        "label": "Affect and experiential...",
-        "description": "Affect and experiential Approaches",
-        "year": 2013,
-        "venue": "The SAGE Handbook of Digital Technology Research",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-4135-9781446282229-n13",
         "type": "publication",
         "label": "Affect and experiential...",
@@ -6121,20 +5550,6 @@
     },
     {
       "data": {
-        "id": "pub-13a9774f5a",
-        "type": "publication",
-        "label": "AffectCam: arousal-augmented...",
-        "description": "AffectCam: arousal-augmented sensecam for richer recall of episodic memories",
-        "year": 2013,
-        "venue": "CHI'13 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2468356-2479670",
         "type": "publication",
         "label": "Evaluation Methods for...",
@@ -6143,20 +5558,6 @@
         "venue": "Conference on Human Factors in Computing Systems - Proceedings",
         "sensitivity": "internal",
         "doi": "10.1145/2468356.2479670",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-d593b89f93",
-        "type": "publication",
-        "label": "Evaluation methods for...",
-        "description": "Evaluation methods for creativity support environments",
-        "year": 2013,
-        "venue": "CHI'13 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -6179,20 +5580,6 @@
     },
     {
       "data": {
-        "id": "pub-b27c35898f",
-        "type": "publication",
-        "label": "Metaphone: an artistic...",
-        "description": "Metaphone: an artistic exploration of biofeedback and machine aesthetics",
-        "year": 2013,
-        "venue": "CHI'13 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2468356-2479596",
         "type": "publication",
         "label": "The Throat III - Disforming...",
@@ -6201,20 +5588,6 @@
         "venue": "Conference on Human Factors in Computing Systems - Proceedings",
         "sensitivity": "internal",
         "doi": "10.1145/2468356.2479596",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-3d8a1b44c2",
-        "type": "publication",
-        "label": "The throat III: disforming...",
-        "description": "The throat III: disforming operatic voices through a novel interactive instrument",
-        "year": 2013,
-        "venue": "SIGCHI Conference on Human Factors in Computing Systems, 27 April-2 May, 2013, Paris, France",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -6237,20 +5610,6 @@
     },
     {
       "data": {
-        "id": "pub-9087488735",
-        "type": "publication",
-        "label": "Theory and practice in ux...",
-        "description": "Theory and practice in ux research: uneasy bedfellows?",
-        "year": 2013,
-        "venue": "CHI'13 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2090150-2090154",
         "type": "publication",
         "label": "A cry for more tech at CHI!",
@@ -6266,40 +5625,12 @@
     },
     {
       "data": {
-        "id": "pub-f963d44a19",
-        "type": "publication",
-        "label": "A cry for more tech at CHI!",
-        "description": "A cry for more tech at CHI!",
-        "year": 2012,
-        "venue": "interactions",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-0ee205e7f9",
         "type": "publication",
         "label": "Affective computing",
         "description": "Affective computing",
         "year": 2012,
         "venue": null,
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-9cd9270728",
-        "type": "publication",
-        "label": "Appreciating plei-plei around...",
-        "description": "Appreciating plei-plei around mobiles: Playfulness in Rah Island",
-        "year": 2012,
-        "venue": "Proceedings of the SIGCHI Conference on Human Factors in Computing Systems",
         "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
@@ -6329,20 +5660,6 @@
         "description": "Commentary on: Shusterman, Richard (2013): Somaesthetics",
         "year": 2012,
         "venue": "In: Soegaard, Mads and Dam, Rikke Friis (eds.).\" The Encyclopedia of Human-Computer Interaction, 2nd Ed.\". Aarhus, Denmark: The Interaction Design Foundation. Available online at http://www. interaction-design. org/encyclopedia/somaesthetics. html",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-6b3817d46a",
-        "type": "publication",
-        "label": "Demo hour.",
-        "description": "Demo hour.",
-        "year": 2012,
-        "venue": "interactions",
         "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
@@ -6436,20 +5753,6 @@
     },
     {
       "data": {
-        "id": "pub-754c5aa424",
-        "type": "publication",
-        "label": "Strong concepts:...",
-        "description": "Strong concepts: Intermediate-level knowledge in interaction design research",
-        "year": 2012,
-        "venue": "ACM Transactions on Computer-Human Interaction (TOCHI)",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-6a348591e5",
         "type": "publication",
         "label": "Welcome to CHI 2012!",
@@ -6472,34 +5775,6 @@
         "venue": "Conference on Human Factors in Computing Systems - Proceedings",
         "sensitivity": "internal",
         "doi": "10.1145/1979742.1979585",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-6bdaa7fcbf",
-        "type": "publication",
-        "label": "Appropriation and creative...",
-        "description": "Appropriation and creative use: linking user studies and design",
-        "year": 2011,
-        "venue": "CHI'11 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-b88caa0a61",
-        "type": "publication",
-        "label": "Bodily Orientations around...",
-        "description": "Bodily Orientations around Mobiles: Lessons learnt in Vanuatu",
-        "year": 2011,
-        "venue": "ACM Conference on Human Factors in Computing Systems",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -6566,34 +5841,6 @@
     },
     {
       "data": {
-        "id": "pub-43e3788cf5",
-        "type": "publication",
-        "label": "Evaluation of affective...",
-        "description": "Evaluation of affective interactive applications",
-        "year": 2011,
-        "venue": "Emotion-Oriented Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-98cb4ed395",
-        "type": "publication",
-        "label": "Experiential artifacts as a...",
-        "description": "Experiential artifacts as a design method for somaesthetic service development",
-        "year": 2011,
-        "venue": "Proceedings of the 2011 ACM symposium on The role of design in UbiComp research & practice",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-2030031-2030041",
         "type": "publication",
         "label": "Experiential artifacts as a...",
@@ -6602,20 +5849,6 @@
         "venue": "RDURP'11 - Proceedings of the 2011 ACM Symposium on the Role of Design in UbiComp Research and Practice",
         "sensitivity": "internal",
         "doi": "10.1145/2030031.2030041",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-93026c57b8",
-        "type": "publication",
-        "label": "Generating Ideas and Building...",
-        "description": "Generating Ideas and Building Prototypes",
-        "year": 2011,
-        "venue": "Emotion-Oriented Systems",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -6696,20 +5929,6 @@
     },
     {
       "data": {
-        "id": "pub-bbdf6211e0",
-        "type": "publication",
-        "label": "Personal informatics and HCI:...",
-        "description": "Personal informatics and HCI: design, theory, and social implications",
-        "year": 2011,
-        "venue": "CHI'11 Extended Abstracts on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-f9c557498b",
         "type": "publication",
         "label": "Reflecting on the design...",
@@ -6739,34 +5958,6 @@
     },
     {
       "data": {
-        "id": "pub-f63264e261",
-        "type": "publication",
-        "label": "Rudiments 1, 2 & 3: design...",
-        "description": "Rudiments 1, 2 & 3: design speculations on autonomy",
-        "year": 2011,
-        "venue": "Proceedings of the fifth international conference on Tangible, embedded, and embodied interaction",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-37ed40e4ab",
-        "type": "publication",
-        "label": "The design and evaluation...",
-        "description": "The design and evaluation process",
-        "year": 2011,
-        "venue": "Emotion-Oriented Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1007-978-3-642-15184-2-33",
         "type": "publication",
         "label": "The design and evaluation...",
@@ -6775,20 +5966,6 @@
         "venue": "Cognitive Technologies",
         "sensitivity": "internal",
         "doi": "10.1007/978-3-642-15184-2_33",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-6302b62c79",
-        "type": "publication",
-        "label": "Understanding users and their...",
-        "description": "Understanding users and their situation",
-        "year": 2011,
-        "venue": "Emotion-Oriented Systems",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -6910,20 +6087,6 @@
     },
     {
       "data": {
-        "id": "pub-e0cd7ca82a",
-        "type": "publication",
-        "label": "Hand in hand with the...",
-        "description": "Hand in hand with the material: designing for suppleness",
-        "year": 2010,
-        "venue": "Proceedings of the SIGCHI Conference on Human Factors in Computing Systems",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1145-1868914-1868978",
         "type": "publication",
         "label": "How to stay in the emotional...",
@@ -6932,20 +6095,6 @@
         "venue": "NordiCHI 2010: Extending Boundaries - Proceedings of the 6th Nordic Conference on Human-Computer Interaction",
         "sensitivity": "internal",
         "doi": "10.1145/1868914.1868978",
-        "source": "orcid:0000-0002-0002-4825",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-adfd0a93b6",
-        "type": "publication",
-        "label": "How to stay in the emotional...",
-        "description": "How to stay in the emotional rollercoaster: lessons learnt from designing EmRoll",
-        "year": 2010,
-        "venue": "Proceedings of the 6th Nordic Conference on Human-Computer Interaction: Extending Boundaries",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-0002-4825",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -8258,21 +7407,6 @@
     },
     {
       "data": {
-        "id": "pub-10-36227-techrxiv-14994444-v1",
-        "type": "publication",
-        "label": "Elastic O-RAN Slicing for...",
-        "description": "Elastic O-RAN Slicing for Industrial Monitoring and Control: A Distributed Matching Game and Deep Reinforcement Learning Approach",
-        "year": 2021,
-        "venue": null,
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.14994444.v1",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1109-tits-2020-3039617",
         "type": "publication",
         "label": "Data Freshness and...",
@@ -8281,21 +7415,6 @@
         "venue": "IEEE Transactions on Intelligent Transportation Systems",
         "sensitivity": "internal",
         "doi": "10.1109/TITS.2020.3039617",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-36227-techrxiv-14994444",
-        "type": "publication",
-        "label": "Elastic O-RAN slicing for...",
-        "description": "Elastic O-RAN slicing for industrial monitoring and control: A distributed matching game and deep reinforcement learning approach",
-        "year": 2021,
-        "venue": "Techrxiv",
-        "sensitivity": "internal",
-        "doi": "10.36227/techrxiv.14994444",
         "source": "orcid:0000-0002-2966-6469",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
@@ -8348,20 +7467,6 @@
     },
     {
       "data": {
-        "id": "pub-0c747c2f83",
-        "type": "publication",
-        "label": "Risk-Aware Energy Scheduling...",
-        "description": "Risk-Aware Energy Scheduling for Edge Computing with Microgrid: A Multi-Agent Deep Reinforcement Learning Approach",
-        "year": 2021,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1101-2020-05-22-20110783",
         "type": "publication",
         "label": "A noncooperative game analysis...",
@@ -8392,64 +7497,6 @@
     },
     {
       "data": {
-        "id": "pub-0be19cb01e",
-        "type": "publication",
-        "label": "Controlling the Outbreak of...",
-        "description": "Controlling the Outbreak of COVID-19: A Noncooperative Game Perspective",
-        "year": 2020,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-48550-arxiv-2007-13305",
-        "type": "publication",
-        "label": "Controlling the outbreak of...",
-        "description": "Controlling the outbreak of COVID-19: A noncooperative game perspective",
-        "year": 2020,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arxiv.2007.13305",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-06cc91fde8",
-        "type": "publication",
-        "label": "Data Freshness and...",
-        "description": "Data Freshness and Energy-Efficient UAV Navigation Optimization: A Deep Reinforcement Learning Approach",
-        "year": 2020,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-48550-arxiv-2003-04816",
-        "type": "publication",
-        "label": "Data freshness and...",
-        "description": "Data freshness and energy-efficient UAV navigation optimization: A deep reinforcement learning approach",
-        "year": 2020,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arxiv.2003.04816",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-3923d62795",
         "type": "publication",
         "label": "Drive Safe:...",
@@ -8457,36 +7504,6 @@
         "year": 2020,
         "venue": "Arxiv",
         "sensitivity": "internal",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-48550-arxiv-2008-10148",
-        "type": "publication",
-        "label": "Drive safe:...",
-        "description": "Drive safe: cognitive-behavioral mining for intelligent transportation cyber-physical system",
-        "year": 2020,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arxiv.2008.10148",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-10-48550-arxiv-2003-02157",
-        "type": "publication",
-        "label": "Risk-aware energy scheduling...",
-        "description": "Risk-aware energy scheduling for edge computing with microgrid: A multi-agent deep reinforcement learning approach",
-        "year": 2020,
-        "venue": "Arxiv",
-        "sensitivity": "internal",
-        "doi": "10.48550/arxiv.2003.02157",
         "source": "orcid:0000-0002-2966-6469",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
@@ -8584,20 +7601,6 @@
     },
     {
       "data": {
-        "id": "pub-860e629086",
-        "type": "publication",
-        "label": "Dual Threshold Load Balancing...",
-        "description": "Dual Threshold Load Balancing in SDN Environment Using Process Migration",
-        "year": 2018,
-        "venue": "2018 32ND INTERNATIONAL CONFERENCE ON INFORMATION NETWORKING (ICOIN)",
-        "sensitivity": "internal",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
         "id": "pub-10-1109-icoin-2018-8343226",
         "type": "publication",
         "label": "Dual threshold load balancing...",
@@ -8606,20 +7609,6 @@
         "venue": "International Conference on Information Networking",
         "sensitivity": "internal",
         "doi": "10.1109/ICOIN.2018.8343226",
-        "source": "orcid:0000-0002-2966-6469",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "id": "pub-a61fe3caa6",
-        "type": "publication",
-        "label": "Intelligent Service...",
-        "description": "Intelligent Service Fulfillment for Software Defined Networks in Smart City",
-        "year": 2018,
-        "venue": "2018 32ND INTERNATIONAL CONFERENCE ON INFORMATION NETWORKING (ICOIN)",
-        "sensitivity": "internal",
         "source": "orcid:0000-0002-2966-6469",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
@@ -10425,24 +9414,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-10-48550-arxiv-2503-16960",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:40+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-10-48550-arxiv-2503-15370",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:40+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-3686169-3686174",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -11073,15 +10044,6 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-175616128-87412093-v1",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
         "target": "pub-10-1109-tmlcn-2025-3635578",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -11091,25 +10053,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-174650513-36264593-v1",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
         "target": "pub-7d4fb56caa",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-48550-arxiv-2507-12031",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -11136,7 +10080,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-21252117-v2",
+        "target": "pub-10-1109-mie-2023-3284202",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -11163,34 +10107,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-1109-mie-2023-3284202",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-21362439-v2",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-21362439-v1",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-21252117-v1",
+        "target": "pub-10-36227-techrxiv-21362439",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -11262,25 +10179,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-21362439",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-21252117",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:18:50+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-17089265-v1",
+        "target": "pub-10-36227-techrxiv-17089265",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:18:50+00:00"
@@ -11344,42 +10243,6 @@
       "data": {
         "source": "r-dejan-kostic",
         "target": "pub-10-1145-3064176-3064209",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-dejan-kostic",
-        "target": "pub-10-7287-peerj-preprints-2477v3",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-dejan-kostic",
-        "target": "pub-10-7287-peerj-preprints-2477",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-dejan-kostic",
-        "target": "pub-10-7287-peerj-preprints-2477v2",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-dejan-kostic",
-        "target": "pub-10-7287-peerj-preprints-2477v1",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:09+00:00"
@@ -11695,15 +10558,6 @@
       "data": {
         "source": "r-dejan-kostic",
         "target": "pub-10-1145-1326320-1326326",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:09+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-dejan-kostic",
-        "target": "pub-1b6eb8d343",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:09+00:00"
@@ -12468,15 +11322,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-2880963531",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-3170427-3186322",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -12496,24 +11341,6 @@
       "data": {
         "source": "r-kristina-h-k",
         "target": "pub-d121a43bdb",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-1c84e3fe30",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-011b150417",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12549,25 +11376,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-ceba9782eb",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-265d8460cb",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-044f65a1cb",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12594,25 +11403,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-78a0556e93",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-3027063-3027082",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-5790e63192",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12648,25 +11439,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-81876c427c",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2851581-2856470",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-0957e51b35",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12693,25 +11466,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-b0be1aa1c6",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-db9b098988",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-7d5cb57d6f",
+        "target": "pub-10-1145-2839462-2839487",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12721,24 +11476,6 @@
       "data": {
         "source": "r-kristina-h-k",
         "target": "pub-10-1145-2957276-2957298",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-8a71e5f366",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-10-1145-2839462-2839487",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12792,15 +11529,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-4d2018dd2d",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2824892",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -12819,15 +11547,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-4f74ee0bf5",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2702613-2702653",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -12838,15 +11557,6 @@
       "data": {
         "source": "r-kristina-h-k",
         "target": "pub-10-1145-2770888",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-e5e548b9ab",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12891,15 +11601,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-eb82f4bd1d",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2559206-2579402",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -12927,34 +11628,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-c1a0b48d5b",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2556288-2557152",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-477621f188",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-f515eacb88",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -12981,42 +11655,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-aecbae7041",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-407dc1cfa2",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-0d48af0fa3",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-815346026a",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-4135-9781446282229-n13",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -13035,25 +11673,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-13a9774f5a",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2468356-2479670",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-d593b89f93",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13071,25 +11691,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-b27c35898f",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2468356-2479596",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-3d8a1b44c2",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13107,15 +11709,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-9087488735",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2090150-2090154",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -13125,25 +11718,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-f963d44a19",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-0ee205e7f9",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-9cd9270728",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13162,15 +11737,6 @@
       "data": {
         "source": "r-kristina-h-k",
         "target": "pub-6f1e56e5ad",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-6b3817d46a",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13233,15 +11799,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-754c5aa424",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-6a348591e5",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -13252,24 +11809,6 @@
       "data": {
         "source": "r-kristina-h-k",
         "target": "pub-10-1145-1979742-1979585",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-6bdaa7fcbf",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-b88caa0a61",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13314,34 +11853,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-43e3788cf5",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-98cb4ed395",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-2030031-2030041",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-93026c57b8",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13395,15 +11907,6 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-bbdf6211e0",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-f9c557498b",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -13422,34 +11925,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-f63264e261",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-37ed40e4ab",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1007-978-3-642-15184-2-33",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-6302b62c79",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -13530,25 +12006,7 @@
     {
       "data": {
         "source": "r-kristina-h-k",
-        "target": "pub-e0cd7ca82a",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
         "target": "pub-10-1145-1868914-1868978",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:13+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-kristina-h-k",
-        "target": "pub-adfd0a93b6",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:13+00:00"
@@ -14349,34 +12807,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-14994444-v1",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
         "target": "pub-10-1109-tits-2020-3039617",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-14994444",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-36227-techrxiv-17089265",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
@@ -14403,15 +12834,6 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-0c747c2f83",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
         "target": "pub-10-1101-2020-05-22-20110783",
         "type": "authored",
         "updatedBy": "import_orcid.py",
@@ -14430,61 +12852,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-0be19cb01e",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-48550-arxiv-2007-13305",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-06cc91fde8",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-48550-arxiv-2003-04816",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
         "target": "pub-3923d62795",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-48550-arxiv-2008-10148",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-10-48550-arxiv-2003-02157",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
@@ -14547,25 +12915,7 @@
     {
       "data": {
         "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-860e629086",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
         "target": "pub-10-1109-icoin-2018-8343226",
-        "type": "authored",
-        "updatedBy": "import_orcid.py",
-        "updatedAt": "2026-07-22T18:48:20+00:00"
-      }
-    },
-    {
-      "data": {
-        "source": "r-sarder-fakhrul-abedin",
-        "target": "pub-a61fe3caa6",
         "type": "authored",
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
@@ -14633,7 +12983,250 @@
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
       }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-tnsm-2021-3049381",
+        "target": "edge",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-globecom38437-2019-9013574",
+        "target": "edge",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-23919-apnoms-2019-8892984",
+        "target": "edge",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jiot-2019-2899673",
+        "target": "edge",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-zeroiot-sensys",
+        "target": "harvest",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-2915918",
+        "target": "harvest",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-intermittent-asplos",
+        "target": "intermittent",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3714470",
+        "target": "intermittent",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3625687-3628381",
+        "target": "intermittent",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3642970-3655836",
+        "target": "llm",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-zeroiot-sensys",
+        "target": "energyHarvest",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-2915918",
+        "target": "energyHarvest",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-fedlearn-sp",
+        "target": "fedLearning",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1007-978-3-031-28996-5-7",
+        "target": "fedLearning",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-36227-techrxiv-21362439",
+        "target": "fedLearning",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3774906-3802781",
+        "target": "lowpower",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-mesh-ipsn",
+        "target": "mesh",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-765b735b04",
+        "target": "mesh",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-riscv-dac",
+        "target": "riscVEdge",
+        "type": "evidences",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-sarder-fakhrul-abedin",
+        "target": "edge",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-luca-mottola",
+        "target": "intermittent",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-eriksson",
+        "target": "harvest",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-eriksson",
+        "target": "intermittent",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-berg",
+        "target": "harvest",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-dejan-kostic",
+        "target": "llm",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-mariano-scazzariello",
+        "target": "llm",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "r-luca-mottola",
+        "target": "harvest",
+        "type": "works_on",
+        "updatedBy": "suggest_links.py",
+        "updatedAt": "2026-07-23T07:03:05+00:00"
+      }
     }
   ],
-  "version": 4
+  "version": 5
 }

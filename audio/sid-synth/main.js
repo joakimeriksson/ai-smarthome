@@ -446,6 +446,10 @@ function importSIDRipperData() {
 
     console.log('📦 Found SID Ripper data in localStorage, length:', dataStr.length);
 
+    // Claim the song before parsing: loadDefaultSong() checks this flag when
+    // its fetch resolves, so an import that starts first always wins.
+    window.__songImported = true;
+
     try {
         const data = JSON.parse(dataStr);
         console.log('📀 Importing SID Ripper data:', data);
@@ -989,10 +993,30 @@ window.updateWorkletTelemetry = (function () {
 // (file:// origin, missing file, parse error) leaves the built-in fallback
 // patterns from pattern-manager-gt2.js in place - the app must still boot.
 export async function loadDefaultSong(url = 'sids/default-song.sng') {
+    // NEVER clobber a real song the user asked for. This function is async, so
+    // its fetch resolves AFTER the rest of window.onload has run - including
+    // checkSIDRipperImport(), which imports synchronously. Without this guard
+    // the default song silently overwrote every SID-ripper import, and the
+    // tracker played the demo instead of the rip (headless rip round trips
+    // measured the DEMO's notes against the original .sid).
+    // The URL param must be read SYNCHRONOUSLY here: checkSIDRipperImport()
+    // strips it with replaceState() before our fetch resolves.
+    const importPending =
+        new URLSearchParams(window.location.search).get('import') === 'sidrip';
+    if (importPending) {
+        console.log('Default song skipped: a SID-ripper import is pending');
+        return false;
+    }
     try {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const parsed = parseSng(new Uint8Array(await resp.arrayBuffer()));
+        // Re-check: an import (URL, manual button, or cross-tab storage event)
+        // may have landed while the fetch was in flight.
+        if (window.__songImported) {
+            console.log('Default song skipped: a song was imported while loading');
+            return false;
+        }
         gt2Importer.importCompleteSong(parsed, 0);
         if (window.gt2PatternEditor) window.gt2PatternEditor.renderPattern();
         if (window.gt2OrderEditor) window.gt2OrderEditor.renderOrderLists();

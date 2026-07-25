@@ -2610,6 +2610,27 @@
                 // Track arpeggio patterns per voice for potential wavetable generation
                 const arpeggioPatterns = [[], [], []];
 
+                // KEYOFF placement. GT2 acts on a row's KEYOFF at GETNEWNOTES,
+                // which runs GATETIMER ticks BEFORE the row starts (gplay.c:
+                // `if (newnote == KEYOFF) cptr->gate = 0xfe;` sits inside
+                // GETNEWNOTES). So a keyoff written on row r silences the note
+                // GATETIMER frames early. Placing it on the row that CONTAINS
+                // the captured gate-off therefore clips every note by GATETIMER
+                // frames - the systematic -2f note-length deficit across the
+                // whole corpus. On long notes that is inaudible; on Miami
+                // Vice's 5-frame notes it removed 2 of them, and combined with
+                // grid rounding left 1-frame blips (gate-on frames 610 -> 122).
+                // Aim the keyoff so it FIRES on the captured frame instead.
+                const GATETIMER = 2;   // matches buildGT2Instruments' gateTimer
+                const keyoffRows = [new Set(), new Set(), new Set()];
+                for (let f = 0; f < frames.length; f++) {
+                    for (let v = 0; v < 3; v++) {
+                        if (frames[f].voices[v].note !== '===') continue;
+                        const r = Math.floor((f + GATETIMER) / framesPerRow);
+                        if (r < numRows) keyoffRows[v].add(r);
+                    }
+                }
+
                 for (let row = 0; row < numRows; row++) {
                     const startFrame = row * framesPerRow;
                     const endFrame = Math.min(startFrame + framesPerRow, frames.length);
@@ -2631,10 +2652,9 @@
                             const voiceFrame = frame.voices[v];
 
                             if (voiceFrame.note === '===') {
-                                // Key-off event - only record if we don't have a note yet
-                                if (rowData.voices[v].note === 0) {
-                                    rowData.voices[v].note = NOTE_KEYOFF;
-                                }
+                                // Key-offs are placed from keyoffRows below:
+                                // GT2 fires them GATETIMER frames before the row
+                                continue;
                             } else if (voiceFrame.note !== '---' && voiceFrame.note !== '???') {
                                 const midiNote = this.noteToMidi(voiceFrame.note);
                                 if (midiNote >= 0) {
@@ -2678,6 +2698,16 @@
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Apply key-offs aimed at this row (see keyoffRows above).
+                    // A real note still wins the slot: gate-rhythmic players
+                    // release just before the next note, and re-articulation
+                    // implies the release anyway.
+                    for (let v = 0; v < 3; v++) {
+                        if (rowData.voices[v].note === 0 && keyoffRows[v].has(row)) {
+                            rowData.voices[v].note = NOTE_KEYOFF;
                         }
                     }
 

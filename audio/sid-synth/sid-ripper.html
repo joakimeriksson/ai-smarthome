@@ -1227,6 +1227,20 @@
                         const currentWave = (state.ctrl >> 4) & 0x0F;
                         const waveChanged = currentWave !== prevWave && (currentWave !== 0);
 
+                        // A voice running SYNC or RING MOD is a special case:
+                        // its oscillator is hard-synced to (or ring-multiplied
+                        // with) voice V-1, so the audible FUNDAMENTAL comes from
+                        // that source voice and THIS voice's frequency is
+                        // TIMBRE, not pitch. Galway's sync sweeps ramp it over
+                        // two octaves (Roland's Ratrace: 923 -> 4723 at
+                        // +100/frame) purely for the tearing sound.
+                        // Sync only takes over the pitch while the SOURCE
+                        // oscillator is actually running - with source freq 0
+                        // there are no sync resets and this voice's own
+                        // frequency is the pitch again.
+                        const syncTimbre = (state.ctrl & 0x06) !== 0
+                            && voiceState[(v + 2) % 3].freq > 0;
+
                         // Track note onset sequences: capture ctrl+freq for frames after gate trigger
                         if (gateTriggered) {
                             // Close previous sequence if any
@@ -1258,12 +1272,29 @@
                             }
                         }
 
+                        // A voice running SYNC or RING MOD is a special case:
+                        // its oscillator is hard-synced to (or ring-multiplied
+                        // with) voice V-1, so the audible FUNDAMENTAL comes
+                        // from that source voice and this voice's frequency is
+                        // TIMBRE, not pitch. Galway's sync sweeps ramp it over
+                        // two octaves (Roland's Ratrace: 923 -> 4723 at
+                        // +100/frame) purely for the tearing sound.
+                        // Feeding that ramp into the pitch analysers is
+                        // actively harmful: it made voice 1 classify as
+                        // "portamento", which then stamped a porta-up command
+                        // on all 42 of its note rows so every sustained note
+                        // bent upward, and it minted narrow +0/+1/+2 "arpeggio"
+                        // wavetables from the ramp's within-row steps.
+                        // Sync only takes over the pitch while the SOURCE
+                        // oscillator is actually running - with source freq 0
+                        // there are no sync resets and this voice's own
+                        // frequency is the pitch again.
                         // Detect pitch changes while gate is on (arpeggio, vibrato, portamento).
                         // Release-phase trills are handled by the onset
                         // wavetables (captured ctrl+freq sequence + loop).
                         let pitchChange = null;
                         let pitchDelta = 0;
-                        if (state.gateOn && prevGate[v] && state.freq > 0 && prevFreq[v] > 0) {
+                        if (!syncTimbre && state.gateOn && prevGate[v] && state.freq > 0 && prevFreq[v] > 0) {
                             pitchDelta = state.freq - prevFreq[v];
                             if (pitchDelta !== 0) {
                                 // Calculate semitone difference
@@ -1351,6 +1382,7 @@
                             noteEvent: noteEvent,
                             waveChanged: waveChanged,
                             arpeggioNote: arpeggioNote,
+                            syncTimbre: syncTimbre,
                             pitchChange: pitchChange,
                             freq: state.freq,
                             rawNote: noteEvent ? note : (state.freq > 0 ? this.freqToNote(state.freq) : '---'),
@@ -1443,6 +1475,13 @@
                         const vf = frames[f].voices[v];
                         sinceEmit++;
                         if (!vf.gateOn) { lastEmitIdx = -1; continue; }
+                        // Under sync/ring this voice's frequency is TIMBRE, not
+                        // pitch (see syncTimbre above), so a sweeping ramp must
+                        // not be promoted to tie notes - that walked the base
+                        // note up through the sweep, and the sync wavetable's
+                        // +16 semitones on top of it shot Roland's Ratrace to
+                        // SID freq 15880 against the original's 6923 ceiling.
+                        if (vf.syncTimbre) { lastEmitIdx = -1; continue; }
                         const idx = noteIdxOf(vf.freq);
                         if (vf.noteEvent) { lastEmitIdx = idx; sinceEmit = 0; continue; }
                         if (idx < 0 || lastEmitIdx < 0) { if (idx >= 0 && lastEmitIdx < 0) { lastEmitIdx = idx; sinceEmit = 0; } continue; }

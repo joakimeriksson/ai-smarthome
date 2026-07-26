@@ -1257,10 +1257,34 @@
                             };
                         } else if (activeOnsetSeq[v]) {
                             const elapsed = f - activeOnsetSeq[v].startFrame;
-                            if (elapsed <= 14) {
-                                // Capture ctrl+freq changes for up to 14 frames after gate-on
+                            // A sync/ring TIMBRE sweep is the POINT of the note,
+                            // not an attack transient, and it runs for the note's
+                            // whole length (~190 frames in Roland's Ratrace).
+                            // Capturing only the 14-frame attack truncated it to
+                            // its first steps, so the rip jumped +16 semitones in
+                            // 15 frames and then held while the original kept
+                            // climbing. Give sweeps a long window, but record a
+                            // step only when the ROUNDED SEMITONE offset moves -
+                            // that is all a wavetable entry can express anyway,
+                            // so it costs no fidelity and keeps the entry count
+                            // bounded (the builder turns the frame gaps back into
+                            // delays, so the ramp keeps its real duration).
+                            if (syncTimbre) activeOnsetSeq[v].sweep = true;
+                            const window = activeOnsetSeq[v].sweep ? 192 : 14;
+                            if (elapsed <= window) {
                                 const lastStep = activeOnsetSeq[v].steps[activeOnsetSeq[v].steps.length - 1];
-                                if (state.ctrl !== lastStep.ctrl || state.freq !== lastStep.freq) {
+                                let changed = state.ctrl !== lastStep.ctrl || state.freq !== lastStep.freq;
+                                if (changed && activeOnsetSeq[v].sweep
+                                    && state.ctrl === lastStep.ctrl
+                                    && state.freq > 0 && lastStep.freq > 0) {
+                                    // 2 semitones, not 1: this is TIMBRE, not
+                                    // pitch, so the ear cannot hear the
+                                    // difference - but it halves the entry count,
+                                    // and WTBL is a shared 255-entry budget that
+                                    // a 2-octave per-semitone ramp will exhaust.
+                                    changed = Math.abs(12 * Math.log2(state.freq / lastStep.freq)) >= 2;
+                                }
+                                if (changed) {
                                     activeOnsetSeq[v].steps.push({ frame: f, ctrl: state.ctrl, freq: state.freq });
                                 }
                             } else {
@@ -3530,17 +3554,77 @@
                 return seq.freq;
             },
 
+            /**
+             * Is this captured onset a real sync/ring TIMBRE SWEEP - a long,
+             * far-travelling ramp - or just a short sync/ring-flavoured attack?
+             *
+             * The distinction matters: Galway sweeps the synced oscillator two
+             * octaves over ~190 frames as the whole point of the note, but
+             * Hubbard uses ring mod for SHORT metallic percussion (Commando has
+             * 160 ring frames on voice 0 and 194 sync frames on voice 1, all of
+             * them brief hits). Treating those hits as sweeps replaces their
+             * exact onset shape with a coarse one and costs real notes, so
+             * demand both a long duration and a wide excursion.
+             */
+            onsetSweepInfo(seq) {
+                if (!seq.sweep || seq.steps.length < 4) return { isSweep: false };
+                const base = this.onsetBaseFreq(seq);
+                const offs = seq.steps
+                    .map(s => (s.freq > 0 && base > 0) ? 12 * Math.log2(s.freq / base) : 0);
+                const excursion = Math.max(...offs) - Math.min(...offs);
+                const dur = seq.steps[seq.steps.length - 1].frame - seq.startFrame;
+                return { isSweep: dur >= 48 && excursion >= 12, excursion, dur };
+            },
+
+            /**
+             * Steps to encode. A true sweep uses its whole long capture; anything
+             * else is an attack transient and keeps the original 14-frame window,
+             * so widening the capture for sync voices cannot disturb them.
+             */
+            onsetSteps(seq) {
+                if (this.onsetSweepInfo(seq).isSweep) return seq.steps;
+                return seq.steps.filter(s => s.frame - seq.startFrame <= 14);
+            },
+
             onsetSignature(seq) {
                 const base = this.onsetBaseFreq(seq);
-                return seq.steps.map(s => {
-                    const off = (s.freq > 0 && base > 0)
-                        ? Math.round(12 * Math.log2(s.freq / base)) : 0;
-                    return (s.ctrl & 0xFE).toString(16) + ':' + off;
-                }).join(',');
+                const offOf = (s) => (s.freq > 0 && base > 0)
+                    ? Math.round(12 * Math.log2(s.freq / base)) : 0;
+
+                // Long sync/ring TIMBRE sweeps are never byte-identical: each
+                // one starts on a different note and runs a slightly different
+                // length, so the exact per-step signature is UNIQUE to every
+                // sweep. With the >=3-occurrence rule below that builds NO
+                // wavetable at all and the voice goes flat - which is exactly
+                // what happened the first time the capture window was widened.
+                // Group sweeps COARSELY instead: same waveform, same direction,
+                // similar total excursion (bucketed to a minor third). Roland's
+                // Ratrace's four sweeps then share one signature and clear the
+                // threshold, and the shape is faithful because they really are
+                // the same gesture.
+                if (this.onsetSweepInfo(seq).isSweep) {
+                    const offs = seq.steps.map(offOf);
+                    const span = offs.length ? offs[offs.length - 1] - offs[0] : 0;
+                    return 'sw:' + (seq.steps[0].ctrl & 0xFE).toString(16)
+                        + ':' + Math.sign(span) + ':' + Math.round(span / 3);
+                }
+
+                return this.onsetSteps(seq)
+                    .map(s => (s.ctrl & 0xFE).toString(16) + ':' + offOf(s)).join(',');
             },
 
             buildWavetablesFromOnsetSequences(noteOnsetSequences, existingWavetables) {
                 const newWavetables = [];
+
+                // WTBL is ONE shared 255-entry table for the whole song. Nothing
+                // used to check that budget: when long sweeps pushed past it, the
+                // later tables were silently written past the end and the voices
+                // pointing at them played garbage (Roland's Ratrace voice 2 went
+                // 146/146 -> 3/146 pitch-exact this way). Track the budget and
+                // DROP tables that no longer fit, loudly.
+                const WTBL_BUDGET = 250;   // leave a little headroom
+                let used = (existingWavetables || []).reduce((s, wt) => s + wt.entries.length, 0);
+                let dropped = 0;
 
                 for (let v = 0; v < 3; v++) {
                     const sequences = noteOnsetSequences[v];
@@ -3549,16 +3633,38 @@
                     // Build a signature for each onset sequence based on ctrl values
                     const patternCounts = new Map();
                     const patternExamples = new Map();
+                    const sigSeqs = new Map();
                     sequences.forEach(seq => {
                         const sig = this.onsetSignature(seq);
                         patternCounts.set(sig, (patternCounts.get(sig) || 0) + 1);
                         if (!patternExamples.has(sig)) patternExamples.set(sig, seq);
+                        if (!sigSeqs.has(sig)) sigSeqs.set(sig, []);
+                        sigSeqs.get(sig).push(seq);
+                    });
+                    // Sweeps: the exemplar defines the gesture's RATE for every
+                    // note that points at the table, so pick the MEDIAN-duration
+                    // capture. Taking the longest (the obvious choice) picks the
+                    // slowest outlier and the whole sweep replays ~20% too slow;
+                    // taking the first picks whatever the song happened to start
+                    // mid-gesture on.
+                    sigSeqs.forEach((seqs, sig) => {
+                        if (!sig.startsWith('sw:')) return;
+                        const dur = (s) => s.steps[s.steps.length - 1].frame - s.startFrame;
+                        const sorted = [...seqs].sort((a, b) => dur(a) - dur(b));
+                        patternExamples.set(sig, sorted[Math.floor(sorted.length / 2)]);
                     });
 
-                    // Find all patterns with >= 3 occurrences
                     const commonPatterns = [];
                     patternCounts.forEach((count, sig) => {
-                        if (count >= 3 && sig.split(',').length >= 2) {
+                        const isSweep = sig.startsWith('sw:');
+                        // A sweep is a whole musical gesture and is expressive on
+                        // its own, so it does not need repetition to be worth a
+                        // table; ordinary attack transients still need >=3 so
+                        // one-off noise doesn't become an instrument.
+                        const minCount = isSweep ? 1 : 3;
+                        const enoughSteps = isSweep || sig.split(',').length >= 2;
+                        if (count >= minCount && enoughSteps
+                            && patternExamples.get(sig).steps.length >= 2) {
                             commonPatterns.push({ sig, count, example: patternExamples.get(sig) });
                         }
                     });
@@ -3568,7 +3674,16 @@
                     // Sort by count descending, generate wavetable for ALL common patterns
                     commonPatterns.sort((a, b) => b.count - a.count);
 
+                    // A voice needs at most a couple of distinct sweep shapes;
+                    // more than that is the coarse signature failing to merge
+                    // near-identical gestures, and each one costs ~25 entries.
+                    let sweepsBuilt = 0;
+
                     for (const pattern of commonPatterns) {
+                        if (pattern.sig.startsWith('sw:') && ++sweepsBuilt > 2) {
+                            dropped++;
+                            continue;
+                        }
                         const exampleSeq = pattern.example;
 
                         // Build wavetable entries from the ctrl sequence.
@@ -3580,7 +3695,10 @@
                             ? this.noteToMidi(this.freqToNote(baseFreq)) - 12 : -1;
                         const rawEntries = [];
 
-                        exampleSeq.steps.forEach((step, i) => {
+                        // Same window the signature used, or a widened sync
+                        // capture would encode entries the signature never saw
+                        const exampleSteps = this.onsetSteps(exampleSeq);
+                        exampleSteps.forEach((step, i) => {
                             const ctrlByte = step.ctrl & 0xFE;  // Strip gate for waveform
                             const gate = step.ctrl & 0x01;
                             const waveform = ctrlByte & 0xF0;   // Upper nibble = waveform
@@ -3614,7 +3732,7 @@
                                         right = 0x80 | Math.max(1, Math.min(95, idx));
                                     }
                                 }
-                            } else if (i > 0 && step.freq !== exampleSeq.steps[i-1].freq && step.freq > 0 && baseFreq > 0) {
+                            } else if (i > 0 && step.freq !== exampleSteps[i-1].freq && step.freq > 0 && baseFreq > 0) {
                                 // Relative semitone offset from base note. NOTE:
                                 // offset 0 must be emitted as relative +0 ($00),
                                 // not "no change" - drums oscillate back to the
@@ -3719,6 +3837,13 @@
                             right: loopTarget
                         });
 
+                        // Shared-WTBL budget: drop rather than overflow (see above)
+                        if (used + entries.length > WTBL_BUDGET) {
+                            dropped++;
+                            continue;
+                        }
+                        used += entries.length;
+
                         // Identify the primary ctrl byte of this onset pattern (waveform + sync/ring, no gate)
                         const primaryWave = entries[0].left & 0xFE;
 
@@ -3737,6 +3862,9 @@
                     }
                 }
 
+                if (dropped) {
+                    console.warn(`WTBL budget: dropped ${dropped} onset wavetable(s); ${used}/${WTBL_BUDGET} entries used`);
+                }
                 return newWavetables;
             },
 

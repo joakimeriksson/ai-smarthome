@@ -401,7 +401,11 @@
             <h3>Register Logging</h3>
             <button id="startLogBtn" disabled>Start Live Log</button>
             <button id="stopLogBtn" class="stop" disabled>Stop Live Log</button>
-            <button id="autoCapBtn" disabled title="Headless capture on the verified 6502 core - instant, no audio needed">Capture 30s (instant)</button>
+            <label for="captureSeconds" style="margin-left:8px;">Length:</label>
+            <input type="number" id="captureSeconds" min="5" max="600" value="30" style="width:64px;"
+                   title="Seconds to capture. Auto-filled from the HVSC song length when known - capturing less than the full song truncates the rip and the tracker then loops the fragment.">
+            <span style="font-size:11px;color:#888;">s</span>
+            <button id="autoCapBtn" disabled title="Headless capture on the verified 6502 core - instant, no audio needed">Capture (instant)</button>
             <button id="clearLogBtn">Clear Log</button>
             <button id="exportLogBtn" disabled>Export Log</button>
         </div>
@@ -587,10 +591,16 @@
                 document.getElementById('hvscSearch').addEventListener('input', () => this.hvscSearch());
                 document.getElementById('playBtn').addEventListener('click', () => this.play());
                 document.getElementById('stopBtn').addEventListener('click', () => this.stop());
-                document.getElementById('subsongSelect').addEventListener('change', (e) => this.changeSubsong(parseInt(e.target.value)));
+                document.getElementById('subsongSelect').addEventListener('change', (e) => {
+                    this.changeSubsong(parseInt(e.target.value));
+                    this.applySongLength();   // each subtune has its own length
+                });
                 document.getElementById('startLogBtn').addEventListener('click', () => this.startLogging());
                 document.getElementById('stopLogBtn').addEventListener('click', () => this.stopLogging());
-                document.getElementById('autoCapBtn').addEventListener('click', () => this.autoCapture(30));
+                document.getElementById('autoCapBtn').addEventListener('click', () => {
+                    const s = parseInt(document.getElementById('captureSeconds').value, 10);
+                    this.autoCapture(Math.max(5, Math.min(600, s || 30)));
+                });
                 document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
                 document.getElementById('exportLogBtn').addEventListener('click', () => this.exportLog());
                 document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeLog());
@@ -669,8 +679,24 @@
                 try {
                     const txt = await (await fetch('/hvsc/DOCUMENTS/Songlengths.md5')).text();
                     const paths = [];
+                    // Songlengths.md5 pairs a "; /path" line with the following
+                    // "<md5>=m:ss m:ss ..." line (one time per subtune). Keep the
+                    // lengths: capturing less than the full song truncates the rip
+                    // and the tracker then loops the fragment - the single biggest
+                    // cause of a rip "sounding wrong" late in a tune.
+                    this.hvscLengths = new Map();
+                    let pendingPath = null;
                     for (const line of txt.split('\n')) {
-                        if (line.startsWith('; /')) paths.push(line.slice(2).trim());
+                        if (line.startsWith('; /')) { pendingPath = line.slice(2).trim(); paths.push(pendingPath); continue; }
+                        const eq = line.indexOf('=');
+                        if (pendingPath && eq > 0 && !line.startsWith(';')) {
+                            const secs = line.slice(eq + 1).trim().split(/\s+/).map(t => {
+                                const m = /^(\d+):(\d+)/.exec(t);
+                                return m ? (+m[1]) * 60 + (+m[2]) : 0;
+                            }).filter(n => n > 0);
+                            if (secs.length) this.hvscLengths.set(pendingPath, secs);
+                            pendingPath = null;
+                        }
                     }
                     this.hvscIndex = paths;
                     status.textContent = paths.length + ' tunes indexed';
@@ -708,6 +734,25 @@
                 });
             },
 
+            /**
+             * Set the capture length from the HVSC song length for the tune and
+             * subtune currently selected. A rip shorter than the song is missing
+             * music outright - the tracker loops the captured fragment - and no
+             * register/audio comparison against the same short window can detect
+             * that, so it must be got right at capture time.
+             * Adds 3 s of tail so the last phrase is not clipped.
+             */
+            applySongLength() {
+                if (!this.hvscPath || !this.hvscLengths) return 0;
+                const lens = this.hvscLengths.get(this.hvscPath);
+                if (!lens) return 0;
+                const sub = parseInt(document.getElementById('subsongSelect').value, 10) || 0;
+                const len = lens[Math.min(sub, lens.length - 1)];
+                if (!len) return 0;
+                document.getElementById('captureSeconds').value = Math.min(600, len + 3);
+                return len;
+            },
+
             async hvscLoad(path) {
                 const status = document.getElementById('hvscStatus');
                 status.textContent = 'Downloading ' + path + '...';
@@ -716,7 +761,11 @@
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = new Uint8Array(await resp.arrayBuffer());
                     this.loadSIDData(data);
-                    status.textContent = 'Loaded ' + path.split('/').pop() + ' - press Capture!';
+                    this.hvscPath = path;
+                    const len = this.applySongLength();
+                    status.textContent = 'Loaded ' + path.split('/').pop()
+                        + (len ? ` - song is ${Math.floor(len/60)}:${String(len%60).padStart(2,'0')}, capture set to ${len+3}s` : '')
+                        + ' - press Capture!';
                 } catch (e) {
                     status.textContent = 'Download failed: ' + e.message;
                 }

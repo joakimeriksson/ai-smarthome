@@ -402,7 +402,7 @@
             <button id="startLogBtn" disabled>Start Live Log</button>
             <button id="stopLogBtn" class="stop" disabled>Stop Live Log</button>
             <label for="captureSeconds" style="margin-left:8px;">Length:</label>
-            <input type="number" id="captureSeconds" min="5" max="600" value="30" style="width:64px;"
+            <input type="number" id="captureSeconds" min="5" max="600" value="90" style="width:64px;"
                    title="Seconds to capture. Auto-filled from the HVSC song length when known - capturing less than the full song truncates the rip and the tracker then loops the fragment.">
             <span style="font-size:11px;color:#888;">s</span>
             <button id="autoCapBtn" disabled title="Headless capture on the verified 6502 core - instant, no audio needed">Capture (instant)</button>
@@ -599,7 +599,9 @@
                 document.getElementById('stopLogBtn').addEventListener('click', () => this.stopLogging());
                 document.getElementById('autoCapBtn').addEventListener('click', () => {
                     const s = parseInt(document.getElementById('captureSeconds').value, 10);
-                    this.autoCapture(Math.max(5, Math.min(600, s || 30)));
+                    // 90 s default, not 30: most SID tunes run past a minute, and
+                    // a short capture silently truncates the song (see below)
+                    this.autoCapture(Math.max(5, Math.min(600, s || 90)));
                 });
                 document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
                 document.getElementById('exportLogBtn').addEventListener('click', () => this.exportLog());

@@ -6,7 +6,10 @@ import { webkit } from 'playwright';
 import { writeFileSync } from 'node:fs';
 
 const [sidPath, outSng, secondsArg, subtuneArg] = process.argv.slice(2);
-const seconds = parseInt(secondsArg || '30', 10);
+// 90 s default: most SID tunes run past a minute and a short capture silently
+// truncates the song - no downstream comparison can detect that, because it
+// measures the captured window against the SAME window of the original.
+const seconds = parseInt(secondsArg || '90', 10);
 const subtune = parseInt(subtuneArg || '0', 10);
 if (!sidPath || !outSng) { console.error('usage: rip-roundtrip.mjs <sid-url-path> <out.sng> [seconds]'); process.exit(2); }
 

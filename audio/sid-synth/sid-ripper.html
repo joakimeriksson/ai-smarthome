@@ -554,6 +554,14 @@
 
     <script>
         // SID Ripper Application
+        // SID envelope RELEASE times per nibble (ms, from the 6581/8580 data
+        // sheet) converted to 50Hz frames. Used to tell how long a voice keeps
+        // ringing after its gate goes off - the range is enormous (6ms to 24s),
+        // so any fixed "is it still sounding?" window is wrong.
+        const SID_RELEASE_MS = [6, 24, 48, 72, 114, 168, 204, 240,
+                                300, 750, 1500, 2400, 3000, 9000, 15000, 24000];
+        const GHOST_RELEASE_FRAMES = SID_RELEASE_MS.map(ms => Math.round(ms / 20));
+
         const SIDRipper = window.SIDRipper = {
             player: null,
             sidFile: null,
@@ -1438,9 +1446,20 @@
                         if (frameData.voices[m].note !== '---') continue;    // don't override real events
                         // Only truly dedicated modulator stretches: a voice
                         // that recently played its own note is still audibly
-                        // releasing - stamping ghost notes onto it would cut
-                        // the tail and insert wrong pitches
-                        if (f - lastRealNote[m] < 25) continue;
+                        // RELEASING - stamping ghost notes onto it replaces its
+                        // instrument (and therefore its ADSR) and cuts the tail.
+                        // How long it rings is set by the SID RELEASE nibble,
+                        // which spans 6ms to 24s - a fixed 25-frame window was
+                        // wildly too short. Roland's Ratrace holds the sync
+                        // SOURCE voice with release $E (15s = 750 frames) and
+                        // lets it ring through 128-frame gaps between gates;
+                        // ghosting it swapped in a release-0 instrument, killed
+                        // the tone, and left the synced voice's raw two-octave
+                        // ramp audible as a wildly wrong "lead".
+                        // The SR register still holds the value the voice is
+                        // releasing with, so read the ring time straight off it.
+                        const relFrames = GHOST_RELEASE_FRAMES[mod.sr & 0x0F];
+                        if (f - lastRealNote[m] < Math.max(25, relFrames)) continue;
                         const lf = lastGhostFreq[m];
                         if (lf && Math.abs(12 * Math.log2(mod.freq / lf)) < 0.7) continue;
                         if (!instrumentMap.has('ghost')) instrumentMap.set('ghost', instCounter++);

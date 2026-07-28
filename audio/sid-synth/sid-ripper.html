@@ -1561,10 +1561,12 @@
                 // Rapid alternations (trills/arps) fail the stability check
                 // and stay arpeggio material.
                 const noteIdxOf = (fr) => fr > 0 ? this.noteToMidi(this.freqToNote(fr)) : -1;
+                const ONSET_BEND_WINDOW = 14;  // matches the onset-sequence capture
                 for (let v = 0; v < 3; v++) {
                     let lastEmitIdx = -1;      // pitch of last real/promoted note
                     let sinceEmit = 1000;
                     let promoted = 0;
+                    let lastRealOnset = -1000; // frame of last gate-triggered note
                     for (let f = 0; f < frames.length; f++) {
                         const vf = frames[f].voices[v];
                         sinceEmit++;
@@ -1577,10 +1579,47 @@
                         // SID freq 15880 against the original's 6923 ceiling.
                         if (vf.syncTimbre) { lastEmitIdx = -1; continue; }
                         const idx = noteIdxOf(vf.freq);
-                        if (vf.noteEvent) { lastEmitIdx = idx; sinceEmit = 0; continue; }
+                        if (vf.noteEvent) {
+                            // A note's EFFECTIVE pitch is where it settles after
+                            // its attack, not the frequency at gate-on. Galway
+                            // bends into notes (Roland's Ratrace voice 0 hits
+                            // A#4 for 12 frames then settles on the real note
+                            // F#4), and the onset wavetable reproduces that bend
+                            // as a RELATIVE offset from the pattern note.
+                            // Comparing against the gate-on pitch made the
+                            // settled pitch look like a new melody note, so it
+                            // was promoted to a tie note as well - and the two
+                            // encodings then fought: the tie moved cptr->note
+                            // while the still-running wavetable kept applying
+                            // its -4 to the NEW note, leaving the voice a major
+                            // third flat (F#4 played as D4). Every lead note in
+                            // Ratrace's tail came out 2-4 semitones off.
+                            // Only a REAL bend counts: it must land at least a
+                            // whole tone away and HOLD there. Vibrato wobble and
+                            // trills also move within the window, and treating
+                            // those as "settled" mis-anchors the comparison
+                            // (Monty's gentle vibrato lost 2 notes that way).
+                            let settled = idx;
+                            if (!vf.legato) {
+                                lastRealOnset = f;
+                                let cand = idx, held = 0;
+                                for (let k = 1; k <= ONSET_BEND_WINDOW && f + k < frames.length; k++) {
+                                    const nf = frames[f + k].voices[v];
+                                    if (!nf.gateOn || nf.noteEvent) break;
+                                    const nidx = noteIdxOf(nf.freq);
+                                    if (nidx < 0) continue;
+                                    if (nidx === cand) held++; else { cand = nidx; held = 1; }
+                                }
+                                if (Math.abs(cand - idx) >= 2 && held >= 3) settled = cand;
+                            }
+                            lastEmitIdx = settled; sinceEmit = 0;
+                            continue;
+                        }
                         if (idx < 0 || lastEmitIdx < 0) { if (idx >= 0 && lastEmitIdx < 0) { lastEmitIdx = idx; sinceEmit = 0; } continue; }
                         const diff = Math.abs(idx - lastEmitIdx);
                         if (diff === 0 || promoted > 500 || sinceEmit < 6 || vf.ghostNote) continue;
+                        // The attack window belongs to the onset wavetable
+                        if (f - lastRealOnset <= ONSET_BEND_WINDOW) continue;
                         // Stability lookahead
                         const stable = (n) => {
                             for (let k = 1; k <= n; k++) {
@@ -2764,6 +2803,18 @@
                     }
                 }
 
+                // Frame of the last real note-on per voice. A pitch change in
+                // the first frames of a note is the ATTACK (Galway's pitch-bend
+                // grace: Roland's Ratrace voice 0 hits A#4 for 12 frames before
+                // settling on the real note F#4, a 4-semitone drop). The
+                // onset-wavetable path already owns that window and reproduces
+                // it exactly; letting the arp detector claim it too mints a
+                // bogus "0,4" chord that then gets stamped on the row as an 8XY
+                // and overrides the note's real pitch. Arpeggio detection only
+                // owns pitch movement AFTER the onset window.
+                const ONSET_WINDOW = 14;   // matches the onset-sequence capture
+                const lastOnsetFrame = [-1000, -1000, -1000];
+
                 for (let row = 0; row < numRows; row++) {
                     const startFrame = row * framesPerRow;
                     const endFrame = Math.min(startFrame + framesPerRow, frames.length);
@@ -2792,7 +2843,12 @@
                                 const midiNote = this.noteToMidi(voiceFrame.note);
                                 if (midiNote >= 0) {
                                     const gt2Note = Math.max(0x60, Math.min(0xBC, midiNote - 12 + 0x60));
-                                    rowNotes[v].push({
+                                    if (voiceFrame.noteEvent) lastOnsetFrame[v] = f;
+                                    // Attack-window pitch movement belongs to the
+                                    // onset wavetable, not to arp detection
+                                    const isOnsetBend = voiceFrame.arpeggioNote
+                                        && (f - lastOnsetFrame[v]) <= ONSET_WINDOW;
+                                    if (!isOnsetBend) rowNotes[v].push({
                                         note: gt2Note,
                                         inst: parseInt(voiceFrame.inst, 16) || 1,
                                         frame: f,

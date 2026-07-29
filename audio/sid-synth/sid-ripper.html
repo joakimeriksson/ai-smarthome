@@ -3151,6 +3151,8 @@
                         voice: wt.voice,
                         type: wt.type || 'arpeggio',
                         primaryWave: wt.primaryWave || 0,
+                        loopsPitch: !!wt.loopsPitch,
+                        isSweep: !!wt.isSweep,
                         entries: wt.entries
                     });
                     wtPos += wt.entries.length;
@@ -3189,7 +3191,16 @@
 
                     // Find arpeggio and ALL waveform_sequence wavetables for this voice
                     const voiceArpWt = wtPositions.find(w => w.voice === v && w.type === 'arpeggio');
-                    const voiceWaveSeqWts = wtPositions.filter(w => w.voice === v && w.type === 'waveform_sequence');
+                    // An instrument DEFAULT wavetable must not keep moving the
+                    // pitch (see loopsPitch in buildWavetablesFromOnsetSequences):
+                    // it would arpeggiate every note the instrument plays, not
+                    // just the ones that were captured arpeggiating. Those tables
+                    // are applied per row by addOnsetWavetableCommands instead.
+                    // SWEEPS are exempt - a sync/ring sweep IS the whole note, so
+                    // its instrument should default to it.
+                    const voiceWaveSeqWts = wtPositions.filter(w =>
+                        w.voice === v && w.type === 'waveform_sequence'
+                        && (!w.loopsPitch || w.isSweep));
 
                     instsOnVoice.forEach(instIdx => {
                         if (instIdx <= 0 || instIdx >= instruments.length) return;
@@ -3970,6 +3981,26 @@
                         }
                         used += entries.length;
 
+                        // Does the LOOPING section keep changing pitch? An onset
+                        // wavetable encodes a note's ATTACK, and its loop is the
+                        // note's STEADY STATE. If that loop cycles relative
+                        // notes it is an ARPEGGIO, and handing it to an
+                        // instrument as its DEFAULT wavetable makes every note
+                        // on that instrument arpeggiate forever - including the
+                        // sustained ones the original holds flat. Roland's
+                        // Ratrace captured a +0/+4 attack, looped it, and
+                        // assigned it to NINE instruments, so a held G#4 came
+                        // out as a G#4/C5 warble from ~40s on. Such tables are
+                        // still applied PER ROW by addOnsetWavetableCommands to
+                        // the notes that actually had that onset, which is
+                        // where an arpeggio belongs.
+                        const loopNotes = new Set();
+                        for (let i = loopTarget; i < entries.length - 1; i++) {
+                            const e = entries[i];
+                            if (e.left >= 0x10 && e.left < 0xF0 && e.right < 0x80) loopNotes.add(e.right);
+                        }
+                        const loopsPitch = loopNotes.size > 1;
+
                         // Identify the primary ctrl byte of this onset pattern (waveform + sync/ring, no gate)
                         const primaryWave = entries[0].left & 0xFE;
 
@@ -3981,6 +4012,8 @@
                             pattern: pattern.sig,
                             occurrences: pattern.count,
                             entries: entries,
+                            loopsPitch: loopsPitch,
+                            isSweep: pattern.sig.startsWith('sw:'),
                             description: `Voice ${v+1} onset: ${desc} (${pattern.count}x)`
                         });
 

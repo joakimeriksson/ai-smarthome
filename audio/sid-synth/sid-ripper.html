@@ -2799,12 +2799,33 @@
                 // arpeggio's relative offsets must be computed against.
                 const lastRowNote = [0, 0, 0];
 
+                // Placement is LENGTH-aware, not just fire-time-aware. A note
+                // placed on row S starts at frame S*framesPerRow, and a keyoff
+                // on row E fires at E*framesPerRow - GATETIMER, so the note
+                // spans (E-S)*framesPerRow - GATETIMER frames. Flooring the
+                // keyoff to the row containing the captured gate-off makes that
+                // span 3k-2 at 3 frames/row, so a 6-frame note came out 4 -
+                // ALWAYS 2 frames short (Ratrace's lead: orig note 6f / gap 6f,
+                // rip 4f / 8f - period right, duty wrong). Choosing E to
+                // minimise |actual length - captured length| also absorbs the
+                // note-on row's own quantisation error, which flooring both
+                // ends does not.
                 const GATETIMER = 2;   // matches buildGT2Instruments' gateTimer
                 const keyoffRows = [new Set(), new Set(), new Set()];
+                const lastOnFrame = [-1, -1, -1];
                 for (let f = 0; f < frames.length; f++) {
                     for (let v = 0; v < 3; v++) {
-                        if (frames[f].voices[v].note !== '===') continue;
-                        const r = Math.floor((f + GATETIMER) / framesPerRow);
+                        const vf = frames[f].voices[v];
+                        if (vf.noteEvent) lastOnFrame[v] = f;
+                        if (vf.note !== '===') continue;
+                        let r;
+                        if (lastOnFrame[v] >= 0) {
+                            const S = Math.floor(lastOnFrame[v] / framesPerRow);
+                            const targetLen = f - lastOnFrame[v];
+                            r = S + Math.max(1, Math.round((targetLen + GATETIMER) / framesPerRow));
+                        } else {
+                            r = Math.floor((f + GATETIMER) / framesPerRow);
+                        }
                         if (r < numRows) keyoffRows[v].add(r);
                     }
                 }

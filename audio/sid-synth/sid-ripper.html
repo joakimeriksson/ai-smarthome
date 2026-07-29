@@ -2303,7 +2303,8 @@
                     console.log('Built', gt2Instruments.length, 'GT2 instruments');
 
                     // Step 3: Generate wavetables from detected arpeggios
-                    const wavetables = this.buildWavetablesFromArpeggios(quantizedData.arpeggioPatterns);
+                    const wavetables = this.buildWavetablesFromArpeggios(
+                        quantizedData.arpeggioPatterns, quantizedData.framesPerRow);
                     if (wavetables.length > 0) {
                         console.log(`Generated ${wavetables.length} arpeggio wavetables`);
                         this.addArpeggioCommands(quantizedData.rows, quantizedData.arpeggioPatterns, wavetables);
@@ -3588,7 +3589,30 @@
              * - Left byte: 0x01-0x0F = delay, 0x10-0xDF = waveform+gate, 0xFF = jump
              * - Right byte: 0x00-0x5F = relative note up, 0x60-0x7F = relative note down, 0x80 = no note change
              */
-            buildWavetablesFromArpeggios(arpeggioPatterns) {
+            /**
+             * The ordered (interval, hold-frames) sequence an arpeggio row
+             * actually plays, e.g. [[+1,2],[-2,1]] = "+1 for two frames, then
+             * -2 for one". The signature used for grouping is SORTED, so it
+             * loses both the play order and the per-step timing - and real
+             * arpeggios are rarely symmetric (Galway's Ratrace lead holds one
+             * tone 2 frames and the next 1, a 3-frame cycle).
+             */
+            arpRowSequence(ap, framesPerRow) {
+                const sorted = [...ap.notes].sort((a, b) => a.frame - b.frame);
+                if (!sorted.length) return null;
+                // The last note of a row keeps sounding to the row boundary
+                const rowEnd = Math.floor(sorted[0].frame / framesPerRow) * framesPerRow + framesPerRow;
+                const seq = [];
+                for (let i = 0; i < sorted.length; i++) {
+                    const nextF = (i + 1 < sorted.length) ? sorted[i + 1].frame : rowEnd;
+                    const hold = nextF - sorted[i].frame;
+                    if (hold < 1 || hold > 16) return null;
+                    seq.push([sorted[i].note - ap.baseNote, hold]);
+                }
+                return seq.length >= 2 ? seq : null;
+            },
+
+            buildWavetablesFromArpeggios(arpeggioPatterns, framesPerRow = 4) {
                 const wavetables = [];
 
                 for (let v = 0; v < 3; v++) {
@@ -3624,48 +3648,58 @@
                         if (built >= MAX_ARP_WT) break;
                         const intervals = signature.split(',').map(Number);
 
-                        // Detect arpeggio speed from this signature's frame gaps
-                        const frameGaps = [];
-                        aps.forEach(ap => {
-                            const sorted = [...ap.notes].sort((a, b) => a.frame - b.frame);
-                            for (let i = 1; i < sorted.length; i++) {
-                                const gap = sorted[i].frame - sorted[i - 1].frame;
-                                if (gap >= 1 && gap <= 15) frameGaps.push(gap);
-                            }
-                        });
-                        let arpSpeed = 1;
-                        if (frameGaps.length > 0) {
-                            frameGaps.sort((a, b) => a - b);
-                            arpSpeed = Math.max(1, Math.min(15, frameGaps[Math.floor(frameGaps.length / 2)]));
-                        }
+                        // GT2 relative note format:
+                        // 0x00-0x5F = note + 0 to +95 semitones
+                        // 0x60-0x7F = note - 32 to -1 semitones (0x60 = -32, 0x7F = -1)
+                        const relNote = (interval) => interval >= 0
+                            ? Math.min(0x5F, interval)
+                            : Math.max(0x60, 0x80 + interval);
 
-                        // GT2 delay entries last one frame LONGER than their
-                        // value: WAVEEXEC compares before incrementing
-                        // (`if (cptr->wavetime != wave) { wavetime++; skip }`),
-                        // so left=0 holds one frame, left=1 holds two. Writing
-                        // the measured gap directly made every arpeggio run at
-                        // half speed - Monty's every-frame octave trill became
-                        // a 2-frame one.
-                        const arpDelay = Math.max(0, Math.min(15, arpSpeed - 1));
+                        // Use the ordered (interval, hold) sequence this
+                        // arpeggio actually plays, taking the most common one
+                        // across the signature's occurrences. The signature
+                        // itself is sorted, so it knows neither the play order
+                        // nor the per-step timing.
+                        const seqCounts = new Map();
+                        aps.forEach(ap => {
+                            const seq = this.arpRowSequence(ap, framesPerRow);
+                            if (!seq) return;
+                            const key = seq.map(([iv, h]) => iv + ':' + h).join(',');
+                            if (!seqCounts.has(key)) seqCounts.set(key, { seq, n: 0 });
+                            seqCounts.get(key).n++;
+                        });
+                        const bestSeq = [...seqCounts.values()].sort((a, b) => b.n - a.n)[0];
 
                         const wtEntries = [];
-                        intervals.forEach(interval => {
-                            // GT2 relative note format:
-                            // 0x00-0x5F = note + 0 to +95 semitones
-                            // 0x60-0x7F = note - 32 to -1 semitones (0x60 = -32, 0x7F = -1)
-                            let relNote;
-                            if (interval >= 0) {
-                                relNote = Math.min(0x5F, interval);
-                            } else {
-                                relNote = 0x80 + interval;
-                                if (relNote < 0x60) relNote = 0x60;
-                            }
-                            wtEntries.push({
-                                left: arpDelay,
-                                right: relNote,
-                                description: `${interval >= 0 ? '+' : ''}${interval} semitones (${arpSpeed}f)`
+                        if (bestSeq) {
+                            const seq = bestSeq.seq, n = seq.length;
+                            // GT2 delay semantics (gplay.c WAVEEXEC): an entry
+                            // with left=d takes d+1 frames to fire, and it is
+                            // the FIRING of the NEXT entry that ends the
+                            // current note. So an entry's delay sets how long
+                            // the PREVIOUS note sounds - the holds are rotated
+                            // by one. (Writing the hold on its own entry made
+                            // every step 2 frames: a symmetric 4-frame cycle
+                            // where Galway plays an asymmetric 3-frame one.)
+                            seq.forEach(([interval], i) => {
+                                const prevHold = seq[(i - 1 + n) % n][1];
+                                wtEntries.push({
+                                    left: Math.max(0, Math.min(15, prevHold - 1)),
+                                    right: relNote(interval),
+                                    description: `${interval >= 0 ? '+' : ''}${interval} semitones (${seq[i][1]}f)`
+                                });
                             });
-                        });
+                        } else {
+                            // No usable sequence captured: fall back to the
+                            // sorted signature at one frame per step
+                            intervals.forEach(interval => {
+                                wtEntries.push({
+                                    left: 0,
+                                    right: relNote(interval),
+                                    description: `${interval >= 0 ? '+' : ''}${interval} semitones (1f)`
+                                });
+                            });
+                        }
 
                         // Loop back to this table's OWN start (right = local
                         // index 0; the importer relocates it to the table base)

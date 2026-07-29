@@ -2793,6 +2793,11 @@
                 // Vice's 5-frame notes it removed 2 of them, and combined with
                 // grid rounding left 1-frame blips (gate-on frames 610 -> 122).
                 // Aim the keyoff so it FIRES on the captured frame instead.
+                // Most recent note a ROW actually placed, per voice. An
+                // arp-only row keeps sounding this note, so it is the base the
+                // arpeggio's relative offsets must be computed against.
+                const lastRowNote = [0, 0, 0];
+
                 const GATETIMER = 2;   // matches buildGT2Instruments' gateTimer
                 const keyoffRows = [new Set(), new Set(), new Set()];
                 for (let f = 0; f < frames.length; f++) {
@@ -2905,19 +2910,27 @@
                         if (rowNotes[v].length > 1) {
                             const uniqueNotes = [...new Set(rowNotes[v].map(n => n.note))];
                             if (uniqueNotes.length > 1) {
-                                // Arpeggio base note: the row's main note is the
-                                // reference the wavetable offsets are relative to.
-                                // But arpeggio-only rows never SET a main note
-                                // (that path is skipped for arp frames above), so
-                                // it can be 0 or a KEYOFF - then `uniqueNote -
-                                // base` becomes the absolute note (~163) and the
-                                // wavetable builder clamps every offset to +95
-                                // ($5F), freezing the voice on one wrong pitch
-                                // (Last Ninja's arp lead). Fall back to the LOWEST
-                                // note played - arps are relative to their root.
+                                // Arpeggio base note. GT2 applies a wavetable's
+                                // relative offsets to `cptr->note` - the note the
+                                // PATTERN is currently holding - so the base used
+                                // to COMPUTE those offsets must be that same note,
+                                // or the arp comes out transposed.
+                                // An arp-only row never sets a main note (that
+                                // path is skipped for arp frames above), and the
+                                // voice simply keeps sounding the last note a row
+                                // actually placed - so that is the base.
+                                // Using min(uniqueNotes) instead inverts every
+                                // DESCENDING arpeggio: Roland's Ratrace plays
+                                // A#4 -> F#4 (down a major third), min() makes
+                                // F#4 the root, the signature becomes [0,+4], and
+                                // GT2 then applies +4 to the row's A#4 and plays
+                                // A#4/C#5 - up instead of down. min() is kept only
+                                // as a last resort for an arp before any note.
                                 const rn = rowData.voices[v].note;
-                                const baseNote = (rn >= 0x60 && rn <= 0xBC)
-                                    ? rn : Math.min(...uniqueNotes);
+                                const baseNote =
+                                    (rn >= 0x60 && rn <= 0xBC) ? rn
+                                    : (lastRowNote[v] >= 0x60 && lastRowNote[v] <= 0xBC) ? lastRowNote[v]
+                                    : Math.min(...uniqueNotes);
                                 // This row has an arpeggio pattern
                                 arpeggioPatterns[v].push({
                                     row: row,
@@ -2927,6 +2940,13 @@
                                 });
                             }
                         }
+                    }
+
+                    // Carry this row's note forward as the arp base for the
+                    // arp-only rows that follow it (see baseNote above)
+                    for (let v = 0; v < 3; v++) {
+                        const n = rowData.voices[v].note;
+                        if (n >= 0x60 && n <= 0xBC) lastRowNote[v] = n;
                     }
 
                     rows.push(rowData);

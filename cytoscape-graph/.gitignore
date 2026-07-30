@@ -7,3 +7,4 @@ __pycache__/
 uv.lock
 data.json.bak-*
 .prior_art_cache.json
+public/

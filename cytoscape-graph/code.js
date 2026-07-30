@@ -3,8 +3,12 @@ var cy = null;
 var currentView = null;
 var ontology = null;
 
+// The curated public build (build_public.py) is a static directory with no
+// Flask app behind it, so it reads the filtered data.json straight off disk.
+var DATA_URL = window.PUBLIC_BUILD ? 'data.json' : '/api/data';
+
 Promise.all([
-  fetch('/api/data').then(function(r) { return r.json(); }),
+  fetch(DATA_URL).then(function(r) { return r.json(); }),
   fetch('/ontology.json').then(function(r) { return r.json(); })
 ]).then(function(res) {
   graphData = res[0];
@@ -781,6 +785,8 @@ var linkModePerson = null;
 
 function setupPersonLinkMode() {
   var personLinkSearch = document.getElementById('person-link-search');
+  // Absent in the read-only public build, where linking people is not offered.
+  if (!personLinkSearch) return;
   var personLinkResults = document.getElementById('person-link-results');
   var personLinkActive = document.getElementById('person-link-active');
   var personLinkName = document.getElementById('person-link-name');
@@ -888,7 +894,7 @@ function stampProvenance(data) {
 }
 
 function reloadData() {
-  return fetch('/api/data')
+  return fetch(DATA_URL)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       graphData = data;
@@ -897,6 +903,8 @@ function reloadData() {
 }
 
 function persistData() {
+  // The public build is read-only and has no write endpoint; never call out.
+  if (window.PUBLIC_BUILD) return Promise.resolve();
   return fetch('/api/data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

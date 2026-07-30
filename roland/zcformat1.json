@@ -1,0 +1,4499 @@
+{
+    "name": "PCMEX",
+    "PCMT_CMN": [
+        {
+            "id": "NAME",
+            "pos": 0,
+            "size": 16
+        },
+        {
+            "id": "CATEGORY",
+            "pos": 16,
+            "size": 1
+        },
+        {
+            "id": "PHRASE",
+            "pos": 18,
+            "size": 2
+        },
+        {
+            "id": "LEVEL",
+            "pos": 20,
+            "size": 1
+        },
+        {
+            "id": "PAN",
+            "pos": 21,
+            "size": 1
+        },
+        {
+            "id": "PRIORITY",
+            "pos": 24,
+            "size": 1
+        },
+        {
+            "id": "PIT_CRS",
+            "pos": 25,
+            "size": 1
+        },
+        {
+            "id": "PIT_FINE",
+            "pos": 26,
+            "size": 1
+        },
+        {
+            "id": "OCTAVE",
+            "pos": 27,
+            "size": 1
+        },
+        {
+            "id": "STRETCH",
+            "pos": 28,
+            "size": 1
+        },
+        {
+            "id": "ANALOG_FEEL",
+            "pos": 29,
+            "size": 1
+        },
+        {
+            "id": "MONO_POLY",
+            "pos": 30,
+            "size": 1
+        },
+        {
+            "id": "LEGATO_SW",
+            "pos": 31,
+            "size": 1
+        },
+        {
+            "id": "RETRIG_INTVL",
+            "pos": 32,
+            "size": 1
+        },
+        {
+            "id": "PORTA_SW",
+            "pos": 33,
+            "size": 1
+        },
+        {
+            "id": "PORTA_MODE",
+            "pos": 34,
+            "size": 1
+        },
+        {
+            "id": "PORTA_TYPE",
+            "pos": 35,
+            "size": 1
+        },
+        {
+            "id": "PORTA_START",
+            "pos": 37,
+            "size": 1
+        },
+        {
+            "id": "PORTA_TIME",
+            "pos": 38,
+            "size": 2
+        },
+        {
+            "id": "BEND_RANGE_UP",
+            "pos": 40,
+            "size": 1
+        },
+        {
+            "id": "BEND_RANGE_DW",
+            "pos": 41,
+            "size": 1
+        },
+        {
+            "id": "BEND_MODE",
+            "pos": 42,
+            "size": 1
+        },
+        {
+            "id": "SOFT_LEVEL_SENS",
+            "pos": 43,
+            "size": 1
+        },
+        {
+            "id": "PHRASE_OCT",
+            "pos": 44,
+            "size": 1
+        },
+        {
+            "id": "PHRASE_VEL_RATE",
+            "pos": 45,
+            "size": 1
+        },
+        {
+            "id": "PHRASE_VEL_SHIFT",
+            "pos": 46,
+            "size": 1
+        },
+        {
+            "id": "SYMP_DEPTH",
+            "pos": 47,
+            "size": 1
+        },
+        {
+            "id": "PORTA_CRV",
+            "pos": 48,
+            "size": 1
+        },
+        {
+            "id": "PTL_LFO_LOCK",
+            "pos": 49,
+            "size": 1
+        }
+    ],
+    "MFX": [
+        {
+            "id": "mfxType",
+            "pos": 64,
+            "size": 1
+        },
+        {
+            "id": "mfxSwitch",
+            "pos": 65,
+            "size": 1
+        },
+        {
+            "id": "choSend",
+            "pos": 66,
+            "size": 1
+        },
+        {
+            "id": "revSend",
+            "pos": 67,
+            "size": 1
+        },
+        {
+            "id": "ctrlSrc1",
+            "pos": 68,
+            "size": 1
+        },
+        {
+            "id": "ctrlSens1",
+            "pos": 69,
+            "size": 1
+        },
+        {
+            "id": "ctrlSrc2",
+            "pos": 70,
+            "size": 1
+        },
+        {
+            "id": "ctrlSens2",
+            "pos": 71,
+            "size": 1
+        },
+        {
+            "id": "ctrlSrc3",
+            "pos": 72,
+            "size": 1
+        },
+        {
+            "id": "ctrlSens3",
+            "pos": 73,
+            "size": 1
+        },
+        {
+            "id": "ctrlSrc4",
+            "pos": 74,
+            "size": 1
+        },
+        {
+            "id": "ctrlSens4",
+            "pos": 75,
+            "size": 1
+        },
+        {
+            "id": "ctrlAsgn",
+            "pos": 76,
+            "size": 4
+        },
+        {
+            "id": "param",
+            "pos": 80,
+            "size": 64
+        }
+    ],
+    "PCMT_PMT": [
+        {
+            "id": "VEL_CTRL",
+            "pos": 148,
+            "size": 1
+        },
+        {
+            "id": "PMT_LEVEL_CRV",
+            "pos": 149,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_PTL_SW",
+            "pos": 152,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_KRANGE_LO",
+            "pos": 156,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_KRANGE_UP",
+            "pos": 157,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_KFADE_LO",
+            "pos": 158,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_KFADE_UP",
+            "pos": 159,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_VRANGE_LO",
+            "pos": 160,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_VRANGE_UP",
+            "pos": 161,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_VFADE_LO",
+            "pos": 162,
+            "size": 1
+        },
+        {
+            "id": "PMT_0_VFADE_UP",
+            "pos": 163,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_PTL_SW",
+            "pos": 164,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_KRANGE_LO",
+            "pos": 168,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_KRANGE_UP",
+            "pos": 169,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_KFADE_LO",
+            "pos": 170,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_KFADE_UP",
+            "pos": 171,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_VRANGE_LO",
+            "pos": 172,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_VRANGE_UP",
+            "pos": 173,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_VFADE_LO",
+            "pos": 174,
+            "size": 1
+        },
+        {
+            "id": "PMT_1_VFADE_UP",
+            "pos": 175,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_PTL_SW",
+            "pos": 176,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_KRANGE_LO",
+            "pos": 180,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_KRANGE_UP",
+            "pos": 181,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_KFADE_LO",
+            "pos": 182,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_KFADE_UP",
+            "pos": 183,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_VRANGE_LO",
+            "pos": 184,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_VRANGE_UP",
+            "pos": 185,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_VFADE_LO",
+            "pos": 186,
+            "size": 1
+        },
+        {
+            "id": "PMT_2_VFADE_UP",
+            "pos": 187,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_PTL_SW",
+            "pos": 188,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_KRANGE_LO",
+            "pos": 192,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_KRANGE_UP",
+            "pos": 193,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_KFADE_LO",
+            "pos": 194,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_KFADE_UP",
+            "pos": 195,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_VRANGE_LO",
+            "pos": 196,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_VRANGE_UP",
+            "pos": 197,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_VFADE_LO",
+            "pos": 198,
+            "size": 1
+        },
+        {
+            "id": "PMT_3_VFADE_UP",
+            "pos": 199,
+            "size": 1
+        }
+    ],
+    "PCMT_PTL_0": [
+        {
+            "id": "LEVEL",
+            "pos": 200,
+            "size": 1
+        },
+        {
+            "id": "PIT_CRS",
+            "pos": 202,
+            "size": 1
+        },
+        {
+            "id": "PIT_FINE",
+            "pos": 203,
+            "size": 1
+        },
+        {
+            "id": "PIT_RND",
+            "pos": 204,
+            "size": 2
+        },
+        {
+            "id": "PAN",
+            "pos": 206,
+            "size": 1
+        },
+        {
+            "id": "PAN_KF",
+            "pos": 207,
+            "size": 1
+        },
+        {
+            "id": "PAN_RND",
+            "pos": 208,
+            "size": 1
+        },
+        {
+            "id": "PAN_ALT",
+            "pos": 209,
+            "size": 1
+        },
+        {
+            "id": "ENV_MODE",
+            "pos": 210,
+            "size": 1
+        },
+        {
+            "id": "DELAY_MODE",
+            "pos": 211,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_SYNC",
+            "pos": 212,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_NOTE",
+            "pos": 213,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME",
+            "pos": 214,
+            "size": 2
+        },
+        {
+            "id": "CHO_SEND",
+            "pos": 216,
+            "size": 1
+        },
+        {
+            "id": "REV_SEND",
+            "pos": 217,
+            "size": 1
+        },
+        {
+            "id": "RX_BEND",
+            "pos": 218,
+            "size": 1
+        },
+        {
+            "id": "RX_EXPR",
+            "pos": 219,
+            "size": 1
+        },
+        {
+            "id": "RX_HOLD",
+            "pos": 220,
+            "size": 1
+        },
+        {
+            "id": "REDAMP_SW",
+            "pos": 221,
+            "size": 1
+        },
+        {
+            "id": "OUT_ASGN",
+            "pos": 222,
+            "size": 1
+        },
+        {
+            "id": "WAV_GTYPE",
+            "pos": 223,
+            "size": 1
+        },
+        {
+            "id": "WAV_GID",
+            "pos": 224,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_L",
+            "pos": 226,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_R",
+            "pos": 228,
+            "size": 2
+        },
+        {
+            "id": "WAV_GAIN",
+            "pos": 230,
+            "size": 1
+        },
+        {
+            "id": "FXM_SW",
+            "pos": 231,
+            "size": 1
+        },
+        {
+            "id": "FXM_COLOR",
+            "pos": 232,
+            "size": 1
+        },
+        {
+            "id": "FXM_DEPTH",
+            "pos": 233,
+            "size": 1
+        },
+        {
+            "id": "PIT_KF",
+            "pos": 234,
+            "size": 2
+        },
+        {
+            "id": "SOFT_EQ_SENS",
+            "pos": 236,
+            "size": 1
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 237,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF",
+            "pos": 240,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_KF",
+            "pos": 242,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_VCRV",
+            "pos": 244,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_VSENS",
+            "pos": 245,
+            "size": 1
+        },
+        {
+            "id": "RESO",
+            "pos": 246,
+            "size": 2
+        },
+        {
+            "id": "RESO_VSENS",
+            "pos": 248,
+            "size": 1
+        },
+        {
+            "id": "BIAS_LEVEL",
+            "pos": 249,
+            "size": 1
+        },
+        {
+            "id": "BIAS_POS",
+            "pos": 250,
+            "size": 1
+        },
+        {
+            "id": "BIAS_DIR",
+            "pos": 251,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VCRV",
+            "pos": 252,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VSENS",
+            "pos": 253,
+            "size": 1
+        },
+        {
+            "id": "PENV_TKF",
+            "pos": 254,
+            "size": 1
+        },
+        {
+            "id": "FENV_TKF",
+            "pos": 255,
+            "size": 1
+        },
+        {
+            "id": "AENV_TKF",
+            "pos": 256,
+            "size": 1
+        },
+        {
+            "id": "VIB_PIT_SENS",
+            "pos": 257,
+            "size": 1
+        },
+        {
+            "id": "VIB_CUT_SENS",
+            "pos": 258,
+            "size": 1
+        },
+        {
+            "id": "VIB_AMP_SENS",
+            "pos": 259,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SRC",
+            "pos": 260,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST1",
+            "pos": 261,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS1",
+            "pos": 262,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST2",
+            "pos": 263,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS2",
+            "pos": 264,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST3",
+            "pos": 265,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS3",
+            "pos": 266,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST4",
+            "pos": 267,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS4",
+            "pos": 268,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SRC",
+            "pos": 272,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST1",
+            "pos": 273,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS1",
+            "pos": 274,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST2",
+            "pos": 275,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS2",
+            "pos": 276,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST3",
+            "pos": 277,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS3",
+            "pos": 278,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST4",
+            "pos": 279,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS4",
+            "pos": 280,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SRC",
+            "pos": 284,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST1",
+            "pos": 285,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS1",
+            "pos": 286,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST2",
+            "pos": 287,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS2",
+            "pos": 288,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST3",
+            "pos": 289,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS3",
+            "pos": 290,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST4",
+            "pos": 291,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS4",
+            "pos": 292,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SRC",
+            "pos": 296,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST1",
+            "pos": 297,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS1",
+            "pos": 298,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST2",
+            "pos": 299,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS2",
+            "pos": 300,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST3",
+            "pos": 301,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS3",
+            "pos": 302,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST4",
+            "pos": 303,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS4",
+            "pos": 304,
+            "size": 1
+        },
+        {
+            "id": "DAMP_FREE",
+            "pos": 308,
+            "size": 1
+        },
+        {
+            "id": "STEREO_WIDTH",
+            "pos": 309,
+            "size": 1
+        },
+        {
+            "id": "STEREO_DETN",
+            "pos": 310,
+            "size": 1
+        },
+        {
+            "id": "DF_DCY_OFST",
+            "pos": 311,
+            "size": 1
+        },
+        {
+            "id": "TEMPO_SYNC",
+            "pos": 312,
+            "size": 1
+        }
+    ],
+    "PCMT_PTL_1": [
+        {
+            "id": "LEVEL",
+            "pos": 324,
+            "size": 1
+        },
+        {
+            "id": "PIT_CRS",
+            "pos": 326,
+            "size": 1
+        },
+        {
+            "id": "PIT_FINE",
+            "pos": 327,
+            "size": 1
+        },
+        {
+            "id": "PIT_RND",
+            "pos": 328,
+            "size": 2
+        },
+        {
+            "id": "PAN",
+            "pos": 330,
+            "size": 1
+        },
+        {
+            "id": "PAN_KF",
+            "pos": 331,
+            "size": 1
+        },
+        {
+            "id": "PAN_RND",
+            "pos": 332,
+            "size": 1
+        },
+        {
+            "id": "PAN_ALT",
+            "pos": 333,
+            "size": 1
+        },
+        {
+            "id": "ENV_MODE",
+            "pos": 334,
+            "size": 1
+        },
+        {
+            "id": "DELAY_MODE",
+            "pos": 335,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_SYNC",
+            "pos": 336,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_NOTE",
+            "pos": 337,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME",
+            "pos": 338,
+            "size": 2
+        },
+        {
+            "id": "CHO_SEND",
+            "pos": 340,
+            "size": 1
+        },
+        {
+            "id": "REV_SEND",
+            "pos": 341,
+            "size": 1
+        },
+        {
+            "id": "RX_BEND",
+            "pos": 342,
+            "size": 1
+        },
+        {
+            "id": "RX_EXPR",
+            "pos": 343,
+            "size": 1
+        },
+        {
+            "id": "RX_HOLD",
+            "pos": 344,
+            "size": 1
+        },
+        {
+            "id": "REDAMP_SW",
+            "pos": 345,
+            "size": 1
+        },
+        {
+            "id": "OUT_ASGN",
+            "pos": 346,
+            "size": 1
+        },
+        {
+            "id": "WAV_GTYPE",
+            "pos": 347,
+            "size": 1
+        },
+        {
+            "id": "WAV_GID",
+            "pos": 348,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_L",
+            "pos": 350,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_R",
+            "pos": 352,
+            "size": 2
+        },
+        {
+            "id": "WAV_GAIN",
+            "pos": 354,
+            "size": 1
+        },
+        {
+            "id": "FXM_SW",
+            "pos": 355,
+            "size": 1
+        },
+        {
+            "id": "FXM_COLOR",
+            "pos": 356,
+            "size": 1
+        },
+        {
+            "id": "FXM_DEPTH",
+            "pos": 357,
+            "size": 1
+        },
+        {
+            "id": "PIT_KF",
+            "pos": 358,
+            "size": 2
+        },
+        {
+            "id": "SOFT_EQ_SENS",
+            "pos": 360,
+            "size": 1
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 361,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF",
+            "pos": 364,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_KF",
+            "pos": 366,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_VCRV",
+            "pos": 368,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_VSENS",
+            "pos": 369,
+            "size": 1
+        },
+        {
+            "id": "RESO",
+            "pos": 370,
+            "size": 2
+        },
+        {
+            "id": "RESO_VSENS",
+            "pos": 372,
+            "size": 1
+        },
+        {
+            "id": "BIAS_LEVEL",
+            "pos": 373,
+            "size": 1
+        },
+        {
+            "id": "BIAS_POS",
+            "pos": 374,
+            "size": 1
+        },
+        {
+            "id": "BIAS_DIR",
+            "pos": 375,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VCRV",
+            "pos": 376,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VSENS",
+            "pos": 377,
+            "size": 1
+        },
+        {
+            "id": "PENV_TKF",
+            "pos": 378,
+            "size": 1
+        },
+        {
+            "id": "FENV_TKF",
+            "pos": 379,
+            "size": 1
+        },
+        {
+            "id": "AENV_TKF",
+            "pos": 380,
+            "size": 1
+        },
+        {
+            "id": "VIB_PIT_SENS",
+            "pos": 381,
+            "size": 1
+        },
+        {
+            "id": "VIB_CUT_SENS",
+            "pos": 382,
+            "size": 1
+        },
+        {
+            "id": "VIB_AMP_SENS",
+            "pos": 383,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SRC",
+            "pos": 384,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST1",
+            "pos": 385,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS1",
+            "pos": 386,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST2",
+            "pos": 387,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS2",
+            "pos": 388,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST3",
+            "pos": 389,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS3",
+            "pos": 390,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST4",
+            "pos": 391,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS4",
+            "pos": 392,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SRC",
+            "pos": 396,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST1",
+            "pos": 397,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS1",
+            "pos": 398,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST2",
+            "pos": 399,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS2",
+            "pos": 400,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST3",
+            "pos": 401,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS3",
+            "pos": 402,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST4",
+            "pos": 403,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS4",
+            "pos": 404,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SRC",
+            "pos": 408,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST1",
+            "pos": 409,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS1",
+            "pos": 410,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST2",
+            "pos": 411,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS2",
+            "pos": 412,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST3",
+            "pos": 413,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS3",
+            "pos": 414,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST4",
+            "pos": 415,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS4",
+            "pos": 416,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SRC",
+            "pos": 420,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST1",
+            "pos": 421,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS1",
+            "pos": 422,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST2",
+            "pos": 423,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS2",
+            "pos": 424,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST3",
+            "pos": 425,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS3",
+            "pos": 426,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST4",
+            "pos": 427,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS4",
+            "pos": 428,
+            "size": 1
+        },
+        {
+            "id": "DAMP_FREE",
+            "pos": 432,
+            "size": 1
+        },
+        {
+            "id": "STEREO_WIDTH",
+            "pos": 433,
+            "size": 1
+        },
+        {
+            "id": "STEREO_DETN",
+            "pos": 434,
+            "size": 1
+        },
+        {
+            "id": "DF_DCY_OFST",
+            "pos": 435,
+            "size": 1
+        },
+        {
+            "id": "TEMPO_SYNC",
+            "pos": 436,
+            "size": 1
+        }
+    ],
+    "PCMT_PTL_2": [
+        {
+            "id": "LEVEL",
+            "pos": 448,
+            "size": 1
+        },
+        {
+            "id": "PIT_CRS",
+            "pos": 450,
+            "size": 1
+        },
+        {
+            "id": "PIT_FINE",
+            "pos": 451,
+            "size": 1
+        },
+        {
+            "id": "PIT_RND",
+            "pos": 452,
+            "size": 2
+        },
+        {
+            "id": "PAN",
+            "pos": 454,
+            "size": 1
+        },
+        {
+            "id": "PAN_KF",
+            "pos": 455,
+            "size": 1
+        },
+        {
+            "id": "PAN_RND",
+            "pos": 456,
+            "size": 1
+        },
+        {
+            "id": "PAN_ALT",
+            "pos": 457,
+            "size": 1
+        },
+        {
+            "id": "ENV_MODE",
+            "pos": 458,
+            "size": 1
+        },
+        {
+            "id": "DELAY_MODE",
+            "pos": 459,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_SYNC",
+            "pos": 460,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_NOTE",
+            "pos": 461,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME",
+            "pos": 462,
+            "size": 2
+        },
+        {
+            "id": "CHO_SEND",
+            "pos": 464,
+            "size": 1
+        },
+        {
+            "id": "REV_SEND",
+            "pos": 465,
+            "size": 1
+        },
+        {
+            "id": "RX_BEND",
+            "pos": 466,
+            "size": 1
+        },
+        {
+            "id": "RX_EXPR",
+            "pos": 467,
+            "size": 1
+        },
+        {
+            "id": "RX_HOLD",
+            "pos": 468,
+            "size": 1
+        },
+        {
+            "id": "REDAMP_SW",
+            "pos": 469,
+            "size": 1
+        },
+        {
+            "id": "OUT_ASGN",
+            "pos": 470,
+            "size": 1
+        },
+        {
+            "id": "WAV_GTYPE",
+            "pos": 471,
+            "size": 1
+        },
+        {
+            "id": "WAV_GID",
+            "pos": 472,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_L",
+            "pos": 474,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_R",
+            "pos": 476,
+            "size": 2
+        },
+        {
+            "id": "WAV_GAIN",
+            "pos": 478,
+            "size": 1
+        },
+        {
+            "id": "FXM_SW",
+            "pos": 479,
+            "size": 1
+        },
+        {
+            "id": "FXM_COLOR",
+            "pos": 480,
+            "size": 1
+        },
+        {
+            "id": "FXM_DEPTH",
+            "pos": 481,
+            "size": 1
+        },
+        {
+            "id": "PIT_KF",
+            "pos": 482,
+            "size": 2
+        },
+        {
+            "id": "SOFT_EQ_SENS",
+            "pos": 484,
+            "size": 1
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 485,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF",
+            "pos": 488,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_KF",
+            "pos": 490,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_VCRV",
+            "pos": 492,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_VSENS",
+            "pos": 493,
+            "size": 1
+        },
+        {
+            "id": "RESO",
+            "pos": 494,
+            "size": 2
+        },
+        {
+            "id": "RESO_VSENS",
+            "pos": 496,
+            "size": 1
+        },
+        {
+            "id": "BIAS_LEVEL",
+            "pos": 497,
+            "size": 1
+        },
+        {
+            "id": "BIAS_POS",
+            "pos": 498,
+            "size": 1
+        },
+        {
+            "id": "BIAS_DIR",
+            "pos": 499,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VCRV",
+            "pos": 500,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VSENS",
+            "pos": 501,
+            "size": 1
+        },
+        {
+            "id": "PENV_TKF",
+            "pos": 502,
+            "size": 1
+        },
+        {
+            "id": "FENV_TKF",
+            "pos": 503,
+            "size": 1
+        },
+        {
+            "id": "AENV_TKF",
+            "pos": 504,
+            "size": 1
+        },
+        {
+            "id": "VIB_PIT_SENS",
+            "pos": 505,
+            "size": 1
+        },
+        {
+            "id": "VIB_CUT_SENS",
+            "pos": 506,
+            "size": 1
+        },
+        {
+            "id": "VIB_AMP_SENS",
+            "pos": 507,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SRC",
+            "pos": 508,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST1",
+            "pos": 509,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS1",
+            "pos": 510,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST2",
+            "pos": 511,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS2",
+            "pos": 512,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST3",
+            "pos": 513,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS3",
+            "pos": 514,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST4",
+            "pos": 515,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS4",
+            "pos": 516,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SRC",
+            "pos": 520,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST1",
+            "pos": 521,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS1",
+            "pos": 522,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST2",
+            "pos": 523,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS2",
+            "pos": 524,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST3",
+            "pos": 525,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS3",
+            "pos": 526,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST4",
+            "pos": 527,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS4",
+            "pos": 528,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SRC",
+            "pos": 532,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST1",
+            "pos": 533,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS1",
+            "pos": 534,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST2",
+            "pos": 535,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS2",
+            "pos": 536,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST3",
+            "pos": 537,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS3",
+            "pos": 538,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST4",
+            "pos": 539,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS4",
+            "pos": 540,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SRC",
+            "pos": 544,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST1",
+            "pos": 545,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS1",
+            "pos": 546,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST2",
+            "pos": 547,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS2",
+            "pos": 548,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST3",
+            "pos": 549,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS3",
+            "pos": 550,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST4",
+            "pos": 551,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS4",
+            "pos": 552,
+            "size": 1
+        },
+        {
+            "id": "DAMP_FREE",
+            "pos": 556,
+            "size": 1
+        },
+        {
+            "id": "STEREO_WIDTH",
+            "pos": 557,
+            "size": 1
+        },
+        {
+            "id": "STEREO_DETN",
+            "pos": 558,
+            "size": 1
+        },
+        {
+            "id": "DF_DCY_OFST",
+            "pos": 559,
+            "size": 1
+        },
+        {
+            "id": "TEMPO_SYNC",
+            "pos": 560,
+            "size": 1
+        }
+    ],
+    "PCMT_PTL_3": [
+        {
+            "id": "LEVEL",
+            "pos": 572,
+            "size": 1
+        },
+        {
+            "id": "PIT_CRS",
+            "pos": 574,
+            "size": 1
+        },
+        {
+            "id": "PIT_FINE",
+            "pos": 575,
+            "size": 1
+        },
+        {
+            "id": "PIT_RND",
+            "pos": 576,
+            "size": 2
+        },
+        {
+            "id": "PAN",
+            "pos": 578,
+            "size": 1
+        },
+        {
+            "id": "PAN_KF",
+            "pos": 579,
+            "size": 1
+        },
+        {
+            "id": "PAN_RND",
+            "pos": 580,
+            "size": 1
+        },
+        {
+            "id": "PAN_ALT",
+            "pos": 581,
+            "size": 1
+        },
+        {
+            "id": "ENV_MODE",
+            "pos": 582,
+            "size": 1
+        },
+        {
+            "id": "DELAY_MODE",
+            "pos": 583,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_SYNC",
+            "pos": 584,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME_NOTE",
+            "pos": 585,
+            "size": 1
+        },
+        {
+            "id": "DLY_TIME",
+            "pos": 586,
+            "size": 2
+        },
+        {
+            "id": "CHO_SEND",
+            "pos": 588,
+            "size": 1
+        },
+        {
+            "id": "REV_SEND",
+            "pos": 589,
+            "size": 1
+        },
+        {
+            "id": "RX_BEND",
+            "pos": 590,
+            "size": 1
+        },
+        {
+            "id": "RX_EXPR",
+            "pos": 591,
+            "size": 1
+        },
+        {
+            "id": "RX_HOLD",
+            "pos": 592,
+            "size": 1
+        },
+        {
+            "id": "REDAMP_SW",
+            "pos": 593,
+            "size": 1
+        },
+        {
+            "id": "OUT_ASGN",
+            "pos": 594,
+            "size": 1
+        },
+        {
+            "id": "WAV_GTYPE",
+            "pos": 595,
+            "size": 1
+        },
+        {
+            "id": "WAV_GID",
+            "pos": 596,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_L",
+            "pos": 598,
+            "size": 2
+        },
+        {
+            "id": "WAV_NUM_R",
+            "pos": 600,
+            "size": 2
+        },
+        {
+            "id": "WAV_GAIN",
+            "pos": 602,
+            "size": 1
+        },
+        {
+            "id": "FXM_SW",
+            "pos": 603,
+            "size": 1
+        },
+        {
+            "id": "FXM_COLOR",
+            "pos": 604,
+            "size": 1
+        },
+        {
+            "id": "FXM_DEPTH",
+            "pos": 605,
+            "size": 1
+        },
+        {
+            "id": "PIT_KF",
+            "pos": 606,
+            "size": 2
+        },
+        {
+            "id": "SOFT_EQ_SENS",
+            "pos": 608,
+            "size": 1
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 609,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF",
+            "pos": 612,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_KF",
+            "pos": 614,
+            "size": 2
+        },
+        {
+            "id": "CUTOFF_VCRV",
+            "pos": 616,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_VSENS",
+            "pos": 617,
+            "size": 1
+        },
+        {
+            "id": "RESO",
+            "pos": 618,
+            "size": 2
+        },
+        {
+            "id": "RESO_VSENS",
+            "pos": 620,
+            "size": 1
+        },
+        {
+            "id": "BIAS_LEVEL",
+            "pos": 621,
+            "size": 1
+        },
+        {
+            "id": "BIAS_POS",
+            "pos": 622,
+            "size": 1
+        },
+        {
+            "id": "BIAS_DIR",
+            "pos": 623,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VCRV",
+            "pos": 624,
+            "size": 1
+        },
+        {
+            "id": "LEVEL_VSENS",
+            "pos": 625,
+            "size": 1
+        },
+        {
+            "id": "PENV_TKF",
+            "pos": 626,
+            "size": 1
+        },
+        {
+            "id": "FENV_TKF",
+            "pos": 627,
+            "size": 1
+        },
+        {
+            "id": "AENV_TKF",
+            "pos": 628,
+            "size": 1
+        },
+        {
+            "id": "VIB_PIT_SENS",
+            "pos": 629,
+            "size": 1
+        },
+        {
+            "id": "VIB_CUT_SENS",
+            "pos": 630,
+            "size": 1
+        },
+        {
+            "id": "VIB_AMP_SENS",
+            "pos": 631,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SRC",
+            "pos": 632,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST1",
+            "pos": 633,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS1",
+            "pos": 634,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST2",
+            "pos": 635,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS2",
+            "pos": 636,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST3",
+            "pos": 637,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS3",
+            "pos": 638,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_DST4",
+            "pos": 639,
+            "size": 1
+        },
+        {
+            "id": "MCTL_0_SENS4",
+            "pos": 640,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SRC",
+            "pos": 644,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST1",
+            "pos": 645,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS1",
+            "pos": 646,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST2",
+            "pos": 647,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS2",
+            "pos": 648,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST3",
+            "pos": 649,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS3",
+            "pos": 650,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_DST4",
+            "pos": 651,
+            "size": 1
+        },
+        {
+            "id": "MCTL_1_SENS4",
+            "pos": 652,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SRC",
+            "pos": 656,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST1",
+            "pos": 657,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS1",
+            "pos": 658,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST2",
+            "pos": 659,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS2",
+            "pos": 660,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST3",
+            "pos": 661,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS3",
+            "pos": 662,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_DST4",
+            "pos": 663,
+            "size": 1
+        },
+        {
+            "id": "MCTL_2_SENS4",
+            "pos": 664,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SRC",
+            "pos": 668,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST1",
+            "pos": 669,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS1",
+            "pos": 670,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST2",
+            "pos": 671,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS2",
+            "pos": 672,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST3",
+            "pos": 673,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS3",
+            "pos": 674,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_DST4",
+            "pos": 675,
+            "size": 1
+        },
+        {
+            "id": "MCTL_3_SENS4",
+            "pos": 676,
+            "size": 1
+        },
+        {
+            "id": "DAMP_FREE",
+            "pos": 680,
+            "size": 1
+        },
+        {
+            "id": "STEREO_WIDTH",
+            "pos": 681,
+            "size": 1
+        },
+        {
+            "id": "STEREO_DETN",
+            "pos": 682,
+            "size": 1
+        },
+        {
+            "id": "DF_DCY_OFST",
+            "pos": 683,
+            "size": 1
+        },
+        {
+            "id": "TEMPO_SYNC",
+            "pos": 684,
+            "size": 1
+        }
+    ],
+    "PTL_PENV_0": [
+        {
+            "id": "DEPTH",
+            "pos": 696,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 697,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 698,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 699,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 700,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 702,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 704,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 706,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 708,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 710,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 712,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 714,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 716,
+            "size": 2
+        },
+        {
+            "id": "VCRV",
+            "pos": 718,
+            "size": 1
+        }
+    ],
+    "PTL_PENV_1": [
+        {
+            "id": "DEPTH",
+            "pos": 720,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 721,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 722,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 723,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 724,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 726,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 728,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 730,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 732,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 734,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 736,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 738,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 740,
+            "size": 2
+        },
+        {
+            "id": "VCRV",
+            "pos": 742,
+            "size": 1
+        }
+    ],
+    "PTL_PENV_2": [
+        {
+            "id": "DEPTH",
+            "pos": 744,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 745,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 746,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 747,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 748,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 750,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 752,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 754,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 756,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 758,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 760,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 762,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 764,
+            "size": 2
+        },
+        {
+            "id": "VCRV",
+            "pos": 766,
+            "size": 1
+        }
+    ],
+    "PTL_PENV_3": [
+        {
+            "id": "DEPTH",
+            "pos": 768,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 769,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 770,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 771,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 772,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 774,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 776,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 778,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 780,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 782,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 784,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 786,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 788,
+            "size": 2
+        },
+        {
+            "id": "VCRV",
+            "pos": 790,
+            "size": 1
+        }
+    ],
+    "PTL_FENV_0": [
+        {
+            "id": "DEPTH",
+            "pos": 792,
+            "size": 1
+        },
+        {
+            "id": "VCRV",
+            "pos": 793,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 794,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 795,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 796,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 798,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 800,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 802,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 804,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 806,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 808,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 810,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 812,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 814,
+            "size": 2
+        }
+    ],
+    "PTL_FENV_1": [
+        {
+            "id": "DEPTH",
+            "pos": 816,
+            "size": 1
+        },
+        {
+            "id": "VCRV",
+            "pos": 817,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 818,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 819,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 820,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 822,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 824,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 826,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 828,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 830,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 832,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 834,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 836,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 838,
+            "size": 2
+        }
+    ],
+    "PTL_FENV_2": [
+        {
+            "id": "DEPTH",
+            "pos": 840,
+            "size": 1
+        },
+        {
+            "id": "VCRV",
+            "pos": 841,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 842,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 843,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 844,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 846,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 848,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 850,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 852,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 854,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 856,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 858,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 860,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 862,
+            "size": 2
+        }
+    ],
+    "PTL_FENV_3": [
+        {
+            "id": "DEPTH",
+            "pos": 864,
+            "size": 1
+        },
+        {
+            "id": "VCRV",
+            "pos": 865,
+            "size": 1
+        },
+        {
+            "id": "VSENS",
+            "pos": 866,
+            "size": 1
+        },
+        {
+            "id": "T1_VSENS",
+            "pos": 867,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 868,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 870,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 872,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 874,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 876,
+            "size": 2
+        },
+        {
+            "id": "L0",
+            "pos": 878,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 880,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 882,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 884,
+            "size": 2
+        },
+        {
+            "id": "L4",
+            "pos": 886,
+            "size": 2
+        }
+    ],
+    "PTL_AENV_0": [
+        {
+            "id": "T1_VSENS",
+            "pos": 888,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 889,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 890,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 892,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 894,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 896,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 898,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 900,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 902,
+            "size": 2
+        }
+    ],
+    "PTL_AENV_1": [
+        {
+            "id": "T1_VSENS",
+            "pos": 904,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 905,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 906,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 908,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 910,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 912,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 914,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 916,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 918,
+            "size": 2
+        }
+    ],
+    "PTL_AENV_2": [
+        {
+            "id": "T1_VSENS",
+            "pos": 920,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 921,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 922,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 924,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 926,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 928,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 930,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 932,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 934,
+            "size": 2
+        }
+    ],
+    "PTL_AENV_3": [
+        {
+            "id": "T1_VSENS",
+            "pos": 936,
+            "size": 1
+        },
+        {
+            "id": "T4_VSENS",
+            "pos": 937,
+            "size": 1
+        },
+        {
+            "id": "T1",
+            "pos": 938,
+            "size": 2
+        },
+        {
+            "id": "T2",
+            "pos": 940,
+            "size": 2
+        },
+        {
+            "id": "T3",
+            "pos": 942,
+            "size": 2
+        },
+        {
+            "id": "T4",
+            "pos": 944,
+            "size": 2
+        },
+        {
+            "id": "L1",
+            "pos": 946,
+            "size": 2
+        },
+        {
+            "id": "L2",
+            "pos": 948,
+            "size": 2
+        },
+        {
+            "id": "L3",
+            "pos": 950,
+            "size": 2
+        }
+    ],
+    "PTL_LFO_0": [
+        {
+            "id": "LFO_0_FORM",
+            "pos": 952,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_SYNC",
+            "pos": 953,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_NOTE",
+            "pos": 954,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP_MAX",
+            "pos": 955,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE",
+            "pos": 956,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_OFST",
+            "pos": 958,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_DETN",
+            "pos": 959,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_DELAY",
+            "pos": 960,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_DELAY_KF",
+            "pos": 962,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE_MODE",
+            "pos": 963,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE",
+            "pos": 964,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_KEY_TRIG",
+            "pos": 966,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PIT_DEPTH",
+            "pos": 967,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVF_DEPTH",
+            "pos": 968,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVA_DEPTH",
+            "pos": 969,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PAN_DEPTH",
+            "pos": 970,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PHASE_POS",
+            "pos": 971,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP",
+            "pos": 972,
+            "size": 16
+        },
+        {
+            "id": "LFO_0_STEP_CURVE",
+            "pos": 988,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_FORM",
+            "pos": 1004,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_SYNC",
+            "pos": 1005,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_NOTE",
+            "pos": 1006,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP_MAX",
+            "pos": 1007,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE",
+            "pos": 1008,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_OFST",
+            "pos": 1010,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_DETN",
+            "pos": 1011,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_DELAY",
+            "pos": 1012,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_DELAY_KF",
+            "pos": 1014,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE_MODE",
+            "pos": 1015,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE",
+            "pos": 1016,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_KEY_TRIG",
+            "pos": 1018,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PIT_DEPTH",
+            "pos": 1019,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVF_DEPTH",
+            "pos": 1020,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVA_DEPTH",
+            "pos": 1021,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PAN_DEPTH",
+            "pos": 1022,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PHASE_POS",
+            "pos": 1023,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP",
+            "pos": 1024,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_STEP_CURVE",
+            "pos": 1040,
+            "size": 16
+        }
+    ],
+    "PTL_LFO_1": [
+        {
+            "id": "LFO_0_FORM",
+            "pos": 1056,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_SYNC",
+            "pos": 1057,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_NOTE",
+            "pos": 1058,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP_MAX",
+            "pos": 1059,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE",
+            "pos": 1060,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_OFST",
+            "pos": 1062,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_DETN",
+            "pos": 1063,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_DELAY",
+            "pos": 1064,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_DELAY_KF",
+            "pos": 1066,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE_MODE",
+            "pos": 1067,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE",
+            "pos": 1068,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_KEY_TRIG",
+            "pos": 1070,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PIT_DEPTH",
+            "pos": 1071,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVF_DEPTH",
+            "pos": 1072,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVA_DEPTH",
+            "pos": 1073,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PAN_DEPTH",
+            "pos": 1074,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PHASE_POS",
+            "pos": 1075,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP",
+            "pos": 1076,
+            "size": 16
+        },
+        {
+            "id": "LFO_0_STEP_CURVE",
+            "pos": 1092,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_FORM",
+            "pos": 1108,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_SYNC",
+            "pos": 1109,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_NOTE",
+            "pos": 1110,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP_MAX",
+            "pos": 1111,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE",
+            "pos": 1112,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_OFST",
+            "pos": 1114,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_DETN",
+            "pos": 1115,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_DELAY",
+            "pos": 1116,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_DELAY_KF",
+            "pos": 1118,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE_MODE",
+            "pos": 1119,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE",
+            "pos": 1120,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_KEY_TRIG",
+            "pos": 1122,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PIT_DEPTH",
+            "pos": 1123,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVF_DEPTH",
+            "pos": 1124,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVA_DEPTH",
+            "pos": 1125,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PAN_DEPTH",
+            "pos": 1126,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PHASE_POS",
+            "pos": 1127,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP",
+            "pos": 1128,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_STEP_CURVE",
+            "pos": 1144,
+            "size": 16
+        }
+    ],
+    "PTL_LFO_2": [
+        {
+            "id": "LFO_0_FORM",
+            "pos": 1160,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_SYNC",
+            "pos": 1161,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_NOTE",
+            "pos": 1162,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP_MAX",
+            "pos": 1163,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE",
+            "pos": 1164,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_OFST",
+            "pos": 1166,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_DETN",
+            "pos": 1167,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_DELAY",
+            "pos": 1168,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_DELAY_KF",
+            "pos": 1170,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE_MODE",
+            "pos": 1171,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE",
+            "pos": 1172,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_KEY_TRIG",
+            "pos": 1174,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PIT_DEPTH",
+            "pos": 1175,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVF_DEPTH",
+            "pos": 1176,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVA_DEPTH",
+            "pos": 1177,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PAN_DEPTH",
+            "pos": 1178,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PHASE_POS",
+            "pos": 1179,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP",
+            "pos": 1180,
+            "size": 16
+        },
+        {
+            "id": "LFO_0_STEP_CURVE",
+            "pos": 1196,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_FORM",
+            "pos": 1212,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_SYNC",
+            "pos": 1213,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_NOTE",
+            "pos": 1214,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP_MAX",
+            "pos": 1215,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE",
+            "pos": 1216,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_OFST",
+            "pos": 1218,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_DETN",
+            "pos": 1219,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_DELAY",
+            "pos": 1220,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_DELAY_KF",
+            "pos": 1222,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE_MODE",
+            "pos": 1223,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE",
+            "pos": 1224,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_KEY_TRIG",
+            "pos": 1226,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PIT_DEPTH",
+            "pos": 1227,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVF_DEPTH",
+            "pos": 1228,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVA_DEPTH",
+            "pos": 1229,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PAN_DEPTH",
+            "pos": 1230,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PHASE_POS",
+            "pos": 1231,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP",
+            "pos": 1232,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_STEP_CURVE",
+            "pos": 1248,
+            "size": 16
+        }
+    ],
+    "PTL_LFO_3": [
+        {
+            "id": "LFO_0_FORM",
+            "pos": 1264,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_SYNC",
+            "pos": 1265,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_NOTE",
+            "pos": 1266,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP_MAX",
+            "pos": 1267,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE",
+            "pos": 1268,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_OFST",
+            "pos": 1270,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_RATE_DETN",
+            "pos": 1271,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_DELAY",
+            "pos": 1272,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_DELAY_KF",
+            "pos": 1274,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE_MODE",
+            "pos": 1275,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_FADE",
+            "pos": 1276,
+            "size": 2
+        },
+        {
+            "id": "LFO_0_KEY_TRIG",
+            "pos": 1278,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PIT_DEPTH",
+            "pos": 1279,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVF_DEPTH",
+            "pos": 1280,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_TVA_DEPTH",
+            "pos": 1281,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PAN_DEPTH",
+            "pos": 1282,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_PHASE_POS",
+            "pos": 1283,
+            "size": 1
+        },
+        {
+            "id": "LFO_0_STEP",
+            "pos": 1284,
+            "size": 16
+        },
+        {
+            "id": "LFO_0_STEP_CURVE",
+            "pos": 1300,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_FORM",
+            "pos": 1316,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_SYNC",
+            "pos": 1317,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_NOTE",
+            "pos": 1318,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP_MAX",
+            "pos": 1319,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE",
+            "pos": 1320,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_OFST",
+            "pos": 1322,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_RATE_DETN",
+            "pos": 1323,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_DELAY",
+            "pos": 1324,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_DELAY_KF",
+            "pos": 1326,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE_MODE",
+            "pos": 1327,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_FADE",
+            "pos": 1328,
+            "size": 2
+        },
+        {
+            "id": "LFO_1_KEY_TRIG",
+            "pos": 1330,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PIT_DEPTH",
+            "pos": 1331,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVF_DEPTH",
+            "pos": 1332,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_TVA_DEPTH",
+            "pos": 1333,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PAN_DEPTH",
+            "pos": 1334,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_PHASE_POS",
+            "pos": 1335,
+            "size": 1
+        },
+        {
+            "id": "LFO_1_STEP",
+            "pos": 1336,
+            "size": 16
+        },
+        {
+            "id": "LFO_1_STEP_CURVE",
+            "pos": 1352,
+            "size": 16
+        }
+    ],
+    "PTL_EQ_0": [
+        {
+            "id": "LO_GAIN",
+            "pos": 1368,
+            "size": 2
+        },
+        {
+            "id": "MID_GAIN",
+            "pos": 1370,
+            "size": 2
+        },
+        {
+            "id": "HI_GAIN",
+            "pos": 1372,
+            "size": 2
+        },
+        {
+            "id": "LO_FREQ",
+            "pos": 1374,
+            "size": 2
+        },
+        {
+            "id": "MID_FREQ",
+            "pos": 1376,
+            "size": 2
+        },
+        {
+            "id": "HI_FREQ",
+            "pos": 1378,
+            "size": 2
+        },
+        {
+            "id": "MID_Q",
+            "pos": 1380,
+            "size": 1
+        },
+        {
+            "id": "SW",
+            "pos": 1381,
+            "size": 1
+        }
+    ],
+    "PTL_EQ_1": [
+        {
+            "id": "LO_GAIN",
+            "pos": 1384,
+            "size": 2
+        },
+        {
+            "id": "MID_GAIN",
+            "pos": 1386,
+            "size": 2
+        },
+        {
+            "id": "HI_GAIN",
+            "pos": 1388,
+            "size": 2
+        },
+        {
+            "id": "LO_FREQ",
+            "pos": 1390,
+            "size": 2
+        },
+        {
+            "id": "MID_FREQ",
+            "pos": 1392,
+            "size": 2
+        },
+        {
+            "id": "HI_FREQ",
+            "pos": 1394,
+            "size": 2
+        },
+        {
+            "id": "MID_Q",
+            "pos": 1396,
+            "size": 1
+        },
+        {
+            "id": "SW",
+            "pos": 1397,
+            "size": 1
+        }
+    ],
+    "PTL_EQ_2": [
+        {
+            "id": "LO_GAIN",
+            "pos": 1400,
+            "size": 2
+        },
+        {
+            "id": "MID_GAIN",
+            "pos": 1402,
+            "size": 2
+        },
+        {
+            "id": "HI_GAIN",
+            "pos": 1404,
+            "size": 2
+        },
+        {
+            "id": "LO_FREQ",
+            "pos": 1406,
+            "size": 2
+        },
+        {
+            "id": "MID_FREQ",
+            "pos": 1408,
+            "size": 2
+        },
+        {
+            "id": "HI_FREQ",
+            "pos": 1410,
+            "size": 2
+        },
+        {
+            "id": "MID_Q",
+            "pos": 1412,
+            "size": 1
+        },
+        {
+            "id": "SW",
+            "pos": 1413,
+            "size": 1
+        }
+    ],
+    "PTL_EQ_3": [
+        {
+            "id": "LO_GAIN",
+            "pos": 1416,
+            "size": 2
+        },
+        {
+            "id": "MID_GAIN",
+            "pos": 1418,
+            "size": 2
+        },
+        {
+            "id": "HI_GAIN",
+            "pos": 1420,
+            "size": 2
+        },
+        {
+            "id": "LO_FREQ",
+            "pos": 1422,
+            "size": 2
+        },
+        {
+            "id": "MID_FREQ",
+            "pos": 1424,
+            "size": 2
+        },
+        {
+            "id": "HI_FREQ",
+            "pos": 1426,
+            "size": 2
+        },
+        {
+            "id": "MID_Q",
+            "pos": 1428,
+            "size": 1
+        },
+        {
+            "id": "SW",
+            "pos": 1429,
+            "size": 1
+        }
+    ],
+    "PCMS_CMN": [
+        {
+            "id": "UNISON_SW",
+            "pos": 1432,
+            "size": 1
+        },
+        {
+            "id": "UNISON_SIZE",
+            "pos": 1433,
+            "size": 1
+        },
+        {
+            "id": "UNISON_DETN",
+            "pos": 1434,
+            "size": 1
+        },
+        {
+            "id": "BEND_RANGE_FINE_UP",
+            "pos": 1436,
+            "size": 1
+        },
+        {
+            "id": "BEND_RANGE_FINE_DW",
+            "pos": 1437,
+            "size": 1
+        },
+        {
+            "id": "RND_PIT_VAL",
+            "pos": 1438,
+            "size": 1
+        },
+        {
+            "id": "RND_PIT_NUM",
+            "pos": 1439,
+            "size": 1
+        },
+        {
+            "id": "CONDITION",
+            "pos": 1440,
+            "size": 1
+        }
+    ],
+    "PCMS_PMT": [
+        {
+            "id": "STRUCT12",
+            "pos": 1452,
+            "size": 1
+        },
+        {
+            "id": "STRUCT34",
+            "pos": 1453,
+            "size": 1
+        },
+        {
+            "id": "RING12_LEVEL",
+            "pos": 1456,
+            "size": 1
+        },
+        {
+            "id": "RING34_LEVEL",
+            "pos": 1457,
+            "size": 1
+        },
+        {
+            "id": "RING_OSC1_LEVEL",
+            "pos": 1458,
+            "size": 1
+        },
+        {
+            "id": "RING_OSC2_LEVEL",
+            "pos": 1459,
+            "size": 1
+        },
+        {
+            "id": "RING_OSC3_LEVEL",
+            "pos": 1460,
+            "size": 1
+        },
+        {
+            "id": "RING_OSC4_LEVEL",
+            "pos": 1461,
+            "size": 1
+        },
+        {
+            "id": "XMOD12_DEPTH",
+            "pos": 1464,
+            "size": 2
+        },
+        {
+            "id": "XMOD34_DEPTH",
+            "pos": 1466,
+            "size": 2
+        },
+        {
+            "id": "XMOD_OSC1_LEVEL",
+            "pos": 1468,
+            "size": 1
+        },
+        {
+            "id": "XMOD_OSC2_LEVEL",
+            "pos": 1469,
+            "size": 1
+        },
+        {
+            "id": "XMOD_OSC3_LEVEL",
+            "pos": 1470,
+            "size": 1
+        },
+        {
+            "id": "XMOD_OSC4_LEVEL",
+            "pos": 1471,
+            "size": 1
+        },
+        {
+            "id": "PTL_PHS_LOCK",
+            "pos": 1472,
+            "size": 1
+        },
+        {
+            "id": "XMOD2_12_DEPTH",
+            "pos": 1473,
+            "size": 1
+        },
+        {
+            "id": "XMOD2_34_DEPTH",
+            "pos": 1474,
+            "size": 1
+        }
+    ],
+    "PCMS_PTL_0": [
+        {
+            "id": "OSC_TYPE",
+            "pos": 1488,
+            "size": 1
+        },
+        {
+            "id": "VA_FORM",
+            "pos": 1489,
+            "size": 1
+        },
+        {
+            "id": "SYNC_WAV_NUM",
+            "pos": 1490,
+            "size": 2
+        },
+        {
+            "id": "PW",
+            "pos": 1492,
+            "size": 1
+        },
+        {
+            "id": "PWM_DEPTH",
+            "pos": 1493,
+            "size": 1
+        },
+        {
+            "id": "SSAW_DETUNE",
+            "pos": 1494,
+            "size": 1
+        },
+        {
+            "id": "CLICK_TYPE",
+            "pos": 1495,
+            "size": 1
+        },
+        {
+            "id": "HPF_CUTOFF",
+            "pos": 1496,
+            "size": 2
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 1498,
+            "size": 1
+        },
+        {
+            "id": "FILTER_SLOPE",
+            "pos": 1499,
+            "size": 1
+        },
+        {
+            "id": "ADSR_ENV_SW",
+            "pos": 1500,
+            "size": 1
+        },
+        {
+            "id": "FAT",
+            "pos": 1501,
+            "size": 1
+        },
+        {
+            "id": "VCF_TYPE",
+            "pos": 1502,
+            "size": 1
+        },
+        {
+            "id": "OSC_ATT",
+            "pos": 1503,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_KF_BP",
+            "pos": 1504,
+            "size": 1
+        },
+        {
+            "id": "VA_INVERT_SW",
+            "pos": 1505,
+            "size": 1
+        },
+        {
+            "id": "FENV_FINE_DEPTH",
+            "pos": 1506,
+            "size": 1
+        },
+        {
+            "id": "PENV_LFO_TRIG_SW",
+            "pos": 1507,
+            "size": 1
+        },
+        {
+            "id": "FENV_LFO_TRIG_SW",
+            "pos": 1508,
+            "size": 1
+        },
+        {
+            "id": "AENV_LFO_TRIG_SW",
+            "pos": 1509,
+            "size": 1
+        },
+        {
+            "id": "PITCH_DOWN_DEPTH",
+            "pos": 1510,
+            "size": 1
+        },
+        {
+            "id": "VCF_GC",
+            "pos": 1511,
+            "size": 1
+        },
+        {
+            "id": "VA_INIT_PHASE",
+            "pos": 1512,
+            "size": 1
+        }
+    ],
+    "PCMS_PTL_1": [
+        {
+            "id": "OSC_TYPE",
+            "pos": 1524,
+            "size": 1
+        },
+        {
+            "id": "VA_FORM",
+            "pos": 1525,
+            "size": 1
+        },
+        {
+            "id": "SYNC_WAV_NUM",
+            "pos": 1526,
+            "size": 2
+        },
+        {
+            "id": "PW",
+            "pos": 1528,
+            "size": 1
+        },
+        {
+            "id": "PWM_DEPTH",
+            "pos": 1529,
+            "size": 1
+        },
+        {
+            "id": "SSAW_DETUNE",
+            "pos": 1530,
+            "size": 1
+        },
+        {
+            "id": "CLICK_TYPE",
+            "pos": 1531,
+            "size": 1
+        },
+        {
+            "id": "HPF_CUTOFF",
+            "pos": 1532,
+            "size": 2
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 1534,
+            "size": 1
+        },
+        {
+            "id": "FILTER_SLOPE",
+            "pos": 1535,
+            "size": 1
+        },
+        {
+            "id": "ADSR_ENV_SW",
+            "pos": 1536,
+            "size": 1
+        },
+        {
+            "id": "FAT",
+            "pos": 1537,
+            "size": 1
+        },
+        {
+            "id": "VCF_TYPE",
+            "pos": 1538,
+            "size": 1
+        },
+        {
+            "id": "OSC_ATT",
+            "pos": 1539,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_KF_BP",
+            "pos": 1540,
+            "size": 1
+        },
+        {
+            "id": "VA_INVERT_SW",
+            "pos": 1541,
+            "size": 1
+        },
+        {
+            "id": "FENV_FINE_DEPTH",
+            "pos": 1542,
+            "size": 1
+        },
+        {
+            "id": "PENV_LFO_TRIG_SW",
+            "pos": 1543,
+            "size": 1
+        },
+        {
+            "id": "FENV_LFO_TRIG_SW",
+            "pos": 1544,
+            "size": 1
+        },
+        {
+            "id": "AENV_LFO_TRIG_SW",
+            "pos": 1545,
+            "size": 1
+        },
+        {
+            "id": "PITCH_DOWN_DEPTH",
+            "pos": 1546,
+            "size": 1
+        },
+        {
+            "id": "VCF_GC",
+            "pos": 1547,
+            "size": 1
+        },
+        {
+            "id": "VA_INIT_PHASE",
+            "pos": 1548,
+            "size": 1
+        }
+    ],
+    "PCMS_PTL_2": [
+        {
+            "id": "OSC_TYPE",
+            "pos": 1560,
+            "size": 1
+        },
+        {
+            "id": "VA_FORM",
+            "pos": 1561,
+            "size": 1
+        },
+        {
+            "id": "SYNC_WAV_NUM",
+            "pos": 1562,
+            "size": 2
+        },
+        {
+            "id": "PW",
+            "pos": 1564,
+            "size": 1
+        },
+        {
+            "id": "PWM_DEPTH",
+            "pos": 1565,
+            "size": 1
+        },
+        {
+            "id": "SSAW_DETUNE",
+            "pos": 1566,
+            "size": 1
+        },
+        {
+            "id": "CLICK_TYPE",
+            "pos": 1567,
+            "size": 1
+        },
+        {
+            "id": "HPF_CUTOFF",
+            "pos": 1568,
+            "size": 2
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 1570,
+            "size": 1
+        },
+        {
+            "id": "FILTER_SLOPE",
+            "pos": 1571,
+            "size": 1
+        },
+        {
+            "id": "ADSR_ENV_SW",
+            "pos": 1572,
+            "size": 1
+        },
+        {
+            "id": "FAT",
+            "pos": 1573,
+            "size": 1
+        },
+        {
+            "id": "VCF_TYPE",
+            "pos": 1574,
+            "size": 1
+        },
+        {
+            "id": "OSC_ATT",
+            "pos": 1575,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_KF_BP",
+            "pos": 1576,
+            "size": 1
+        },
+        {
+            "id": "VA_INVERT_SW",
+            "pos": 1577,
+            "size": 1
+        },
+        {
+            "id": "FENV_FINE_DEPTH",
+            "pos": 1578,
+            "size": 1
+        },
+        {
+            "id": "PENV_LFO_TRIG_SW",
+            "pos": 1579,
+            "size": 1
+        },
+        {
+            "id": "FENV_LFO_TRIG_SW",
+            "pos": 1580,
+            "size": 1
+        },
+        {
+            "id": "AENV_LFO_TRIG_SW",
+            "pos": 1581,
+            "size": 1
+        },
+        {
+            "id": "PITCH_DOWN_DEPTH",
+            "pos": 1582,
+            "size": 1
+        },
+        {
+            "id": "VCF_GC",
+            "pos": 1583,
+            "size": 1
+        },
+        {
+            "id": "VA_INIT_PHASE",
+            "pos": 1584,
+            "size": 1
+        }
+    ],
+    "PCMS_PTL_3": [
+        {
+            "id": "OSC_TYPE",
+            "pos": 1596,
+            "size": 1
+        },
+        {
+            "id": "VA_FORM",
+            "pos": 1597,
+            "size": 1
+        },
+        {
+            "id": "SYNC_WAV_NUM",
+            "pos": 1598,
+            "size": 2
+        },
+        {
+            "id": "PW",
+            "pos": 1600,
+            "size": 1
+        },
+        {
+            "id": "PWM_DEPTH",
+            "pos": 1601,
+            "size": 1
+        },
+        {
+            "id": "SSAW_DETUNE",
+            "pos": 1602,
+            "size": 1
+        },
+        {
+            "id": "CLICK_TYPE",
+            "pos": 1603,
+            "size": 1
+        },
+        {
+            "id": "HPF_CUTOFF",
+            "pos": 1604,
+            "size": 2
+        },
+        {
+            "id": "FILTER_TYPE",
+            "pos": 1606,
+            "size": 1
+        },
+        {
+            "id": "FILTER_SLOPE",
+            "pos": 1607,
+            "size": 1
+        },
+        {
+            "id": "ADSR_ENV_SW",
+            "pos": 1608,
+            "size": 1
+        },
+        {
+            "id": "FAT",
+            "pos": 1609,
+            "size": 1
+        },
+        {
+            "id": "VCF_TYPE",
+            "pos": 1610,
+            "size": 1
+        },
+        {
+            "id": "OSC_ATT",
+            "pos": 1611,
+            "size": 1
+        },
+        {
+            "id": "CUTOFF_KF_BP",
+            "pos": 1612,
+            "size": 1
+        },
+        {
+            "id": "VA_INVERT_SW",
+            "pos": 1613,
+            "size": 1
+        },
+        {
+            "id": "FENV_FINE_DEPTH",
+            "pos": 1614,
+            "size": 1
+        },
+        {
+            "id": "PENV_LFO_TRIG_SW",
+            "pos": 1615,
+            "size": 1
+        },
+        {
+            "id": "FENV_LFO_TRIG_SW",
+            "pos": 1616,
+            "size": 1
+        },
+        {
+            "id": "AENV_LFO_TRIG_SW",
+            "pos": 1617,
+            "size": 1
+        },
+        {
+            "id": "PITCH_DOWN_DEPTH",
+            "pos": 1618,
+            "size": 1
+        },
+        {
+            "id": "VCF_GC",
+            "pos": 1619,
+            "size": 1
+        },
+        {
+            "id": "VA_INIT_PHASE",
+            "pos": 1620,
+            "size": 1
+        }
+    ]
+}

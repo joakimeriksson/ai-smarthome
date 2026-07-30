@@ -20,7 +20,10 @@ def get_num(str):
         return numdef[str]
 
 # define some attributes to get for params
-attdefs = {'id':str, 'desc':str, 'init':get_num, 'min':get_num, 'max':get_num, 'array':get_num}
+# desc_val carries the enum labels ("SAW, SQR, TRI, ...") the UI needs to render
+# a dropdown, and the VA view needs to name a value. Without it every consumer
+# has to hardcode lists that already exist in Roland's XML.
+attdefs = {'id':str, 'desc':str, 'desc_val':str, 'init':get_num, 'min':get_num, 'max':get_num, 'array':get_num}
 
 def fill_atts(data, elem):
     atts = elem.attrib
@@ -131,7 +134,7 @@ def show_block(block, pos):
         if e['type'] == 'param':
             print("   ", e['id'], " ", pos, " ", size, e)
         # copy over some of the data in the param data
-        newelem = {key: e[key] for key in e.keys() & {'id', 'init', 'min', 'max', 'desc'}}
+        newelem = {key: e[key] for key in e.keys() & {'id', 'init', 'min', 'max', 'desc', 'desc_val'}}
         data = data + [{**newelem, 'pos': pos, 'size': size}]
         if e['type'] == 'padding':
             print("    <padding>", pos, size)

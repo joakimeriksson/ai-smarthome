@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zencore"
+version = "0.1.0"
+description = "Read, write, create and modify Roland ZEN-Core .svz files"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Joakim Eriksson" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+zencore = "zencore.cli:main"
+
+[tool.setuptools]
+packages = ["zencore"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

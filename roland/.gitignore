@@ -1,0 +1,27 @@
+# Generated / local artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+zencore.egg-info/
+uv.lock
+
+# Measurement output - large audio, regenerable from the tools
+renders/
+refs/
+states/
+
+# Roland's editor XML. Needed by tools/xml_to_schema.py and referenced all over
+# docs/, but it is Roland's copyrighted data, not ours. Kept local by default;
+# remove this line deliberately if you decide the repo should carry it.
+JUPITERprmdb/
+
+# Scratch patches generated while probing the plugin. tests/data/ holds the
+# corpus that matters and IS tracked.
+probes/
+/probe*.svz
+/multi4*.svz
+/laser-*.svz
+/va-saw.svz
+/pwm.svz
+/alias-test.svz
+/sweep-cutoff.svz

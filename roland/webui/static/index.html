@@ -59,7 +59,7 @@ const held = new Set();
 async function audio() {
   if (ctx) { if (ctx.state === "suspended") await ctx.resume(); return; }
   ctx = new AudioContext();
-  await ctx.audioWorklet.addModule("va-processor.js");
+  await ctx.audioWorklet.addModule("va-worklet.js");
   node = new AudioWorkletNode(ctx, "va-processor", { outputChannelCount: [2] });
   node.connect(ctx.destination);
   node.port.onmessage = (e) => {

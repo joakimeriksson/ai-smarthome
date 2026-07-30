@@ -122,7 +122,30 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001 - report, never 500 silently
             self._fail(exc, 404 if isinstance(exc, (IndexError, KeyError)) else 400)
 
+    #: Not every engine allows a static `import` inside AudioWorklet scope, and
+    #: a failure there is silent and awful to debug. Serve the worklet with the
+    #: DSP inlined instead - one source file on disk, bundled on the way out,
+    #: so the shared-DSP arrangement survives without depending on that support.
+    BUNDLED = "va-worklet.js"
+
+    def _bundle_worklet(self):
+        dsp = (STATIC / "va-dsp.js").read_text()
+        proc = (STATIC / "va-processor.js").read_text()
+        dsp = dsp.replace("export const ", "const ").replace("export class ", "class ")
+        proc = "\n".join(l for l in proc.splitlines()
+                         if not l.startswith("import "))
+        return (f"// bundled by webui/server.py from va-dsp.js + va-processor.js\n"
+                f"{dsp}\n{proc}").encode()
+
     def _static(self, parts):
+        if parts and parts[-1] == self.BUNDLED:
+            body = self._bundle_worklet()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/javascript")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         rel = "/".join(parts) or "index.html"
         target = (STATIC / rel).resolve()
         if not str(target).startswith(str(STATIC.resolve())) or not target.is_file():

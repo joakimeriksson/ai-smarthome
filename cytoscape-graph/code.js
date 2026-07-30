@@ -93,6 +93,11 @@ function getNodeStyle() {
   styles.push({ selector: '.highlighted-node', style: { 'border-color': 'yellow', 'border-width': 5 } });
   styles.push({ selector: '.highlighted-edge', style: { 'line-color': 'yellow', 'target-arrow-color': 'yellow', 'width': 6 } });
   styles.push({ selector: '.faded', style: { 'opacity': 0.15 } });
+  // Workshop link mode: the node you picked as the "from" end.
+  styles.push({ selector: '.workshop-from', style: {
+    'border-color': '#F5A623', 'border-width': 6, 'overlay-color': '#F5A623',
+    'overlay-opacity': 0.18, 'overlay-padding': 8
+  } });
   styles.push({ selector: '.person-linked', style: { 'border-color': '#5cb85c', 'border-width': 5 } });
   styles.push({ selector: '.person-unlinked', style: { 'opacity': 0.5 } });
   styles.push({ selector: '.neighbor-highlight', style: { 'opacity': 1 } });
@@ -166,8 +171,12 @@ function getLayout(view) {
 // next / beyond) give the columns, so a stone's x still reads as "when".
 // Within a band a chain's stones spread sideways into sub-slots — never
 // stacked vertically, which is what would bend the line.
-// Keep the total width modest: a wider graph forces a lower fit-zoom, and below
-// ~0.7 Cytoscape stops painting the SVG stone icons.
+// Spacing tuned so a five-journey roadmap fits a laptop screen without needing
+// a pan. (An earlier version blamed low zoom for the stone icons disappearing —
+// that was actually a stale-paint bug, now fixed by the forceRender in
+// switchView. These numbers are pure layout taste.)
+// Height of the fixed band-header strip; content must start below it.
+var ROADMAP_BAND_STRIP = 195;
 var ROADMAP_SLOT_W = 180;   // x-distance between two stones in the same band
 var ROADMAP_BAND_GAP = 95;  // extra breathing room between bands (holds the divider)
 var ROADMAP_LANE_H = 190;   // y-distance between journeys
@@ -274,6 +283,49 @@ function computeRoadmapPositions(elements) {
   return { positions: positions, cols: cols, dividers: dividers };
 }
 
+// Workshop mode parks a panel over the left of the canvas. Its whole interaction
+// is "click the nodes", so anything underneath would be unreachable. Re-fit the
+// graph into the strip beside the panel rather than just panning it across,
+// which would push the destinations off-screen. Re-applied after every layout,
+// since fit() resets zoom and pan.
+var WORKSHOP_INSET = 360;
+function applyWorkshopInset() {
+  if (!(window.workshopActive && window.workshopActive())) return;
+  var w = cy.width(), h = cy.height();
+  if (w <= WORKSHOP_INSET + 120) return;   // too narrow to be worth it
+  var bb = cy.elements().boundingBox();
+  if (!bb || !isFinite(bb.x1) || bb.w === 0) return;
+
+  var zoom = cy.zoom() * ((w - WORKSHOP_INSET) / w);
+  cy.zoom(zoom);
+
+  var strip = w - WORKSHOP_INSET;
+  var contentW = bb.w * zoom, contentH = bb.h * zoom;
+  var availH = h - ROADMAP_BAND_STRIP;
+  cy.pan({
+    x: contentW <= strip
+      ? WORKSHOP_INSET + (strip - contentW) / 2 - bb.x1 * zoom            // fits: centre it
+      : WORKSHOP_INSET + 24 - bb.x1 * zoom,                               // overflows: pin left
+    y: contentH <= availH
+      ? ROADMAP_BAND_STRIP + (availH - contentH) / 2 - bb.y1 * zoom
+      : ROADMAP_BAND_STRIP - bb.y1 * zoom     // taller than the viewport: pin below the labels
+  });
+}
+
+// Changing zoom/pan right after a layout can leave the node SVG icons unpainted
+// — stones render as empty circles even though `background-image` is set.
+// Cytoscape rasterises node images per rendered size and keeps a texture cache
+// that it does not rebuild when the scale changes underneath it.
+//
+// cy.forceRender() is NOT enough: it redraws the current frame from the stale
+// cache, so only whatever was already dirty comes back. cy.resize() invalidates
+// the caches outright, which is what actually restores every icon. It must run
+// after the images are decoded, hence the deferred pair.
+function repaintIcons() {
+  requestAnimationFrame(function() { cy.resize(); });
+  setTimeout(function() { cy.resize(); }, 250);
+}
+
 function applyRoadmapLayout(elements) {
   var rm = computeRoadmapPositions(elements);
   cy.nodes().forEach(function(n) {
@@ -348,6 +400,8 @@ function switchView(viewId) {
     cy.layout(getLayout(view)).run();
     cy.fit(undefined, 40);
   }
+  applyWorkshopInset();
+  repaintIcons();
 
   // Update legend visibility
   var visibleTypes = viewTypes(view.nodeTypes, 'nodeTypes', view.excludeNodeTypes);
@@ -479,6 +533,9 @@ function initGraph() {
       handleLinkModeTap(evt.target.id());
       return;
     }
+    // Workshop mode turns a tap into "pick this end of the link", so it gets
+    // first refusal; it returns false when it isn't consuming the tap.
+    if (window.workshopTapHandler && window.workshopTapHandler(evt.target.id())) return;
     showDetailPanel(evt.target);
   });
 

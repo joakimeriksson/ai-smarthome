@@ -8931,154 +8931,176 @@
       "data": {
         "source": "robotics",
         "target": "tools",
-        "type": "journey"
+        "type": "journey",
+        "id": "f56c4742-a815-490f-b67c-449926016c19"
       }
     },
     {
       "data": {
         "source": "tools",
         "target": "edgeai",
-        "type": "journey"
+        "type": "journey",
+        "id": "345c7e0d-0671-475d-b4bc-181747b32bcf"
       }
     },
     {
       "data": {
         "source": "tools",
         "target": "llm",
-        "type": "journey"
+        "type": "journey",
+        "id": "12fac0bf-4f8b-41f3-81ec-43a670157b0d"
       }
     },
     {
       "data": {
         "source": "llm",
         "target": "cloud",
-        "type": "journey"
+        "type": "journey",
+        "id": "13d4e771-5bf1-42e8-b87f-5ee1ee0f26cd"
       }
     },
     {
       "data": {
         "source": "edgeai",
         "target": "edge",
-        "type": "journey"
+        "type": "journey",
+        "id": "be49aafe-8e9c-4001-b33f-f7e6952ecb95"
       }
     },
     {
       "data": {
         "source": "edge",
         "target": "sustainable",
-        "type": "journey"
+        "type": "journey",
+        "id": "b2dc7890-a91f-4dd4-8949-f75b804769c8"
       }
     },
     {
       "data": {
         "source": "sustainable",
         "target": "csw",
-        "type": "journey"
+        "type": "journey",
+        "id": "bb31cdfa-1866-4b9e-8d91-c0d5900d1d29"
       }
     },
     {
       "data": {
         "source": "sensors",
         "target": "harvest",
-        "type": "journey"
+        "type": "journey",
+        "id": "96088002-0e4e-4b4e-b666-8775811e4df4"
       }
     },
     {
       "data": {
         "source": "harvest",
         "target": "lowpower",
-        "type": "journey"
+        "type": "journey",
+        "id": "5414b209-e952-4e53-8bd3-539e6c39df3b"
       }
     },
     {
       "data": {
         "source": "lowpower",
         "target": "intermittent",
-        "type": "journey"
+        "type": "journey",
+        "id": "5bc103ec-17be-4dc4-b6e9-c5373ecf24c7"
       }
     },
     {
       "data": {
         "source": "intermittent",
         "target": "mesh",
-        "type": "journey"
+        "type": "journey",
+        "id": "5f5ed39a-1d65-4a95-a248-2ad7896d074f"
       }
     },
     {
       "data": {
         "source": "mesh",
         "target": "zeroIoT",
-        "type": "journey"
+        "type": "journey",
+        "id": "3058fb27-35ce-4ea2-a0b2-dfa99eaf05b2"
       }
     },
     {
       "data": {
         "source": "riscVEdge",
         "target": "tinyLLMaccel",
-        "type": "journey"
+        "type": "journey",
+        "id": "b9783d08-7e0e-44ad-8f7c-490b32a10344"
       }
     },
     {
       "data": {
         "source": "tinyLLMaccel",
         "target": "neuromorphicCore",
-        "type": "journey"
+        "type": "journey",
+        "id": "501f8abf-e39a-43c1-b026-24a73787da17"
       }
     },
     {
       "data": {
         "source": "neuromorphicCore",
         "target": "eventVision",
-        "type": "journey"
+        "type": "journey",
+        "id": "d53254bc-e8c2-40b9-9671-38562a26b35c"
       }
     },
     {
       "data": {
         "source": "eventVision",
         "target": "energyHarvest",
-        "type": "journey"
+        "type": "journey",
+        "id": "2136b869-c379-442d-8855-cf275add3c1e"
       }
     },
     {
       "data": {
         "source": "energyHarvest",
         "target": "photonicsAI",
-        "type": "journey"
+        "type": "journey",
+        "id": "3aef2fc5-d3ba-406c-b1d1-2b80b9579763"
       }
     },
     {
       "data": {
         "source": "tinyLLMrt",
         "target": "detMeshStack",
-        "type": "journey"
+        "type": "journey",
+        "id": "05690d2a-2c76-4fb2-9ccf-132cd7efda58"
       }
     },
     {
       "data": {
         "source": "detMeshStack",
         "target": "fedLearning",
-        "type": "journey"
+        "type": "journey",
+        "id": "013a018c-a8a7-49c4-a45a-19f5ac2082db"
       }
     },
     {
       "data": {
         "source": "fedLearning",
         "target": "neuroSDK",
-        "type": "journey"
+        "type": "journey",
+        "id": "5302ffc6-edcb-4eba-9e39-36d5ba7e79ec"
       }
     },
     {
       "data": {
         "source": "neuroSDK",
         "target": "multiBotRL",
-        "type": "journey"
+        "type": "journey",
+        "id": "d55887c5-3bd4-4e36-ac8a-c86d30bbf2e7"
       }
     },
     {
       "data": {
         "source": "multiBotRL",
         "target": "safetyXAI",
-        "type": "journey"
+        "type": "journey",
+        "id": "f8e822fa-d4d1-4215-83de-a87ba07ee1b8"
       }
     },
     {
@@ -15064,5 +15086,5 @@
       }
     }
   ],
-  "version": 7
+  "version": 11
 }

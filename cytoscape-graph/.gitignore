@@ -6,3 +6,4 @@ __pycache__/
 .venv/
 uv.lock
 data.json.bak-*
+.prior_art_cache.json

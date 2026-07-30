@@ -31,6 +31,7 @@
 
   <div id="right-buttons">
     <button id="edit-graph-btn">Edit Graph</button>
+    <button id="workshop-btn">Workshop</button>
     <button id="insights-btn">Insights</button>
     <button id="show-persons-btn">Show Persons</button>
   </div>
@@ -76,8 +77,12 @@
       <div class="editor-section">
         <h3>Edges</h3>
         <div id="edges-list"></div>
-        <select id="edge-source"></select>
-        <select id="edge-target"></select>
+        <!-- Type-to-search: a plain <select> over 600 nodes is unusable. -->
+        <input type="text" id="edge-source" list="node-options" autocomplete="off"
+               placeholder="From — type a name to search…">
+        <input type="text" id="edge-target" list="node-options" autocomplete="off"
+               placeholder="To — type a name to search…">
+        <datalist id="node-options"></datalist>
         <select id="edge-type"></select>
         <button id="add-edge-btn">Add Edge</button>
       </div>
@@ -95,6 +100,7 @@
   <script src="cytoscape-icons.js"></script>
   <script src="code.js"></script>
   <script src="queries.js"></script>
+  <script src="workshop.js"></script>
   <script src="editor.js"></script>
 
 </body>

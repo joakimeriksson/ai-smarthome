@@ -160,7 +160,7 @@ body {
   gap: 8px;
 }
 
-#edit-graph-btn, #show-persons-btn, #insights-btn {
+#edit-graph-btn, #show-persons-btn, #insights-btn, #workshop-btn {
   padding: 8px 14px;
   background-color: rgba(53, 101, 218, 0.9);
   color: white;
@@ -172,7 +172,7 @@ body {
   margin: 0;
 }
 
-#edit-graph-btn:hover, #show-persons-btn:hover, #insights-btn:hover {
+#edit-graph-btn:hover, #show-persons-btn:hover, #insights-btn:hover, #workshop-btn:hover {
   background-color: rgba(53, 101, 218, 1);
   border-color: rgba(255,255,255,0.6);
 }
@@ -491,6 +491,143 @@ body {
   color: #555;
   margin-bottom: 2px;
 }
+
+/* Workshop mode — big targets and few of them; this is driven live in a room. */
+#workshop-panel {
+  position: absolute;
+  top: 60px;
+  left: 12px;
+  width: 330px;
+  background: rgba(0, 5, 80, 0.97);
+  color: white;
+  padding: 18px;
+  border-radius: 12px;
+  border: 2px solid rgba(245, 166, 35, 0.55);
+  z-index: 17;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+}
+
+#workshop-panel h3 {
+  margin: 0 0 14px 0;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+
+#workshop-close {
+  position: absolute;
+  top: 8px; right: 12px;
+  background: none; border: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 22px; line-height: 1;
+  cursor: pointer; width: auto; padding: 0; margin: 0;
+}
+#workshop-close:hover { color: white; }
+
+.workshop-step { margin-bottom: 16px; }
+
+.workshop-step-head {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(245, 166, 35, 0.9);
+  margin-bottom: 7px;
+}
+
+#workshop-label, #workshop-edge-type {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 14px;
+  margin: 0 0 8px 0;
+  outline: none;
+}
+#workshop-label::placeholder { color: rgba(255,255,255,0.4); }
+#workshop-label:focus { border-color: rgba(245, 166, 35, 0.8); }
+#workshop-edge-type option { background: #00057d; color: white; }
+
+.workshop-horizons { display: flex; gap: 6px; margin-bottom: 8px; }
+
+.workshop-horizon {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.75);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: auto;
+  margin: 0;
+}
+.workshop-horizon span {
+  display: block;
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
+}
+.workshop-horizon:hover { background: rgba(255,255,255,0.14); }
+.workshop-horizon.selected {
+  background: rgba(245, 166, 35, 0.85);
+  border-color: rgba(245, 166, 35, 1);
+  color: #00113a;
+}
+.workshop-horizon.selected span { color: rgba(0,17,58,0.7); }
+
+.workshop-primary {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  background: #F5A623;
+  color: #00113a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0;
+}
+.workshop-primary:hover { background: #ffb943; }
+
+.workshop-hint {
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.55);
+}
+
+.workshop-status {
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 10px;
+  min-height: 17px;
+}
+.workshop-status-ok { background: rgba(92, 184, 92, 0.18); color: #b7e6b7; }
+.workshop-status-warn { background: rgba(245, 166, 35, 0.18); color: #ffd79a; }
+
+.workshop-undo {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+  cursor: pointer;
+  margin: 0;
+}
+.workshop-undo:hover:not(:disabled) { background: rgba(255,255,255,0.14); }
+.workshop-undo:disabled { opacity: 0.35; cursor: default; }
+
+/* Crosshair over the canvas makes "click two nodes" read as an action, not a tap. */
+body.workshop-active #cy { cursor: crosshair; }
 
 /* Insights / query panel */
 #query-panel {

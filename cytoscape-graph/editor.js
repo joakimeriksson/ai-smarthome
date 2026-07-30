@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var edgeSourceSelect = document.getElementById('edge-source');
   var edgeTargetSelect = document.getElementById('edge-target');
+  var nodeOptionsList = document.getElementById('node-options');
   var edgeTypeSelect = document.getElementById('edge-type');
   var addEdgeBtn = document.getElementById('add-edge-btn');
 
@@ -284,21 +285,39 @@ document.addEventListener('DOMContentLoaded', function() {
     selectedNodeId = null;
   });
 
+  // The endpoint inputs are free text, so resolve what was typed to a real node:
+  // an exact id, else a unique label match (people type the name they can see).
+  function resolveNodeId(text) {
+    text = (text || '').trim();
+    if (!text) return null;
+    if (currentGraphData.nodes.some(function(n) { return n.data.id === text; })) return text;
+    var hits = currentGraphData.nodes.filter(function(n) {
+      return (n.data.label || '').replace(/\n/g, ' ').toLowerCase() === text.toLowerCase();
+    });
+    return hits.length === 1 ? hits[0].data.id : null;
+  }
+
   addEdgeBtn.addEventListener('click', function() {
-    var edgeData = {
-      source: edgeSourceSelect.value,
-      target: edgeTargetSelect.value,
-      type: edgeTypeSelect.value
-    };
+    var src = resolveNodeId(edgeSourceSelect.value);
+    var tgt = resolveNodeId(edgeTargetSelect.value);
+    if (!src || !tgt) {
+      alert('Pick both ends from the suggestions — "' +
+            (!src ? edgeSourceSelect.value : edgeTargetSelect.value) +
+            '" is not a node in the graph.');
+      return;
+    }
+    if (src === tgt) { alert('An edge needs two different nodes.'); return; }
+
+    var edgeData = { source: src, target: tgt, type: edgeTypeSelect.value };
     stampProvenance(edgeData);
     currentGraphData.edges.push({ data: edgeData });
+    edgeSourceSelect.value = '';
+    edgeTargetSelect.value = '';
     populateEditor();
   });
 
   function populateEditor() {
     nodesList.innerHTML = '';
-    edgeSourceSelect.innerHTML = '';
-    edgeTargetSelect.innerHTML = '';
 
     // Sort nodes by type then label
     var sortedNodes = currentGraphData.nodes.slice().sort(function(a, b) {
@@ -338,20 +357,16 @@ document.addEventListener('DOMContentLoaded', function() {
       nodesList.appendChild(nodeDiv);
     });
 
-    // Populate source/target selects
+    // One shared datalist backs both endpoint inputs. The option VALUE is the
+    // node id (what the edge stores) and its text is the human label, so typing
+    // a few letters of a name narrows 600 nodes to a handful.
+    nodeOptionsList.innerHTML = '';
     currentGraphData.nodes.forEach(function(node) {
-      var label = (node.data.label || node.data.id).replace(/\n/g, ' ');
-      var optText = '[' + node.data.type + '] ' + label;
-
-      var opt1 = document.createElement('option');
-      opt1.value = node.data.id;
-      opt1.textContent = optText;
-      edgeSourceSelect.appendChild(opt1);
-
-      var opt2 = document.createElement('option');
-      opt2.value = node.data.id;
-      opt2.textContent = optText;
-      edgeTargetSelect.appendChild(opt2);
+      var opt = document.createElement('option');
+      opt.value = node.data.id;
+      opt.textContent = '[' + node.data.type + '] ' +
+                        (node.data.label || node.data.id).replace(/\n/g, ' ');
+      nodeOptionsList.appendChild(opt);
     });
 
     edgesList.innerHTML = '';

@@ -17,6 +17,11 @@
 const MAX_INSTRNAMELEN = 16;
 const MAX_TABLES = 4;
 const MAX_PATTERN_ROWS = 128;
+// gcommon.h MAX_SONGLEN. The on-disk length is a SINGLE BYTE (songlen+1), so
+// an order list longer than this cannot be represented at all - writing one
+// wraps the byte and every subsequent field (instruments, tables, patterns)
+// is read at the wrong offset, producing a silently corrupt file.
+const MAX_SONGLEN = 254;
 
 function putString(bytes, s, len) {
     for (let i = 0; i < len; i++) {
@@ -42,6 +47,16 @@ function orderListBytes(orderList) {
         entries.push(entry);
     }
     if (entries.length === 0) entries.push(0); // GT2 requires songlen >= 1
+    // HARD CLAMP: the length byte cannot express more than MAX_SONGLEN
+    // entries. Truncating loses the tail of the song; NOT truncating produced
+    // a corrupt file that parsed as 166 instruments / speed 254 / zero notes
+    // and played total silence. Truncate loudly - callers must size their
+    // order lists to fit (see detectPatternLength in sid-ripper.html).
+    if (entries.length > MAX_SONGLEN) {
+        console.warn(`writeSng: order list has ${entries.length} entries, ` +
+            `GT2 allows ${MAX_SONGLEN} - truncating (song will end early)`);
+        entries.length = MAX_SONGLEN;
+    }
     // Restart must point inside the entry list
     if (restart >= entries.length) restart = 0;
     return [...entries, 0xFF, restart];

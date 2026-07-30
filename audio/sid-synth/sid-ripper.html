@@ -3337,7 +3337,16 @@
              * Auto-detect optimal pattern length by scoring chunk reuse across voices
              */
             detectPatternLength(rows) {
-                const candidates = [8, 12, 16, 24, 32, 48, 64];
+                // GT2 hard limits (gcommon.h): a song is at most MAX_SONGLEN
+                // order entries per voice and MAX_PATT distinct patterns, and
+                // a pattern is at most MAX_PATTROWS rows.
+                const MAX_SONGLEN = 254, MAX_PATT = 208, MAX_PATTROWS = 128;
+                // Headroom: buildGT2Orders also spends order entries on
+                // TRANSPOSE bytes, and detectPatterns needs room for the
+                // per-voice patterns it cannot dedup.
+                const ORDER_BUDGET = 230, PATT_BUDGET = 200;
+
+                const candidates = [8, 12, 16, 24, 32, 48, 64, 96, 128];
                 let bestLength = 32;
                 let bestScore = -1;
 
@@ -3349,8 +3358,21 @@
                     }
                 });
 
+                // Shortest length whose order list fits, as the fallback when
+                // NOTHING fits comfortably - a long song (Monty on the Run is
+                // 5:50 = 5883 rows at 3 frames/row) needs long patterns or its
+                // order list overflows the single-byte length field and
+                // writeSng has to truncate the song.
+                const fitsOrder = (len) => Math.ceil(rows.length / len) <= ORDER_BUDGET;
+                let feasibleFallback = candidates.filter(l => l <= MAX_PATTROWS && fitsOrder(l)).pop()
+                    || MAX_PATTROWS;
+
                 for (const len of candidates) {
                     if (len > rows.length) continue;
+                    if (len > MAX_PATTROWS) continue;
+                    // A length whose order list cannot be expressed is not a
+                    // candidate at all, however well it dedups
+                    if (!fitsOrder(len)) continue;
 
                     const hashes = new Map(); // hash -> count
                     let totalChunks = 0;
@@ -3376,6 +3398,10 @@
                     let score = reusedChunks / totalChunks;
                     // Penalize very short lengths to avoid over-fragmentation
                     if (len < 16) score *= 0.7;
+                    // Penalize a length that needs more distinct patterns than
+                    // GT2 has slots: detectPatterns would hit the cap and start
+                    // reusing pattern 0, silently deleting music.
+                    if (hashes.size > PATT_BUDGET) score *= 0.3;
 
                     if (score > bestScore) {
                         bestScore = score;
@@ -3383,10 +3409,12 @@
                     }
                 }
 
-                // Fall back to 32 if no reuse detected
-                if (bestScore <= 0) bestLength = 32;
+                // Fall back to the longest length that fits if no reuse detected
+                if (bestScore <= 0) bestLength = feasibleFallback;
 
-                console.log(`Auto-detected pattern length: ${bestLength} (reuse score: ${(bestScore * 100).toFixed(1)}%)`);
+                const orderLen = Math.ceil(rows.length / bestLength);
+                console.log(`Auto-detected pattern length: ${bestLength} (reuse score: ` +
+                    `${(bestScore * 100).toFixed(1)}%, ~${orderLen} order entries of ${MAX_SONGLEN})`);
                 return bestLength;
             },
 

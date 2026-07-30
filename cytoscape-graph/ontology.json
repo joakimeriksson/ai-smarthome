@@ -54,7 +54,8 @@
     "participates": { "label": "Participates", "note": "researcher/partner -> project.", "color": "#9b59b6", "style": "dashed", "width": 3 },
     "related_to":   { "label": "Related to", "note": "generic association.", "color": "rgba(255,255,255,0.3)", "style": "dotted", "width": 3 },
     "authored":     { "label": "Authored", "note": "researcher -> publication.", "color": "#e74c3c", "style": "solid", "width": 3 },
-    "evidences":    { "label": "Evidences", "note": "publication -> stone (proof a stone is being reached). NEW in v1.", "color": "#e74c3c", "style": "dashed", "width": 3 },
+    "evidences":    { "label": "Evidences", "note": "publication -> stone. OUR progress: proof a stone is being reached. NEW in v1.", "color": "#e74c3c", "style": "dashed", "width": 3 },
+    "priorArt":     { "label": "Prior art", "note": "publication -> stone. The BASELINE: foundational work defining the area, usually authored outside RISE. Deliberately distinct from `evidences` — reading the literature is not progress. Rendered weaker (dotted, thin) so baseline never looks like delivery.", "color": "#e0796b", "style": "dotted", "width": 2 },
     "enabledBy":    { "label": "Enabled by / gates", "note": "enabler/trend -> stone. NEW in v1.", "color": "#E9A23B", "style": "dashed", "width": 3 },
     "funds":        { "label": "Funds", "note": "funding_call -> project. NEW in v1.", "color": "#4C6EF5", "style": "solid", "width": 3 },
     "supports":     { "label": "Supports", "note": "testbed -> project. NEW in v1.", "color": "#51616F", "style": "solid", "width": 3 }

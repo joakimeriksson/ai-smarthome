@@ -182,20 +182,32 @@ VIEW_UPDATES = {
     },
     "publications": {
         "nodeTypes": ["publication", "researcher", "topic"],
-        "edgeTypes": ["authored", "evidences"],
+        "edgeTypes": ["authored", "evidences", "priorArt"],
     },
 }
 
-DELIVERY_VIEW = {
-    "id": "delivery",
-    "label": "Delivery & Gaps",
-    "nodeTypes": ["topic", "project", "publication"],
-    "edgeTypes": ["journey", "advances", "evidences"],
-    "layout": "cose",
-    # Only what is connected: this view answers "what is being delivered", so an
-    # unlinked publication is noise, not a gap.
-    "dropIsolated": True,
-}
+# Views this migration creates if absent. Both drop isolated nodes: they answer
+# "what is connected", so an unlinked publication is noise. A missing link is a
+# gap for the Insights panel to report, not a floating dot on the canvas.
+NEW_VIEWS = [
+    {
+        "id": "delivery",
+        "label": "Delivery & Gaps",
+        "nodeTypes": ["topic", "project", "publication"],
+        "edgeTypes": ["journey", "advances", "evidences"],
+        "layout": "cose",
+        "dropIsolated": True,
+    },
+    {
+        # The literature behind the roadmap: stones and the papers that define them.
+        "id": "state-of-the-art",
+        "label": "State of the Art",
+        "nodeTypes": ["topic", "publication"],
+        "edgeTypes": ["priorArt", "evidences", "journey"],
+        "layout": "cose",
+        "dropIsolated": True,
+    },
+]
 
 
 def wire_views(data):
@@ -212,11 +224,13 @@ def wire_views(data):
         v.update(spec)
         changes["views_updated"] += 1
 
-    if DELIVERY_VIEW["id"] not in by_id:
+    for spec in NEW_VIEWS:
+        if spec["id"] in by_id:
+            continue
         # Sits next to the other topic-centric views, before the catch-all Full Map.
         views = data["views"]
         idx = next((i for i, v in enumerate(views) if v["id"] == "everything"), len(views))
-        views.insert(idx, dict(DELIVERY_VIEW))
+        views.insert(idx, dict(spec))
         changes["views_added"] += 1
 
     return changes

@@ -1,0 +1,33 @@
+# Search queries for prior-art discovery, one per stepping stone.
+#   python import_prior_art.py --seeds prior_art_seeds.txt
+#
+# Format:  <stone_id>: <query>
+#
+# The query matters more than the ranking. A stone's LABEL is usually too vague
+# or too ambiguous to search with: "Event-based Sensors" matches satellite
+# rainfall papers, and "Energy-Harvest Peripherals" matches photosynthesis,
+# because light-harvesting complexes really do have a "peripheral antenna".
+# Naming the field explicitly fixes both. Edit these as the stones evolve —
+# this file is also the record of HOW each stone's literature was found.
+
+robotics:         humanoid robot motion control interaction
+tools:            open source software development ecosystem
+edgeai:           edge intelligence deep learning inference devices
+edge:             edge computing architecture offloading
+sustainable:      sustainable computing energy efficiency carbon
+llm:              large language models transformer pretraining
+sensors:          wireless sensor networks embedded sensing
+harvest:          energy harvesting wireless sensor networks
+lowpower:         ultra low power microcontroller circuit design
+intermittent:     intermittent computing checkpoint energy harvesting
+mesh:             wireless mesh networks routing protocol
+riscVEdge:        RISC-V embedded processor microcontroller architecture
+tinyLLMaccel:     neural network hardware accelerator quantized inference
+neuromorphicCore: neuromorphic hardware spiking neural network chip
+eventVision:      event camera dynamic vision sensor neuromorphic
+energyHarvest:    energy harvesting circuit ambient power management
+tinyLLMrt:        on-device language model inference quantization
+detMeshStack:     deterministic wireless time-sensitive networking latency
+fedLearning:      federated learning edge devices privacy
+neuroSDK:         spiking neural network compiler toolchain mapping
+multiBotRL:       multi-robot reinforcement learning coordination

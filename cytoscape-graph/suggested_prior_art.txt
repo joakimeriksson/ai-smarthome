@@ -1,0 +1,315 @@
+# Suggested PRIOR ART (state of the art) per stepping stone.
+# NOTHING has been written to data.json.
+#
+# Apply the lines you accept with:
+#   python import_prior_art.py --apply
+#
+# Ranked by citation count, which favours foundational work: an older
+# paper has had years to accumulate citations, a 2025 one has not.
+# Comment out (#) or delete any line that is not really prior art for
+# that stone — a keyword match is not the same as a foundational paper.
+
+## Humanoid Robotics   (query: 'humanoid robot motion control interaction')
+#      461 cites | 2003 | Tomomichi Sugihara, Yoshihiko Nakamura, H. Inoue
+#   Real-time humanoid motion generation through ZMP manipulation based on inverted pendulum control
+priorArt robotics pub-10-1109-robot-2002-1014740
+#      452 cites | 2011 | Myron Diftler, Frank Permenter, Brian Hargrave et al.
+#   Robonaut 2 - The first humanoid robot in space
+priorArt robotics pub-10-1109-icra-2011-5979830
+#      372 cites | 2007 | Elena García, María A. Jiménez, P. González de Santos et al. · IEEE Robotics & Automation Magazine
+#   The evolution of robotics research
+priorArt robotics pub-10-1109-mra-2007-339608
+#      289 cites | 2004 | Oussama Khatib, Luis Sentis, Jun-Won Park et al. · International Journal of Humanoid Robotics
+#   WHOLE-BODY DYNAMIC BEHAVIOR AND CONTROL OF HUMAN-LIKE ROBOTS
+priorArt robotics pub-10-1142-s0219843604000058
+#   (skipped: 14 missing a query term)
+
+## Open Source Tools and Tech   (query: 'open source software development ecosystem')
+#     4061 cites | 2013 | Alexandre Gramfort · Frontiers in Neuroscience
+#   MEG and EEG data analysis with MNE-Python
+# REJECTED by review (off-topic for this stone): priorArt tools pub-10-3389-fnins-2013-00267
+#      494 cites | 2020 | The SunPy Community, Will Barnes, Monica Bobra et al. · The Astrophysical Journal
+#   The SunPy Project: Open Source Development and Status of the Version 1.0 Core Package
+# REJECTED by review (off-topic for this stone): priorArt tools pub-10-3847-1538-4357-ab4f7a
+#      438 cites | 2008 | Ågerfalk, Fitzgerald · MIS Quarterly
+#   Outsourcing to an Unknown Workforce: Exploring Opensourcing as a Global Sourcing Strategy1
+priorArt tools pub-10-2307-25148845
+#      365 cites | 2013 | Hamish Cunningham, Valentin Tablan, Angus Roberts et al. · PLoS Computational Biology
+#   Getting More Out of Biomedical Documents with GATE's Full Lifecycle Open Source Text Analytics
+# REJECTED by review (off-topic for this stone): priorArt tools pub-10-1371-journal-pcbi-1002854
+#   (skipped: 12 missing a query term, 1 below the citation floor, 7 without a DOI)
+
+## AI on the Edge   (query: 'edge intelligence deep learning inference devices')
+#     1458 cites | 2020 | Xiaofei Wang, Yiwen Han, Victor C. M. Leung et al. · IEEE Communications Surveys & Tutorials
+#   Convergence of Edge Computing and Deep Learning: A Comprehensive Survey
+priorArt edgeai pub-10-1109-comst-2020-2970550
+#     1090 cites | 2020 | Shuiguang Deng, Hailiang Zhao, Weijia Fang et al. · IEEE Internet of Things Journal
+#   Edge Intelligence: The Confluence of Edge Computing and Artificial Intelligence
+priorArt edgeai pub-10-1109-jiot-2020-2984887
+#     1053 cites | 2019 | Xiaofei Wang, Yiwen Han, Chenyang Wang et al. · IEEE Network
+#   In-Edge AI: Intelligentizing Mobile Edge Computing, Caching and Communication by Federated Learning
+priorArt edgeai pub-10-1109-mnet-2019-1800286
+#      454 cites | 2020 | Yuanming Shi, Kai Yang, Tao Jiang et al. · IEEE Communications Surveys & Tutorials
+#   Communication-Efficient Edge AI: Algorithms and Systems
+priorArt edgeai pub-10-1109-comst-2020-3007787
+#   (skipped: 10 missing a query term)
+
+## Edge Computing   (query: 'edge computing architecture offloading')
+#     2988 cites | 2017 | Pavel Mach, Zdenek Becvar · IEEE Communications Surveys & Tutorials
+#   Mobile Edge Computing: A Survey on Architecture and Computation Offloading
+priorArt edge pub-10-1109-comst-2017-2682318
+#      866 cites | 2019 | Xiongwen Cheng, Feng Lyu, Wei Quan et al. · IEEE Journal on Selected Areas in Communications
+#   Space/Aerial-Assisted Computing Offloading for IoT Applications: A Learning-Based Approach
+priorArt edge pub-10-1109-jsac-2019-2906789
+#      835 cites | 2020 | Tie Qiu, Jiancheng Chi, Xiaobo Zhou et al. · IEEE Communications Surveys & Tutorials
+#   Edge Computing in Industrial Internet of Things: Architecture, Advances and Challenges
+priorArt edge pub-10-1109-comst-2020-3009103
+#      617 cites | 2019 | Ju Ren, Deyu Zhang, Shiwen He et al. · ACM Computing Surveys
+#   A Survey on End-Edge-Cloud Orchestrated Network Computing Paradigms
+priorArt edge pub-10-1145-3362031
+#   (skipped: 5 missing a query term, 1 without a DOI)
+
+## Sustainable World   (query: 'sustainable computing energy efficiency carbon')
+#      146 cites | 2018 | Sukhpal Singh Gill, Rajkumar Buyya · ACM Computing Surveys
+#   A Taxonomy and Future Directions for Sustainable Cloud Computing
+priorArt sustainable pub-10-1145-3241038
+#      102 cites | 2023 | Manideep Yenugula, Sushil Kumar Sahoo, Shankha Shubhra Goswami · Journal of Future Sustainability
+#   Cloud computing for sustainable development: An analysis of environmental, economic and social benefits
+priorArt sustainable pub-10-5267-j-jfs-2024-1-005
+#       98 cites | 2023 | Rajkumar Buyya, Shashikant Ilager, Patricia Arroba · Software Practice and Experience
+#   Energy‐efficiency and sustainability in new generation cloud computing: A vision and directions for integrated management of data centre resources and workloads
+priorArt sustainable pub-10-1002-spe-3248
+#       93 cites | 2024 | Daiju Ueda, Shannon L. Walston, Shohei Fujita et al. · Diagnostic and Interventional Imaging
+#   Climate change and artificial intelligence in healthcare: Review and recommendations towards a sustainable future
+# REJECTED by review (off-topic for this stone): priorArt sustainable pub-10-1016-j-diii-2024-06-002
+#   (skipped: 23 missing a query term, 1 below the citation floor)
+
+## Large Language Models   (query: 'large language models transformer pretraining')
+#     1676 cites | 2019 | Jiasen Lu, Dhruv Batra, Devi Parikh et al. · arXiv (Cornell University)
+#   ViLBERT: Pretraining Task-Agnostic Visiolinguistic Representations for Vision-and-Language Tasks
+priorArt llm pub-10-48550-arxiv-1908-02265
+#     1669 cites | 2020 | Xiaoqi Jiao, Yichun Yin, Lifeng Shang et al.
+#   TinyBERT: Distilling BERT for Natural Language Understanding
+priorArt llm pub-10-18653-v1-2020-findings-emnlp-372
+#      847 cites | 2021 | Laila Rasmy, Yang Xiang, Ziqian Xie et al. · npj Digital Medicine
+#   Med-BERT: pretrained contextualized embeddings on large-scale structured electronic health records for disease prediction
+# REJECTED by review (off-topic for this stone): priorArt llm pub-10-1038-s41746-021-00455-y
+#      323 cites | 2023 | Katikapalli Subramanyam Kalyan · Natural Language Processing Journal
+#   A survey of GPT-3 family large language models including ChatGPT and GPT-4
+priorArt llm pub-10-1016-j-nlp-2023-100048
+#   (skipped: 30 missing a query term, 1 below the citation floor, 1 without a DOI)
+
+## Smart Sensors   (query: 'wireless sensor networks embedded sensing')
+#     1824 cites | 2019 | Marco Di Renzo, Mérouane Debbah, Dinh-Thuy Phan-Huy et al. · EURASIP Journal on Wireless Communications and Networking
+#   Smart radio environments empowered by reconfigurable AI meta-surfaces: an idea whose time has come
+# REJECTED by review (off-topic for this stone): priorArt sensors pub-10-1186-s13638-019-1438-9
+#     1096 cites | 2004 | Ning Xu, Sumit Rangwala, Krishna Chintalapudi et al.
+#   A wireless sensor network For structural monitoring
+priorArt sensors pub-10-1145-1031495-1031498
+#      706 cites | 2011 | Hossein Mamaghanian, N. Khaled, David Atienza et al. · IEEE Transactions on Biomedical Engineering
+#   Compressed Sensing for Real-Time Energy-Efficient ECG Compression on Wireless Body Sensor Nodes
+priorArt sensors pub-10-1109-tbme-2011-2156795
+#      599 cites | 2005 | unknown authors · Choice Reviews Online
+#   Handbook of sensor networks: compact wireless and wired sensing systems
+priorArt sensors pub-10-5860-choice-42-3446
+#   (skipped: 14 missing a query term, 1 without a DOI, 1 not research articles)
+
+## Energy Harvesting   (query: 'energy harvesting wireless sensor networks')
+#     1213 cites | 2015 | Faisal Karim Shaikh, Sherali Zeadally · Renewable and Sustainable Energy Reviews
+#   Energy harvesting in wireless sensor networks: A comprehensive review
+priorArt harvest pub-10-1016-j-rser-2015-11-010
+#      622 cites | 2010 | Rudd Vullers, R. van Schaijk, Hubregt J. Visser et al. · IEEE Solid-State Circuits Magazine
+#   Energy Harvesting for Autonomous Wireless Sensor Networks
+priorArt harvest pub-10-1109-mssc-2010-936667
+#      596 cites | 2013 | Hubregt J. Visser, Ruud Vullers · Proceedings of the IEEE
+#   RF Energy Harvesting and Transport for Wireless Sensor Network Applications: Principles and Requirements
+priorArt harvest pub-10-1109-jproc-2013-2250891
+#      435 cites | 2009 | Winston K.G. Seah, Zhi Ang Eu, Hwee-Pink Tan
+#   Wireless sensor networks powered by ambient energy harvesting (WSN-HEAP) - Survey and challenges
+priorArt harvest pub-10-1109-wirelessvitae-2009-5172411
+#   (skipped: nothing filtered)
+
+## Ultra-Low Power Computing   (query: 'ultra low power microcontroller circuit design')
+#      180 cites | 2016 | Anshuman Das, Akshat Wahi, Ishan Kothari et al. · Scientific Reports
+#   Ultra-portable, wireless smartphone spectrometer for rapid, non-destructive testing of fruit ripeness
+# REJECTED by review (a spectrometer, not low-power computing): priorArt lowpower pub-10-1038-srep32504
+#      128 cites | 2018 | Himanshu Sharma, Ahteshamul Haque, Zainul Abdin Jaffery · Journal of Renewable and Sustainable Energy
+#   Solar energy harvesting wireless sensor network nodes: A survey
+# REJECTED by review (off-topic for this stone): priorArt lowpower pub-10-1063-1-5006619
+#       68 cites | 2021 | Jianbiao Xiao, Jiahao Liu, Huanqi Yang et al. · IEEE Journal of Biomedical and Health Informatics
+#   ULECGNet: An Ultra-Lightweight End-to-End ECG Classification Neural Network
+# REJECTED by review (off-topic for this stone): priorArt lowpower pub-10-1109-jbhi-2021-3090421
+#       46 cites | 2014 | Michael Lueders, Bjoern Eversmann, Johannes Gerber et al. · IEEE Transactions on Very Large Scale Integration (VLSI) Systems
+#   Architectural and Circuit Design Techniques for Power Management of Ultra-Low-Power MCU Systems
+priorArt lowpower pub-10-1109-tvlsi-2013-2290083
+#   (skipped: 27 missing a query term, 3 below the citation floor)
+
+## Intermittent Computing   (query: 'intermittent computing checkpoint energy harvesting')
+#      256 cites | 2017 | Kiwan Maeng, Alexei Colin, Brandon Lucia · Proceedings of the ACM on Programming Languages
+#   Alpaca: intermittent execution without checkpoints
+priorArt intermittent pub-10-1145-3133920
+#       89 cites | 2020 | Vito Kortbeek, Kasım Sinan Yıldırım, Abu Bakar et al.
+#   Time-sensitive Intermittent Computing Meets Legacy Software
+priorArt intermittent pub-10-1145-3373376-3378476
+#       87 cites | 2020 | Jasper de Winkel, Vito Kortbeek, Josiah Hester et al. · Proceedings of the ACM on Interactive Mobile Wearable and Ubiquitous Technologies
+#   Battery-Free Game Boy
+priorArt intermittent pub-10-1145-3411839
+#       47 cites | 2016 | Alexei Colin, Brandon Lucia · ACM SIGPLAN Notices
+#   Chain: tasks and channels for reliable intermittent programs
+priorArt intermittent pub-10-1145-3022671-2983995
+#   (skipped: 13 missing a query term, 17 below the citation floor)
+
+## Mesh Networking   (query: 'wireless mesh networks routing protocol')
+#     2467 cites | 2004 | Richard Draves, Jitendra Padhye, Brian Zill
+#   Routing in multi-radio, multi-hop wireless mesh networks
+priorArt mesh pub-10-1145-1023720-1023732
+#     2276 cites | 2008 | S. Katti, Hariharan Rahul, Wenjun Hu et al. · IEEE/ACM Transactions on Networking
+#   XORs in the Air: Practical Wireless Network Coding
+priorArt mesh pub-10-1109-tnet-2008-923722
+#     1059 cites | 2004 | Ashish Raniwala, Kartik Gopalan, Tzi‐cker Chiueh · ACM SIGMOBILE Mobile Computing and Communications Review
+#   Centralized channel assignment and routing algorithms for multi-channel wireless mesh networks
+priorArt mesh pub-10-1145-997122-997130
+#      753 cites | 2005 | John Bicket, Daniel Aguayo, Sanjit Biswas et al.
+#   Architecture and evaluation of an unplanned 802.11b mesh network
+priorArt mesh pub-10-1145-1080829-1080833
+#   (skipped: 4 missing a query term, 2 below the citation floor, 1 without a DOI)
+
+## RISC-V Edge MCUs   (query: 'RISC-V embedded processor microcontroller architecture')
+#       52 cites | 2021 | Angelo Garofalo, Giuseppe Tagliavini, Francesco Conti et al. · IEEE Transactions on Emerging Topics in Computing
+#   XpulpNN: Enabling Energy Efficient and Flexible Inference of Quantized Neural Networks on RISC-V Based IoT End Nodes
+priorArt riscVEdge pub-10-1109-tetc-2021-3072337
+#       44 cites | 2020 | M. Johns, Tom J. Kázmierski
+#   A Minimal RISC-V Vector Processor for Embedded Systems
+priorArt riscVEdge pub-10-1109-fdl50818-2020-9232940
+#       39 cites | 2020 | Gianmarco Ottavi, Angelo Garofalo, Giuseppe Tagliavini et al.
+#   A Mixed-Precision RISC-V Processor for Extreme-Edge DNN Inference
+priorArt riscVEdge pub-10-1109-isvlsi49217-2020-000-5
+#       34 cites | 2021 | Andreas Bahr, Matthias Schneider, Maria Francis et al. · Biosensors
+#   Epileptic Seizure Detection on an Ultra-Low-Power Embedded RISC-V Processor Using a Convolutional Neural Network
+# REJECTED by review (off-topic for this stone): priorArt riscVEdge pub-10-3390-bios11070203
+#   (skipped: 28 missing a query term, 7 below the citation floor)
+
+## uLLM HW Accelerators   (query: 'neural network hardware accelerator quantized inference')
+#      765 cites | 2018 | Raghuraman Krishnamoorthi · arXiv (Cornell University)
+#   Quantizing deep convolutional networks for efficient inference: A whitepaper
+priorArt tinyLLMaccel pub-10-48550-arxiv-1806-08342
+#       98 cites | 2018 | Weizhe Hua, Yuan Zhou, Christopher De et al. · arXiv (Cornell University)
+#   Channel Gating Neural Networks
+priorArt tinyLLMaccel pub-10-48550-arxiv-1805-12549
+#       89 cites | 2022 | Mengshu Sun, Zhengang Li, Alec Lu et al.
+#   FILM-QNN: Efficient FPGA Acceleration of Deep Neural Networks with Intra-Layer, Mixed-Precision Quantization
+priorArt tinyLLMaccel pub-10-1145-3490422-3502364
+#       88 cites | 2019 | Sayeh Sharify, Alberto Delmás Lascorz, Mostafa Mahmoud et al.
+#   Laconic deep learning inference acceleration
+priorArt tinyLLMaccel pub-10-1145-3307650-3322255
+#   (skipped: 26 missing a query term, 2 without a DOI)
+
+## Neuromorphic Cores   (query: 'neuromorphic hardware spiking neural network chip')
+#      638 cites | 2021 | Mike Davies, Andreas Wild, Garrick Orchard et al. · Proceedings of the IEEE
+#   Advancing Neuromorphic Computing With Loihi: A Survey of Results and Outlook
+priorArt neuromorphicCore pub-10-1109-jproc-2021-3067593
+#      343 cites | 2020 | Jia‐Qin Yang, Ruopeng Wang, Yi Ren et al. · Advanced Materials
+#   Neuromorphic Engineering: From Biological to Spike‐Based Hardware Nervous Systems
+priorArt neuromorphicCore pub-10-1002-adma-202003610
+#      217 cites | 2016 | Gopalakrishnan Srinivasan, Abhronil Sengupta, Kaushik Roy · Scientific Reports
+#   Magnetic Tunnel Junction Based Long-Term Short-Term Stochastic Synapse for a Spiking Neural Network with On-Chip STDP Learning
+priorArt neuromorphicCore pub-10-1038-srep29545
+#      196 cites | 2020 | Lei Deng, Guanrui Wang, Guoqi Li et al. · IEEE Journal of Solid-State Circuits
+#   Tianjic: A Unified and Scalable Chip Bridging Spike-Based and Continuous Neural Computation
+priorArt neuromorphicCore pub-10-1109-jssc-2020-2970709
+#   (skipped: 17 missing a query term, 1 without a DOI)
+
+## Event-based Sensors   (query: 'event camera dynamic vision sensor neuromorphic')
+#      515 cites | 2017 | Hongmin Li, Hanchao Liu, Xiangyang Ji et al. · Frontiers in Neuroscience
+#   CIFAR10-DVS: An Event-Stream Dataset for Object Classification
+priorArt eventVision pub-10-3389-fnins-2017-00309
+#      460 cites | 2014 | C. Posch, Teresa Serrano‐Gotarredona, B. Linares-Barranco et al. · Proceedings of the IEEE
+#   Retinomorphic Event-Based Vision Sensors: Bioinspired Cameras With Spiking Output
+priorArt eventVision pub-10-1109-jproc-2014-2346153
+#      299 cites | 2020 | Guang Chen, Hu Cao, Jörg Conradt et al. · IEEE Signal Processing Magazine
+#   Event-Based Neuromorphic Vision for Autonomous Driving: A Paradigm Shift for Bio-Inspired Visual Sensing and Perception
+priorArt eventVision pub-10-1109-msp-2020-2985815
+#      167 cites | 2016 | Valentina Vasco, Arren Glover, Chiara Bartolozzi
+#   Fast event-based Harris corner detection exploiting the advantages of event-driven cameras
+priorArt eventVision pub-10-1109-iros-2016-7759610
+#   (skipped: 7 missing a query term)
+
+## Energy-Harvest Peripherals   (query: 'energy harvesting circuit ambient power management')
+#      415 cites | 2017 | Shashank Priya, Hyun‐Cheol Song, Yuan Zhou et al. · Energy Harvesting and Systems
+#   A Review on Piezoelectric Energy Harvesting: Materials, Methods, and Circuits
+priorArt energyHarvest pub-10-1515-ehs-2016-0028
+#      411 cites | 2010 | Yen Kheng Tan, Sanjib Kumar Panda · IEEE Transactions on Industrial Electronics
+#   Energy Harvesting From Hybrid Indoor Ambient Light and Thermal Energy Sources for Enhanced Performance of Wireless Sensor Nodes
+priorArt energyHarvest pub-10-1109-tie-2010-2102321
+#      223 cites | 2021 | Yu Song, Daniel Mukasa, Haixia Zhang et al. · Accounts of Materials Research
+#   Self-Powered Wearable Biosensors
+priorArt energyHarvest pub-10-1021-accountsmr-1c00002
+#      208 cites | 2017 | Xiaofeng Wang, Simiao Niu, Yi Fang et al. · ACS Nano
+#   Harvesting Ambient Vibration Energy over a Wide Frequency Range for Self-Powered Electronics
+priorArt energyHarvest pub-10-1021-acsnano-6b07633
+#   (skipped: 9 missing a query term, 1 below the citation floor)
+
+## uLLM Runtime   (query: 'on-device language model inference quantization')
+#      186 cites | 2025 | Ji Lin, Jiaming Tang, Haotian Tang et al. · GetMobile Mobile Computing and Communications
+#   AWQ: Activation-aware Weight Quantization for On-Device LLM Compression and Acceleration
+priorArt tinyLLMrt pub-10-1145-3714983-3714987
+#      142 cites | 2024 | Mingjin Zhang, Xiaoming Shen, Jiannong Cao et al. · IEEE Internet of Things Journal
+#   EdgeShard: Efficient LLM Inference via Collaborative Edge Computing
+priorArt tinyLLMrt pub-10-1109-jiot-2024-3524255
+#       22 cites | 2025 | Erik Johannes Husom, Arda Göknil, Merve Astekin et al. · ACM Transactions on Internet of Things
+#   Sustainable LLM Inference for Edge AI: Evaluating Quantized LLMs for Energy Efficiency, Output Accuracy, and Inference Latency
+priorArt tinyLLMrt pub-10-1145-3767742
+#       10 cites | 2024 | Zhaode Wang, Jingbang Yang, Xinyu Qian et al.
+#   MNN-LLM: A Generic Inference Engine for Fast Large Language Model Deployment on Mobile Devices
+priorArt tinyLLMrt pub-10-1145-3700410-3702126
+#   (skipped: 34 missing a query term, 2 below the citation floor)
+
+## Deterministic Mesh Stack   (query: 'deterministic wireless time-sensitive networking latency')
+#      689 cites | 2018 | Ahmed Nasrallah, Akhilesh S. Thyagaturu, Ziyad Alharbi et al. · IEEE Communications Surveys & Tutorials
+#   Ultra-Low Latency (ULL) Networks: The IEEE TSN and IETF DetNet Standards and Related 5G ULL Research
+priorArt detMeshStack pub-10-1109-comst-2018-2869350
+#       94 cites | 2020 | Ana Larrañaga, M. Carmen Lucas-Estañ, Imanol Martínez et al.
+#   Analysis of 5G-TSN Integration to Support Industry 4.0
+priorArt detMeshStack pub-10-1109-etfa46521-2020-9212141
+#       46 cites | 2020 | Renato Abreu, Guillermo Pocovi, Thomas Jacobsen et al. · IEEE Access
+#   Scheduling Enhancements and Performance Evaluation of Downlink 5G Time-Sensitive Communications
+priorArt detMeshStack pub-10-1109-access-2020-3008598
+#       39 cites | 2021 | Yoohwa Kang, Sunwoo Lee, Songi Gwak et al. · Energies
+#   Time-Sensitive Networking Technologies for Industrial Automation in Wireless Communication Systems
+priorArt detMeshStack pub-10-3390-en14154497
+#   (skipped: 24 missing a query term, 5 below the citation floor)
+
+## Federated Edge Learning   (query: 'federated learning edge devices privacy')
+#     2455 cites | 2020 | Wei Yang Bryan Lim, Nguyen Cong Luong, Dinh Thai Hoang et al. · IEEE Communications Surveys & Tutorials
+#   Federated Learning in Mobile Edge Networks: A Comprehensive Survey
+priorArt fedLearning pub-10-1109-comst-2020-2986024
+#     1916 cites | 2018 | Yue Zhao, Meng Li, Liangzhen Lai et al. · arXiv (Cornell University)
+#   Federated Learning with Non-IID Data
+priorArt fedLearning pub-10-48550-arxiv-1806-00582
+#     1045 cites | 2020 | Kai Yang, Tao Jiang, Yuanming Shi et al. · IEEE Transactions on Wireless Communications
+#   Federated Learning via Over-the-Air Computation
+priorArt fedLearning pub-10-1109-twc-2019-2961673
+#      732 cites | 2021 | Ahmed Imteaj, Urmish Thakker, Shiqiang Wang et al. · IEEE Internet of Things Journal
+#   A Survey on Federated Learning for Resource-Constrained IoT Devices
+priorArt fedLearning pub-10-1109-jiot-2021-3095077
+#   (skipped: 9 missing a query term)
+
+## Neuromorphic SDK   (query: 'spiking neural network compiler toolchain mapping')
+#   (no candidates — 1 below the citation floor)
+#   Try a better query:  python import_prior_art.py --stone neuroSDK --query "..."
+
+## Multi-bot RL Framework   (query: 'multi-robot reinforcement learning coordination')
+#      410 cites | 2019 | Guillaume Sartoretti, Justin Kerr, Yunfei Shi et al. · IEEE Robotics and Automation Letters
+#   PRIMAL: Pathfinding via Reinforcement and Imitation Multi-Agent Learning
+priorArt multiBotRL pub-10-1109-lra-2019-2903261
+#      197 cites | 2007 | Laëtitia Matignon, Guillaume J. Laurent, Nadine Le Fort-Piat
+#   Hysteretic Q-learning : an algorithm for Decentralized Reinforcement Learning in Cooperative Multi-Agent Teams
+priorArt multiBotRL pub-10-1109-iros-2007-4399095
+#      170 cites | 2021 | Mehul Damani, Zhiyao Luo, Emerson Wenzel et al. · IEEE Robotics and Automation Letters
+#   PRIMAL$_2$: Pathfinding Via Reinforcement and Imitation Multi-Agent Learning - Lifelong
+priorArt multiBotRL pub-10-1109-lra-2021-3062803
+#       68 cites | 2021 | Kaiqing Zhang, Zhuoran Yang, Tamer Başar · Frontiers of Information Technology & Electronic Engineering
+#   Decentralized multi-agent reinforcement learning with networked agents: recent advances
+priorArt multiBotRL pub-10-1631-fitee-1900661
+#   (skipped: 18 missing a query term, 6 below the citation floor, 1 without a DOI)
+

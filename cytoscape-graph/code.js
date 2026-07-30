@@ -588,6 +588,10 @@ function showDetailPanel(node) {
   if (d.email) metaHtml += metaRow('Email', d.email);
   if (d.year) metaHtml += metaRow('Year', d.year);
   if (d.venue) metaHtml += metaRow('Venue', d.venue);
+  // External prior art has no researcher nodes to hang authorship off, so the
+  // author list and citation count live on the publication node itself.
+  if (d.authors) metaHtml += metaRow('Authors', d.authors);
+  if (d.citations != null) metaHtml += metaRow('Citations', d.citations);
   if (d.funder) metaHtml += metaRow('Funder', d.funder);
   if (d.startYear) metaHtml += metaRow('Period', d.startYear + ' - ' + (d.endYear || ''));
 
@@ -611,30 +615,37 @@ function showDetailPanel(node) {
     if (e.data.source === nodeId) {
       var targetNode = graphData.nodes.find(function(n) { return n.data.id === e.data.target; });
       if (targetNode) {
-        connList.push({ type: e.data.type, label: targetNode.data.label.replace(/\n/g, ' '), id: targetNode.data.id, nodeType: targetNode.data.type });
+        connList.push({ type: e.data.type, label: targetNode.data.label.replace(/\n/g, ' '), id: targetNode.data.id, nodeType: targetNode.data.type, year: targetNode.data.year });
       }
     }
     if (e.data.target === nodeId) {
       var sourceNode = graphData.nodes.find(function(n) { return n.data.id === e.data.source; });
       if (sourceNode) {
-        connList.push({ type: e.data.type, label: sourceNode.data.label.replace(/\n/g, ' '), id: sourceNode.data.id, nodeType: sourceNode.data.type });
+        connList.push({ type: e.data.type, label: sourceNode.data.label.replace(/\n/g, ' '), id: sourceNode.data.id, nodeType: sourceNode.data.type, year: sourceNode.data.year });
       }
     }
   });
 
-  // Group connections by edge type
+  // Group connections by edge type (raw type, so ordering/sorting can key off it).
   var grouped = {};
   connList.forEach(function(c) {
-    var key = formatEdgeType(c.type);
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(c);
+    if (!grouped[c.type]) grouped[c.type] = [];
+    grouped[c.type].push(c);
   });
 
   var connHtml = '';
-  Object.keys(grouped).forEach(function(key) {
-    connHtml += '<div class="conn-group"><strong>' + key + ':</strong>';
-    grouped[key].forEach(function(c) {
-      connHtml += '<span class="conn-tag type-' + c.nodeType + '" data-id="' + c.id + '">' + escapeHtml(c.label) + '</span>';
+  orderedEdgeTypes(Object.keys(grouped)).forEach(function(type) {
+    var items = grouped[type];
+    // Publication-backed groups read as a timeline: oldest first, year shown.
+    // Prior art is only legible in chronological order — it IS the timeline.
+    if (YEAR_SORTED_EDGES.indexOf(type) >= 0) {
+      items = items.slice().sort(function(a, b) { return (a.year || 0) - (b.year || 0); });
+    }
+    connHtml += '<div class="conn-group"><strong>' + escapeHtml(edgeTypeLabel(type)) + ':</strong>';
+    items.forEach(function(c) {
+      var text = c.label + (YEAR_SORTED_EDGES.indexOf(type) >= 0 && c.year ? ' · ' + c.year : '');
+      connHtml += '<span class="conn-tag type-' + c.nodeType + ' edge-' + type +
+                  '" data-id="' + c.id + '">' + escapeHtml(text) + '</span>';
     });
     connHtml += '</div>';
   });
@@ -666,6 +677,31 @@ document.getElementById('close-detail-btn').addEventListener('click', function()
 
 function formatEdgeType(type) {
   return type.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+// Prefer the ontology's label so edge naming lives in one place (PLAN §2.5);
+// fall back to prettifying the raw type for anything not yet in the ontology.
+function edgeTypeLabel(type) {
+  var e = ontology && ontology.edgeTypes && ontology.edgeTypes[type];
+  return (e && e.label) || formatEdgeType(type);
+}
+
+// Publication-backed relations, shown oldest-first with the year.
+var YEAR_SORTED_EDGES = ['priorArt', 'evidences', 'authored'];
+
+// Detail-panel group order: the stone's story, baseline before progress before
+// people. Anything unlisted keeps its natural order at the end.
+var EDGE_GROUP_ORDER = ['journey', 'priorArt', 'evidences', 'advances', 'works_on',
+                        'enabledBy', 'authored', 'member_of', 'leads', 'participates',
+                        'funds', 'supports', 'related_to'];
+
+function orderedEdgeTypes(types) {
+  return types.slice().sort(function(a, b) {
+    var ia = EDGE_GROUP_ORDER.indexOf(a), ib = EDGE_GROUP_ORDER.indexOf(b);
+    if (ia < 0) ia = EDGE_GROUP_ORDER.length;
+    if (ib < 0) ib = EDGE_GROUP_ORDER.length;
+    return ia - ib;
+  });
 }
 
 function escapeHtml(str) {

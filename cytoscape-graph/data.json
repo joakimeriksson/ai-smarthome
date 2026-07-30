@@ -78,7 +78,8 @@
       ],
       "edgeTypes": [
         "authored",
-        "evidences"
+        "evidences",
+        "priorArt"
       ],
       "layout": "cose"
     },
@@ -94,6 +95,21 @@
         "journey",
         "advances",
         "evidences"
+      ],
+      "layout": "cose",
+      "dropIsolated": true
+    },
+    {
+      "id": "state-of-the-art",
+      "label": "State of the Art",
+      "nodeTypes": [
+        "topic",
+        "publication"
+      ],
+      "edgeTypes": [
+        "priorArt",
+        "evidences",
+        "journey"
       ],
       "layout": "cose",
       "dropIsolated": true
@@ -7718,6 +7734,1196 @@
         "updatedBy": "import_orcid.py",
         "updatedAt": "2026-07-22T18:48:20+00:00"
       }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-robot-2002-1014740",
+        "type": "publication",
+        "label": "Real-time humanoid motion...",
+        "description": "Real-time humanoid motion generation through ZMP manipulation based on inverted pendulum control",
+        "year": 2003,
+        "venue": null,
+        "doi": "10.1109/robot.2002.1014740",
+        "citations": 461,
+        "authors": "Tomomichi Sugihara, Yoshihiko Nakamura, H. Inoue",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/robot.2002.1014740",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-icra-2011-5979830",
+        "type": "publication",
+        "label": "Robonaut 2 - The first...",
+        "description": "Robonaut 2 - The first humanoid robot in space",
+        "year": 2011,
+        "venue": null,
+        "doi": "10.1109/icra.2011.5979830",
+        "citations": 452,
+        "authors": "Myron Diftler, Frank Permenter, Brian Hargrave et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/icra.2011.5979830",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-mra-2007-339608",
+        "type": "publication",
+        "label": "The evolution of robotics...",
+        "description": "The evolution of robotics research",
+        "year": 2007,
+        "venue": "IEEE Robotics & Automation Magazine",
+        "doi": "10.1109/mra.2007.339608",
+        "citations": 372,
+        "authors": "Elena García, María A. Jiménez, P. González de Santos et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/mra.2007.339608",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1142-s0219843604000058",
+        "type": "publication",
+        "label": "WHOLE-BODY DYNAMIC BEHAVIOR...",
+        "description": "WHOLE-BODY DYNAMIC BEHAVIOR AND CONTROL OF HUMAN-LIKE ROBOTS",
+        "year": 2004,
+        "venue": "International Journal of Humanoid Robotics",
+        "doi": "10.1142/s0219843604000058",
+        "citations": 289,
+        "authors": "Oussama Khatib, Luis Sentis, Jun-Won Park et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1142/s0219843604000058",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-2307-25148845",
+        "type": "publication",
+        "label": "Outsourcing to an Unknown...",
+        "description": "Outsourcing to an Unknown Workforce: Exploring Opensourcing as a Global Sourcing Strategy1",
+        "year": 2008,
+        "venue": "MIS Quarterly",
+        "doi": "10.2307/25148845",
+        "citations": 438,
+        "authors": "Ågerfalk, Fitzgerald",
+        "sensitivity": "public",
+        "source": "openalex:10.2307/25148845",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-comst-2020-2970550",
+        "type": "publication",
+        "label": "Convergence of Edge Computing...",
+        "description": "Convergence of Edge Computing and Deep Learning: A Comprehensive Survey",
+        "year": 2020,
+        "venue": "IEEE Communications Surveys & Tutorials",
+        "doi": "10.1109/comst.2020.2970550",
+        "citations": 1458,
+        "authors": "Xiaofei Wang, Yiwen Han, Victor C. M. Leung et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/comst.2020.2970550",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jiot-2020-2984887",
+        "type": "publication",
+        "label": "Edge Intelligence: The...",
+        "description": "Edge Intelligence: The Confluence of Edge Computing and Artificial Intelligence",
+        "year": 2020,
+        "venue": "IEEE Internet of Things Journal",
+        "doi": "10.1109/jiot.2020.2984887",
+        "citations": 1090,
+        "authors": "Shuiguang Deng, Hailiang Zhao, Weijia Fang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jiot.2020.2984887",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-mnet-2019-1800286",
+        "type": "publication",
+        "label": "In-Edge AI: Intelligentizing...",
+        "description": "In-Edge AI: Intelligentizing Mobile Edge Computing, Caching and Communication by Federated Learning",
+        "year": 2019,
+        "venue": "IEEE Network",
+        "doi": "10.1109/mnet.2019.1800286",
+        "citations": 1053,
+        "authors": "Xiaofei Wang, Yiwen Han, Chenyang Wang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/mnet.2019.1800286",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-comst-2020-3007787",
+        "type": "publication",
+        "label": "Communication-Efficient Edge...",
+        "description": "Communication-Efficient Edge AI: Algorithms and Systems",
+        "year": 2020,
+        "venue": "IEEE Communications Surveys & Tutorials",
+        "doi": "10.1109/comst.2020.3007787",
+        "citations": 454,
+        "authors": "Yuanming Shi, Kai Yang, Tao Jiang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/comst.2020.3007787",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-comst-2017-2682318",
+        "type": "publication",
+        "label": "Mobile Edge Computing: A...",
+        "description": "Mobile Edge Computing: A Survey on Architecture and Computation Offloading",
+        "year": 2017,
+        "venue": "IEEE Communications Surveys & Tutorials",
+        "doi": "10.1109/comst.2017.2682318",
+        "citations": 2988,
+        "authors": "Pavel Mach, Zdenek Becvar",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/comst.2017.2682318",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jsac-2019-2906789",
+        "type": "publication",
+        "label": "Space/Aerial-Assisted...",
+        "description": "Space/Aerial-Assisted Computing Offloading for IoT Applications: A Learning-Based Approach",
+        "year": 2019,
+        "venue": "IEEE Journal on Selected Areas in Communications",
+        "doi": "10.1109/jsac.2019.2906789",
+        "citations": 866,
+        "authors": "Xiongwen Cheng, Feng Lyu, Wei Quan et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jsac.2019.2906789",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-comst-2020-3009103",
+        "type": "publication",
+        "label": "Edge Computing in Industrial...",
+        "description": "Edge Computing in Industrial Internet of Things: Architecture, Advances and Challenges",
+        "year": 2020,
+        "venue": "IEEE Communications Surveys & Tutorials",
+        "doi": "10.1109/comst.2020.3009103",
+        "citations": 835,
+        "authors": "Tie Qiu, Jiancheng Chi, Xiaobo Zhou et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/comst.2020.3009103",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3362031",
+        "type": "publication",
+        "label": "A Survey on End-Edge-Cloud...",
+        "description": "A Survey on End-Edge-Cloud Orchestrated Network Computing Paradigms",
+        "year": 2019,
+        "venue": "ACM Computing Surveys",
+        "doi": "10.1145/3362031",
+        "citations": 617,
+        "authors": "Ju Ren, Deyu Zhang, Shiwen He et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3362031",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3241038",
+        "type": "publication",
+        "label": "A Taxonomy and Future...",
+        "description": "A Taxonomy and Future Directions for Sustainable Cloud Computing",
+        "year": 2018,
+        "venue": "ACM Computing Surveys",
+        "doi": "10.1145/3241038",
+        "citations": 146,
+        "authors": "Sukhpal Singh Gill, Rajkumar Buyya",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3241038",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-5267-j-jfs-2024-1-005",
+        "type": "publication",
+        "label": "Cloud computing for...",
+        "description": "Cloud computing for sustainable development: An analysis of environmental, economic and social benefits",
+        "year": 2023,
+        "venue": "Journal of Future Sustainability",
+        "doi": "10.5267/j.jfs.2024.1.005",
+        "citations": 102,
+        "authors": "Manideep Yenugula, Sushil Kumar Sahoo, Shankha Shubhra Goswami",
+        "sensitivity": "public",
+        "source": "openalex:10.5267/j.jfs.2024.1.005",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1002-spe-3248",
+        "type": "publication",
+        "label": "Energy‐efficiency and...",
+        "description": "Energy‐efficiency and sustainability in new generation cloud computing: A vision and directions for integrated management of data centre resources and workloads",
+        "year": 2023,
+        "venue": "Software Practice and Experience",
+        "doi": "10.1002/spe.3248",
+        "citations": 98,
+        "authors": "Rajkumar Buyya, Shashikant Ilager, Patricia Arroba",
+        "sensitivity": "public",
+        "source": "openalex:10.1002/spe.3248",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-48550-arxiv-1908-02265",
+        "type": "publication",
+        "label": "ViLBERT: Pretraining...",
+        "description": "ViLBERT: Pretraining Task-Agnostic Visiolinguistic Representations for Vision-and-Language Tasks",
+        "year": 2019,
+        "venue": "arXiv (Cornell University)",
+        "doi": "10.48550/arxiv.1908.02265",
+        "citations": 1676,
+        "authors": "Jiasen Lu, Dhruv Batra, Devi Parikh et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.48550/arxiv.1908.02265",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-18653-v1-2020-findings-emnlp-372",
+        "type": "publication",
+        "label": "TinyBERT: Distilling BERT for...",
+        "description": "TinyBERT: Distilling BERT for Natural Language Understanding",
+        "year": 2020,
+        "venue": null,
+        "doi": "10.18653/v1/2020.findings-emnlp.372",
+        "citations": 1669,
+        "authors": "Xiaoqi Jiao, Yichun Yin, Lifeng Shang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.18653/v1/2020.findings-emnlp.372",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1016-j-nlp-2023-100048",
+        "type": "publication",
+        "label": "A survey of GPT-3 family large...",
+        "description": "A survey of GPT-3 family large language models including ChatGPT and GPT-4",
+        "year": 2023,
+        "venue": "Natural Language Processing Journal",
+        "doi": "10.1016/j.nlp.2023.100048",
+        "citations": 323,
+        "authors": "Katikapalli Subramanyam Kalyan",
+        "sensitivity": "public",
+        "source": "openalex:10.1016/j.nlp.2023.100048",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-1031495-1031498",
+        "type": "publication",
+        "label": "A wireless sensor network For...",
+        "description": "A wireless sensor network For structural monitoring",
+        "year": 2004,
+        "venue": null,
+        "doi": "10.1145/1031495.1031498",
+        "citations": 1096,
+        "authors": "Ning Xu, Sumit Rangwala, Krishna Chintalapudi et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/1031495.1031498",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-tbme-2011-2156795",
+        "type": "publication",
+        "label": "Compressed Sensing for...",
+        "description": "Compressed Sensing for Real-Time Energy-Efficient ECG Compression on Wireless Body Sensor Nodes",
+        "year": 2011,
+        "venue": "IEEE Transactions on Biomedical Engineering",
+        "doi": "10.1109/tbme.2011.2156795",
+        "citations": 706,
+        "authors": "Hossein Mamaghanian, N. Khaled, David Atienza et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/tbme.2011.2156795",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-5860-choice-42-3446",
+        "type": "publication",
+        "label": "Handbook of sensor networks:...",
+        "description": "Handbook of sensor networks: compact wireless and wired sensing systems",
+        "year": 2005,
+        "venue": "Choice Reviews Online",
+        "doi": "10.5860/choice.42-3446",
+        "citations": 599,
+        "authors": null,
+        "sensitivity": "public",
+        "source": "openalex:10.5860/choice.42-3446",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1016-j-rser-2015-11-010",
+        "type": "publication",
+        "label": "Energy harvesting in wireless...",
+        "description": "Energy harvesting in wireless sensor networks: A comprehensive review",
+        "year": 2015,
+        "venue": "Renewable and Sustainable Energy Reviews",
+        "doi": "10.1016/j.rser.2015.11.010",
+        "citations": 1213,
+        "authors": "Faisal Karim Shaikh, Sherali Zeadally",
+        "sensitivity": "public",
+        "source": "openalex:10.1016/j.rser.2015.11.010",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-mssc-2010-936667",
+        "type": "publication",
+        "label": "Energy Harvesting for...",
+        "description": "Energy Harvesting for Autonomous Wireless Sensor Networks",
+        "year": 2010,
+        "venue": "IEEE Solid-State Circuits Magazine",
+        "doi": "10.1109/mssc.2010.936667",
+        "citations": 622,
+        "authors": "Rudd Vullers, R. van Schaijk, Hubregt J. Visser et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/mssc.2010.936667",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jproc-2013-2250891",
+        "type": "publication",
+        "label": "RF Energy Harvesting and...",
+        "description": "RF Energy Harvesting and Transport for Wireless Sensor Network Applications: Principles and Requirements",
+        "year": 2013,
+        "venue": "Proceedings of the IEEE",
+        "doi": "10.1109/jproc.2013.2250891",
+        "citations": 596,
+        "authors": "Hubregt J. Visser, Ruud Vullers",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jproc.2013.2250891",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-wirelessvitae-2009-5172411",
+        "type": "publication",
+        "label": "Wireless sensor networks...",
+        "description": "Wireless sensor networks powered by ambient energy harvesting (WSN-HEAP) - Survey and challenges",
+        "year": 2009,
+        "venue": null,
+        "doi": "10.1109/wirelessvitae.2009.5172411",
+        "citations": 435,
+        "authors": "Winston K.G. Seah, Zhi Ang Eu, Hwee-Pink Tan",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/wirelessvitae.2009.5172411",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-tvlsi-2013-2290083",
+        "type": "publication",
+        "label": "Architectural and Circuit...",
+        "description": "Architectural and Circuit Design Techniques for Power Management of Ultra-Low-Power MCU Systems",
+        "year": 2014,
+        "venue": "IEEE Transactions on Very Large Scale Integration (VLSI) Systems",
+        "doi": "10.1109/tvlsi.2013.2290083",
+        "citations": 46,
+        "authors": "Michael Lueders, Bjoern Eversmann, Johannes Gerber et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/tvlsi.2013.2290083",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3133920",
+        "type": "publication",
+        "label": "Alpaca: intermittent execution...",
+        "description": "Alpaca: intermittent execution without checkpoints",
+        "year": 2017,
+        "venue": "Proceedings of the ACM on Programming Languages",
+        "doi": "10.1145/3133920",
+        "citations": 256,
+        "authors": "Kiwan Maeng, Alexei Colin, Brandon Lucia",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3133920",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3373376-3378476",
+        "type": "publication",
+        "label": "Time-sensitive Intermittent...",
+        "description": "Time-sensitive Intermittent Computing Meets Legacy Software",
+        "year": 2020,
+        "venue": null,
+        "doi": "10.1145/3373376.3378476",
+        "citations": 89,
+        "authors": "Vito Kortbeek, Kasım Sinan Yıldırım, Abu Bakar et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3373376.3378476",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3411839",
+        "type": "publication",
+        "label": "Battery-Free Game Boy",
+        "description": "Battery-Free Game Boy",
+        "year": 2020,
+        "venue": "Proceedings of the ACM on Interactive Mobile Wearable and Ubiquitous Technologies",
+        "doi": "10.1145/3411839",
+        "citations": 87,
+        "authors": "Jasper de Winkel, Vito Kortbeek, Josiah Hester et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3411839",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3022671-2983995",
+        "type": "publication",
+        "label": "Chain: tasks and channels for...",
+        "description": "Chain: tasks and channels for reliable intermittent programs",
+        "year": 2016,
+        "venue": "ACM SIGPLAN Notices",
+        "doi": "10.1145/3022671.2983995",
+        "citations": 47,
+        "authors": "Alexei Colin, Brandon Lucia",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3022671.2983995",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-1023720-1023732",
+        "type": "publication",
+        "label": "Routing in multi-radio,...",
+        "description": "Routing in multi-radio, multi-hop wireless mesh networks",
+        "year": 2004,
+        "venue": null,
+        "doi": "10.1145/1023720.1023732",
+        "citations": 2467,
+        "authors": "Richard Draves, Jitendra Padhye, Brian Zill",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/1023720.1023732",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-tnet-2008-923722",
+        "type": "publication",
+        "label": "XORs in the Air: Practical...",
+        "description": "XORs in the Air: Practical Wireless Network Coding",
+        "year": 2008,
+        "venue": "IEEE/ACM Transactions on Networking",
+        "doi": "10.1109/tnet.2008.923722",
+        "citations": 2276,
+        "authors": "S. Katti, Hariharan Rahul, Wenjun Hu et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/tnet.2008.923722",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-997122-997130",
+        "type": "publication",
+        "label": "Centralized channel assignment...",
+        "description": "Centralized channel assignment and routing algorithms for multi-channel wireless mesh networks",
+        "year": 2004,
+        "venue": "ACM SIGMOBILE Mobile Computing and Communications Review",
+        "doi": "10.1145/997122.997130",
+        "citations": 1059,
+        "authors": "Ashish Raniwala, Kartik Gopalan, Tzi‐cker Chiueh",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/997122.997130",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-1080829-1080833",
+        "type": "publication",
+        "label": "Architecture and evaluation of...",
+        "description": "Architecture and evaluation of an unplanned 802.11b mesh network",
+        "year": 2005,
+        "venue": null,
+        "doi": "10.1145/1080829.1080833",
+        "citations": 753,
+        "authors": "John Bicket, Daniel Aguayo, Sanjit Biswas et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/1080829.1080833",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-tetc-2021-3072337",
+        "type": "publication",
+        "label": "XpulpNN: Enabling Energy...",
+        "description": "XpulpNN: Enabling Energy Efficient and Flexible Inference of Quantized Neural Networks on RISC-V Based IoT End Nodes",
+        "year": 2021,
+        "venue": "IEEE Transactions on Emerging Topics in Computing",
+        "doi": "10.1109/tetc.2021.3072337",
+        "citations": 52,
+        "authors": "Angelo Garofalo, Giuseppe Tagliavini, Francesco Conti et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/tetc.2021.3072337",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-fdl50818-2020-9232940",
+        "type": "publication",
+        "label": "A Minimal RISC-V Vector...",
+        "description": "A Minimal RISC-V Vector Processor for Embedded Systems",
+        "year": 2020,
+        "venue": null,
+        "doi": "10.1109/fdl50818.2020.9232940",
+        "citations": 44,
+        "authors": "M. Johns, Tom J. Kázmierski",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/fdl50818.2020.9232940",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-isvlsi49217-2020-000-5",
+        "type": "publication",
+        "label": "A Mixed-Precision RISC-V...",
+        "description": "A Mixed-Precision RISC-V Processor for Extreme-Edge DNN Inference",
+        "year": 2020,
+        "venue": null,
+        "doi": "10.1109/isvlsi49217.2020.000-5",
+        "citations": 39,
+        "authors": "Gianmarco Ottavi, Angelo Garofalo, Giuseppe Tagliavini et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/isvlsi49217.2020.000-5",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-48550-arxiv-1806-08342",
+        "type": "publication",
+        "label": "Quantizing deep convolutional...",
+        "description": "Quantizing deep convolutional networks for efficient inference: A whitepaper",
+        "year": 2018,
+        "venue": "arXiv (Cornell University)",
+        "doi": "10.48550/arxiv.1806.08342",
+        "citations": 765,
+        "authors": "Raghuraman Krishnamoorthi",
+        "sensitivity": "public",
+        "source": "openalex:10.48550/arxiv.1806.08342",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-48550-arxiv-1805-12549",
+        "type": "publication",
+        "label": "Channel Gating Neural Networks",
+        "description": "Channel Gating Neural Networks",
+        "year": 2018,
+        "venue": "arXiv (Cornell University)",
+        "doi": "10.48550/arxiv.1805.12549",
+        "citations": 98,
+        "authors": "Weizhe Hua, Yuan Zhou, Christopher De et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.48550/arxiv.1805.12549",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3490422-3502364",
+        "type": "publication",
+        "label": "FILM-QNN: Efficient FPGA...",
+        "description": "FILM-QNN: Efficient FPGA Acceleration of Deep Neural Networks with Intra-Layer, Mixed-Precision Quantization",
+        "year": 2022,
+        "venue": null,
+        "doi": "10.1145/3490422.3502364",
+        "citations": 89,
+        "authors": "Mengshu Sun, Zhengang Li, Alec Lu et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3490422.3502364",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3307650-3322255",
+        "type": "publication",
+        "label": "Laconic deep learning...",
+        "description": "Laconic deep learning inference acceleration",
+        "year": 2019,
+        "venue": null,
+        "doi": "10.1145/3307650.3322255",
+        "citations": 88,
+        "authors": "Sayeh Sharify, Alberto Delmás Lascorz, Mostafa Mahmoud et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3307650.3322255",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jproc-2021-3067593",
+        "type": "publication",
+        "label": "Advancing Neuromorphic...",
+        "description": "Advancing Neuromorphic Computing With Loihi: A Survey of Results and Outlook",
+        "year": 2021,
+        "venue": "Proceedings of the IEEE",
+        "doi": "10.1109/jproc.2021.3067593",
+        "citations": 638,
+        "authors": "Mike Davies, Andreas Wild, Garrick Orchard et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jproc.2021.3067593",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1002-adma-202003610",
+        "type": "publication",
+        "label": "Neuromorphic Engineering: From...",
+        "description": "Neuromorphic Engineering: From Biological to Spike‐Based Hardware Nervous Systems",
+        "year": 2020,
+        "venue": "Advanced Materials",
+        "doi": "10.1002/adma.202003610",
+        "citations": 343,
+        "authors": "Jia‐Qin Yang, Ruopeng Wang, Yi Ren et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1002/adma.202003610",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1038-srep29545",
+        "type": "publication",
+        "label": "Magnetic Tunnel Junction Based...",
+        "description": "Magnetic Tunnel Junction Based Long-Term Short-Term Stochastic Synapse for a Spiking Neural Network with On-Chip STDP Learning",
+        "year": 2016,
+        "venue": "Scientific Reports",
+        "doi": "10.1038/srep29545",
+        "citations": 217,
+        "authors": "Gopalakrishnan Srinivasan, Abhronil Sengupta, Kaushik Roy",
+        "sensitivity": "public",
+        "source": "openalex:10.1038/srep29545",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jssc-2020-2970709",
+        "type": "publication",
+        "label": "Tianjic: A Unified and...",
+        "description": "Tianjic: A Unified and Scalable Chip Bridging Spike-Based and Continuous Neural Computation",
+        "year": 2020,
+        "venue": "IEEE Journal of Solid-State Circuits",
+        "doi": "10.1109/jssc.2020.2970709",
+        "citations": 196,
+        "authors": "Lei Deng, Guanrui Wang, Guoqi Li et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jssc.2020.2970709",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-3389-fnins-2017-00309",
+        "type": "publication",
+        "label": "CIFAR10-DVS: An Event-Stream...",
+        "description": "CIFAR10-DVS: An Event-Stream Dataset for Object Classification",
+        "year": 2017,
+        "venue": "Frontiers in Neuroscience",
+        "doi": "10.3389/fnins.2017.00309",
+        "citations": 515,
+        "authors": "Hongmin Li, Hanchao Liu, Xiangyang Ji et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.3389/fnins.2017.00309",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jproc-2014-2346153",
+        "type": "publication",
+        "label": "Retinomorphic Event-Based...",
+        "description": "Retinomorphic Event-Based Vision Sensors: Bioinspired Cameras With Spiking Output",
+        "year": 2014,
+        "venue": "Proceedings of the IEEE",
+        "doi": "10.1109/jproc.2014.2346153",
+        "citations": 460,
+        "authors": "C. Posch, Teresa Serrano‐Gotarredona, B. Linares-Barranco et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jproc.2014.2346153",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-msp-2020-2985815",
+        "type": "publication",
+        "label": "Event-Based Neuromorphic...",
+        "description": "Event-Based Neuromorphic Vision for Autonomous Driving: A Paradigm Shift for Bio-Inspired Visual Sensing and Perception",
+        "year": 2020,
+        "venue": "IEEE Signal Processing Magazine",
+        "doi": "10.1109/msp.2020.2985815",
+        "citations": 299,
+        "authors": "Guang Chen, Hu Cao, Jörg Conradt et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/msp.2020.2985815",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-iros-2016-7759610",
+        "type": "publication",
+        "label": "Fast event-based Harris corner...",
+        "description": "Fast event-based Harris corner detection exploiting the advantages of event-driven cameras",
+        "year": 2016,
+        "venue": null,
+        "doi": "10.1109/iros.2016.7759610",
+        "citations": 167,
+        "authors": "Valentina Vasco, Arren Glover, Chiara Bartolozzi",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/iros.2016.7759610",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1515-ehs-2016-0028",
+        "type": "publication",
+        "label": "A Review on Piezoelectric...",
+        "description": "A Review on Piezoelectric Energy Harvesting: Materials, Methods, and Circuits",
+        "year": 2017,
+        "venue": "Energy Harvesting and Systems",
+        "doi": "10.1515/ehs-2016-0028",
+        "citations": 415,
+        "authors": "Shashank Priya, Hyun‐Cheol Song, Yuan Zhou et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1515/ehs-2016-0028",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-tie-2010-2102321",
+        "type": "publication",
+        "label": "Energy Harvesting From Hybrid...",
+        "description": "Energy Harvesting From Hybrid Indoor Ambient Light and Thermal Energy Sources for Enhanced Performance of Wireless Sensor Nodes",
+        "year": 2010,
+        "venue": "IEEE Transactions on Industrial Electronics",
+        "doi": "10.1109/tie.2010.2102321",
+        "citations": 411,
+        "authors": "Yen Kheng Tan, Sanjib Kumar Panda",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/tie.2010.2102321",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1021-accountsmr-1c00002",
+        "type": "publication",
+        "label": "Self-Powered Wearable...",
+        "description": "Self-Powered Wearable Biosensors",
+        "year": 2021,
+        "venue": "Accounts of Materials Research",
+        "doi": "10.1021/accountsmr.1c00002",
+        "citations": 223,
+        "authors": "Yu Song, Daniel Mukasa, Haixia Zhang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1021/accountsmr.1c00002",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1021-acsnano-6b07633",
+        "type": "publication",
+        "label": "Harvesting Ambient Vibration...",
+        "description": "Harvesting Ambient Vibration Energy over a Wide Frequency Range for Self-Powered Electronics",
+        "year": 2017,
+        "venue": "ACS Nano",
+        "doi": "10.1021/acsnano.6b07633",
+        "citations": 208,
+        "authors": "Xiaofeng Wang, Simiao Niu, Yi Fang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1021/acsnano.6b07633",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3714983-3714987",
+        "type": "publication",
+        "label": "AWQ: Activation-aware Weight...",
+        "description": "AWQ: Activation-aware Weight Quantization for On-Device LLM Compression and Acceleration",
+        "year": 2025,
+        "venue": "GetMobile Mobile Computing and Communications",
+        "doi": "10.1145/3714983.3714987",
+        "citations": 186,
+        "authors": "Ji Lin, Jiaming Tang, Haotian Tang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3714983.3714987",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jiot-2024-3524255",
+        "type": "publication",
+        "label": "EdgeShard: Efficient LLM...",
+        "description": "EdgeShard: Efficient LLM Inference via Collaborative Edge Computing",
+        "year": 2024,
+        "venue": "IEEE Internet of Things Journal",
+        "doi": "10.1109/jiot.2024.3524255",
+        "citations": 142,
+        "authors": "Mingjin Zhang, Xiaoming Shen, Jiannong Cao et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jiot.2024.3524255",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3767742",
+        "type": "publication",
+        "label": "Sustainable LLM Inference for...",
+        "description": "Sustainable LLM Inference for Edge AI: Evaluating Quantized LLMs for Energy Efficiency, Output Accuracy, and Inference Latency",
+        "year": 2025,
+        "venue": "ACM Transactions on Internet of Things",
+        "doi": "10.1145/3767742",
+        "citations": 22,
+        "authors": "Erik Johannes Husom, Arda Göknil, Merve Astekin et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3767742",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1145-3700410-3702126",
+        "type": "publication",
+        "label": "MNN-LLM: A Generic Inference...",
+        "description": "MNN-LLM: A Generic Inference Engine for Fast Large Language Model Deployment on Mobile Devices",
+        "year": 2024,
+        "venue": null,
+        "doi": "10.1145/3700410.3702126",
+        "citations": 10,
+        "authors": "Zhaode Wang, Jingbang Yang, Xinyu Qian et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1145/3700410.3702126",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-comst-2018-2869350",
+        "type": "publication",
+        "label": "Ultra-Low Latency (ULL)...",
+        "description": "Ultra-Low Latency (ULL) Networks: The IEEE TSN and IETF DetNet Standards and Related 5G ULL Research",
+        "year": 2018,
+        "venue": "IEEE Communications Surveys & Tutorials",
+        "doi": "10.1109/comst.2018.2869350",
+        "citations": 689,
+        "authors": "Ahmed Nasrallah, Akhilesh S. Thyagaturu, Ziyad Alharbi et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/comst.2018.2869350",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-etfa46521-2020-9212141",
+        "type": "publication",
+        "label": "Analysis of 5G-TSN Integration...",
+        "description": "Analysis of 5G-TSN Integration to Support Industry 4.0",
+        "year": 2020,
+        "venue": null,
+        "doi": "10.1109/etfa46521.2020.9212141",
+        "citations": 94,
+        "authors": "Ana Larrañaga, M. Carmen Lucas-Estañ, Imanol Martínez et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/etfa46521.2020.9212141",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-access-2020-3008598",
+        "type": "publication",
+        "label": "Scheduling Enhancements and...",
+        "description": "Scheduling Enhancements and Performance Evaluation of Downlink 5G Time-Sensitive Communications",
+        "year": 2020,
+        "venue": "IEEE Access",
+        "doi": "10.1109/access.2020.3008598",
+        "citations": 46,
+        "authors": "Renato Abreu, Guillermo Pocovi, Thomas Jacobsen et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/access.2020.3008598",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-3390-en14154497",
+        "type": "publication",
+        "label": "Time-Sensitive Networking...",
+        "description": "Time-Sensitive Networking Technologies for Industrial Automation in Wireless Communication Systems",
+        "year": 2021,
+        "venue": "Energies",
+        "doi": "10.3390/en14154497",
+        "citations": 39,
+        "authors": "Yoohwa Kang, Sunwoo Lee, Songi Gwak et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.3390/en14154497",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-comst-2020-2986024",
+        "type": "publication",
+        "label": "Federated Learning in Mobile...",
+        "description": "Federated Learning in Mobile Edge Networks: A Comprehensive Survey",
+        "year": 2020,
+        "venue": "IEEE Communications Surveys & Tutorials",
+        "doi": "10.1109/comst.2020.2986024",
+        "citations": 2455,
+        "authors": "Wei Yang Bryan Lim, Nguyen Cong Luong, Dinh Thai Hoang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/comst.2020.2986024",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-48550-arxiv-1806-00582",
+        "type": "publication",
+        "label": "Federated Learning with...",
+        "description": "Federated Learning with Non-IID Data",
+        "year": 2018,
+        "venue": "arXiv (Cornell University)",
+        "doi": "10.48550/arxiv.1806.00582",
+        "citations": 1916,
+        "authors": "Yue Zhao, Meng Li, Liangzhen Lai et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.48550/arxiv.1806.00582",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-twc-2019-2961673",
+        "type": "publication",
+        "label": "Federated Learning via...",
+        "description": "Federated Learning via Over-the-Air Computation",
+        "year": 2020,
+        "venue": "IEEE Transactions on Wireless Communications",
+        "doi": "10.1109/twc.2019.2961673",
+        "citations": 1045,
+        "authors": "Kai Yang, Tao Jiang, Yuanming Shi et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/twc.2019.2961673",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-jiot-2021-3095077",
+        "type": "publication",
+        "label": "A Survey on Federated Learning...",
+        "description": "A Survey on Federated Learning for Resource-Constrained IoT Devices",
+        "year": 2021,
+        "venue": "IEEE Internet of Things Journal",
+        "doi": "10.1109/jiot.2021.3095077",
+        "citations": 732,
+        "authors": "Ahmed Imteaj, Urmish Thakker, Shiqiang Wang et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/jiot.2021.3095077",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-lra-2019-2903261",
+        "type": "publication",
+        "label": "PRIMAL: Pathfinding via...",
+        "description": "PRIMAL: Pathfinding via Reinforcement and Imitation Multi-Agent Learning",
+        "year": 2019,
+        "venue": "IEEE Robotics and Automation Letters",
+        "doi": "10.1109/lra.2019.2903261",
+        "citations": 410,
+        "authors": "Guillaume Sartoretti, Justin Kerr, Yunfei Shi et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/lra.2019.2903261",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-iros-2007-4399095",
+        "type": "publication",
+        "label": "Hysteretic Q-learning : an...",
+        "description": "Hysteretic Q-learning : an algorithm for Decentralized Reinforcement Learning in Cooperative Multi-Agent Teams",
+        "year": 2007,
+        "venue": null,
+        "doi": "10.1109/iros.2007.4399095",
+        "citations": 197,
+        "authors": "Laëtitia Matignon, Guillaume J. Laurent, Nadine Le Fort-Piat",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/iros.2007.4399095",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1109-lra-2021-3062803",
+        "type": "publication",
+        "label": "PRIMAL$_2$: Pathfinding Via...",
+        "description": "PRIMAL$_2$: Pathfinding Via Reinforcement and Imitation Multi-Agent Learning - Lifelong",
+        "year": 2021,
+        "venue": "IEEE Robotics and Automation Letters",
+        "doi": "10.1109/lra.2021.3062803",
+        "citations": 170,
+        "authors": "Mehul Damani, Zhiyao Luo, Emerson Wenzel et al.",
+        "sensitivity": "public",
+        "source": "openalex:10.1109/lra.2021.3062803",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "id": "pub-10-1631-fitee-1900661",
+        "type": "publication",
+        "label": "Decentralized multi-agent...",
+        "description": "Decentralized multi-agent reinforcement learning with networked agents: recent advances",
+        "year": 2021,
+        "venue": "Frontiers of Information Technology & Electronic Engineering",
+        "doi": "10.1631/fitee.1900661",
+        "citations": 68,
+        "authors": "Kaiqing Zhang, Zhuoran Yang, Tamer Başar",
+        "sensitivity": "public",
+        "source": "openalex:10.1631/fitee.1900661",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
     }
   ],
   "edges": [
@@ -13226,7 +14432,637 @@
         "updatedBy": "suggest_links.py",
         "updatedAt": "2026-07-23T07:03:05+00:00"
       }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-robot-2002-1014740",
+        "target": "robotics",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-icra-2011-5979830",
+        "target": "robotics",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-mra-2007-339608",
+        "target": "robotics",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1142-s0219843604000058",
+        "target": "robotics",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-2307-25148845",
+        "target": "tools",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-comst-2020-2970550",
+        "target": "edgeai",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jiot-2020-2984887",
+        "target": "edgeai",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-mnet-2019-1800286",
+        "target": "edgeai",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-comst-2020-3007787",
+        "target": "edgeai",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-comst-2017-2682318",
+        "target": "edge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jsac-2019-2906789",
+        "target": "edge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-comst-2020-3009103",
+        "target": "edge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3362031",
+        "target": "edge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3241038",
+        "target": "sustainable",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-5267-j-jfs-2024-1-005",
+        "target": "sustainable",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1002-spe-3248",
+        "target": "sustainable",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-48550-arxiv-1908-02265",
+        "target": "llm",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-18653-v1-2020-findings-emnlp-372",
+        "target": "llm",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1016-j-nlp-2023-100048",
+        "target": "llm",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-1031495-1031498",
+        "target": "sensors",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-tbme-2011-2156795",
+        "target": "sensors",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-5860-choice-42-3446",
+        "target": "sensors",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1016-j-rser-2015-11-010",
+        "target": "harvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-mssc-2010-936667",
+        "target": "harvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jproc-2013-2250891",
+        "target": "harvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-wirelessvitae-2009-5172411",
+        "target": "harvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-tvlsi-2013-2290083",
+        "target": "lowpower",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3133920",
+        "target": "intermittent",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3373376-3378476",
+        "target": "intermittent",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3411839",
+        "target": "intermittent",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3022671-2983995",
+        "target": "intermittent",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-1023720-1023732",
+        "target": "mesh",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-tnet-2008-923722",
+        "target": "mesh",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-997122-997130",
+        "target": "mesh",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-1080829-1080833",
+        "target": "mesh",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-tetc-2021-3072337",
+        "target": "riscVEdge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-fdl50818-2020-9232940",
+        "target": "riscVEdge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-isvlsi49217-2020-000-5",
+        "target": "riscVEdge",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-48550-arxiv-1806-08342",
+        "target": "tinyLLMaccel",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-48550-arxiv-1805-12549",
+        "target": "tinyLLMaccel",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3490422-3502364",
+        "target": "tinyLLMaccel",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3307650-3322255",
+        "target": "tinyLLMaccel",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jproc-2021-3067593",
+        "target": "neuromorphicCore",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1002-adma-202003610",
+        "target": "neuromorphicCore",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1038-srep29545",
+        "target": "neuromorphicCore",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jssc-2020-2970709",
+        "target": "neuromorphicCore",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-3389-fnins-2017-00309",
+        "target": "eventVision",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jproc-2014-2346153",
+        "target": "eventVision",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-msp-2020-2985815",
+        "target": "eventVision",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-iros-2016-7759610",
+        "target": "eventVision",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1515-ehs-2016-0028",
+        "target": "energyHarvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-tie-2010-2102321",
+        "target": "energyHarvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1021-accountsmr-1c00002",
+        "target": "energyHarvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1021-acsnano-6b07633",
+        "target": "energyHarvest",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3714983-3714987",
+        "target": "tinyLLMrt",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jiot-2024-3524255",
+        "target": "tinyLLMrt",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3767742",
+        "target": "tinyLLMrt",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1145-3700410-3702126",
+        "target": "tinyLLMrt",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-comst-2018-2869350",
+        "target": "detMeshStack",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-etfa46521-2020-9212141",
+        "target": "detMeshStack",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-access-2020-3008598",
+        "target": "detMeshStack",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-3390-en14154497",
+        "target": "detMeshStack",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-comst-2020-2986024",
+        "target": "fedLearning",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-48550-arxiv-1806-00582",
+        "target": "fedLearning",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-twc-2019-2961673",
+        "target": "fedLearning",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-jiot-2021-3095077",
+        "target": "fedLearning",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-lra-2019-2903261",
+        "target": "multiBotRL",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-iros-2007-4399095",
+        "target": "multiBotRL",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1109-lra-2021-3062803",
+        "target": "multiBotRL",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
+    },
+    {
+      "data": {
+        "source": "pub-10-1631-fitee-1900661",
+        "target": "multiBotRL",
+        "type": "priorArt",
+        "updatedBy": "import_prior_art.py",
+        "updatedAt": "2026-07-30T13:34:09+00:00"
+      }
     }
   ],
-  "version": 5
+  "version": 7
 }

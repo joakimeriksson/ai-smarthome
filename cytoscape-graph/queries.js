@@ -109,6 +109,17 @@
     },
     {
       group: 'Capability gaps',
+      id: 'gap-no-prior-art',
+      label: 'Stones with no prior art',
+      help: 'Stepping stones with no "prior art" publication — nobody has captured the state of the art for this area yet.',
+      run: function () {
+        return stones()
+          .filter(function (s) { return !hasIncoming(s.data.id, 'priorArt'); })
+          .map(function (s) { return { id: s.data.id, label: lbl(s), note: horizonNote(s) }; });
+      }
+    },
+    {
+      group: 'Capability gaps',
       id: 'gap-pub-no-evidence',
       label: 'Publications evidencing no stone',
       help: 'Publications not linked to any stepping stone via "evidences" — results the roadmap cannot see yet.',

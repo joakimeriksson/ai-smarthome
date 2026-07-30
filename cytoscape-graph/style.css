@@ -286,6 +286,13 @@ body {
 .conn-tag.type-project { background: rgba(155, 89, 182, 0.6); }
 .conn-tag.type-publication { background: rgba(231, 76, 60, 0.6); }
 
+/* Prior art is the baseline, not our delivery — render it visibly weaker than
+   `evidences` so the two are never confused at a glance. */
+.conn-tag.edge-priorArt {
+  background: rgba(224, 121, 107, 0.18);
+  border: 1px dotted rgba(224, 121, 107, 0.75);
+}
+
 /* Persons display */
 #persons-display-container {
   position: absolute;

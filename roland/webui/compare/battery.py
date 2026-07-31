@@ -110,6 +110,19 @@ def main(argv=None):
     p = engine.make_plugin_processor("zen", VST)
 
     if not a.skip_editor:
+        # A bare python process has no app bundle, so macOS gives its windows no
+        # Dock icon, no activation policy and a default position - the editor
+        # opens small, behind everything, and cannot be reached with cmd-tab.
+        # Promoting ourselves to a regular app fixes all three.
+        try:
+            from AppKit import (NSApplication,
+                                NSApplicationActivationPolicyRegular)
+            app = NSApplication.sharedApplication()
+            app.setActivationPolicy_(NSApplicationActivationPolicyRegular)
+            app.activateIgnoringOtherApps_(True)
+            print("promoted to a foreground app - look for a Dock icon", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"(could not promote to foreground: {exc})", flush=True)
         print("EDITOR_OPEN - pick the patch, then CLOSE the window", flush=True)
         try:
             p.open_editor()

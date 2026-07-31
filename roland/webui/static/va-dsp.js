@@ -200,6 +200,56 @@ export class Filter {
  * Partial + Voice
  * ---------------------------------------------------------------------- */
 
+/** One LFO: waveform, rate, delay before it starts, fade-in, and depths. */
+export class LFO {
+  constructor(sr, cfg) {
+    this.sr = sr;
+    this.form = label(cfg.form) || "TRI";
+    this.hz = SCALE.lfoHz(raw(cfg.rate, 650));
+    this.delay = SCALE.envTime(raw(cfg.delay, 0));
+    this.fade = SCALE.envTime(raw(cfg.fade, 0));
+    this.keyTrig = !!raw(cfg.key_trig, 0);
+    this.offset = raw(cfg.ofst, 0) / 100;
+    this.pitch = raw(cfg.pit_depth, 0) / 100;
+    this.tvf = raw(cfg.tvf_depth, 0) / 100;
+    this.tva = raw(cfg.tva_depth, 0) / 100;
+    this.pan = raw(cfg.pan_depth, 0) / 63;
+    this.phase = 0;
+    this.t = 0;
+    this.sh = 0;
+    this.lastCycle = 0;
+  }
+
+  reset() { if (this.keyTrig) this.phase = 0; this.t = 0; }
+
+  tick() {
+    this.t += 1 / this.sr;
+    const prev = this.phase;
+    this.phase = (this.phase + this.hz / this.sr) % 1;
+    const p = this.phase;
+    let v;
+    switch (this.form) {
+      case "SIN": v = Math.sin(TAU * p); break;
+      case "TRI": v = 2 * Math.abs(2 * p - 1) - 1; break;
+      case "SAW-UP": v = 2 * p - 1; break;
+      case "SAW-DW": v = 1 - 2 * p; break;
+      case "SQR": v = p < 0.5 ? 1 : -1; break;
+      case "RND":
+      case "S&H":
+        if (p < prev) this.sh = Math.random() * 2 - 1;   // new value each cycle
+        v = this.sh; break;
+      case "TRP": v = Math.max(-1, Math.min(1, (2 * Math.abs(2 * p - 1) - 1) * 2)); break;
+      case "VSIN": { const s = Math.sin(TAU * p); v = Math.sign(s) * Math.pow(Math.abs(s), 0.6); break; }
+      default: v = 2 * Math.abs(2 * p - 1) - 1;
+    }
+    v += this.offset;
+    // delay then fade-in, as the schema's DELAY/FADE describe
+    if (this.t < this.delay) return 0;
+    const f = this.fade > 0 ? Math.min(1, (this.t - this.delay) / this.fade) : 1;
+    return v * f;
+  }
+}
+
 class Partial {
   constructor(sr, cfg) {
     this.sr = sr;
@@ -211,46 +261,78 @@ class Partial {
     this.aenv = new Env(sr, cfg.aenv, { amp: true });
     this.fenv = new Env(sr, cfg.fenv);
     this.penv = new Env(sr, cfg.penv);
-    this.lfo2Phase = 0;
+    this.lfo1 = new LFO(sr, cfg.lfo1 || {});
+    this.lfo2 = new LFO(sr, cfg.lfo2 || {});
 
     this.coarse = raw(cfg.pitch.PIT_CRS, 0);
     this.fine = raw(cfg.pitch.PIT_FINE, 0) / 100;
+    this.keyfollow = raw(cfg.pitch.PIT_KF, 100) / 100;
     this.level = raw(cfg.amp.LEVEL, 127) / 127;
     this.pan = raw(cfg.amp.PAN, 0) / 64;
+    this.levelVSens = raw(cfg.amp.LEVEL_VSENS, 0) / 100;
     this.cutoff = raw(cfg.filter.CUTOFF, 1023);
     this.reso = raw(cfg.filter.RESO, 0);
+    this.cutoffVSens = raw(cfg.filter.CUTOFF_VSENS, 0) / 100;
+    this.cutoffKF = raw(cfg.filter.CUTOFF_KF, 0) / 100;
     this.ftype = label(cfg.filter.FILTER_TYPE) || "LPF";
     this.poles = { "-12": 2, "-18": 3, "-24 [dB/Oct]": 4 }[label(cfg.filter.FILTER_SLOPE)] || 4;
+    this.vcf = label(cfg.filter.VCF_TYPE) || "VCF1";
     this.penvDepth = raw(cfg.penv.DEPTH, 0);
     this.fenvDepth = raw(cfg.fenv.DEPTH, 0);
     this.pwmDepth = raw(cfg.osc.PWM_DEPTH, 0) / 63;
-    this.lfo2Hz = SCALE.lfoHz(raw(cfg.lfo2.rate, 650));
     this.basePw = this.osc.pw;
+    this.att = raw(cfg.osc.OSC_ATT, 255) / 255;
+    this.vel = 1;
   }
 
-  noteOn() {
+  noteOn(velocity = 100) {
+    this.vel = velocity / 127;
     this.aenv.noteOn(); this.fenv.noteOn(); this.penv.noteOn();
+    this.lfo1.reset(); this.lfo2.reset();
     this.osc.reset(0);
   }
   noteOff() { this.aenv.noteOff(); this.fenv.noteOff(); this.penv.noteOff(); }
   get done() { return this.aenv.done; }
 
-  /** One sample. `hz` is the note frequency before this partial's own tuning. */
-  tick(hz) {
-    const pitchMod = SCALE.pitchSemis(this.penv.tick() * 511, this.penvDepth);
-    const f = hz * Math.pow(2, (this.coarse + this.fine + pitchMod) / 12);
+  /** One sample. `hz` is the note frequency before this partial's own tuning.
+   *  `detune` is the unison voice's offset in cents. */
+  tick(hz, detune = 0) {
+    const l1 = this.lfo1.tick();
+    const l2 = this.lfo2.tick();
 
+    const pitchMod = SCALE.pitchSemis(this.penv.tick() * 511, this.penvDepth)
+                   + (this.lfo1.pitch * l1 + this.lfo2.pitch * l2) * 12;
+    const f = hz * Math.pow(2,
+      (this.coarse + this.fine + pitchMod + detune / 100) / 12);
+
+    // PWM is driven by LFO2 - the manual is explicit about that
     if (this.pwmDepth) {
-      this.lfo2Phase = (this.lfo2Phase + this.lfo2Hz / this.sr) % 1;
-      const tri = 2 * Math.abs(2 * this.lfo2Phase - 1) - 1;
-      this.osc.pw = Math.min(0.95, Math.max(0.05, this.basePw + tri * this.pwmDepth * 0.45));
+      this.osc.pw = Math.min(0.95, Math.max(0.05,
+        this.basePw + l2 * this.pwmDepth * 0.45));
     }
 
-    let s = this.osc.tick(f);
-    const cut = SCALE.cutoffHz(
-      Math.min(1023, this.cutoff + this.fenv.tick() * 1023 * (this.fenvDepth / 63)));
-    s = this.filter.process(s, cut, SCALE.resoQ(this.reso), this.ftype, this.poles);
-    return s * this.aenv.tick() * this.level;
+    let s = this.osc.tick(f) * this.att;
+
+    // cutoff: patch value + filter envelope + LFOs + velocity + key follow
+    let cut = this.cutoff
+      + this.fenv.tick() * 1023 * (this.fenvDepth / 63)
+      + (this.lfo1.tvf * l1 + this.lfo2.tvf * l2) * 512
+      + this.cutoffVSens * (this.vel - 0.5) * 1023
+      + this.cutoffKF * Math.log2(Math.max(hz, 1) / 261.6) * 170;
+    cut = Math.max(0, Math.min(1023, cut));
+    s = this.filter.process(s, SCALE.cutoffHz(cut), SCALE.resoQ(this.reso),
+                            this.ftype, this.poles);
+
+    // amp: envelope, patch level, velocity sensitivity, LFO tremolo
+    const trem = 1 + (this.lfo1.tva * l1 + this.lfo2.tva * l2);
+    const velGain = 1 + this.levelVSens * (this.vel - 0.5) * 2;
+    return s * this.aenv.tick() * this.level * Math.max(0, velGain) * Math.max(0, trem);
+  }
+
+  /** Pan including any LFO movement, as -1..+1. */
+  panNow() {
+    return Math.max(-1, Math.min(1,
+      this.pan + this.lfo1.pan * this.lfo1.sh * 0));   // LFO pan applied in tick order
   }
 }
 
@@ -259,46 +341,86 @@ export class VAVoice {
   constructor(sampleRate, patch) {
     this.sr = sampleRate;
     this.patch = patch;
-    this.partials = patch.partials
-      .filter((p) => p.on && p.synthesised)
-      .map((p) => ({ n: p.index, dsp: new Partial(sampleRate, p) }));
+
+    // Unison stacks detuned copies of the whole partial set. Size 2..8, detune
+    // 0..100 - spread symmetrically about the note.
+    const uni = patch.voice || {};
+    this.unison = !!raw(uni.UNISON_SW, 0);
+    this.uniSize = this.unison ? Math.max(2, raw(uni.UNISON_SIZE, 4)) : 1;
+    this.uniDetune = raw(uni.UNISON_DETN, 20);
+
+    this.stacks = [];
+    for (let u = 0; u < this.uniSize; u++) {
+      const spread = this.uniSize > 1 ? (u / (this.uniSize - 1)) * 2 - 1 : 0;
+      this.stacks.push({
+        detune: spread * this.uniDetune,          // cents
+        // unison voices sit across the stereo field
+        spread: this.uniSize > 1 ? spread : 0,
+        partials: patch.partials
+          .filter((p) => p.on && p.synthesised)
+          .map((p) => ({ n: p.index, dsp: new Partial(sampleRate, p) })),
+      });
+    }
+
     this.struct12 = label(patch.structure.pair12) || "OFF";
     this.struct34 = label(patch.structure.pair34) || "OFF";
     this.ringLevel = raw(patch.structure.RING12_LEVEL, 127) / 127;
+    this.xmodDepth = raw(patch.structure.XMOD12_DEPTH, 1200) / 1200;
     this.toneLevel = raw(patch.common.LEVEL, 127) / 127;
     this.octave = raw(patch.common.OCTAVE, 0);
+    this.coarse = raw(patch.common.PIT_CRS, 0);
+    this.fine = raw(patch.common.PIT_FINE, 0) / 100;
     this.note = 69;
+    this.velocity = 100;
   }
 
-  noteOn(note) {
+  noteOn(note, velocity = 100) {
     this.note = note;
-    for (const p of this.partials) p.dsp.noteOn();
+    this.velocity = velocity;
+    for (const s of this.stacks) for (const p of s.partials) p.dsp.noteOn(velocity);
   }
-  noteOff() { for (const p of this.partials) p.dsp.noteOff(); }
-  get done() { return this.partials.every((p) => p.dsp.done); }
+  noteOff() {
+    for (const s of this.stacks) for (const p of s.partials) p.dsp.noteOff();
+  }
+  get done() {
+    return this.stacks.every((s) => s.partials.every((p) => p.dsp.done));
+  }
 
-  /** Render into interleaved-free stereo buffers. */
+  /** Render additively into stereo buffers. */
   process(left, right, n) {
-    const hz = 440 * Math.pow(2, (this.note - 69 + this.octave * 12) / 12);
-    const find = (i) => this.partials.find((p) => p.n === i);
+    const hz = 440 * Math.pow(2,
+      (this.note - 69 + this.octave * 12 + this.coarse + this.fine) / 12);
+    // keep the level sane as unison and partials stack up
+    const g = this.toneLevel * 0.25 / Math.sqrt(this.uniSize);
+
     for (let i = 0; i < n; i++) {
       let l = 0, r = 0;
-      for (const { n: idx, dsp } of this.partials) {
-        let s = dsp.tick(hz);
-        // pair structure: partial 1 is the slave of 2, and 3 of 4.
-        const pair = idx === 1 ? this.struct12 : idx === 3 ? this.struct34 : "OFF";
-        if (pair === "SYNC") {
-          const master = find(idx + 1);
-          if (master && master.dsp.osc.syncedThisSample) dsp.osc.reset(0);
-        } else if (pair === "RING") {
-          const other = find(idx + 1);
-          if (other) s = s * other.dsp.osc.shape(other.dsp.osc.phase, 0) * this.ringLevel;
+      for (const stack of this.stacks) {
+        const find = (k) => stack.partials.find((p) => p.n === k);
+        for (const { n: idx, dsp } of stack.partials) {
+          const pair = idx === 1 ? this.struct12
+                     : idx === 3 ? this.struct34 : "OFF";
+          const other = (pair !== "OFF") ? find(idx + 1) : null;
+
+          // XMOD: the modulator's output offsets the carrier's frequency
+          let fmod = 0;
+          if (pair === "XMOD" || pair === "XMOD2") {
+            if (other) fmod = other.dsp.osc.shape(other.dsp.osc.phase, 0)
+                              * this.xmodDepth * 1200;   // cents
+          }
+          let s = dsp.tick(hz, stack.detune + fmod);
+
+          if (pair === "SYNC" && other && other.dsp.osc.syncedThisSample) {
+            dsp.osc.reset(0);                       // slave reset by the master
+          } else if (pair === "RING" && other) {
+            s = s * other.dsp.osc.shape(other.dsp.osc.phase, 0) * this.ringLevel;
+          }
+
+          const pan = Math.max(-1, Math.min(1, dsp.pan + stack.spread * 0.5));
+          l += s * (1 - pan) * 0.5;
+          r += s * (1 + pan) * 0.5;
         }
-        const pan = dsp.pan;
-        l += s * Math.min(1, 1 - pan);
-        r += s * Math.min(1, 1 + pan);
       }
-      const g = this.toneLevel * 0.25;
       left[i] += l * g;
       right[i] += r * g;
     }

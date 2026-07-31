@@ -2,194 +2,301 @@
 <meta charset="utf-8">
 <title>ZenCore VA</title>
 <style>
-  :root { color-scheme: dark; --bg:#14161a; --fg:#e6e8ec; --dim:#8b93a1;
-          --line:#2a2f38; --accent:#6ea8ff; --warn:#e0a54a; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 ui-monospace,
-         SFMono-Regular,Menlo,monospace; }
-  header { padding:14px 20px; border-bottom:1px solid var(--line);
-           display:flex; gap:20px; align-items:baseline; flex-wrap:wrap; }
-  h1 { font-size:15px; margin:0; letter-spacing:.14em; text-transform:uppercase; }
-  .meta { color:var(--dim); font-size:12px; }
-  main { display:grid; grid-template-columns:minmax(220px,280px) 1fr; gap:0;
-         align-items:start; }
-  #tones { border-right:1px solid var(--line); min-height:70vh; }
-  #tones button { display:block; width:100%; text-align:left; padding:9px 20px;
-      background:none; border:0; border-bottom:1px solid var(--line);
-      color:var(--fg); font:inherit; cursor:pointer; }
-  #tones button:hover { background:#1b1f26; }
-  #tones button[aria-selected=true] { background:#1f2733; color:var(--accent); }
-  #tones .no { color:var(--dim); }
-  section { padding:16px 20px; }
-  table { border-collapse:collapse; font-size:12px; margin:4px 0 18px; }
-  td { padding:2px 14px 2px 0; }
-  td.k { color:var(--dim); }
-  kbd { background:#20242c; border:1px solid var(--line); border-radius:3px;
-        padding:1px 5px; font-size:11px; }
-  .warn { color:var(--warn); }
-  .keys { display:flex; gap:3px; margin-top:10px; flex-wrap:wrap; }
-  .keys div { width:34px; height:96px; background:#20242c; border:1px solid var(--line);
-      border-radius:0 0 4px 4px; display:flex; align-items:flex-end;
-      justify-content:center; padding-bottom:6px; font-size:10px; color:var(--dim);
+  :root {
+    color-scheme: dark;
+    --bg:#0f1216; --panel:#161a21; --line:#252b35; --fg:#e6e9ef; --dim:#7d8797;
+    --accent:#5cc8d7; --accent-dim:#2b6d78; --warn:#d9a441;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  header { padding:10px 18px; border-bottom:1px solid var(--line); display:flex;
+           gap:18px; align-items:baseline; flex-wrap:wrap; background:var(--panel); }
+  h1 { font-size:13px; margin:0; letter-spacing:.18em; color:var(--accent); }
+  .meta { color:var(--dim); font-size:11px; }
+  button.act { background:var(--accent-dim); border:0; color:#eaffff; font:inherit;
+               padding:3px 10px; border-radius:3px; cursor:pointer; }
+  button.act:hover { background:var(--accent); color:#04262b; }
+  main { display:grid; grid-template-columns:230px 1fr; min-height:calc(100vh - 42px); }
+  #tones { border-right:1px solid var(--line); background:var(--panel); }
+  #tones button { display:block; width:100%; text-align:left; padding:8px 14px;
+      background:none; border:0; border-bottom:1px solid var(--line); color:var(--fg);
+      font:inherit; cursor:pointer; }
+  #tones button:hover { background:#1d222b; }
+  #tones button[aria-selected=true] { background:#12333a; color:var(--accent);
+      box-shadow:inset 3px 0 0 var(--accent); }
+  #tones .badge { float:right; font-size:10px; color:var(--dim); }
+  section.body { padding:14px 18px 60px; }
+  .tabs { display:flex; gap:4px; margin:0 0 12px; flex-wrap:wrap; }
+  .tabs button { background:#1a1f27; border:1px solid var(--line); color:var(--dim);
+      font:inherit; padding:4px 12px; border-radius:3px; cursor:pointer; }
+  .tabs button[aria-selected=true] { background:var(--accent-dim); color:#eaffff;
+      border-color:var(--accent-dim); }
+  .tabs button:disabled { opacity:.35; cursor:not-allowed; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:4px;
+          padding:10px 12px; }
+  .card h3 { margin:0 0 8px; font-size:11px; letter-spacing:.12em; color:var(--accent);
+             text-transform:uppercase; font-weight:600; }
+  .row { display:grid; grid-template-columns:1fr 74px; gap:8px; align-items:center;
+         margin:3px 0; }
+  .row label { color:var(--dim); font-size:11px; overflow:hidden;
+               text-overflow:ellipsis; white-space:nowrap; }
+  .row label span { color:#4d5666; }
+  input[type=range] { width:100%; accent-color:var(--accent); height:16px; }
+  select, input[type=number] { width:100%; background:#0d1015; color:var(--fg);
+      border:1px solid var(--line); border-radius:3px; font:inherit; font-size:11px;
+      padding:2px 4px; }
+  .val { text-align:right; color:var(--fg); font-size:11px; }
+  .keys { display:flex; gap:2px; margin-top:14px; }
+  .keys div { width:30px; height:78px; background:#1c212a; border:1px solid var(--line);
+      border-radius:0 0 3px 3px; display:flex; align-items:flex-end;
+      justify-content:center; padding-bottom:5px; font-size:9px; color:var(--dim);
       cursor:pointer; user-select:none; }
-  .keys div.on { background:var(--accent); color:#0d1117; }
+  .keys div.on { background:var(--accent); color:#04262b; }
+  .warn { color:var(--warn); }
+  footer { position:fixed; bottom:0; left:0; right:0; background:var(--panel);
+           border-top:1px solid var(--line); padding:6px 18px; font-size:11px;
+           color:var(--dim); display:flex; gap:18px; }
 </style>
 
 <header>
-  <h1>ZenCore VA</h1>
+  <h1>ZENCORE VA</h1>
   <span class="meta" id="file">loading…</span>
-  <span class="meta" id="status"></span>
-  <span class="meta" id="midi">MIDI: …</span>
+  <span class="meta" id="midi"></span>
+  <span style="flex:1"></span>
+  <button class="act" id="save">Save .svz</button>
 </header>
 
 <main>
   <div id="tones"></div>
-  <section>
-    <div id="detail" class="meta">Select a tone.</div>
+  <section class="body">
+    <div class="tabs" id="parts"></div>
+    <div class="grid" id="panels"></div>
     <div class="keys" id="keys"></div>
-    <p class="meta">Play with <kbd>A</kbd>…<kbd>K</kbd> (white) / <kbd>W</kbd><kbd>E</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd> (black),
-       <kbd>Z</kbd>/<kbd>X</kbd> octave. Audio starts on first click.</p>
   </section>
 </main>
 
-<script type="module">
-const $ = (s) => document.querySelector(s);
-let ctx, node, patch = null, octave = 4;
-const held = new Set();
+<footer>
+  <span id="status">select a tone</span>
+  <span id="dirty"></span>
+</footer>
 
+<script type="module">
+const $ = s => document.querySelector(s);
+let ctx, node, tone = 0, partial = 1, patch = null, schema = {};
+const held = new Set();
+let octave = 4;
+
+/* ---- audio ------------------------------------------------------------- */
 async function audio() {
   if (ctx) { if (ctx.state === "suspended") await ctx.resume(); return; }
   ctx = new AudioContext();
   await ctx.audioWorklet.addModule("va-worklet.js");
   node = new AudioWorkletNode(ctx, "va-processor", { outputChannelCount: [2] });
   node.connect(ctx.destination);
-  node.port.onmessage = (e) => {
-    if (e.data.type === "loaded")
-      $("#status").textContent = e.data.playable ? "patch loaded" : "not playable (PCM only)";
-  };
   if (patch) node.port.postMessage({ type: "patch", patch });
 }
+const push = () => node && patch &&
+  node.port.postMessage({ type: "patch", patch });
 
+/* ---- data -------------------------------------------------------------- */
 const file = await (await fetch("/api/file")).json();
 $("#file").textContent =
-  `${file.path} — ${file.product} v${file.version} — ${file.tones.length} tones`;
+  `${file.path.split("/").pop()} · ${file.product} v${file.version} · ${file.tones.length} tones`;
 
-const va = await Promise.all(
-  file.tones.map(t => fetch(`/api/tone/${t.index}/va`).then(r => r.json())));
+// the schema drives every control - nothing here hardcodes a range or a label
+for (const g of ["PCMT_CMN","PCMS_CMN","PCMS_PMT",
+                 ...[1,2,3,4].flatMap(n => [`PCMT_PTL_${n}`,`PCMS_PTL_${n}`,
+                       `PTL_AENV_${n}`,`PTL_FENV_${n}`,`PTL_PENV_${n}`,`PTL_LFO_${n}`])]) {
+  schema[g] = await (await fetch(`/api/schema/${g}`)).json();
+}
+const def = (g, id) => (schema[g] || []).find(p => p.id === id);
 
-$("#tones").innerHTML = va.map((p, i) =>
-  `<button data-i="${i}" aria-selected="false">${p.name}
-   <span class="${p.playable ? 'meta' : 'no'}">${
-     p.playable ? `VA ×${p.partials.filter(q => q.on && q.synthesised).length}` : "PCM"}</span>
-   </button>`).join("");
-
-$("#tones").addEventListener("click", async (e) => {
+/* ---- tone list --------------------------------------------------------- */
+const vaAll = await Promise.all(file.tones.map(t =>
+  fetch(`/api/tone/${t.index}/va`).then(r => r.json())));
+$("#tones").innerHTML = vaAll.map((p, i) => {
+  const n = p.partials.filter(q => q.on && q.synthesised).length;
+  return `<button data-i="${i}" aria-selected="${i === 0}">${p.name}
+      <span class="badge">${p.playable ? `VA×${n}` : "PCM"}</span></button>`;
+}).join("");
+$("#tones").onclick = async e => {
   const b = e.target.closest("button"); if (!b) return;
-  for (const x of $("#tones").children) x.setAttribute("aria-selected", x === b);
-  select(va[+b.dataset.i]);
-  await audio();
-});
+  [...$("#tones").children].forEach(x => x.setAttribute("aria-selected", x === b));
+  tone = +b.dataset.i; await load(); await audio();
+};
 
-function select(p) {
-  patch = p;
-  if (node) node.port.postMessage({ type: "patch", patch });
-  const on = p.partials.filter(q => q.on);
-  const lbl = (f) => (f && typeof f === "object" ? f.label : f);
-  $("#detail").innerHTML = `
-    <table>
-      <tr><td class="k">structure</td><td>${lbl(p.structure.pair12)} / ${lbl(p.structure.pair34)}</td></tr>
-      <tr><td class="k">partials</td><td>${on.length} on, ${on.filter(q=>q.synthesised).length} synthesised</td></tr>
-      ${on.map(q => `<tr><td class="k">partial ${q.index}</td><td>
-        ${lbl(q.osc.OSC_TYPE)} ${lbl(q.osc.VA_FORM) ?? ""}
-        · ${lbl(q.filter.FILTER_TYPE)} ${q.filter.CUTOFF}/${q.filter.RESO}
-        · ${lbl(q.filter.VCF_TYPE)} ${lbl(q.filter.FILTER_SLOPE)}dB
-        · crs ${q.pitch.PIT_CRS >= 0 ? "+" : ""}${q.pitch.PIT_CRS}
-        ${q.synthesised ? "" : '<span class="warn">(PCM — silent here)</span>'}
-      </td></tr>`).join("")}
-    </table>`;
+async function load() {
+  patch = await (await fetch(`/api/tone/${tone}/va`)).json();
+  push();
+  $("#status").textContent = patch.playable
+    ? `${patch.name} — playable` : `${patch.name} — PCM only, silent here`;
+  drawParts(); draw();
 }
 
-// -- keyboard --------------------------------------------------------------
-const MAP = { a:0, w:1, s:2, e:3, d:4, f:5, t:6, g:7, y:8, h:9, u:10, j:11, k:12 };
+/* ---- controls ---------------------------------------------------------- */
+function control(group, id, value, label) {
+  const d = def(group, id);
+  if (!d) return "";
+  const v = typeof value === "object" ? value.value : value;
+  const name = label || d.desc || id;
+  if (d.values) {
+    return `<div class="row"><label title="${group}.${id}">${name}</label>
+      <select data-g="${group}" data-p="${id}">${d.values.map((s, k) =>
+        `<option value="${k + d.min}" ${k + d.min === v ? "selected" : ""}>${s}</option>`
+      ).join("")}</select></div>`;
+  }
+  return `<div class="row">
+      <label title="${group}.${id}">${name} <span>${d.min}…${d.max}</span></label>
+      <span class="val" id="v-${group}-${id}">${v}</span>
+      <input type="range" min="${d.min}" max="${d.max}" value="${v}"
+             data-g="${group}" data-p="${id}" style="grid-column:1/3">
+    </div>`;
+}
+
+function card(title, rows) {
+  const inner = rows.filter(Boolean).join("");
+  return inner ? `<div class="card"><h3>${title}</h3>${inner}</div>` : "";
+}
+
+function drawParts() {
+  $("#parts").innerHTML = [1, 2, 3, 4].map(n => {
+    const p = patch.partials[n - 1];
+    const kind = p.osc.OSC_TYPE?.label ?? "";
+    return `<button data-n="${n}" aria-selected="${n === partial}" ${p.on ? "" : "disabled"}>
+      PARTIAL ${n}<span class="meta"> ${p.on ? kind : "off"}</span></button>`;
+  }).join("") + `<button data-n="0" aria-selected="${partial === 0}">COMMON</button>`;
+  $("#parts").onclick = e => {
+    const b = e.target.closest("button"); if (!b || b.disabled) return;
+    partial = +b.dataset.n; drawParts(); draw();
+  };
+}
+
+function draw() {
+  const n = partial;
+  if (n === 0) {
+    $("#panels").innerHTML =
+      card("Tone common", ["LEVEL","PAN","OCTAVE","PIT_CRS","PIT_FINE","MONO_POLY",
+                           "PORTA_SW","PORTA_TIME","BEND_RANGE_UP","ANALOG_FEEL"]
+            .map(id => control("PCMT_CMN", id, patch.common[id]))) +
+      card("Voice", ["UNISON_SW","UNISON_SIZE","UNISON_DETN","RND_PIT_VAL"]
+            .map(id => control("PCMS_CMN", id, patch.voice[id]))) +
+      card("Structure", ["STRUCT12","STRUCT34","RING12_LEVEL","XMOD12_DEPTH"]
+            .map(id => control("PCMS_PMT", id,
+                 id === "STRUCT12" ? patch.structure.pair12
+               : id === "STRUCT34" ? patch.structure.pair34
+               : patch.structure[id])));
+    return;
+  }
+  const p = patch.partials[n - 1];
+  const S = `PCMS_PTL_${n}`, P = `PCMT_PTL_${n}`;
+  $("#panels").innerHTML =
+    card(`Oscillator ${n}`,
+      ["OSC_TYPE","VA_FORM","PW","PWM_DEPTH","SSAW_DETUNE","FAT","OSC_ATT","VA_INVERT_SW"]
+        .map(id => control(S, id, p.osc[id]))) +
+    card(`Pitch ${n}`,
+      ["PIT_CRS","PIT_FINE","PIT_KF","PIT_RND"].map(id => control(P, id, p.pitch[id]))) +
+    card(`Filter ${n}`,
+      ["FILTER_TYPE","CUTOFF","RESO","CUTOFF_KF","CUTOFF_VSENS"]
+        .map(id => control(P, id, p.filter[id]))
+      .concat(["VCF_TYPE","FILTER_SLOPE","HPF_CUTOFF"]
+        .map(id => control(S, id, p.filter[id])))) +
+    card(`Amp ${n}`,
+      ["LEVEL","PAN","LEVEL_VSENS"].map(id => control(P, id, p.amp[id]))) +
+    card(`Amp env ${n}`,
+      ["T1","T2","T3","T4","L1","L2","L3"]
+        .map(id => control(`PTL_AENV_${n}`, id, p.aenv[id]))) +
+    card(`Filter env ${n}`,
+      ["DEPTH","T1","T2","T3","T4","L0","L1","L2","L3","L4"]
+        .map(id => control(`PTL_FENV_${n}`, id, p.fenv[id]))) +
+    card(`Pitch env ${n}`,
+      ["DEPTH","T1","T2","L0","L1","L4"]
+        .map(id => control(`PTL_PENV_${n}`, id, p.penv[id]))) +
+    card(`LFO 1 · ${n}`,
+      ["LFO_1_FORM","LFO_1_RATE","LFO_1_DELAY","LFO_1_FADE","LFO_1_PIT_DEPTH",
+       "LFO_1_TVF_DEPTH","LFO_1_TVA_DEPTH"]
+        .map(id => control(`PTL_LFO_${n}`, id,
+             p.lfo1[id.replace("LFO_1_","").toLowerCase()]))) +
+    card(`LFO 2 · ${n}`,
+      ["LFO_2_FORM","LFO_2_RATE","LFO_2_PIT_DEPTH","LFO_2_TVF_DEPTH"]
+        .map(id => control(`PTL_LFO_${n}`, id,
+             p.lfo2[id.replace("LFO_2_","").toLowerCase()])));
+}
+
+/* ---- editing ----------------------------------------------------------- */
+async function edit(group, id, value) {
+  const r = await fetch(`/api/tone/${tone}`, {
+    method: "PATCH",
+    body: JSON.stringify({ group, id, value: +value }),
+  });
+  const j = await r.json();
+  if (j.error) { $("#status").innerHTML = `<span class="warn">${j.error}</span>`; return; }
+  $("#dirty").textContent = j.unchanged ? "" : "modified — unsaved";
+  patch = await (await fetch(`/api/tone/${tone}/va`)).json();
+  push();
+}
+$("#panels").addEventListener("input", async e => {
+  const t = e.target;
+  if (!t.dataset.g) return;
+  const out = document.getElementById(`v-${t.dataset.g}-${t.dataset.p}`);
+  if (out) out.textContent = t.value;
+  await audio();
+  edit(t.dataset.g, t.dataset.p, t.value);
+});
+$("#save").onclick = async () => {
+  const r = await (await fetch("/api/save", { method: "POST", body: "{}" })).json();
+  $("#status").textContent = r.ok ? `saved ${r.path} (${r.bytes} B)` : r.error;
+  $("#dirty").textContent = "";
+};
+
+/* ---- keyboard + MIDI --------------------------------------------------- */
+const MAP = { a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12 };
 const NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B","C"];
 $("#keys").innerHTML = Object.entries(MAP)
-  .map(([k, s]) => `<div data-semi="${s}">${NAMES[s]}<br>${k}</div>`).join("");
-
-function noteOn(semi) {
-  const n = 12 * (octave + 1) + semi;
-  if (held.has(n)) return;
-  held.add(n);
-  node?.port.postMessage({ type: "noteOn", note: n, velocity: 100 });
-  document.querySelector(`[data-semi="${semi}"]`)?.classList.add("on");
-}
-function noteOff(semi) {
-  const n = 12 * (octave + 1) + semi;
-  held.delete(n);
-  node?.port.postMessage({ type: "noteOff", note: n });
-  document.querySelector(`[data-semi="${semi}"]`)?.classList.remove("on");
-}
-
-// -- MIDI in ---------------------------------------------------------------
-// Any connected device, plus the IAC bus, so the same MIDI that drives
-// Zenology for a capture can drive this for an A/B.
-async function midi() {
-  if (!navigator.requestMIDIAccess) { $("#midi").textContent = "no Web MIDI"; return; }
-  try {
-    const access = await navigator.requestMIDIAccess({ sysex: false });
-    const bind = () => {
-      const names = [];
-      for (const input of access.inputs.values()) {
-        names.push(input.name);
-        input.onmidimessage = onMidi;
-      }
-      $("#midi").textContent = names.length
-        ? `MIDI: ${names.join(", ")}` : "MIDI: no inputs";
-    };
-    bind();
-    access.onstatechange = bind;
-  } catch (err) {
-    $("#midi").textContent = `MIDI blocked: ${err.message}`;
-  }
-}
-
-function onMidi(e) {
-  const [status, d1, d2] = e.data;
-  const cmd = status & 0xf0;
-  if (cmd === 0x90 && d2 > 0) {
-    audio().then(() => {
-      if (held.has(d1)) return;
-      held.add(d1);
-      node?.port.postMessage({ type: "noteOn", note: d1, velocity: d2 });
-      flash(d1, true);
-    });
-  } else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
-    held.delete(d1);
-    node?.port.postMessage({ type: "noteOff", note: d1 });
-    flash(d1, false);
-  } else if (cmd === 0xb0 && d1 === 123) {
-    node?.port.postMessage({ type: "allNotesOff" });
-  }
-}
-
-function flash(note, on) {
-  const semi = note - 12 * (octave + 1);
-  const el = document.querySelector(`[data-semi="${semi}"]`);
-  if (el) el.classList.toggle("on", on);
-}
-
-midi();
-
-addEventListener("keydown", async (e) => {
-  if (e.repeat) return;
-  if (e.key === "z") { octave = Math.max(0, octave - 1); return; }
-  if (e.key === "x") { octave = Math.min(8, octave + 1); return; }
+  .map(([k,s]) => `<div data-semi="${s}">${NAMES[s]}<br>${k}</div>`).join("");
+const noteOn = s => { const n = 12*(octave+1)+s; if (held.has(n)) return; held.add(n);
+  node?.port.postMessage({type:"noteOn",note:n,velocity:100});
+  document.querySelector(`[data-semi="${s}"]`)?.classList.add("on"); };
+const noteOff = s => { const n = 12*(octave+1)+s; held.delete(n);
+  node?.port.postMessage({type:"noteOff",note:n});
+  document.querySelector(`[data-semi="${s}"]`)?.classList.remove("on"); };
+addEventListener("keydown", async e => {
+  if (e.repeat || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.key === "z") return void (octave = Math.max(0, octave-1));
+  if (e.key === "x") return void (octave = Math.min(8, octave+1));
   if (!(e.key in MAP)) return;
   await audio(); noteOn(MAP[e.key]);
 });
-addEventListener("keyup", (e) => { if (e.key in MAP) noteOff(MAP[e.key]); });
-$("#keys").addEventListener("pointerdown", async (e) => {
+addEventListener("keyup", e => { if (e.key in MAP) noteOff(MAP[e.key]); });
+$("#keys").addEventListener("pointerdown", async e => {
   const d = e.target.closest("[data-semi]"); if (!d) return;
   await audio(); noteOn(+d.dataset.semi);
 });
-addEventListener("pointerup", () => { for (const d of document.querySelectorAll(".keys .on"))
-  noteOff(+d.dataset.semi); });
+addEventListener("pointerup", () =>
+  document.querySelectorAll(".keys .on").forEach(d => noteOff(+d.dataset.semi)));
+
+if (navigator.requestMIDIAccess) {
+  try {
+    const acc = await navigator.requestMIDIAccess({ sysex:false });
+    const bind = () => {
+      const names = [];
+      for (const i of acc.inputs.values()) { names.push(i.name); i.onmidimessage = onMidi; }
+      $("#midi").textContent = names.length ? `MIDI: ${names.join(", ")}` : "MIDI: none";
+    };
+    bind(); acc.onstatechange = bind;
+  } catch (err) { $("#midi").textContent = "MIDI blocked"; }
+}
+function onMidi(e) {
+  const [st, d1, d2] = e.data, cmd = st & 0xf0;
+  if (cmd === 0x90 && d2 > 0) audio().then(() => {
+    if (held.has(d1)) return; held.add(d1);
+    node?.port.postMessage({type:"noteOn",note:d1,velocity:d2});
+  });
+  else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
+    held.delete(d1); node?.port.postMessage({type:"noteOff",note:d1});
+  } else if (cmd === 0xb0 && d1 === 123) node?.port.postMessage({type:"allNotesOff"});
+}
+
+await load();
 </script>

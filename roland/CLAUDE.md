@@ -137,6 +137,13 @@ move it up into "Verified facts" *with the evidence that settled it*.
   underneath it — a slot written at 20:27 was gone by 21:25 with Logic still
   open. Quit every host before writing the bank, and re-read the file
   immediately before writing rather than trusting an earlier capture.
+- Whether a tone written into `User.bin` shows up in the plugin is **still
+  untested**. It looked like a failure on 2026-07-31 — a slot we built never
+  appeared in the browser — but the bank had been silently reverted by a running
+  Zenology before the plugin read it (file back to its pre-write size and
+  timestamp). That is the gotcha above, not evidence about slot validity. To
+  test it properly: quit every host, write, confirm the file still holds the
+  slot, THEN start the plugin.
 - Measurement noise floors, measured 2026-07-30, for anything comparing audio:
   BlackHole capture of the same patch twice differs by **2.57 dB**; an offline
   DawDreamer render of the same patch twice differs by **1.30 dB** (the plugin

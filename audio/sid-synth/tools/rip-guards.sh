@@ -23,7 +23,7 @@ HU=/hvsc/MUSICIANS
 
 # label | local .sid | hvsc url path | subtune | expected onset/pitch | what it guards
 CORPUS=(
-"commando|sids/Commando.sid|/sids/Commando.sid|0|99.7/99.4|Hubbard staccato + drum onset wavetables; also uses sync AND ring mod"
+"commando|$HV/H/Hubbard_Rob/Commando.sid|$HU/H/Hubbard_Rob/Commando.sid|0|99.7/99.4|Hubbard staccato + drum onset wavetables; also uses sync AND ring mod"
 "monty0|$HV/H/Hubbard_Rob/Monty_on_the_Run.sid|$HU/H/Hubbard_Rob/Monty_on_the_Run.sid|0|100.0/98.0|1-frame octave trill; fine-grid gate-rhythmic"
 "monty2|$HV/H/Hubbard_Rob/Monty_on_the_Run.sid|$HU/H/Hubbard_Rob/Monty_on_the_Run.sid|2|100.0/99.6|densest subtune (223 notes)"
 "ocean|$HV/G/Galway_Martin/Ocean_Loader_1.sid|$HU/G/Galway_Martin/Ocean_Loader_1.sid|0|100.0/100.0|Galway rubato -> fidelity mode + legato tie notes"

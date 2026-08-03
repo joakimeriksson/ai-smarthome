@@ -654,18 +654,30 @@
                 }
             },
 
+            // Example tune. Fetched from HVSC through the /hvsc/ proxy
+            // (tools/serve.py, cached in the gitignored hvsc-cache/) rather
+            // than shipped in the repo: SID tunes are their composers'
+            // copyrighted work and must not be redistributed here.
+            EXAMPLE_SID: '/hvsc/MUSICIANS/H/Hubbard_Rob/Commando.sid',
+
             async loadExample() {
                 try {
-                    this.updateStatus('Loading example SID...');
-                    const response = await fetch('sids/Commando.sid');
-                    if (!response.ok) throw new Error('Could not load example SID');
+                    this.updateStatus('Loading example SID from HVSC...');
+                    const response = await fetch(this.EXAMPLE_SID);
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
 
                     const arrayBuffer = await response.arrayBuffer();
                     const data = new Uint8Array(arrayBuffer);
                     this.loadSIDData(data);
+                    // It IS an HVSC tune, so give it the real song length like
+                    // any other (a 90 s default would truncate it)
+                    this.hvscPath = this.EXAMPLE_SID.replace(/^\/hvsc/, '');
+                    await this.hvscEnsureIndex();
+                    this.applySongLength();
                 } catch (error) {
                     console.error('Failed to load example:', error);
-                    this.updateStatus('Error: ' + error.message);
+                    this.updateStatus('Example needs the HVSC proxy (run `make serve`) or a network ' +
+                        'connection - or just drop your own .sid file above. (' + error.message + ')');
                 }
             },
 

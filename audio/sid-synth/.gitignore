@@ -11,3 +11,9 @@ gt2-src/goattrk2
 exporters/gt2/build/gt2_driver.prg
 .DS_Store
 hvsc-cache/
+
+# Third-party SID tunes are their composers' copyrighted work - never commit
+# them. Tunes are fetched from HVSC on demand via the /hvsc/ proxy
+# (tools/serve.py) into hvsc-cache/ above. Songs authored HERE live as .sng
+# (sids/default-song.sng), which is deliberately still tracked.
+sids/*.sid

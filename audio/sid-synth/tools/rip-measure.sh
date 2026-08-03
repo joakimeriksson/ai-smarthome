@@ -4,7 +4,11 @@
 #
 #   tools/rip-measure.sh <local.sid> <hvsc-url-path> <subtune0based> <frames> <label>
 #
-# e.g. tools/rip-measure.sh sids/Commando.sid /sids/Commando.sid 0 1500 commando
+# e.g. tools/rip-measure.sh hvsc-cache/MUSICIANS/H/Hubbard_Rob/Commando.sid \
+#          /hvsc/MUSICIANS/H/Hubbard_Rob/Commando.sid 0 1500 commando
+#
+# Tunes come from HVSC via the /hvsc/ proxy (tools/serve.py) into the
+# gitignored hvsc-cache/ - no copyrighted .sid is stored in this repo.
 #
 # The pipeline is:
 #   sid-dump.js       original .sid -> register dump   (ground truth)

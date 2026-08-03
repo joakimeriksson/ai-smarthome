@@ -13,6 +13,15 @@ const seconds = parseInt(secondsArg || '90', 10);
 const subtune = parseInt(subtuneArg || '0', 10);
 if (!sidPath || !outSng) { console.error('usage: rip-roundtrip.mjs <sid-url-path> <out.sng> [seconds]'); process.exit(2); }
 
+// Preflight: without the dev server playwright fails with an opaque
+// "Could not connect" stack trace that looks like a browser problem.
+try {
+  await fetch('http://localhost:8471/sid-ripper.html', { signal: AbortSignal.timeout(3000) });
+} catch {
+  console.error('rip-roundtrip: dev server not responding on :8471 - run `make serve` first');
+  process.exit(1);
+}
+
 const browser = await webkit.launch();
 const page = await browser.newPage();
 page.on('pageerror', e => console.error('[pageerror]', e.message));

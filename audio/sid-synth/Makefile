@@ -22,8 +22,22 @@ driver:
 refdump:
 	$(MAKE) -C tools/gt2-refdump
 
-.PHONY: verify golden worklet driver refdump serve
+.PHONY: verify golden worklet driver refdump serve guards doctor
 
-# Dev server: no-cache static serving + HVSC download proxy (tools/serve.py)
+# Dev server: no-cache static serving + HVSC download proxy (tools/serve.py).
+# Refuses to start a second copy - a stale server on :8471 serving an old
+# working tree is a very confusing way to "reproduce" a bug.
 serve:
-	python3 tools/serve.py 8471
+	@curl -s -o /dev/null --max-time 2 http://localhost:8471/ \
+		&& echo "serve: already running on :8471" \
+		|| python3 tools/serve.py 8471
+
+# Rip regression gate: the whole guard corpus vs its committed baseline.
+# `make verify` guards the ENGINE; this guards the RIPPER. Needs `make serve`.
+guards:
+	tools/rip-guards.sh
+
+# Check the toolchain the rip loop depends on (server, playwright, numpy,
+# sidplayfp) and say exactly what to do about anything missing.
+doctor:
+	tools/rip-doctor.sh

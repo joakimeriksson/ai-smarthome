@@ -21,7 +21,7 @@ sound and display globals they reference.
 ## Run
 
 ```sh
-tools/gt2-refdump/gt2dump sids/dojo.sng [--frames N] [--subtune N]
+tools/gt2-refdump/gt2dump sids/default-song.sng [--frames N] [--subtune N]
 ```
 
 - `--frames N`: number of frames to dump (default 1500 = 30s PAL)
@@ -30,7 +30,7 @@ tools/gt2-refdump/gt2dump sids/dojo.sng [--frames N] [--subtune N]
 Output (stdout, diagnostics on stderr):
 
 ```
-{"source":"ref","song":"dojo.sng","subtune":0}
+{"source":"ref","song":"default-song.sng","subtune":0}
 {"f":0,"regs":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15]}
 {"f":1,"regs":[...25 decimal values of sidreg $00-$18...]}
 ```

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // make-test-songs.js - Generate a GTS5 .sng test corpus exercising GT2
-// features that dojo.sng does not cover. One file, feature-isolating
+// features a plain song does not cover. One file, feature-isolating
 // subtunes; every engine (gt2dump / worklet-dump / export-sid+sid-dump)
 // plays the same file.
 //

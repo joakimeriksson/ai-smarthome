@@ -350,6 +350,10 @@ function clearCurrentTable() {
 
 // Field specs per generator: [key, label, type, default, options?]
 const GENERATOR_FIELDS = {
+    sustain: [
+        ['waveform', 'Waveform', 'select', WAVEFORMS.pulse,
+            () => Object.entries(WAVEFORMS).map(([k, v]) => [v, k])],
+    ],
     arpeggio: [
         ['chord', 'Chord', 'select', 'minor', () => Object.keys(CHORDS)],
         ['waveform', 'Waveform', 'select', WAVEFORMS.pulse,
@@ -379,6 +383,7 @@ const GENERATOR_FIELDS = {
 };
 
 const GENERATOR_LABELS = {
+    sustain: 'Sustained note (plain instrument)',
     arpeggio: 'Arpeggio / trill',
     drum: 'Drum (one-shot)',
     pwm: 'PWM sweep',

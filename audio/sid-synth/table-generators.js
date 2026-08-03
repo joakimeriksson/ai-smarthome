@@ -96,6 +96,36 @@ export function generateArpeggio({
 }
 
 /**
+ * Plain sustained instrument wavetable - the one EVERY pitched GT2 instrument
+ * needs, and the easiest thing to leave out.
+ *
+ * In gplay.c the note frequency is written ONLY inside WAVEEXEC (the
+ * `cptr->freq = freqtbllo[note]...` line), and WAVEEXEC runs only
+ * `if (cptr->ptr[WTBL])`. So an instrument with NO wavetable never has its
+ * pitch set at all: on real hardware every note plays at whatever frequency
+ * the voice happened to hold - frequency 0 from song start. It sounds fine in
+ * a more permissive engine and is silent in real GoatTracker.
+ *
+ * Shape: one waveform entry that sets the note, then a delay that loops on
+ * ITSELF. The note is set once and never re-set, which matters because a
+ * wavetable entry that sets a note does `goto PULSEEXEC` and SKIPS
+ * TICKNEFFECTS - so re-setting it every frame would silently disable vibrato
+ * and portamento on the instrument. Delay entries fall through to
+ * TICKNEFFECTS, so effects keep running.
+ */
+export function generateSustain({ waveform = WAVEFORMS.pulse, startPos = 0 } = {}) {
+    return {
+        entries: [
+            { left: waveform & 0xFF, right: 0x00, description: 'set waveform + note' },
+            { left: 0x0F, right: 0x80, description: 'hold 16f, no note change' },
+            // loop onto the DELAY (startPos+2), never back onto the note entry
+            { left: 0xFF, right: startPos + 2, description: 'sustain (effects keep running)' },
+        ],
+        description: 'plain sustained note (required for a pitched instrument)',
+    };
+}
+
+/**
  * Pulse-width sweep (PWM). Triangle up/down so it is seamless and bounded.
  * The loop deliberately returns to the FIRST MODULATE, not the leading set:
  * GT2 keeps the pulse VALUE across the jump, so re-running the set would snap
@@ -216,7 +246,7 @@ export function generateDrum({ kind = 'kick' } = {}) {
 
 /** Which generators apply to which table type (0=WTBL 1=PTBL 2=FTBL 3=STBL) */
 export const GENERATORS_BY_TABLE = {
-    0: ['arpeggio', 'drum'],
+    0: ['sustain', 'arpeggio', 'drum'],
     1: ['pwm'],
     2: ['filter'],
     3: ['vibrato'],
@@ -224,6 +254,7 @@ export const GENERATORS_BY_TABLE = {
 
 export function generate(name, params = {}) {
     switch (name) {
+        case 'sustain':  return generateSustain(params);
         case 'arpeggio': return generateArpeggio(params);
         case 'pwm':      return generatePWM(params);
         case 'filter':   return generateFilterSweep(params);

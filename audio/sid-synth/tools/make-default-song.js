@@ -20,7 +20,7 @@
 //                                                          for the app to import
 import { writeSng } from '../gt2-sng-writer.js';
 import { generateArpeggio, generatePWM, generateFilterSweep, generateVibrato,
-         generateDrum, WAVEFORMS } from '../table-generators.js';
+         generateDrum, generateSustain, WAVEFORMS } from '../table-generators.js';
 import { writeFileSync } from 'node:fs';
 
 // ---------------------------------------------------------------- note helpers
@@ -69,6 +69,14 @@ const ARP_MAJ  = arp([0, 4, 7]);       // major triad
 const ARP_SUS  = arp([0, 5, 7]);       // sus4 - lifts the turnaround
 const ARP_MIN7 = arp([0, 3, 7, 10]);   // minor 7th
 
+// --- WTBL: plain sustained instruments. WITHOUT this an instrument never has
+// its pitch set in real GT2 (frequency is written only inside WAVEEXEC, which
+// runs only if the instrument HAS a wavetable) - the lead and bass sounded
+// correct in the browser engine and were dead silent on real hardware and in
+// the exported .SID. `make verify` now covers this song, which is how it was
+// caught. Both are pulse, so one table serves both.
+const WT_SUSTAIN = emit(WTBL, generateSustain({ waveform: PULSE, startPos: at(WTBL) }));
+
 // --- WTBL: drum onsets (one-shot, absolute notes so the kit survives the
 // order-list transposes)
 const WT_KICK  = emit(WTBL, generateDrum({ kind: 'kick' }));
@@ -99,11 +107,17 @@ const VIB_NONE = 0;
 // runs a NARROW pulse (~$180 = thin and buzzy so it cuts through) while lead and
 // arp sit wide (~$800-$B40). Commando uses no filter at all - the SID's filter
 // varied between chips, so Hubbard largely avoided it.
+// INSTRUMENT 1 MUST NOT HAVE VIBRATO. GT2's 6502 player initialises every
+// channel to instrument 1, so a never-gated channel carrying a vibrato
+// instrument wiggles its (inaudible) frequency register - a real player-vs-
+// editor quirk that shows up as a register diff against gplay.c. The lead
+// rests through the 4-bar intro, so it hit exactly that case; the bass (no
+// vibrato) leads the list instead. Same rule as tests/make-test-songs.js.
 const instruments = [
-    { name: 'Hub Lead',  ad: 0x06, sr: 0x4B, firstWave: PULSE, gateTimer: 0x02,
-      tables: { wave: 0, pulse: PW_LEAD, filter: 0, speed: VIB_LEAD }, vibratoDelay: 14 },
     { name: 'Hub Bass',  ad: 0x08, sr: 0x59, firstWave: PULSE, gateTimer: 0x02,
-      tables: { wave: 0, pulse: PW_BASS, filter: 0, speed: VIB_NONE } },
+      tables: { wave: WT_SUSTAIN, pulse: PW_BASS, filter: 0, speed: VIB_NONE } },
+    { name: 'Hub Lead',  ad: 0x06, sr: 0x4B, firstWave: PULSE, gateTimer: 0x02,
+      tables: { wave: WT_SUSTAIN, pulse: PW_LEAD, filter: 0, speed: VIB_LEAD }, vibratoDelay: 14 },
     { name: 'Arp Chord', ad: 0x06, sr: 0x4B, firstWave: PULSE, gateTimer: 0x02,
       tables: { wave: ARP_MIN, pulse: PW_STAB, filter: 0, speed: VIB_NONE } },
     { name: 'Kick',      ad: 0x00, sr: 0x88, firstWave: NOISE, gateTimer: 0x02,
@@ -113,7 +127,7 @@ const instruments = [
     { name: 'Hat',       ad: 0x00, sr: 0x56, firstWave: NOISE, gateTimer: 0x02,
       tables: { wave: WT_HAT, pulse: 0, filter: 0, speed: VIB_NONE } },
 ];
-const I_LEAD = 1, I_BASS = 2, I_ARP = 3, I_KICK = 4, I_SNARE = 5, I_HAT = 6;
+const I_BASS = 1, I_LEAD = 2, I_ARP = 3, I_KICK = 4, I_SNARE = 5, I_HAT = 6;
 
 // ---------------------------------------------------------------- song
 // ORIGINAL music written in Hubbard's idiom - his techniques and timbres, not

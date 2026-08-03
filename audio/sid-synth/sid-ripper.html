@@ -2420,9 +2420,38 @@
                             }
                         }
                     });
-                    const pulseTables = [...sweepPulseTables, ...instPulseTables];
+                    // PTBL is ONE shared 255-entry table for the whole song and
+                    // nothing checked that budget. Ripping Monty on the Run at
+                    // its real length (5:50) wanted 413 entries, so 158 were
+                    // written past the end and the instruments whose pointers
+                    // landed there played from corrupt table data. Same
+                    // silent-overflow class as the WTBL bug in
+                    // buildWavetablesFromOnsetSequences - drop what does not
+                    // fit, loudly, instead of writing past the end.
+                    //
+                    // Order is deliberately left as generated (per-voice sweeps,
+                    // then per instrument: base table followed by its per-note
+                    // PWM bucket variants). Re-prioritising to keep every
+                    // instrument's BASE table was tried and spreads the budget
+                    // more evenly across voices, but it shifts note/pitch
+                    // agreement on the guard corpus for no audible gain
+                    // (identical spectral distance), so the conservative order
+                    // stands.
+                    const PTBL_BUDGET = 250;   // leave headroom below 255
+                    const pulseTables = [];
+                    let ptblUsed = 0, ptblDropped = 0;
+                    for (const pt of [...sweepPulseTables, ...instPulseTables]) {
+                        if (ptblUsed + pt.entries.length > PTBL_BUDGET) { ptblDropped++; continue; }
+                        ptblUsed += pt.entries.length;
+                        pulseTables.push(pt);
+                    }
                     if (pulseTables.length > 0) {
                         console.log(`Generated ${sweepPulseTables.length} sweep + ${instPulseTables.length} instrument pulse tables`);
+                    }
+                    if (ptblDropped) {
+                        console.warn(`PTBL budget: dropped ${ptblDropped} of ` +
+                            `${sweepPulseTables.length + instPulseTables.length} pulse table(s); ` +
+                            `${ptblUsed}/${PTBL_BUDGET} entries used`);
                     }
 
                     // Step 5: Build filter tables from filter change data
@@ -2563,7 +2592,11 @@
                         pulseTables.forEach(pt => { ptrOf.set(pt, pPos + 1); pPos += pt.entries.length; });
                         instPulseTables.forEach(pt => {
                             const inst = gt2Instruments[pt.instId];
-                            if (inst) inst.tables.pulse = ptrOf.get(pt);
+                            // A table dropped by the PTBL budget has no pointer -
+                            // assigning undefined here would silently null the
+                            // instrument's pulse table
+                            const ptr = ptrOf.get(pt);
+                            if (inst && ptr !== undefined) inst.tables.pulse = ptr;
                         });
 
                     }

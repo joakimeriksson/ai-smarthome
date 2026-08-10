@@ -1,17 +1,28 @@
 /* FM Synth — DX7-style, orange/amber theme */
 
 :root {
-  --bg: #1a1208;
-  --panel-bg: #241c10;
-  --panel-border: #4a3a20;
-  --accent: #ff8800;
-  --accent-dim: #aa5500;
-  --accent-bright: #ffaa33;
-  --text: #e8dcc8;
-  --text-dim: #998866;
-  --knob-track: #3a3020;
-  --slider-thumb: #ff8800;
+  /* Yamaha DX7, 1983 — dark chocolate panel in a beige case, green LCD,
+     membrane buttons. Warm browns, not orange-on-black. */
+  --chassis: #b9b0a0;
+  --chassis-edge: rgba(40, 30, 18, 0.55);
+  --bg: #2a2119;
+  --panel-bg: #33291e;
+  --panel-border: #5a4834;
+  --accent: #e8842a;
+  --accent-dim: #8a4d16;
+  --accent-bright: #ffab5e;
+  --text: #efe6d6;
+  --text-dim: #a3937a;
+  --knob-track: #1c1610;
+  --slider-thumb: #e8842a;
   --danger: #ff4466;
+  --led: #ff3b2f;
+  --cap: #cfc7ba;
+  --display-bg: #16301c;      /* the DX7's green LCD */
+  --display-ink: #7df2a0;
+  --display-grid: rgba(125, 242, 160, 0.10);
+  --panel-radius: 3px;
+  --title-tracking: 2.2px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

@@ -24,11 +24,21 @@
     .drum { background: linear-gradient(135deg, #2e0a0a, #1a0000); border: 1px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.15); color: #ff4444; }
     .drum:hover { box-shadow: 0 0 30px rgba(255,68,68,0.3); }
     .sub { font-size: 11px; color: #888; margin-top: 6px; font-weight: 400; letter-spacing: 1px; }
+    .studio-row { margin-bottom: 28px; display: flex; gap: 24px; justify-content: center; }
+    .studio { background: linear-gradient(135deg, #241a2e, #120d1a); border: 1px solid #cc88ff; box-shadow: 0 0 20px rgba(204,136,255,0.15); color: #cc88ff; }
+    .studio:hover { box-shadow: 0 0 30px rgba(204,136,255,0.35); }
+    .synthex { background: linear-gradient(135deg, #2e1e14, #1a1008); border: 1px solid #d65a1c; box-shadow: 0 0 20px rgba(214,90,28,0.15); color: #ee7e3a; }
+    .synthex:hover { box-shadow: 0 0 30px rgba(214,90,28,0.35); }
+    .note { color: #666; font-size: 11px; margin-top: 26px; letter-spacing: 1px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Software Synths</h1>
+    <div class="studio-row">
+      <a href="http://localhost:5180/" class="studio">Studio<div class="sub">All synths &middot; mixer &middot; sequencer</div></a>
+      <a href="http://localhost:5173/" class="synthex">Synthex<div class="sub">Elka Synthex tribute</div></a>
+    </div>
     <div class="synths">
       <a href="va-synth.html" class="va">VA Synth<div class="sub">Virtual Analog</div></a>
       <a href="ws-synth.html" class="ws">WaveSynth<div class="sub">Wavetable &amp; Wave Sequence</div></a>
@@ -37,6 +47,7 @@
       <a href="pm-synth.html" class="pm">PM Synth<div class="sub">Karplus-Strong Physical Modeling</div></a>
       <a href="drum-machine.html" class="drum">Drums<div class="sub">808/909 Drum Machine</div></a>
     </div>
+    <p class="note">Studio and Synthex run from their own dev servers (npm run studio / npm run dev in synthex/).</p>
   </div>
 </body>
 </html>

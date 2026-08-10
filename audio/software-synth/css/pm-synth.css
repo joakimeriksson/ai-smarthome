@@ -1,17 +1,37 @@
 /* Physical Modeling Synth — earthy green theme */
 
 :root {
-  --bg: #0a1a0a;
-  --panel-bg: #142014;
-  --panel-border: #2a4a2a;
-  --accent: #44cc44;
-  --accent-dim: #228822;
-  --accent-bright: #66ee66;
-  --text: #d0e8d0;
-  --text-dim: #88aa88;
-  --knob-track: #1a3a1a;
-  --slider-thumb: #44cc44;
-  --danger: #ff4466;
+  /* Karplus-Strong is a paper, not a product — so this one is a lab
+     instrument: bone panel, ink legends, a single copper accent. It is the
+     only light surface in the family, which is the point. */
+  --chassis: #cdc7bb;
+  --chassis-edge: rgba(60, 55, 45, 0.35);
+  --bg: #ded8cc;
+  --panel-bg: #f2eee5;
+  --panel-border: #b9b1a1;
+  --accent: #9a5b2c;
+  --accent-dim: #7d4a23;
+  --accent-bright: #c47a3f;
+  --text: #2c2823;
+  --text-dim: #6d665b;
+  --knob-track: #cfc8ba;
+  --slider-thumb: #9a5b2c;
+  --danger: #a33;
+  --led: #d1462f;
+  --cap: #6f675c;
+  --cap-edge: rgba(0,0,0,0.4);
+  --display-bg: #1d2420;
+  --display-ink: #8fd6a8;
+  --display-grid: rgba(143, 214, 168, 0.12);
+  --readout-bg: transparent;
+  --readout-ink: var(--accent);
+  --readout-border: transparent;
+  --readout-glow: none;
+  --panel-radius: 2px;
+  --shadow-strength: 0.35;    /* matte paper, not gloss */
+  --label-weight: 700;
+  --label-tracking: 1.1px;
+  --title-tracking: 2.4px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -65,3 +85,18 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .key-label { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #88aa88; pointer-events: none; }
 
 @media (max-width: 900px) { .synth-grid { grid-template-columns: 1fr; } .effects-row { grid-template-columns: 1fr 1fr; } }
+
+
+/* On a light surface panels dissolve into the chassis, so they get a printed
+   edge and a paper highlight rather than the drop shadow a dark theme uses. */
+.panel,
+.synth-header {
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 2px 5px rgba(60, 52, 40, 0.16);
+  border-color: #b0a795;
+}
+.panel-title {
+  border-bottom: 1px solid #cfc6b4;
+}

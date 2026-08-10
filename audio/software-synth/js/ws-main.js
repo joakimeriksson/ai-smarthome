@@ -3,6 +3,7 @@
 // Keyboard/MIDI handled by shared keyboard.js
 
 const NUM_VOICES = 8;
+const pool = new SynthShell.VoicePool(NUM_VOICES);
 
 const WAVE_NAMES = [
   'Sine', 'Triangle', 'Saw', 'Square',
@@ -22,48 +23,12 @@ let analyser = null;
 let keyboard = null;
 
 // Voice allocation
-const voices = new Array(NUM_VOICES).fill(null).map(() => ({
-  note: -1, active: false, age: 0
-}));
-let voiceAge = 0;
 let sustainOn = false;
 const sustainedNotes = new Set();
 
-function allocateVoice(note) {
-  for (let i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].note === note && voices[i].active) return i;
-  }
-  for (let i = 0; i < NUM_VOICES; i++) {
-    if (!voices[i].active) {
-      voices[i].note = note;
-      voices[i].active = true;
-      voices[i].age = ++voiceAge;
-      return i;
-    }
-  }
-  let oldest = 0;
-  for (let i = 1; i < NUM_VOICES; i++) {
-    if (voices[i].age < voices[oldest].age) oldest = i;
-  }
-  voices[oldest].note = note;
-  voices[oldest].active = true;
-  voices[oldest].age = ++voiceAge;
-  return oldest;
-}
-
-function releaseVoice(note) {
-  for (let i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].note === note && voices[i].active) {
-      voices[i].active = false;
-      return i;
-    }
-  }
-  return -1;
-}
-
 function noteOn(note, velocity = 100) {
   if (!workletNode) return;
-  const v = allocateVoice(note);
+  const v = pool.alloc(note);
   workletNode.port.postMessage({ type: 'noteOn', voice: v, note, velocity });
   updateVoiceDisplay();
   if (keyboard) keyboard.highlightKey(note, true);
@@ -72,7 +37,7 @@ function noteOn(note, velocity = 100) {
 function noteOff(note) {
   if (!workletNode) return;
   if (sustainOn) { sustainedNotes.add(note); return; }
-  const v = releaseVoice(note);
+  const v = pool.release(note);
   if (v >= 0) {
     workletNode.port.postMessage({ type: 'noteOff', voice: v });
     updateVoiceDisplay();
@@ -83,6 +48,29 @@ function noteOff(note) {
 function sendParam(param, value) {
   if (workletNode) workletNode.port.postMessage({ type: 'param', param, value });
 }
+
+const bind = SynthShell.createBinder(sendParam);
+const bindSlider = bind.slider, bindSelect = bind.select, bindCheckbox = bind.checkbox;
+
+function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool); }
+function initScope() {
+  SynthShell.startScope({ canvasId: 'scope', analyser, background: '#0d101a', stroke: '#00ccff' });
+}
+// Built lazily: FACTORY_PRESETS is declared further down the file, so
+// constructing at this point would hit the temporal dead zone.
+let presets = null;
+function getPresets() {
+  if (!presets) {
+    presets = new SynthShell.PresetStore({
+      storageKey: 'ws-synth-presets',
+      factory: FACTORY_PRESETS,
+      apply: (p) => applyPreset(p),
+      capture: () => getCurrentPreset(),
+    });
+  }
+  return presets;
+}
+function populatePresetSelect() { getPresets().populateSelect(); }
 
 function sendWaveSeq(osc, steps, loopMode, speed) {
   if (workletNode) {
@@ -240,36 +228,6 @@ function pushSeqToProcessor() {
 }
 
 // ─── UI Binding ─────────────────────────────────────────────────────────────
-
-function bindSlider(id, paramPath, opts = {}) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const valEl = document.getElementById(id + '-val');
-  const fmt = opts.format || (v => parseFloat(v).toFixed(2));
-  const map = opts.map || (v => parseFloat(v));
-
-  el.oninput = () => {
-    const raw = el.value;
-    const mapped = map(raw);
-    if (valEl) valEl.textContent = fmt(raw);
-    sendParam(paramPath, mapped);
-  };
-  // Init display
-  if (valEl) valEl.textContent = fmt(el.value);
-}
-
-function bindSelect(id, paramPath, opts = {}) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const map = opts.map || (v => parseInt(v));
-  el.onchange = () => sendParam(paramPath, map(el.value));
-}
-
-function bindCheckbox(id, paramPath) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.onchange = () => sendParam(paramPath, el.checked);
-}
 
 // Map 0-1 slider to frequency (20Hz to 20kHz logarithmic)
 function sliderToFreq(v) {
@@ -446,43 +404,7 @@ function initUI() {
 
 // ─── Scope ──────────────────────────────────────────────────────────────────
 
-function initScope() {
-  const canvas = document.getElementById('scope');
-  if (!canvas || !analyser) return;
-  const ctx = canvas.getContext('2d');
-  const bufLen = analyser.frequencyBinCount;
-  const dataArray = new Float32Array(bufLen);
-
-  function draw() {
-    requestAnimationFrame(draw);
-    analyser.getFloatTimeDomainData(dataArray);
-    ctx.fillStyle = '#0a0d1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#00ccff';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    const sliceWidth = canvas.width / bufLen;
-    let x = 0;
-    for (let i = 0; i < bufLen; i++) {
-      const y = (1 - dataArray[i]) * canvas.height / 2;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      x += sliceWidth;
-    }
-    ctx.stroke();
-  }
-  draw();
-}
-
 // ─── Display Updates ────────────────────────────────────────────────────────
-
-function updateVoiceDisplay() {
-  const el = document.getElementById('voice-display');
-  if (el) {
-    const active = voices.filter(v => v.active).length;
-    el.textContent = `Voices: ${active}/${NUM_VOICES}`;
-  }
-}
-
 
 // ─── Presets ────────────────────────────────────────────────────────────────
 
@@ -704,35 +626,6 @@ const FACTORY_PRESETS = [
   }
 ];
 
-let userPresets = [];
-
-function loadPresets() {
-  try {
-    const stored = localStorage.getItem('ws-synth-presets');
-    if (stored) userPresets = JSON.parse(stored);
-  } catch(e) {}
-}
-
-function savePresetsToStorage() {
-  try {
-    localStorage.setItem('ws-synth-presets', JSON.stringify(userPresets));
-  } catch(e) {}
-}
-
-function populatePresetSelect() {
-  const sel = document.getElementById('preset-select');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">-- Preset --</option>';
-  FACTORY_PRESETS.forEach((p, i) => {
-    sel.innerHTML += `<option value="f:${i}">${p.name}</option>`;
-  });
-  if (userPresets.length > 0) {
-    sel.innerHTML += '<option disabled>──────────</option>';
-    userPresets.forEach((p, i) => {
-      sel.innerHTML += `<option value="u:${i}">${p.name}</option>`;
-    });
-  }
-}
 
 function applyPreset(preset) {
   if (!workletNode) return;
@@ -854,29 +747,7 @@ function updateUIFromPreset(preset) {
   }
 }
 
-function initPresets() {
-  loadPresets();
-  populatePresetSelect();
-
-  document.getElementById('preset-select').onchange = (e) => {
-    const val = e.target.value;
-    if (!val) return;
-    const [type, idx] = val.split(':');
-    const preset = type === 'f' ? FACTORY_PRESETS[idx] : userPresets[idx];
-    if (preset) applyPreset(preset);
-  };
-
-  document.getElementById('save-preset-btn').onclick = () => {
-    const name = prompt('Preset name:');
-    if (!name) return;
-    const preset = getCurrentPreset(name);
-    const existing = userPresets.findIndex(p => p.name === name);
-    if (existing >= 0) userPresets[existing] = preset;
-    else userPresets.push(preset);
-    savePresetsToStorage();
-    populatePresetSelect();
-  };
-}
+function initPresets() { getPresets().init(); }
 
 function getCurrentPreset(name) {
   // Read current UI state to build a preset object

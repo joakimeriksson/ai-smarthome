@@ -2,6 +2,7 @@
 // Voice allocation, keyboard, UI bindings, MIDI
 
 const NUM_VOICES = 8;
+const pool = new SynthShell.VoicePool(NUM_VOICES);
 
 // ─── Arpeggiator ──────────────────────────────────────────────────────────────
 
@@ -228,13 +229,6 @@ let analyserNode = null;
 let started = false;
 
 // Voice allocation
-const voices = new Array(NUM_VOICES).fill(null).map(() => ({
-  note: -1,
-  velocity: 0,
-  age: 0,
-  active: false
-}));
-let voiceAge = 0;
 
 // Mono/Legato mode
 let monoMode = 'poly'; // 'poly', 'mono', 'legato'
@@ -274,26 +268,6 @@ async function initAudio() {
 }
 
 // ─── Voice Allocation ───────────────────────────────────────────────────────
-
-function allocVoice(note) {
-  // Check if note already playing
-  for (let i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].note === note && voices[i].active) return i;
-  }
-  // Find free voice
-  for (let i = 0; i < NUM_VOICES; i++) {
-    if (!voices[i].active) return i;
-  }
-  // Steal oldest
-  let oldest = 0, oldestAge = Infinity;
-  for (let i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].age < oldestAge) {
-      oldestAge = voices[i].age;
-      oldest = i;
-    }
-  }
-  return oldest;
-}
 
 let masterTranspose = 0; // semitones (multiples of 12)
 
@@ -336,6 +310,14 @@ function sendParam(param, value) {
   if (!synthNode) return;
   synthNode.port.postMessage({ type: 'param', param, value });
   currentParams[param] = value;
+}
+
+const bind = SynthShell.createBinder(sendParam);
+const bindSlider = bind.slider, bindSelect = bind.select, bindToggle = bind.checkbox;
+
+function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool); }
+function initScope() {
+  SynthShell.startScope({ canvasId: 'scope', analyser: analyserNode, background: '#0d1a0d', stroke: '#00ff88' });
 }
 
 // Create arpeggiator wired to noteOn/noteOff
@@ -404,47 +386,6 @@ function inputNoteOff(note) {
 // Computer keyboard, on-screen piano, and MIDI are now handled by shared keyboard.js
 
 // ─── UI Bindings ────────────────────────────────────────────────────────────
-
-function bindSlider(id, param, opts = {}) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const display = document.getElementById(id + '-val');
-  const { transform, suffix = '', decimals = 2 } = opts;
-
-  el.addEventListener('input', () => {
-    let raw = parseFloat(el.value);
-    let value = transform ? transform(raw) : raw;
-    sendParam(param, value);
-    if (display) {
-      display.textContent = (typeof value === 'number' ? value.toFixed(decimals) : value) + suffix;
-    }
-  });
-
-  // Set initial display
-  if (display) {
-    let raw = parseFloat(el.value);
-    let value = transform ? transform(raw) : raw;
-    display.textContent = (typeof value === 'number' ? value.toFixed(decimals) : value) + suffix;
-  }
-}
-
-function bindSelect(id, param, opts = {}) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('change', () => {
-    let value = opts.number ? parseInt(el.value) : el.value;
-    if (opts.bool) value = el.value === 'true';
-    sendParam(param, value);
-  });
-}
-
-function bindToggle(id, param) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('change', () => {
-    sendParam(param, el.checked);
-  });
-}
 
 // FX state key mapping: HTML id prefix → currentFxState key
 const FX_ID_TO_KEY = {
@@ -750,13 +691,6 @@ function setupBindings() {
 
 // ─── Display Updates ────────────────────────────────────────────────────────
 
-function updateVoiceDisplay() {
-  const el = document.getElementById('voice-display');
-  if (!el) return;
-  const count = voices.filter(v => v.active).length;
-  el.textContent = `Voices: ${count}/${NUM_VOICES}`;
-}
-
 function updateSustainIndicator() {
   const el = document.getElementById('sustain-indicator');
   if (el) el.style.color = sustainPedalOn ? 'var(--accent)' : 'var(--text-dim)';
@@ -765,59 +699,6 @@ function updateSustainIndicator() {
 // ─── Oscilloscope ───────────────────────────────────────────────────────────
 
 let scopeCanvas, scopeCtx, scopeData;
-
-function initScope() {
-  scopeCanvas = document.getElementById('scope');
-  if (!scopeCanvas) return;
-  scopeCtx = scopeCanvas.getContext('2d');
-  scopeData = new Float32Array(analyserNode.fftSize);
-  drawScope();
-}
-
-function drawScope() {
-  if (!scopeCanvas) { requestAnimationFrame(drawScope); return; }
-  requestAnimationFrame(drawScope);
-
-  analyserNode.getFloatTimeDomainData(scopeData);
-  const w = scopeCanvas.width;
-  const h = scopeCanvas.height;
-
-  scopeCtx.fillStyle = '#1a1a2e';
-  scopeCtx.fillRect(0, 0, w, h);
-
-  // Grid
-  scopeCtx.strokeStyle = '#2a2a4e';
-  scopeCtx.lineWidth = 0.5;
-  scopeCtx.beginPath();
-  scopeCtx.moveTo(0, h / 2);
-  scopeCtx.lineTo(w, h / 2);
-  scopeCtx.stroke();
-
-  // Zero-crossing trigger
-  let triggerIdx = 0;
-  for (let i = 1; i < scopeData.length / 2; i++) {
-    if (scopeData[i - 1] <= 0 && scopeData[i] > 0) {
-      triggerIdx = i;
-      break;
-    }
-  }
-
-  // Waveform
-  scopeCtx.strokeStyle = '#00ff88';
-  scopeCtx.lineWidth = 2;
-  scopeCtx.beginPath();
-
-  const samplesToShow = Math.min(512, scopeData.length - triggerIdx);
-  for (let i = 0; i < samplesToShow; i++) {
-    const x = (i / samplesToShow) * w;
-    const y = h / 2 - scopeData[triggerIdx + i] * h * 0.4;
-    if (i === 0) scopeCtx.moveTo(x, y);
-    else scopeCtx.lineTo(x, y);
-  }
-  scopeCtx.stroke();
-}
-
-
 
 // ─── Preset State Capture ────────────────────────────────────────────────────
 
@@ -921,15 +802,55 @@ function getCurrentState() {
 
 // ─── localStorage Persistence ───────────────────────────────────────────────
 
-const USER_PRESETS_KEY = 'va-synth-user-presets';
+// VA stores presets on disk in the same shape as every other synth —
+// `[{ name, params, fx }]` under `<synth>-synth-presets` — so one browser can
+// read them all. In memory it keeps its own name-keyed object, which the rest
+// of this file indexes directly, so the conversion happens at the boundary.
+const USER_PRESETS_KEY = 'va-synth-presets';
+const LEGACY_PRESETS_KEY = 'va-synth-user-presets';
+
+/** name-keyed state  ->  [{ name, params, fx }] */
+function _toSharedFormat(presets) {
+  return Object.entries(presets).map(([name, state]) => {
+    const { fx, ...params } = state || {};
+    return { name, params, fx: fx || {} };
+  });
+}
+
+/** [{ name, params, fx }]  ->  name-keyed state */
+function _fromSharedFormat(list) {
+  const out = {};
+  for (const entry of list) {
+    if (!entry || !entry.name) continue;
+    // Only re-attach fx when there is some: an empty {} would look like real
+    // FX state to applyPreset and reset the panel's effects.
+    const hasFx = entry.fx && Object.keys(entry.fx).length > 0;
+    out[entry.name] = Object.assign({}, entry.params, hasFx ? { fx: entry.fx } : {});
+  }
+  return out;
+}
 
 function loadUserPresets() {
-  try { return JSON.parse(localStorage.getItem(USER_PRESETS_KEY)) || {}; }
-  catch { return {}; }
+  try {
+    const shared = localStorage.getItem(USER_PRESETS_KEY);
+    if (shared) return _fromSharedFormat(JSON.parse(shared) || []);
+
+    // One-time migration of presets saved under the old key/shape. The old
+    // key is left in place as a backup rather than deleted.
+    const legacy = localStorage.getItem(LEGACY_PRESETS_KEY);
+    if (legacy) {
+      const presets = JSON.parse(legacy) || {};
+      saveUserPresetsToStorage(presets);
+      return presets;
+    }
+    return {};
+  } catch { return {}; }
 }
 
 function saveUserPresetsToStorage(presets) {
-  localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(presets));
+  try {
+    localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(_toSharedFormat(presets)));
+  } catch (e) { /* quota or private mode */ }
 }
 
 // ─── Presets ────────────────────────────────────────────────────────────────

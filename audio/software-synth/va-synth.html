@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VA Synth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/synth-base.css">
   <link rel="stylesheet" href="css/va-synth.css">
 </head>
 <body>
@@ -27,7 +31,7 @@
   <div class="synth-grid">
 
     <!-- OSCILLATORS -->
-    <div class="panel">
+    <div class="panel" data-group="source">
       <div class="panel-title">Oscillators</div>
 
       <div class="control-row">
@@ -134,7 +138,7 @@
     </div>
 
     <!-- FILTER -->
-    <div class="panel">
+    <div class="panel" data-group="shape">
       <div class="panel-title">Filter</div>
 
       <div class="control-row">
@@ -202,7 +206,7 @@
     </div>
 
     <!-- ENVELOPES -->
-    <div class="panel">
+    <div class="panel" data-group="shape">
       <div class="panel-title">Envelopes</div>
 
       <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin-bottom:2px">AMP</div>
@@ -235,7 +239,7 @@
   <div class="synth-row">
 
     <!-- LFO 1 -->
-    <div class="panel">
+    <div class="panel" data-group="mod">
       <div class="panel-title">LFO 1</div>
       <div class="control-row">
         <label>Rate</label>
@@ -270,7 +274,7 @@
     </div>
 
     <!-- LFO 2 -->
-    <div class="panel">
+    <div class="panel" data-group="mod">
       <div class="panel-title">LFO 2</div>
       <div class="control-row">
         <label>Rate</label>
@@ -305,7 +309,7 @@
     </div>
 
     <!-- MOD MATRIX -->
-    <div class="panel">
+    <div class="panel" data-group="mod">
       <div class="panel-title">Mod Matrix</div>
       <div class="mod-slot">
         <span class="slot-num">1</span>
@@ -408,7 +412,7 @@
 
   <!-- Arpeggiator Row -->
   <div class="arp-row">
-    <div class="panel">
+    <div class="panel" data-group="play">
       <div class="fx-header">
         <div class="panel-title">Arpeggiator</div>
         <input type="checkbox" id="arp-on">
@@ -466,7 +470,7 @@
 
   <!-- Performance Row -->
   <div class="perf-row">
-    <div class="panel">
+    <div class="panel" data-group="play">
       <div class="panel-title">Performance</div>
       <div class="perf-controls">
         <div class="control-row">
@@ -514,7 +518,7 @@
   <div class="effects-row">
 
     <!-- Distortion -->
-    <div class="panel">
+    <div class="panel" data-group="fx">
       <div class="fx-header">
         <div class="panel-title">Distortion</div>
         <input type="checkbox" id="fx-dist-on">
@@ -527,7 +531,7 @@
     </div>
 
     <!-- EQ -->
-    <div class="panel">
+    <div class="panel" data-group="fx">
       <div class="fx-header">
         <div class="panel-title">EQ</div>
         <input type="checkbox" id="fx-eq-on">
@@ -550,7 +554,7 @@
     </div>
 
     <!-- Chorus -->
-    <div class="panel">
+    <div class="panel" data-group="fx">
       <div class="fx-header">
         <div class="panel-title">Chorus</div>
         <input type="checkbox" id="fx-chorus-on">
@@ -573,7 +577,7 @@
     </div>
 
     <!-- Delay -->
-    <div class="panel">
+    <div class="panel" data-group="fx">
       <div class="fx-header">
         <div class="panel-title">Delay</div>
         <input type="checkbox" id="fx-delay-on">
@@ -596,7 +600,7 @@
     </div>
 
     <!-- Reverb -->
-    <div class="panel">
+    <div class="panel" data-group="fx">
       <div class="fx-header">
         <div class="panel-title">Reverb</div>
         <input type="checkbox" id="fx-reverb-on">
@@ -621,7 +625,7 @@
 
   <!-- Bottom Row: Master + Scope -->
   <div class="bottom-row">
-    <div class="panel">
+    <div class="panel" data-group="out">
       <div class="panel-title">Master</div>
       <div class="control-row">
         <label>Volume</label>
@@ -647,7 +651,7 @@
         <span id="midi-status">MIDI: --</span>
       </div>
     </div>
-    <div class="panel">
+    <div class="panel" data-group="out">
       <div class="panel-title">Scope</div>
       <canvas id="scope" width="800" height="120"></canvas>
     </div>
@@ -664,7 +668,9 @@
 
 </div>
 
+<script src="js/synth-shell.js"></script>
 <script src="js/keyboard.js"></script>
 <script src="js/main.js"></script>
+<script src="js/ui-enhance.js"></script>
 </body>
 </html>

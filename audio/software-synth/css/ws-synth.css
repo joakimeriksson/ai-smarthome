@@ -1,20 +1,34 @@
-/* WaveSynth — Blue/Cyan dark theme (Wavestation-inspired) */
+/* WaveSynth — PPG Wave 2.2 (1982) */
 
 :root {
-  --bg: #0a0d1a;
-  --panel-bg: #141828;
-  --panel-border: #2a2e4e;
-  --accent: #00ccff;
-  --accent-dim: #0088aa;
-  --accent2: #ff6600;
-  --text: #e0e0e0;
-  --text-dim: #888;
-  --knob-track: #333;
-  --slider-thumb: #00ccff;
+  /* The PPG is the severe one: near-black navy, hard white legends, and
+     orange used only where the machine actually glows — the wave display
+     and the LEDs. Restraint is what separates it from the Roland. */
+  --chassis: #0b1220;
+  --chassis-edge: rgba(0, 0, 0, 0.8);
+  --bg: #0a1120;
+  --panel-bg: #111c31;
+  --panel-border: #2b4166;
+  --accent: #e8eefc;          /* legends are white on a PPG, not orange */
+  --accent-dim: #6d81a8;
+  --accent-bright: #ffffff;
+  --text: #dce5f6;
+  --text-dim: #7d90b4;
+  --knob-track: #060c18;
+  --slider-thumb: #c8d4ea;
   --danger: #ff4466;
-  --seq-step: #1e2240;
-  --seq-active: #00ccff22;
-  --seq-selected: #00ccff44;
+  --led: #ff7a00;
+  --cap: #dfe6f2;
+  --display-bg: #070a10;
+  --display-ink: #ff8c1a;     /* the glow lives in the display */
+  --display-grid: rgba(255, 140, 26, 0.12);
+  --readout-ink: #ff9f3d;
+  --readout-bg: #070a10;
+  --panel-radius: 2px;
+  --label-weight: 700;
+  --label-tracking: 1.3px;
+  --title-tracking: 3px;
+  --shadow-strength: 0.9;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -480,3 +494,51 @@ input[type="checkbox"] { accent-color: var(--accent); }
   .effects-row { grid-template-columns: 1fr 1fr; }
   .seq-params { grid-template-columns: 1fr 1fr; }
 }
+
+
+/* ─── PPG hairline rules ───────────────────────────────────────────────────
+   Section titles are set as thin white rules rather than coloured bars —
+   the opposite move from the Jupiter next door, and true to the machine. */
+.panel-title {
+  color: var(--accent);
+  border-bottom: 1px solid rgba(232, 238, 252, 0.22);
+}
+
+/* The wave sequence editor is the instrument's reason to exist, so it gets
+   the PPG's orange-on-black display treatment: the steps read as a lit
+   readout, not as another row of buttons. */
+.seq-editor .seq-steps {
+  background: linear-gradient(180deg, #05080e, #0a0f1a);
+  border: 1px solid #2b3d5a;
+  border-radius: 2px;
+  padding: 8px;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+.seq-editor .seq-step {
+  background: #0a1220;
+  border: 1px solid #2b3d5a;
+  border-radius: 2px;
+}
+.seq-editor .seq-step .step-num { color: var(--display-ink); opacity: 0.55; }
+.seq-editor .seq-step .step-wave {
+  color: var(--display-ink);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  text-shadow: 0 0 6px rgba(255, 140, 26, 0.5);
+}
+.seq-editor .seq-step .step-dur { color: #6d81a8; }
+.seq-editor .seq-step.selected {
+  border-color: var(--display-ink);
+  background: #14202f;
+  box-shadow: inset 0 0 0 1px rgba(255, 140, 26, 0.35);
+}
+.seq-editor .seq-step.playing {
+  background: #2a1a08;
+  border-color: var(--display-ink);
+  box-shadow: 0 0 12px rgba(255, 140, 26, 0.55);
+}
+.seq-editor .seq-step-add {
+  background: transparent;
+  border: 1px dashed #2b3d5a;
+  color: #4d5f80;
+}
+.seq-editor .seq-step-add:hover { border-color: var(--display-ink); color: var(--display-ink); }

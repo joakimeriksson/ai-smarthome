@@ -2,25 +2,13 @@
 
 const NUM_VOICES = 8;
 let audioCtx = null, workletNode = null, analyser = null, keyboard = null;
-const voices = new Array(NUM_VOICES).fill(null).map(() => ({ note: -1, active: false, age: 0 }));
-let voiceAge = 0, sustainOn = false;
+const pool = new SynthShell.VoicePool(NUM_VOICES);
+let sustainOn = false;
 const sustainedNotes = new Set();
 
-function allocateVoice(note) {
-  for (let i = 0; i < NUM_VOICES; i++) if (voices[i].note === note && voices[i].active) return i;
-  for (let i = 0; i < NUM_VOICES; i++) if (!voices[i].active) { voices[i].note = note; voices[i].active = true; voices[i].age = ++voiceAge; return i; }
-  let oldest = 0;
-  for (let i = 1; i < NUM_VOICES; i++) if (voices[i].age < voices[oldest].age) oldest = i;
-  voices[oldest].note = note; voices[oldest].active = true; voices[oldest].age = ++voiceAge;
-  return oldest;
-}
-function releaseVoice(note) {
-  for (let i = 0; i < NUM_VOICES; i++) if (voices[i].note === note && voices[i].active) { voices[i].active = false; return i; }
-  return -1;
-}
 function noteOn(note, velocity = 100) {
   if (!workletNode) return;
-  const v = allocateVoice(note);
+  const v = pool.alloc(note);
   workletNode.port.postMessage({ type: 'noteOn', voice: v, note, velocity });
   updateVoiceDisplay();
   if (keyboard) keyboard.highlightKey(note, true);
@@ -28,7 +16,7 @@ function noteOn(note, velocity = 100) {
 function noteOff(note) {
   if (!workletNode) return;
   if (sustainOn) { sustainedNotes.add(note); return; }
-  const v = releaseVoice(note);
+  const v = pool.release(note);
   if (v >= 0) { workletNode.port.postMessage({ type: 'noteOff', voice: v }); updateVoiceDisplay(); }
   if (keyboard) keyboard.highlightKey(note, false);
 }
@@ -36,22 +24,8 @@ function sendParam(param, value) { if (workletNode) workletNode.port.postMessage
 
 // ─── UI Binding ─────────────────────────────────────────────────────────────
 
-function bindSlider(id, paramPath, opts = {}) {
-  const el = document.getElementById(id); if (!el) return;
-  const valEl = document.getElementById(id + '-val');
-  const fmt = opts.format || (v => parseFloat(v).toFixed(2));
-  const map = opts.map || (v => parseFloat(v));
-  el.oninput = () => { if (valEl) valEl.textContent = fmt(el.value); sendParam(paramPath, map(el.value)); };
-  if (valEl) valEl.textContent = fmt(el.value);
-}
-function bindSelect(id, paramPath) {
-  const el = document.getElementById(id); if (!el) return;
-  el.onchange = () => sendParam(paramPath, parseInt(el.value));
-}
-function bindCheckbox(id, paramPath) {
-  const el = document.getElementById(id); if (!el) return;
-  el.onchange = () => sendParam(paramPath, el.checked);
-}
+const bind = SynthShell.createBinder(sendParam);
+const bindSlider = bind.slider, bindSelect = bind.select, bindCheckbox = bind.checkbox;
 
 function initUI() {
   bindSelect('exciter', 'exciter');
@@ -83,28 +57,10 @@ function initUI() {
 // ─── Scope ──────────────────────────────────────────────────────────────────
 
 function initScope() {
-  const canvas = document.getElementById('scope');
-  if (!canvas || !analyser) return;
-  const ctx = canvas.getContext('2d');
-  const buf = new Float32Array(analyser.frequencyBinCount);
-  (function draw() {
-    requestAnimationFrame(draw);
-    analyser.getFloatTimeDomainData(buf);
-    ctx.fillStyle = '#0a1a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#44cc44'; ctx.lineWidth = 1.5; ctx.beginPath();
-    const sw = canvas.width / buf.length;
-    for (let i = 0, x = 0; i < buf.length; i++, x += sw) {
-      const y = (1 - buf[i]) * canvas.height / 2;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  })();
+  SynthShell.startScope({ canvasId: 'scope', analyser, background: '#0a1a0a', stroke: '#44cc44' });
 }
 
-function updateVoiceDisplay() {
-  const el = document.getElementById('voice-display');
-  if (el) el.textContent = `Voices: ${voices.filter(v => v.active).length}/${NUM_VOICES}`;
-}
+function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool); }
 
 // ─── Presets ────────────────────────────────────────────────────────────────
 
@@ -135,27 +91,18 @@ const FACTORY_PRESETS = [
     fx: { reverb: { enabled: true, roomSize: 0.6, damping: 0.5, mix: 0.2 } } },
 ];
 
-let userPresets = [];
-function loadPresets() { try { const s = localStorage.getItem('pm-synth-presets'); if (s) userPresets = JSON.parse(s); } catch(e) {} }
-function savePresetsToStorage() { try { localStorage.setItem('pm-synth-presets', JSON.stringify(userPresets)); } catch(e) {} }
-
-function populatePresetSelect() {
-  const sel = document.getElementById('preset-select'); if (!sel) return;
-  sel.innerHTML = '<option value="">-- Preset --</option>';
-  FACTORY_PRESETS.forEach((p, i) => sel.innerHTML += `<option value="f:${i}">${p.name}</option>`);
-  if (userPresets.length > 0) {
-    sel.innerHTML += '<option disabled>──────────</option>';
-    userPresets.forEach((p, i) => sel.innerHTML += `<option value="u:${i}">${p.name}</option>`);
-  }
-}
+const presets = new SynthShell.PresetStore({
+  storageKey: 'pm-synth-presets',
+  factory: FACTORY_PRESETS,
+  apply: applyPreset,
+  capture: capturePreset,
+});
 
 function applyPreset(preset) {
   if (!workletNode) return;
   workletNode.port.postMessage({ type: 'preset', params: preset.params, fx: preset.fx || {} });
   const p = preset.params;
-  const set = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.dispatchEvent(new Event('input')); } };
-  const setSelect = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-  const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+  const { setControl: set, setSelectValue: setSelect, setChecked: setCheck } = SynthShell;
   setSelect('exciter', p.exciter || 0);
   set('color', p.color); set('brightness', p.brightness);
   set('decay', p.decay); set('damping', p.damping);
@@ -168,26 +115,17 @@ function applyPreset(preset) {
   if (fx.reverb) setCheck('fx-reverb-on', fx.reverb.enabled);
 }
 
-function initPresets() {
-  loadPresets(); populatePresetSelect();
-  document.getElementById('preset-select').onchange = (e) => {
-    const val = e.target.value; if (!val) return;
-    const [type, idx] = val.split(':');
-    const preset = type === 'f' ? FACTORY_PRESETS[idx] : userPresets[idx];
-    if (preset) applyPreset(preset);
-  };
-  document.getElementById('save-preset-btn').onclick = () => {
-    const name = prompt('Preset name:'); if (!name) return;
-    const rv = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) : 0; };
-    const preset = { name, params: {
-      exciter: parseInt(document.getElementById('exciter').value),
-      color: rv('color'), brightness: rv('brightness'), decay: rv('decay'), damping: rv('damping'),
-      pickup: rv('pickup'), inharm: rv('inharm'), bodyAmount: rv('body-amount'), bodySize: rv('body-size'),
-      stereoWidth: rv('stereo-width'), masterVolume: rv('master-vol'),
-    } };
-    userPresets.push(preset); savePresetsToStorage(); populatePresetSelect();
-  };
+function capturePreset() {
+  const rv = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) : 0; };
+  return { params: {
+    exciter: parseInt(document.getElementById('exciter').value, 10),
+    color: rv('color'), brightness: rv('brightness'), decay: rv('decay'), damping: rv('damping'),
+    pickup: rv('pickup'), inharm: rv('inharm'), bodyAmount: rv('body-amount'), bodySize: rv('body-size'),
+    stereoWidth: rv('stereo-width'), masterVolume: rv('master-vol'),
+  } };
 }
+
+function initPresets() { presets.init(); }
 
 // ─── Init ───────────────────────────────────────────────────────────────────
 

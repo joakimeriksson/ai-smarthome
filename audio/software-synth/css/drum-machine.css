@@ -1,19 +1,40 @@
 /* Drum Machine — red/dark theme */
 
 :root {
-  --bg: #1a0a0a;
-  --panel-bg: #241414;
-  --panel-border: #4a2020;
-  --accent: #ff4444;
-  --accent-dim: #aa2222;
-  --accent-bright: #ff6666;
-  --text: #e8c8c8;
-  --text-dim: #aa8888;
-  --knob-track: #3a1a1a;
-  --slider-thumb: #ff4444;
-  --step-off: #2a1414;
-  --step-on: #ff4444;
-  --step-current: #ffaa44;
+  /* Roland TR-808, 1980 — cream panel in wood, with the famous orange /
+     amber / yellow / white step rows. The colour IS the interface. */
+  --chassis: #6f4b2a;         /* wood */
+  --chassis-edge: rgba(30, 18, 8, 0.6);
+  --bg: #cfc7b8;
+  --panel-bg: #ded7c9;
+  --panel-border: #a89e8c;
+  --accent: #e8531f;          /* 808 orange */
+  --accent-dim: #b23c12;
+  --accent-bright: #ff7a45;
+  --text: #2b2620;
+  --text-dim: #6b6355;
+  --knob-track: #b7ae9c;
+  --slider-thumb: #e8531f;
+  --danger: #c0392b;
+  --led: #ff3b2f;
+  --cap: #5c554a;
+  --cap-edge: rgba(0,0,0,0.45);
+  --display-bg: #23201a;
+  --display-ink: #ff8a3d;
+  --display-grid: rgba(255, 138, 61, 0.12);
+  --readout-bg: transparent;
+  --readout-ink: #8a3410;
+  --readout-border: transparent;
+  --readout-glow: none;
+  --panel-radius: 3px;
+  --shadow-strength: 0.5;
+  --label-weight: 700;
+  --title-tracking: 2.4px;
+  /* 808 step-row colours, used by the sequencer grid */
+  --step-1: #e8531f;
+  --step-2: #f0912a;
+  --step-3: #f5c542;
+  --step-4: #e8e2d5;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -52,11 +73,46 @@ select { background: #2a1010; color: var(--text); border: 1px solid var(--panel-
 .seq-label { width: 70px; font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; flex-shrink: 0; padding-right: 4px; text-align: right; cursor: pointer; }
 .seq-label:hover { color: var(--accent); }
 .seq-label.selected { color: var(--accent-bright); }
-.seq-step { width: 48px; height: 32px; border: 1px solid var(--panel-border); border-radius: 3px; background: var(--step-off); cursor: pointer; flex-shrink: 0; transition: background 0.1s; }
-.seq-step:hover { border-color: var(--accent-dim); }
-.seq-step.on { background: var(--step-on); }
-.seq-step.current { border-color: var(--step-current); box-shadow: 0 0 6px rgba(255,170,68,0.4); }
-.seq-step:nth-child(4n+2) { margin-left: 4px; } /* group by 4 */
+/* The 808's step buttons are its signature: four colour groups across the
+   bar (orange / amber / yellow / white) so you read the beat by colour
+   before you read the labels. Group = which sixteenth of the bar. */
+.seq-step {
+  flex: 1 1 0;
+  min-width: 26px;
+  height: 34px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 2px;
+  /* Unlit = coloured plastic cap, not an empty hole: the 808's buttons are
+     moulded in these colours and merely light up when a step is on. */
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--step-color) 52%, #cfc6b4) 0%,
+    color-mix(in srgb, var(--step-color) 38%, #b3a996) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: background 90ms ease, box-shadow 90ms ease;
+  --step-color: var(--step-1);
+}
+/* Colour by position in the bar, TR-808 style */
+.seq-step:nth-child(4n+1) { --step-color: var(--step-1); }
+.seq-step:nth-child(4n+2) { --step-color: var(--step-2); margin-left: 5px; }
+.seq-step:nth-child(4n+3) { --step-color: var(--step-3); }
+.seq-step:nth-child(4n+4) { --step-color: var(--step-4); }
+
+.seq-step:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 1px rgba(0,0,0,0.45); }
+.seq-step.on {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--step-color) 100%, #fff 18%) 0%,
+    var(--step-color) 55%,
+    color-mix(in srgb, var(--step-color) 80%, #000 20%) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 10px color-mix(in srgb, var(--step-color) 55%, transparent);
+}
+.seq-step.current { outline: 2px solid rgba(30, 20, 10, 0.85); outline-offset: -2px; }
+
+/* Instrument names sit on the panel like silkscreen, right-aligned into the grid. */
+.seq-row > .seq-label,
+.seq-row > span:first-child { letter-spacing: 0.1em; }
 .seq-vol { width: 50px; height: 4px; margin-left: 4px; flex-shrink: 0; }
 
 /* Channel editor */

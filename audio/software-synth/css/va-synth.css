@@ -1,17 +1,56 @@
-/* VA Synth — Dark theme */
+/* VA Synth — Roland Jupiter-8 (1981) */
 
 :root {
-  --bg: #0d0d1a;
-  --panel-bg: #1a1a2e;
-  --panel-border: #2a2a4e;
-  --accent: #00ff88;
-  --accent-dim: #00aa55;
-  --text: #e0e0e0;
-  --text-dim: #888;
-  --knob-track: #333;
-  --slider-thumb: #00ff88;
-  --danger: #ff4466;
+  /* The Jupiter-8 is not a black box: warm charcoal panel in a wood shell,
+     with each function group carrying its own colour band across the top.
+     That colour-coding is the thing you recognise from across a room, so
+     it is this synth's signature rather than another orange accent. */
+  --chassis: #6a4526;         /* wood cheeks */
+  --chassis-edge: rgba(28, 16, 6, 0.7);
+  --bg: #211e1b;
+  --panel-bg: #2f2b27;
+  --panel-border: #4b443c;
+  --accent: #ff9d2e;
+  --accent-dim: #a8621a;
+  --accent-bright: #ffc078;
+  --text: #f1ede7;
+  --text-dim: #9c9388;
+  --knob-track: #16130f;
+  --slider-thumb: #d8d2c8;    /* pale slider caps, Roland-style */
+  --danger: #e8455c;
+  --led: #ff3b30;
+  --cap: #ded8ce;
+  --display-bg: #0e0c0a;
+  --display-ink: #ffa845;
+  --display-grid: rgba(255, 157, 46, 0.10);
+  --panel-radius: 3px;
+  --title-tracking: 2.2px;
+
+  /* Jupiter group colours, applied as the band over each section title. */
+  --band-1: #e8622a;
+  --band-2: #d8a72c;
+  --band-3: #3f8f6a;
+  --band-4: #3d6ea8;
+  --band-5: #9a5ca8;
 }
+
+/* Wood shell around the whole instrument. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(0,0,0,0.16) 0 2px, rgba(255,255,255,0.04) 2px 5px),
+    linear-gradient(90deg, #4d3018, var(--chassis) 45%, #3d260f);
+  z-index: 5;
+  pointer-events: none;
+}
+body::before { left: 0; box-shadow: inset -2px 0 6px rgba(0,0,0,0.5); }
+body::after { right: 0; box-shadow: inset 2px 0 6px rgba(0,0,0,0.5); }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -362,3 +401,35 @@ input[type="checkbox"] {
   .synth-row { grid-template-columns: 1fr; }
   .effects-row { grid-template-columns: 1fr 1fr; }
 }
+
+
+/* ─── Jupiter-8 section colour bands ───────────────────────────────────────
+   The band is the panel's identity: you find OSCILLATORS by its orange bar,
+   not by reading. Cycling by DOM order keeps neighbours distinguishable. */
+.panel[data-group="source"] { --band: var(--band-1); }  /* oscillators   */
+.panel[data-group="shape"]  { --band: var(--band-2); }  /* filter + envs */
+.panel[data-group="mod"]    { --band: var(--band-3); }  /* LFOs + matrix */
+.panel[data-group="play"]   { --band: var(--band-4); }  /* arp + perform */
+.panel[data-group="fx"]     { --band: var(--band-5); }  /* effects       */
+.panel[data-group="out"]    { --band: #8d8377; }        /* master + scope*/
+.panel                      { --band: #8d8377; }
+
+.panel-title {
+  position: relative;
+  padding-left: 10px;
+  /* Full-width rule in the group colour — readable across the panel, the
+     way the Jupiter's printed bands are. */
+  border-bottom: 2px solid var(--band);
+}
+.panel-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 5px;
+  width: 4px;
+  border-radius: 1px;
+  background: var(--band);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--band) 60%, transparent);
+}
+.fx-header .panel-title { padding-left: 10px; }

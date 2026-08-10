@@ -1,0 +1,404 @@
+/* ===========================================================================
+   synth-base.css — shared design system for the six synths.
+   ===========================================================================
+
+   Loaded BEFORE each synth's own stylesheet, which keeps its :root palette
+   (--accent, --panel-bg, …) and any layout that is unique to it. Everything
+   here is driven by those tokens, so each synth keeps its identity colour
+   while the controls, panels and typography read as one family.
+
+   Nothing here depends on markup changes: it restyles the native controls
+   (range / checkbox / select / button) and the shared class names the pages
+   already use, so no JS binding is affected.
+
+   Optional enhancement: js/ui-enhance.js sets --pct on each range input so
+   the fader track shows a filled portion. Everything degrades gracefully
+   without it.
+   ======================================================================== */
+
+/* --- Neutral fallbacks; each synth's own :root overrides these ---------- */
+:root {
+  --bg: #0d0d10;
+  --panel-bg: #16161c;
+  --panel-border: #2a2a34;
+  --accent: #00ff88;
+  --accent-dim: #0a8850;
+  --accent-bright: #66ffbb;
+  --text: #e2e2e8;
+  --text-dim: #8a8a96;
+  --knob-track: #0a0a0d;
+  --danger: #ff4466;
+
+  /* --- Optional theme tokens (each synth's stylesheet may override) ------
+     The six synths emulate six different machines, so each one themes the
+     shared components rather than just swapping the accent hue.            */
+  --chassis: var(--bg);              /* case surrounding the panel        */
+  --chassis-edge: rgba(0,0,0,0.5);   /* case shadow / seam                */
+  --led: var(--accent);              /* indicator colour, if not accent   */
+  --cap: #d8d8dc;                    /* fader cap face                    */
+  --cap-edge: rgba(0,0,0,0.55);
+  --display-bg: #07070a;             /* scope / LCD glass                 */
+  --display-ink: var(--accent);
+  /* Parameter read-outs. Dark machines show them as little LED windows;
+     light ones (the 808's cream panel, the lab instrument) print them as
+     ink on the panel instead — an LED pill on paper reads as a dark blob. */
+  --readout-bg: var(--display-bg);
+  --readout-ink: var(--display-ink);
+  --readout-border: color-mix(in srgb, var(--panel-border) 70%, transparent);
+  --readout-glow: 0 0 8px color-mix(in srgb, var(--display-ink) 55%, transparent);
+  --display-grid: color-mix(in srgb, var(--accent) 7%, transparent);
+  --label-weight: 600;
+  --label-tracking: 0.9px;
+  --title-tracking: 1.6px;
+  --panel-radius: 6px;
+  --shadow-strength: 1;              /* 0 flattens shading for matte cases */
+
+  /* Design-system scale (not per-synth) */
+  --fs-label: 9.5px;
+  --fs-value: 10px;
+  --fs-title: 10px;
+  --track-h: 5px;
+  --cap-w: 11px;
+  --cap-h: 17px;
+  --radius: 4px;
+}
+
+/* --- Page ------------------------------------------------------------- */
+
+body {
+  font-family: 'Saira Condensed', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--chassis);
+  /* A very soft vignette lifts the flat background. */
+  background-image: radial-gradient(ellipse at 50% -10%,
+    rgba(255, 255, 255, 0.045), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* --- Header ----------------------------------------------------------- */
+
+.synth-header {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--panel-bg) 92%, #fff 8%), var(--panel-bg)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.synth-header h1 {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* --- Panels ----------------------------------------------------------- */
+
+.panel {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel-bg) 94%, #fff 6%) 0%,
+      var(--panel-bg) 42%,
+      color-mix(in srgb, var(--panel-bg) 92%, #000 8%) 100%) !important;
+  border-radius: var(--panel-radius) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(0.06 * var(--shadow-strength))),
+    inset 0 -1px 0 rgba(0, 0, 0, calc(0.35 * var(--shadow-strength))),
+    0 1px 3px rgba(0, 0, 0, calc(0.4 * var(--shadow-strength)));
+  /* Panels size to their content instead of stretching to the tallest in
+     the row — the old behaviour left large empty voids (PM, FM, drums). */
+  align-self: start;
+  /* Grid items default to min-width:auto (min-content), which stopped 1fr
+     tracks shrinking to their share and pushed wide rows (VA's 5-column FX
+     row) outside the container, where overflow-x:hidden clipped them out of
+     reach. Allowing panels to shrink lets the faders inside take up the
+     slack instead. */
+  min-width: 0;
+}
+
+.panel-title {
+  font-size: var(--fs-title);
+  letter-spacing: var(--title-tracking);
+  /* Hairline that fades out, rather than a hard full-width rule. */
+  border-bottom: 0 !important;
+  padding-bottom: 5px !important;
+  position: relative;
+}
+.panel-title::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 55%, transparent),
+    color-mix(in srgb, var(--panel-border) 80%, transparent) 45%,
+    transparent);
+}
+
+.section-label {
+  font-size: var(--fs-label);
+  letter-spacing: 1.3px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--panel-border) 90%, transparent), transparent);
+}
+
+/* --- Labels and value read-outs --------------------------------------- */
+
+/* Rows are themselves grid items in the paired ADSR layouts (.sid-adsr,
+   .adsr-group). Same min-width:auto trap as .panel — without this the
+   value read-outs spill outside their panel. */
+.control-row,
+.checkbox-row {
+  min-width: 0;
+}
+
+.control-row label,
+.checkbox-row label {
+  font-size: var(--fs-label);
+  letter-spacing: var(--label-tracking);
+  font-weight: var(--label-weight);
+}
+
+.control-row .val {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: var(--fs-value);
+  color: var(--readout-ink);
+  background: var(--readout-bg);
+  border: 1px solid var(--readout-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  text-shadow: var(--readout-glow);
+}
+
+/* --- Faders (input[type=range]) ---------------------------------------
+   Recessed track, accent-filled portion up to the handle, and a proper
+   fader cap with a centre line instead of the default round web dot. */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Let faders shrink inside flex rows (see the .panel min-width note). */
+  min-width: 0;
+  height: var(--track-h) !important;
+  border-radius: 2px !important;
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--accent) 85%, transparent) 0 calc(var(--pct, 0) * 1%),
+      transparent calc(var(--pct, 0) * 1%)),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--knob-track) 60%, #000 40%),
+      var(--knob-track)) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--cap-w) !important;
+  height: var(--cap-h) !important;
+  border-radius: 2px !important;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--cap) 100%, #fff 0%) 0%,
+    color-mix(in srgb, var(--cap) 84%, #000 16%) 46%,
+    color-mix(in srgb, var(--cap) 66%, #000 34%) 54%,
+    color-mix(in srgb, var(--cap) 78%, #000 22%) 100%) !important;
+  border: 1px solid var(--cap-edge);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 1px 3px rgba(0, 0, 0, 0.65) !important;
+  cursor: grab;
+  transition: filter 90ms ease;
+}
+input[type="range"]::-moz-range-thumb {
+  width: var(--cap-w);
+  height: var(--cap-h);
+  border-radius: 2px;
+  background: linear-gradient(180deg,
+    var(--cap) 0%,
+    color-mix(in srgb, var(--cap) 84%, #000 16%) 46%,
+    color-mix(in srgb, var(--cap) 66%, #000 34%) 54%,
+    color-mix(in srgb, var(--cap) 78%, #000 22%) 100%);
+  border: 1px solid var(--cap-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 3px rgba(0, 0, 0, 0.65);
+  cursor: grab;
+}
+input[type="range"]:hover::-webkit-slider-thumb { filter: brightness(1.12); }
+input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  filter: brightness(1.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 7px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.65) !important;
+}
+input[type="range"]:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 3px;
+}
+
+/* --- Toggles (input[type=checkbox]) ----------------------------------
+   Panel-style pushbutton with an LED, replacing the browser tick box. */
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 30px;
+  height: 15px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #0a0a0d, #131318);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 90%, transparent);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background 120ms ease, border-color 120ms ease;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 1px; left: 1px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #55555f, #2a2a32);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition: transform 130ms cubic-bezier(0.3, 1.3, 0.5, 1), background 130ms ease;
+}
+input[type="checkbox"]:checked {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 22%, #0a0a0d),
+    color-mix(in srgb, var(--accent) 12%, #131318));
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+input[type="checkbox"]:checked::after {
+  transform: translateX(15px);
+  background: radial-gradient(circle at 38% 32%,
+    color-mix(in srgb, var(--led) 70%, #fff), var(--led));
+  box-shadow:
+    0 0 7px color-mix(in srgb, var(--led) 75%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+input[type="checkbox"]:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* --- Selects ---------------------------------------------------------- */
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background:
+    /* caret */
+    linear-gradient(45deg, transparent 50%, var(--text-dim) 50%) calc(100% - 11px) calc(50% - 1px) / 5px 5px no-repeat,
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%) calc(100% - 6px) calc(50% - 1px) / 5px 5px no-repeat,
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel-bg) 80%, #fff 6%),
+      color-mix(in srgb, var(--panel-bg) 90%, #000 10%)) !important;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 95%, transparent) !important;
+  border-radius: 3px !important;
+  padding: 3px 20px 3px 7px !important;
+  font-family: inherit;
+  font-size: 10.5px !important;
+  letter-spacing: 0.4px;
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+select:hover { border-color: color-mix(in srgb, var(--accent) 45%, transparent) !important; }
+select:focus-visible { outline: 1px solid color-mix(in srgb, var(--accent) 70%, transparent); outline-offset: 1px; }
+
+/* --- Buttons ---------------------------------------------------------- */
+
+.btn {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent-dim) 85%, #fff 15%),
+    var(--accent-dim) 55%,
+    color-mix(in srgb, var(--accent-dim) 80%, #000 20%)) !important;
+  border: 1px solid rgba(0, 0, 0, 0.45) !important;
+  border-radius: var(--radius) !important;
+  letter-spacing: 1.2px;
+  font-family: inherit;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: filter 110ms ease, transform 60ms ease;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.15); }
+.btn:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45); }
+.btn:disabled { filter: grayscale(0.8) brightness(0.6); }
+
+/* Small utility/segmented buttons (waveform pickers, algorithm numbers…) */
+.btn-small,
+.wave-btn, .algo-btn, .tab-btn, .table-btn {
+  font-family: inherit;
+  letter-spacing: 0.8px;
+}
+
+/* --- Scope ------------------------------------------------------------ */
+
+#scope, canvas#scope {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 15px,
+      var(--display-grid) 15px 16px),
+    repeating-linear-gradient(90deg, transparent 0 30px,
+      var(--display-grid) 30px 31px),
+    var(--display-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.85);
+}
+
+/* --- Status bar ------------------------------------------------------- */
+
+.status-bar {
+  gap: 4px 12px !important;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.status-bar span {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: var(--fs-value);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* --- Piano keyboard --------------------------------------------------- */
+
+#piano-keyboard {
+  background: linear-gradient(180deg, #14141a, #0a0a0e);
+  border-radius: var(--radius);
+  padding: 5px 0 0 5px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
+  /* Fixed-width key bed (absolutely positioned black keys): centre it
+     rather than leaving an asymmetric gap on the right. */
+  width: fit-content;
+  margin-inline: auto;
+}
+.white-key {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -6px 8px rgba(0, 0, 0, 0.09);
+  transition: filter 60ms ease;
+}
+.white-key.active {
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+  filter: brightness(1.05);
+}
+.black-key {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 3px 5px rgba(0, 0, 0, 0.55);
+}
+.black-key.active { box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6); }
+
+/* --- Focus visibility for keyboard users ------------------------------ */
+:focus-visible { outline-color: var(--accent); }

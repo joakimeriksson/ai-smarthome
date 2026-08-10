@@ -25,7 +25,7 @@ const defaultLayer = (): LayerPatch => ({
   lfo2: { shape: 'tri', rate: 0.4, sync: false, delay: 0, depthA: 1, depthB: 1 },
   modMatrix: emptyMatrix(),
   velocity: { amp: 0.3, cutoff: 0.2, env1: 0 },
-  glide: { time: 0, mode: 'off' },
+  glide: { time: 0, amount: 0, mode: 'off', osc1: true, osc2: true },
   keyAssign: 'poly',
   multiTrigger: true,
   pan: 0,

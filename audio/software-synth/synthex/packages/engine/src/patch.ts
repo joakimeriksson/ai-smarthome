@@ -5,7 +5,7 @@ export type FilterMode = 'lp24' | 'lp12' | 'bp12' | 'bp6' | 'hp12'
 export type LfoShape = 'tri' | 'square' | 'sample-hold' | 'random' | 'ramp' | 'square-uni'
 export type Octave = -2 | -1 | 0 | 1 | 2
 export type ChorusMode = 1 | 2 | 3
-export type GlideMode = 'off' | 'legato' | 'always'
+export type GlideMode = 'off' | 'glide' | 'portamento'
 export type VoiceMode = 'single' | 'split' | 'double'      // layer mode
 export type KeyAssign = 'poly' | 'mono' | 'unison'         // voice allocation
 export type NoiseColor = 'white' | 'pink'
@@ -30,11 +30,46 @@ export type ModSlot =
   | 'joyYToCutoff'    | 'joyYToLfoFiltDepth'
   | 'velToAmp' | 'velToCutoff' | 'velToEnv1'
 
-// Synthex "Glide" is a per-osc one-shot attack pitch envelope (NOT
-// portamento, which is `glide.time/mode` below). On every note-on, the
-// oscillator's pitch starts `amount` semitones away from the target and
-// decays exponentially to 0 over `speed` seconds. Either osc, both, or
-// neither can have it.
+// ---------------------------------------------------------------------------
+// Joystick performance section (manual p. "LFO2 Sliders" / "To Oscillator
+// Sliders" / "To Filter Sliders"): the stick, the six sliders and the
+// UPPER/BOTH/LOWER switch are PERFORMANCE controls — the manual states they
+// are "not remembered in the preset or memory programmes". They are therefore
+// NOT part of Patch; the app holds them and pushes them to voices directly.
+//   vertical stick   = bend: osc pitch ±(bendOsc × 7 st), cutoff ±(bendFilt)
+//   horizontal stick = LFO2 fade-in: left → osc pitch, right → cutoff
+//   lfo2 rate        = initFreq (coarse) + deltaFreq (fine)
+// ---------------------------------------------------------------------------
+export interface JoystickPerformance {
+  bendOsc: number    // TO OSC. right slider — pitch-bend depth, 0..1 → 0..7 st
+  bendFilt: number   // TO FILTER right slider — cutoff-shift depth, 0..1
+  lfo2Osc: number    // TO OSC. left slider — LFO2→pitch depth (stick left)
+  lfo2Filt: number   // TO FILTER left slider — LFO2→cutoff depth (stick right)
+}
+
+// ---------------------------------------------------------------------------
+// Synthex Glide / Portamento system
+// ---------------------------------------------------------------------------
+//
+// The Synthex panel has a "Glide / Portamento" section with:
+//   - Mode: Off / Glide / Portamento (3-position switch)
+//   - Amount: semitones of initial pitch offset (the "swoop")
+//   - Speed (time): exponential decay time-constant
+//   - OSC1 / OSC2: routing toggle buttons
+//
+// In 'glide' mode, the routed oscillator(s) start `amount` semitones above
+// the target pitch and exponentially decay to the target on each note-on.
+// This is the Laser Harp sound (slot 46 "Ring mod.") — OSC2-only glide
+// with a large amount creates the characteristic metallic swoop.
+//
+// In 'portamento' mode, pitch slides smoothly between consecutive notes
+// (legato glide, like a Moog). Amount is ignored; speed controls slide rate.
+//
+// OscGlideParams is a secondary per-oscillator pitch envelope that fires
+// independently of the panel mode. Used for subtle pitch effects that
+// don't need the panel Glide system. Rarely needed — prefer GlideParams.
+// ---------------------------------------------------------------------------
+
 export interface OscGlideParams {
   amount: number   // -32..+31 semitones, signed
   speed: number    // seconds (time-constant of exponential decay)
@@ -93,8 +128,11 @@ export interface VelocityParams {
 }
 
 export interface GlideParams {
-  time: number
+  time: number      // decay speed (seconds) — Synthex "Speed" knob
+  amount: number    // semitones of initial pitch offset — Synthex "Amount" knob
   mode: GlideMode
+  osc1: boolean     // route to OSC1
+  osc2: boolean     // route to OSC2
 }
 
 export interface LayerPatch {

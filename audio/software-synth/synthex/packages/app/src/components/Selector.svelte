@@ -1,17 +1,23 @@
 <script lang="ts" generics="T extends string | number">
-  // Vintage push-button row. The active position depresses into the panel
-  // and lights its LED indicator.
+  // Synthex pushbutton row — symbols above, plain white square buttons
+  // with red LED dot, all in one dark recessed strip.
 
-  let { value, options, label, onchange }: {
+  let { value, options, label, onchange, compact = false }: {
     value: T
     options: { value: T; label: string }[]
     label: string
     onchange: (v: T) => void
+    compact?: boolean
   } = $props()
 </script>
 
 <div class="sel" role="group" aria-label={label}>
-  <div class="opts">
+  <div class="caps-row" class:compact>
+    {#each options as opt (opt.value)}
+      <span class="cap">{@html opt.label}</span>
+    {/each}
+  </div>
+  <div class="strip" class:compact>
     {#each options as opt (opt.value)}
       {@const active = opt.value === value}
       <button
@@ -19,87 +25,127 @@
         onclick={() => onchange(opt.value)}
         type="button"
         aria-pressed={active}
+        aria-label={`${label || 'Option'}: ${String(opt.value)}`}
       >
-        <span class="led" aria-hidden="true"></span>
-        <span class="cap">{opt.label}</span>
+        <span class="led-area"><span class="led" aria-hidden="true"></span></span>
+        <span class="body"></span>
       </button>
     {/each}
   </div>
-  <div class="lbl">{label}</div>
+  {#if label}<div class="lbl">{label}</div>{/if}
 </div>
 
 <style>
   .sel {
     display: inline-flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.1rem;
     align-items: center;
+    flex-shrink: 0;
   }
-  .opts {
+  .caps-row {
     display: flex;
-    gap: 2px;
-    background: linear-gradient(180deg, #5e5645, #2a241c);
-    padding: 3px;
-    border-radius: 3px;
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.55),
-      0 1px 0 rgba(255, 255, 255, 0.5);
+    gap: 4px;
   }
-  button {
-    background: linear-gradient(180deg, #f5efdc 0%, #d8ceb2 60%, #b3a786 100%);
-    border: 0;
-    color: var(--ink);
-    padding: 0.32rem 0.55rem 0.28rem;
-    font: inherit;
+  .cap {
     font-family: 'Saira Condensed', sans-serif;
-    font-weight: 600;
-    font-size: 0.7rem;
-    letter-spacing: 0.06em;
-    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.48rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-align: center;
+    width: 20px;
+    line-height: 1;
+    overflow: visible;
+    white-space: nowrap;
+  }
+  .caps-row.compact .cap {
+    width: 18px;
+    font-size: 0.45rem;
+  }
+  /* Dark recessed strip holding all buttons */
+  .strip {
+    display: flex;
+    gap: 4px;
+    background: #1a1816;
+    padding: 4px;
     border-radius: 2px;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+      inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  button {
+    width: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    line-height: 1;
-    transition: background 80ms ease, transform 60ms ease, box-shadow 80ms ease;
-  }
-  button:hover {
-    background: linear-gradient(180deg, #fffaeb 0%, #e3dabc 60%, #b8ac8a 100%);
-  }
-  /* Active position depressed into the bezel + lit LED */
-  button.active {
-    background: linear-gradient(180deg, #c95820 0%, #ee6e2a 60%, #c7501a 100%);
-    color: #fff5e0;
-    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 1px;
+    overflow: hidden;
     box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.4),
-      0 0 0 1px rgba(0, 0, 0, 0.2);
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 1px 0 rgba(0, 0, 0, 0.15);
+    transition: transform 60ms ease, box-shadow 60ms ease;
+  }
+  button:hover .body {
+    background: linear-gradient(180deg, #f4f0e8 0%, #eae6de 100%);
+  }
+  button.active {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
     transform: translateY(1px);
   }
+  /* Slightly recessed LED area at top */
+  .led-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 0;
+    background: linear-gradient(180deg, #ccc8c0 0%, #d8d4cc 100%);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.1);
+  }
   .led {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #5a1a08, #2a0604 80%);
-    box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.6);
+    background: radial-gradient(circle at 40% 35%, #6a2a10, #3a0a04 80%);
+    box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.3);
   }
   button.active .led {
-    background: radial-gradient(circle at 35% 30%, #ffe6b0 0%, var(--led) 40%, #a01408 100%);
-    box-shadow: 0 0 4px var(--led-glow);
+    background: radial-gradient(circle at 35% 30%, #ff6050 0%, #ff2010 50%, #c01008 100%);
+    box-shadow: 0 0 3px rgba(255, 40, 20, 0.6), 0 0 6px rgba(255, 40, 20, 0.3);
   }
-  .cap { line-height: 1; text-transform: uppercase; }
+  /* White body area below LED */
+  .body {
+    padding: 5px 0;
+    background: linear-gradient(180deg, #ede8e0 0%, #ddd8d0 100%);
+  }
+
+  .strip.compact {
+    gap: 3px;
+    padding: 3px;
+  }
+  .strip.compact button {
+    width: 18px;
+  }
+  .strip.compact .led-area {
+    padding: 2px 0;
+  }
+  .strip.compact .body {
+    padding: 4px 0;
+  }
+  .strip.compact .led {
+    width: 5px;
+    height: 5px;
+  }
 
   .lbl {
     font-family: 'Saira Condensed', sans-serif;
     font-weight: 600;
-    font-size: 0.6rem;
+    font-size: 0.5rem;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--ink);
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
     line-height: 1;
   }
 </style>

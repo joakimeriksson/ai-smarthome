@@ -52,6 +52,7 @@
 </script>
 
 <div class="seq">
+  <div class="title-bar"><span class="title">Sequencer</span></div>
   <div class="bar">
     <button class="play" onclick={playing ? onstop : onplay}>
       {playing ? '■ Stop' : '▶ Play'}
@@ -95,16 +96,28 @@
 
 <style>
   .seq {
-    background: linear-gradient(180deg, var(--cream-light) 0%, var(--cream) 30%, var(--cream-deep) 100%);
-    border: 1px solid rgba(0, 0, 0, 0.18);
-    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 0.6rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+  /* Title on the border line, matching Panel.svelte */
+  .title-bar {
+    display: flex;
+    justify-content: center;
+    margin-top: -1.05rem;
+  }
+  .title {
+    font-family: 'Saira Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.64rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink);
+    padding: 0 0.5rem;
+    background: var(--panel);
+    line-height: 1;
   }
   .bar {
     display: flex;
@@ -113,8 +126,8 @@
     flex-wrap: wrap;
   }
   .play {
-    background: linear-gradient(180deg, var(--orange-bright) 0%, var(--orange) 60%, var(--orange-dark) 100%);
-    color: var(--cream-light);
+    background: linear-gradient(180deg, var(--btn-hi) 0%, var(--btn-face) 40%, var(--btn-lo) 100%);
+    color: #1a1410;
     border: 1px solid rgba(0, 0, 0, 0.3);
     padding: 0.32rem 0.85rem;
     font-family: 'Saira Condensed', sans-serif;
@@ -124,9 +137,8 @@
     text-transform: uppercase;
     border-radius: 2px;
     cursor: pointer;
-    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
       inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   }
   .play:hover { filter: brightness(1.05); }
@@ -158,15 +170,15 @@
   .track-tabs {
     display: flex;
     gap: 2px;
-    background: linear-gradient(180deg, #5e5645, #2a241c);
+    background: linear-gradient(180deg, #1a1816, #0e0c0a);
     padding: 2px;
     border-radius: 3px;
     box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
   }
   .track-tabs button {
-    background: linear-gradient(180deg, #f5efdc 0%, #d8ceb2 60%, #b3a786 100%);
+    background: linear-gradient(180deg, var(--btn-hi) 0%, var(--btn-face) 40%, var(--btn-lo) 100%);
     border: 0;
-    color: var(--ink);
+    color: #1a1410;
     padding: 0.22rem 0.55rem;
     border-radius: 2px;
     cursor: pointer;
@@ -180,11 +192,11 @@
   }
   .track-tabs button.on { color: var(--orange); }
   .track-tabs button.active {
-    background: linear-gradient(180deg, var(--orange-bright) 0%, var(--orange) 60%, var(--orange-dark) 100%);
-    color: var(--cream-light);
-    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+    background: linear-gradient(180deg, #8a8274 0%, #6a645a 40%, #504c44 100%);
+    color: #ede4d2;
     transform: translateY(1px);
   }
+  .opt { accent-color: var(--orange); }
   .opt {
     font-family: 'Saira Condensed', sans-serif;
     font-weight: 700;
@@ -199,14 +211,14 @@
   .layer-sw {
     display: flex;
     gap: 2px;
-    background: linear-gradient(180deg, #5e5645, #2a241c);
+    background: linear-gradient(180deg, #1a1816, #0e0c0a);
     padding: 2px;
     border-radius: 3px;
   }
   .layer-sw button {
-    background: linear-gradient(180deg, #f5efdc 0%, #d8ceb2 60%, #b3a786 100%);
+    background: linear-gradient(180deg, var(--btn-hi) 0%, var(--btn-face) 40%, var(--btn-lo) 100%);
     border: 0;
-    color: var(--ink);
+    color: #1a1410;
     padding: 0.22rem 0.55rem;
     border-radius: 2px;
     cursor: pointer;
@@ -215,8 +227,8 @@
     font-size: 0.7rem;
   }
   .layer-sw button.active {
-    background: linear-gradient(180deg, var(--orange-bright) 0%, var(--orange) 60%, var(--orange-dark) 100%);
-    color: var(--cream-light);
+    background: linear-gradient(180deg, #8a8274 0%, #6a645a 40%, #504c44 100%);
+    color: #ede4d2;
     transform: translateY(1px);
   }
 
@@ -229,17 +241,17 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    border: 1px solid rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 2px;
-    background: linear-gradient(180deg, var(--cream-light), var(--cream-deep));
+    background: linear-gradient(180deg, #302c2a, #242120);
     padding: 3px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     position: relative;
   }
   .step.cur {
     border-color: var(--orange);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
       0 0 0 1px var(--orange),
       0 0 6px var(--led-glow);
   }
@@ -261,7 +273,7 @@
     justify-content: center;
   }
   .ctrls button {
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.05);
     border: 0;
     color: var(--ink-soft);
     padding: 0.1rem 0.3rem;
@@ -269,6 +281,6 @@
     cursor: pointer;
     font-size: 0.65rem;
   }
-  .ctrls button:hover { background: rgba(0, 0, 0, 0.15); color: var(--ink); }
+  .ctrls button:hover { background: rgba(255, 255, 255, 0.1); color: var(--ink); }
   .ctrls .tie.on { color: var(--orange); }
 </style>

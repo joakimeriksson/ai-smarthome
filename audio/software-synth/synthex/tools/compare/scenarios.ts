@@ -5,7 +5,7 @@
 // patches minimal so spectral differences point at the specific subsystem
 // being tested.
 
-import type { LayerPatch, ModSlot, DeepPartial } from '../../packages/engine/src/patch.ts'
+import type { LayerPatch, ModSlot, DeepPartial, ChorusParams } from '../../packages/engine/src/patch.ts'
 import { mergeDeep } from '../../packages/engine/src/patch.ts'
 import type { NoteEvent, Param } from './render.ts'
 
@@ -16,6 +16,7 @@ export interface Scenario {
   patch: LayerPatch
   events: NoteEvent[]
   params?: Param[]
+  fx?: { chorus?: ChorusParams } | undefined   // post-voice FX matching the app's FX bus
   durationSec: number
   // Hint for plot range (some tests want a narrower view)
   maxPlotHz?: number
@@ -47,12 +48,12 @@ function bare(over: DeepPartial<LayerPatch> = {}): LayerPatch {
     lfo2: { shape: 'tri', rate: 5, sync: false, delay: 0, depthA: 1, depthB: 1 },
     modMatrix: emptyMatrix(),
     velocity: { amp: 0, cutoff: 0, env1: 0 },
-    glide: { time: 0, mode: 'off' },
+    glide: { time: 0, amount: 0, mode: 'off', osc1: true, osc2: true },
     keyAssign: 'poly',
     multiTrigger: true,
     pan: 0,
   }
-  return mergeDeep(base, over)
+  return mergeDeep<LayerPatch>(base, over)
 }
 
 // Helper: render a single sustained note from t=0 to (durationSec - 0.1)
@@ -242,31 +243,34 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'patch-laser-harp',
     title: 'Patch — Ring mod. (Laser Harp, slot 46)',
-    description: 'The Wiffen/JMJ "Rendez-Vous" sound. All four "weird" switches engaged: sync + ring + cross-mod + filter env on osc2 pitch.',
+    description: 'The Wiffen/JMJ "Rendez-Vous" sound. Tuned against Cherry Audio Elka-X factory preset.',
     patch: {
-      // Now uses the authentic Wiffen tuning: per-osc Glide on OSC2 (not env1ToOsc2Pitch).
-      osc1: { wave: 'square', octave: 0, pwm: 0.45, glide: { amount: 0, speed: 0.05 } },
-      osc2: { wave: 'square', octave: 2, detune: 700, pwm: 0.45, sync: true, glide: { amount: 2, speed: 0.05 } },
-      mix:  { osc1: 0.5, osc2: 0.5, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.55, crossMod2: 0 },
-      filter: { mode: 'lp24', cutoff: 0.5, resonance: 0, envAmount: 0.5, keyTrack: 1.0 },
-      envFilter: { a: 0.001, d: 0.5, s: 0.2, r: 0.05 },
-      envAmp:    { a: 0.001, d: 2.0, s: 0.4, r: 1.5 },
-      lfo1: { shape: 'tri', rate: 2.5, sync: false, delay: 0, depthA: 1, depthB: 1 },
+      osc1: { wave: 'square', octave: -1, pwm: 0.50, glide: { amount: 0, speed: 0.05 } },
+      osc2: { wave: 'square', octave: 1, detune: 700, pwm: 0.39, sync: true, glide: { amount: 0, speed: 0.05 } },
+      mix:  { osc1: 0.7, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.55, crossMod2: 0 },
+      filter: { mode: 'lp24', cutoff: 0.44, resonance: 0, envAmount: 0.5, keyTrack: 0.5 },
+      envFilter: { a: 0.001, d: 1.0, s: 0.65, r: 0.3 },
+      // Release measured from Elka-X capture: silent ≤0.4 s after note-off.
+      envAmp:    { a: 0.001, d: 8.0, s: 0.75, r: 0.3 },
+      lfo1: { shape: 'tri', rate: 0.93, sync: false, delay: 1.0, depthA: 0.53, depthB: 1 },
       lfo2: { shape: 'tri', rate: 0.4, sync: false, delay: 0, depthA: 1, depthB: 1 },
-      modMatrix: { ...emptyMatrix(), env1ToCutoff: 1, lfo1ToOsc2Pwm: 0.33 },
+      modMatrix: { ...emptyMatrix(), env1ToCutoff: 1, lfo1ToOsc2Pwm: 0.75 },
       velocity: { amp: 0, cutoff: 0, env1: 0 },
-      glide: { time: 0, mode: 'off' },
+      // Panel Glide: OSC2 only, amount=14 semitones, speed=3s decay
+      glide: { time: 1.0, amount: 8, mode: 'glide', osc1: false, osc2: true },
       keyAssign: 'mono',
-      multiTrigger: true,
+      multiTrigger: false,
       pan: 0,
     },
     events: [
       // perkristian's reference recording opens around D3 (~147 Hz). Match
       // the pitch so the spectral comparison is apples-to-apples.
       { kind: 'on', t: 0.1, note: 50, velocity: 1 },
-      { kind: 'off', t: 2.4, note: 50 },
+      { kind: 'off', t: 10.0, note: 50 },
     ],
-    durationSec: 3,
+    // The Elka-X reference was captured with chorus mode 1 engaged — model it.
+    fx: { chorus: { enabled: true, mode: 1, mix: 0.55, rate: 0.5, depth: 0.6 } },
+    durationSec: 15,
   },
   {
     id: 'patch-brass-1',
@@ -283,7 +287,7 @@ export const SCENARIOS: Scenario[] = [
       lfo2: { shape: 'tri', rate: 0.4, sync: false, delay: 0, depthA: 1, depthB: 1 },
       modMatrix: { ...emptyMatrix(), env1ToCutoff: 1 },
       velocity: { amp: 0, cutoff: 0, env1: 0 },
-      glide: { time: 0, mode: 'off' },
+      glide: { time: 0, amount: 0, mode: 'off', osc1: true, osc2: true },
       keyAssign: 'poly',
       multiTrigger: true,
       pan: 0,

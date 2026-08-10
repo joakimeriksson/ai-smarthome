@@ -1,7 +1,7 @@
 <script lang="ts">
-  // Recessed Synthex-style rotary knob.
-  // SVG composition: orange arc track → black indicator arc → recessed well →
-  // cream cap with subtle bevel → white pointer line.
+  // Dark Elka-X style rotary knob.
+  // SVG composition: faint track arc → white indicator arc → dark recessed well →
+  // dark metallic cap with subtle bevel → white pointer line.
   //
   // Vertical drag adjusts value. Shift = fine ×0.25, Cmd/Ctrl = coarse ×4.
   // Double-click = default. Wheel + arrow keys for keyboard accessibility.
@@ -17,16 +17,15 @@
     format?: (v: number) => string
     onchange: (v: number) => void
     size?: number
+    tickLabels?: (string | number)[]  // custom tick labels; length sets tick count
+    light?: boolean  // silver/light cap (Master Tune style)
   }
 
   let {
     value, min = 0, max = 1, default: def = 0, step = 0,
-    label, unit = '', format, onchange, size = 50,
+    label, unit = '', format, onchange, size = 50, tickLabels, light = false,
   }: Props = $props()
 
-  // SVG <defs> ids must not contain spaces or special characters. Labels
-  // can have either ("1→2 PWM"), so we use a per-instance random suffix
-  // instead of the label itself to scope the gradient definitions.
   const uid = Math.random().toString(36).slice(2, 10)
 
   const sweep = 280
@@ -41,6 +40,8 @@
   let dragStartY = 0
   let dragStartV = 0
   let speed = 1
+  let readoutX = $state(0)
+  let readoutY = $state(0)
 
   function pointerDown(e: PointerEvent) {
     dragging = true
@@ -48,6 +49,15 @@
     dragStartV = value
     speed = e.shiftKey ? 0.25 : (e.metaKey || e.ctrlKey ? 4 : 1)
     ;(e.target as Element).setPointerCapture(e.pointerId)
+    document.body.classList.add('knob-dragging')
+    // Position readout above the knob using fixed coords
+    const el = (e.target as Element).closest('.knob') as HTMLElement
+    if (el) {
+      const r = el.getBoundingClientRect()
+      readoutX = r.left + r.width / 2
+      readoutY = r.top - 4
+    }
+    e.preventDefault()
   }
   function pointerMove(e: PointerEvent) {
     if (!dragging) return
@@ -55,10 +65,12 @@
     const range = max - min
     const next = clamp(snap(dragStartV + (dy / 200) * range * speed))
     if (next !== value) onchange(next)
+    e.preventDefault()
   }
   function pointerUp(e: PointerEvent) {
     dragging = false
     ;(e.target as Element).releasePointerCapture(e.pointerId)
+    document.body.classList.remove('knob-dragging')
   }
   function dblClick() { onchange(clamp(snap(def))) }
   function wheel(e: WheelEvent) {
@@ -76,44 +88,82 @@
     if (e.key === 'End')       { onchange(max); e.preventDefault() }
   }
 
-  // Map value position 0..1 along the sweep
   let pos01 = $derived((value - min) / (max - min))
   let angle = $derived(start + pos01 * sweep)
 
-  // Arc indicator path — bipolar knobs (min<0 && max>0) fill from center, others fill from start.
   const isBipolar = $derived(min < 0 && max > 0)
-  const arcRadius = 41
-
-  function polar(deg: number, r: number = arcRadius): { x: number; y: number } {
-    const rad = (deg - 90) * Math.PI / 180
-    return { x: 50 + r * Math.cos(rad), y: 50 + r * Math.sin(rad) }
-  }
-  function arcPath(fromDeg: number, toDeg: number): string {
-    if (Math.abs(toDeg - fromDeg) < 0.1) return ''
-    const a = polar(fromDeg)
-    const b = polar(toDeg)
-    const large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0
-    const sweep = toDeg > fromDeg ? 1 : 0
-    return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} A ${arcRadius} ${arcRadius} 0 ${large} ${sweep} ${b.x.toFixed(2)} ${b.y.toFixed(2)}`
-  }
-
-  let trackPath = $derived(arcPath(start, start + sweep))
-  let indicatorPath = $derived.by(() => {
-    if (isBipolar) {
-      const center = start + sweep * (-min / (max - min))
-      return arcPath(center, angle)
-    }
-    return arcPath(start, angle)
-  })
-
   let display = $derived(
     format ? format(value) :
     (Math.abs(value) >= 10 ? value.toFixed(0) : value.toFixed(2)) + (unit ? ' ' + unit : '')
   )
+
+  // Tick marks well outside the knob, numbers at the edge
+  const tickInner = 34
+  const tickRadius = 38
+  const labelRadius = 44
+
+  let tickData = $derived.by(() => {
+    // Use custom labels if provided
+    if (tickLabels) {
+      return tickLabels.map((lbl, i) => ({
+        frac: i / (tickLabels.length - 1),
+        label: String(lbl),
+      }))
+    }
+    // Auto-derive: integer ranges show actual values, 0-1 ranges show 0-10
+    const range = max - min
+    if (step >= 1 && range <= 24) {
+      // Integer steps (transpose, range, etc.) — show actual values
+      const count = Math.round(range / step) + 1
+      const maxTicks = 13
+      const skip = count > maxTicks ? Math.ceil(count / maxTicks) : 1
+      const items: { frac: number; label: string }[] = []
+      for (let i = 0; i < count; i += skip) {
+        const val = min + i * step
+        items.push({ frac: i / (count - 1), label: String(val) })
+      }
+      // Ensure last tick is included
+      if (items[items.length - 1]?.frac !== 1) {
+        items.push({ frac: 1, label: String(max) })
+      }
+      return items
+    }
+    if (isBipolar) {
+      // Bipolar: show symmetric labels around center (e.g. 5..0..5)
+      const half = 5
+      const items: { frac: number; label: string }[] = []
+      for (let i = 0; i <= half * 2; i++) {
+        items.push({ frac: i / (half * 2), label: String(Math.abs(i - half)) })
+      }
+      return items
+    }
+    // Default: 0-10 scale
+    return Array.from({ length: 11 }, (_, i) => ({
+      frac: i / 10,
+      label: String(i),
+    }))
+  })
+
+  let ticks = $derived.by(() => {
+    return tickData.map(t => {
+      const deg = start + t.frac * sweep
+      const rad = (deg - 90) * Math.PI / 180
+      return {
+        x1: 50 + tickInner * Math.cos(rad),
+        y1: 50 + tickInner * Math.sin(rad),
+        x2: 50 + tickRadius * Math.cos(rad),
+        y2: 50 + tickRadius * Math.sin(rad),
+        lx: 50 + labelRadius * Math.cos(rad),
+        ly: 50 + labelRadius * Math.sin(rad),
+        label: t.label,
+      }
+    })
+  })
 </script>
 
 <div
   class="knob"
+  class:active={dragging}
   style="--size:{size}px"
   role="slider"
   tabindex="0"
@@ -129,45 +179,59 @@
   onwheel={wheel}
   onkeydown={key}
 >
-  <div class="readout-anchor">
-    {#if dragging}<div class="readout">{display}</div>{/if}
-  </div>
+  {#if dragging}<div class="readout" style="left:{readoutX}px;top:{readoutY}px">{display}</div>{/if}
 
-  <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
+  <svg viewBox="-2 -2 104 104" width={size} height={size} aria-hidden="true">
     <defs>
-      <radialGradient id="capGrad-{uid}" cx="0.35" cy="0.30" r="0.85">
-        <stop offset="0%" stop-color="#fbf6e7" />
-        <stop offset="55%" stop-color="#e6dec5" />
-        <stop offset="100%" stop-color="#b1a585" />
+      <!-- Knob cap: dark by default (matching real Synthex), silver for Master -->
+      <radialGradient id="capGrad-{uid}" cx="0.40" cy="0.35" r="0.65">
+        {#if light}
+          <stop offset="0%" stop-color="#d8d4cc" />
+          <stop offset="40%" stop-color="#c0bab0" />
+          <stop offset="100%" stop-color="#908a80" />
+        {:else}
+          <stop offset="0%" stop-color="#484644" />
+          <stop offset="40%" stop-color="#363432" />
+          <stop offset="100%" stop-color="#222020" />
+        {/if}
       </radialGradient>
-      <radialGradient id="wellGrad-{uid}" cx="0.5" cy="0.5" r="0.7">
-        <stop offset="0%" stop-color="#bcb29a" />
-        <stop offset="80%" stop-color="#857d68" />
-        <stop offset="100%" stop-color="#5c5648" />
+      <!-- Dark recessed well / panel cutout -->
+      <radialGradient id="wellGrad-{uid}" cx="0.5" cy="0.45" r="0.6">
+        <stop offset="0%" stop-color="#181614" />
+        <stop offset="100%" stop-color="#080706" />
       </radialGradient>
     </defs>
 
-    <!-- Outer screen-printed track (faint scale arc) -->
-    <path d={trackPath} class="track" />
-    <!-- Filled arc indicating the current value -->
-    <path d={indicatorPath} class="arc" />
+    <!-- Tick marks + numbers (screen-printed on panel). Numbers become
+         unreadable noise below ~40px — small knobs keep ticks only. -->
+    {#each ticks as t, i (i)}
+      <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} class="tick" />
+      {#if size >= 40}
+        <text x={t.lx} y={t.ly} class="tick-num">{t.label}</text>
+      {/if}
+    {/each}
 
-    <!-- Recessed well (the panel cut-out) -->
-    <circle cx="50" cy="50" r="34" fill="url(#wellGrad-{uid})" />
-    <!-- Knob cap (cream, subtle bevel) -->
-    <circle cx="50" cy="50" r="29" fill="url(#capGrad-{uid})" stroke="#3a3225" stroke-width="0.6" />
+    <!-- Thin shadow ring where knob meets panel -->
+    <circle cx="50" cy="50" r="24.5" fill="none"
+      stroke="rgba(0,0,0,0.3)" stroke-width="1" />
 
-    <!-- Pointer line — extends from cap edge inward; dark at the edge so it
-         reads against any cap shade. -->
+    <!-- Knob cap — sits directly on panel -->
+    <circle cx="50" cy="50" r="23" fill="url(#capGrad-{uid})"
+      stroke="rgba(0,0,0,0.4)" stroke-width="0.6" />
+    <!-- Top-edge highlight for 3D effect -->
+    <circle cx="50" cy="50" r="22.5" fill="none"
+      stroke={light ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'} stroke-width="0.5" />
+
+    <!-- Pointer line (white on silver knob, matching real Synthex) -->
     <line
-      x1={50 + 28 * Math.cos((angle - 90) * Math.PI / 180)}
-      y1={50 + 28 * Math.sin((angle - 90) * Math.PI / 180)}
-      x2={50 + 13 * Math.cos((angle - 90) * Math.PI / 180)}
-      y2={50 + 13 * Math.sin((angle - 90) * Math.PI / 180)}
+      x1={50 + 22 * Math.cos((angle - 90) * Math.PI / 180)}
+      y1={50 + 22 * Math.sin((angle - 90) * Math.PI / 180)}
+      x2={50 + 6 * Math.cos((angle - 90) * Math.PI / 180)}
+      y2={50 + 6 * Math.sin((angle - 90) * Math.PI / 180)}
       class="pointer"
     />
-    <!-- Tiny center pip -->
-    <circle cx="50" cy="50" r="2.2" fill="#3a3225" />
+    <!-- Center pip -->
+    <circle cx="50" cy="50" r="1.8" fill={light ? '#5a5650' : '#1a1818'} />
   </svg>
 
   <div class="label">{label}</div>
@@ -176,6 +240,7 @@
 <style>
   .knob {
     width: var(--size);
+    min-width: 0;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
@@ -184,48 +249,57 @@
     user-select: none;
     position: relative;
     outline: none;
-  }
-  .readout-anchor {
-    position: relative;
-    width: 100%;
-    height: 0;
+    flex-shrink: 0;
   }
   .knob:focus-visible svg {
     filter: drop-shadow(0 0 2px var(--orange-bright));
   }
-  .track   { fill: none; stroke: rgba(0, 0, 0, 0.18); stroke-width: 2.4; stroke-linecap: round; }
-  .arc     { fill: none; stroke: var(--orange); stroke-width: 3.2; stroke-linecap: round; }
-  .pointer { stroke: #2a221a; stroke-width: 2.6; stroke-linecap: round; }
+  /* Active (dragging) — subtle glow */
+  .knob.active svg {
+    filter: drop-shadow(0 0 4px rgba(214, 90, 28, 0.4));
+  }
+  .knob.active .pointer { stroke: #fff; stroke-width: 3.2; }
+  .knob.active .label { color: var(--orange); }
+
+  .tick    { stroke: rgba(255, 255, 255, 0.6); stroke-width: 1.2; stroke-linecap: round; }
+  .tick-num {
+    fill: var(--ink, #e8e4dc);
+    font-size: 12px;
+    font-family: 'Saira Condensed', sans-serif;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .pointer { stroke: #ffffff; stroke-width: 2.8; stroke-linecap: round; }
 
   .label {
     font-family: 'Saira Condensed', sans-serif;
-    font-weight: 600;
-    font-size: 0.62rem;
+    font-weight: 700;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     color: var(--ink);
     margin-top: 0.18rem;
     text-align: center;
     line-height: 1;
+    white-space: nowrap;
   }
   .readout {
-    position: absolute;
-    bottom: 0.35rem;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
+    transform: translateX(-50%) translateY(-100%);
     background: #1a0606;
     color: var(--led);
-    padding: 0.15rem 0.5rem;
+    padding: 0.18rem 0.55rem;
     border-radius: 2px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     pointer-events: none;
     white-space: nowrap;
     text-shadow: 0 0 4px var(--led-glow);
     border: 1px solid #4a0a05;
-    z-index: 4;
+    z-index: 200;
     box-shadow:
       inset 0 0 6px rgba(255, 40, 24, 0.25),
-      0 1px 3px rgba(0, 0, 0, 0.35);
+      0 2px 8px rgba(0, 0, 0, 0.6);
   }
 </style>

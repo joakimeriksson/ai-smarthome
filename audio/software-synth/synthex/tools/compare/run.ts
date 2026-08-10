@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { SCENARIOS } from './scenarios.ts'
 import { render } from './render.ts'
 import { writeWav, readWav } from './io.ts'
-import { logSpectrum, spectrumSvg, spectrogramSvg, type Trace } from './plot.ts'
+import { logSpectrum, avgLogSpectrum, spectrumSvg, spectrogramSvg, overlaySpectrogramSvg, amplitudeEnvelope, envelopeSvg, type Trace, type EnvTrace } from './plot.ts'
 
 const SR = 48000
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -32,7 +32,26 @@ interface Result {
   spectrumSvgRel: string
   spectrogramSvgRel: string
   refSpectrogramSvgRel: string | null
+  overlaySvgRel: string | null
+  envelopeSvgRel: string | null
   spectralRmsDb: number | null   // overall spectral distance vs ref (NaN if no ref)
+}
+
+// Detect onset: find the sample index where the signal first exceeds
+// a threshold (relative to peak). Returns a trimmed copy starting from
+// a small margin before the onset so the attack transient is visible.
+function alignToOnset(samples: Float32Array, sr: number, thresholdDb = -40, marginMs = 10): Float32Array {
+  let peak = 0
+  for (let i = 0; i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]!))
+  if (peak < 1e-8) return samples // silence
+  const thresh = peak * Math.pow(10, thresholdDb / 20)
+  let onset = 0
+  for (let i = 0; i < samples.length; i++) {
+    if (Math.abs(samples[i]!) > thresh) { onset = i; break }
+  }
+  const margin = Math.floor((marginMs / 1000) * sr)
+  const start = Math.max(0, onset - margin)
+  return samples.slice(start)
 }
 
 const results: Result[] = []
@@ -43,6 +62,7 @@ for (const sc of SCENARIOS) {
     patch: sc.patch,
     events: sc.events,
     params: sc.params,
+    fx: sc.fx,
     durationSec: sc.durationSec,
     sampleRate: SR,
   })
@@ -54,24 +74,41 @@ for (const sc of SCENARIOS) {
     { label: 'synthex-web', color: '#ff8a3d', freqs: oursSpec.freqs, db: oursSpec.db },
   ]
 
+  // Align our render to onset
+  const oursAligned = alignToOnset(ours, SR)
+
   let refWav: Float32Array | null = null
+  let refAligned: Float32Array | null = null
   let spectralRmsDb: number | null = null
   const refPath = resolve(REFS, `${sc.id}.wav`)
   refWav = readWav(refPath, SR)
   if (refWav) {
-    const refSpec = logSpectrum(refWav, SR)
+    refAligned = alignToOnset(refWav, SR)
+    const refSpec = logSpectrum(refAligned, SR)
     traces.push({ label: 'reference', color: '#4ec9ff', freqs: refSpec.freqs, db: refSpec.db })
 
-    // Spectral-distance metric: RMS of dB difference, restricted to [50 Hz, 10 kHz]
-    // and clamped to a -90..0 range so silent bins don't dominate.
-    let sum = 0, count = 0
-    for (let i = 0; i < oursSpec.freqs.length; i++) {
-      const f = oursSpec.freqs[i]!
+    // Spectral-distance metric: RMS of dB difference on TIME-AVERAGED
+    // (Welch) spectra, restricted to [50 Hz, 10 kHz], clamped to -90 dB,
+    // with the mean level offset removed (level-invariant). Averaging is
+    // essential for patches with animated spectra (LFO/PWM/glide).
+    const oursAvg = avgLogSpectrum(oursAligned, SR)
+    const refAvg = avgLogSpectrum(refAligned, SR)
+    let sum = 0, count = 0, meanDiff = 0
+    for (let i = 0; i < oursAvg.freqs.length; i++) {
+      const f = oursAvg.freqs[i]!
       if (f < 50 || f > 10000) continue
-      const a = Math.max(oursSpec.db[i]!, -90)
-      const b = Math.max(refSpec.db[i]!, -90)
-      sum += (a - b) ** 2
+      const a = Math.max(oursAvg.db[i]!, -90)
+      const b = Math.max(refAvg.db[i]!, -90)
+      meanDiff += a - b
       count++
+    }
+    meanDiff /= Math.max(count, 1)
+    for (let i = 0; i < oursAvg.freqs.length; i++) {
+      const f = oursAvg.freqs[i]!
+      if (f < 50 || f > 10000) continue
+      const a = Math.max(oursAvg.db[i]!, -90)
+      const b = Math.max(refAvg.db[i]!, -90)
+      sum += (a - b - meanDiff) ** 2
     }
     spectralRmsDb = Math.sqrt(sum / Math.max(count, 1))
   }
@@ -80,13 +117,36 @@ for (const sc of SCENARIOS) {
     title: sc.title,
     maxHz: sc.maxPlotHz ?? 20000,
   })
-  const spectroSvg = spectrogramSvg(ours, SR, {
+  const spectroSvg = spectrogramSvg(oursAligned, SR, {
     title: 'Synthex Web — spectrogram',
     maxHz: 12000,
   })
-  const refSpectroSvg = refWav
-    ? spectrogramSvg(refWav, SR, { title: 'Reference — spectrogram', maxHz: 12000 })
+  const refSpectroSvg = refAligned
+    ? spectrogramSvg(refAligned, SR, { title: 'Reference — spectrogram', maxHz: 12000 })
     : null
+
+  // Overlay spectrogram + amplitude envelope (only when ref exists)
+  let overlaySvg: string | null = null
+  let envSvg: string | null = null
+  if (refAligned) {
+    overlaySvg = overlaySpectrogramSvg(oursAligned, refAligned, SR, {
+      title: 'Overlay — orange = ours, blue = reference, purple = overlap',
+      maxHz: 12000,
+    })
+    writeFileSync(resolve(OUT, `${sc.id}.overlay.svg`), overlaySvg)
+
+    const oursEnv = amplitudeEnvelope(oursAligned, SR)
+    const refEnv = amplitudeEnvelope(refAligned, SR)
+    const envTraces: EnvTrace[] = [
+      { label: 'synthex-web', color: '#ff8a3d', ...oursEnv },
+      { label: 'reference', color: '#4ec9ff', ...refEnv },
+    ]
+    envSvg = envelopeSvg(envTraces, {
+      title: 'Amplitude envelope (RMS dB over time)',
+      maxTime: sc.durationSec,
+    })
+    writeFileSync(resolve(OUT, `${sc.id}.envelope.svg`), envSvg)
+  }
 
   writeFileSync(resolve(OUT, `${sc.id}.spectrum.svg`), specSvg)
   writeFileSync(resolve(OUT, `${sc.id}.spectrogram.svg`), spectroSvg)
@@ -101,6 +161,8 @@ for (const sc of SCENARIOS) {
     spectrumSvgRel: `out/${sc.id}.spectrum.svg`,
     spectrogramSvgRel: `out/${sc.id}.spectrogram.svg`,
     refSpectrogramSvgRel: refSpectroSvg ? `out/${sc.id}.ref-spectrogram.svg` : null,
+    overlaySvgRel: overlaySvg ? `out/${sc.id}.overlay.svg` : null,
+    envelopeSvgRel: envSvg ? `out/${sc.id}.envelope.svg` : null,
     spectralRmsDb,
   })
 }
@@ -168,6 +230,10 @@ ${results.map(r => {
     <div class="plot"><img alt="spectrogram" src="${r.spectrogramSvgRel}" /></div>
     ${r.refSpectrogramSvgRel ? `<div class="plot"><img alt="ref spectrogram" src="${r.refSpectrogramSvgRel}" /></div>` : ''}
   </div>
+  ${r.overlaySvgRel || r.envelopeSvgRel ? `<div class="plots" style="margin-top:0.5rem">
+    ${r.overlaySvgRel ? `<div class="plot" style="grid-column:span 2"><img alt="overlay spectrogram" src="${r.overlaySvgRel}" /></div>` : ''}
+    ${r.envelopeSvgRel ? `<div class="plot" style="grid-column:span 2"><img alt="amplitude envelope" src="${r.envelopeSvgRel}" /></div>` : ''}
+  </div>` : ''}
 </section>`
 }).join('\n')}
 

@@ -23,17 +23,20 @@ const empty = (): Record<ModSlot, number> => ({
 
 function patch(pwm: number): LayerPatch {
   return {
-    osc1: { wave: 'square', octave: 0, pwm },
-    osc2: { wave: 'sawtooth', octave: 0, detune: 0, pwm: 0.5, sync: false },
-    mix: { osc1: 1, osc2: 0, noise: 0, ringMod: false, crossMod: 0 },
+    osc1: { glide: { amount: 0, speed: 0.05 }, wave: 'square', octave: 0, pwm },
+    osc2: { glide: { amount: 0, speed: 0.05 }, wave: 'sawtooth', octave: 0, detune: 0, pwm: 0.5, sync: false },
+    mix: { osc1: 1, osc2: 0, noise: 0, noiseColor: 'white', crossMod2: 0, ringMod: false, crossMod: 0 },
     filter: { mode: 'lp24', cutoff: 1, resonance: 0, envAmount: 0, keyTrack: 0 },
     envFilter: { a: 0.001, d: 0.001, s: 1, r: 0.001 },
     envAmp: { a: 0.001, d: 0.001, s: 1, r: 0.001 },
-    lfo1: { shape: 'tri', rate: 5, sync: false, delay: 0 },
-    lfo2: { shape: 'tri', rate: 5, sync: false, delay: 0 },
+    lfo1: { depthA: 1, depthB: 1, shape: 'tri', rate: 5, sync: false, delay: 0 },
+    lfo2: { depthA: 1, depthB: 1, shape: 'tri', rate: 5, sync: false, delay: 0 },
     modMatrix: empty(),
     velocity: { amp: 0, cutoff: 0, env1: 0 },
-    glide: { time: 0, mode: 'off' },
+    glide: { time: 0, amount: 0, osc1: true, osc2: true, mode: 'off' },
+    keyAssign: 'poly',
+    multiTrigger: true,
+    pan: 0,
   }
 }
 

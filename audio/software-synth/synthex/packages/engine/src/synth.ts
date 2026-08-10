@@ -23,13 +23,19 @@ import { StereoChorus } from './fx/chorus.ts'
 import { StereoDelay } from './fx/delay.ts'
 import { SynthReverb } from './fx/reverb.ts'
 import { loadVoiceWorklet } from './load-worklet.ts'
-import type { Patch, LayerPatch, FxParams } from './patch.ts'
+import type { Patch, LayerPatch, FxParams, JoystickPerformance } from './patch.ts'
 import { factoryDefault } from './presets/default.ts'
 
 export interface SynthOptions {
   workletUrl?: string | URL
   context?: AudioContext
   polyphony?: number       // initial pool size; can be overridden by patch.master.polyphony later
+  /**
+   * Where the synth's output goes. Defaults to `context.destination` (the
+   * standalone app). A host — e.g. the studio — passes its own track input
+   * node so the synth feeds a mixer strip instead of the speakers directly.
+   */
+  destination?: AudioNode
 }
 
 type LayerKey = 'upper' | 'lower'
@@ -50,19 +56,24 @@ export class Synth {
   readonly context: AudioContext
   private readonly workletUrl: string | URL | null
   private readonly ownsContext: boolean
+  private readonly destination: AudioNode | null
   private polyphony: number
 
   private upper: LayerChain | null = null
   private lower: LayerChain | null = null
   private master: GainNode | null = null
   private limiter: DynamicsCompressorNode | null = null
+  private monoSum: GainNode | null = null
   private analyser: AnalyserNode | null = null
 
   private patch: Patch = factoryDefault()
+  // Joystick performance depths — panel controls, not patch memory (manual).
+  private perf: JoystickPerformance = { bendOsc: 0.3, bendFilt: 0.3, lfo2Osc: 0.5, lfo2Filt: 0.5 }
   private initialized = false
 
   constructor(opts: SynthOptions = {}) {
     this.workletUrl = opts.workletUrl ?? null
+    this.destination = opts.destination ?? null
     this.polyphony = Math.max(1, Math.min(16, opts.polyphony ?? 8))
     if (opts.context) {
       this.context = opts.context
@@ -85,6 +96,11 @@ export class Synth {
     this.limiter = new DynamicsCompressorNode(ctx, {
       threshold: -3, knee: 6, ratio: 12, attack: 0.003, release: 0.15,
     })
+    // Stereo/Mono switch stage: with channelCountMode 'explicit', setting
+    // channelCount to 1 forces a mono downmix (Synthex STEREO/MONO switch).
+    this.monoSum = new GainNode(ctx, { gain: 1 })
+    this.monoSum.channelCountMode = 'explicit'
+    this.monoSum.channelCount = 2
     this.analyser = new AnalyserNode(ctx, { fftSize: 2048 })
 
     this.polyphony = this.patch.master.polyphony
@@ -95,8 +111,9 @@ export class Synth {
 
     this.master
       .connect(this.limiter)
+      .connect(this.monoSum)
       .connect(this.analyser)
-      .connect(ctx.destination)
+      .connect(this.destination ?? ctx.destination)
 
     this.broadcastPatch()
     this.applyAllFx()
@@ -269,16 +286,35 @@ export class Synth {
     }
   }
 
-  pitchBend(semitones: number): void {
-    for (const c of this.layers()) {
+  // `which` mirrors the Synthex UPPER/BOTH/LOWER switch next to the joystick:
+  // performance controls can be routed to one layer or both.
+  pitchBend(semitones: number, which: 'upper' | 'lower' | 'both' = 'both'): void {
+    for (const c of this.targetLayers(which)) {
       for (const v of c.voices) v.port.postMessage({ type: 'bend', semitones })
     }
   }
 
-  setJoy(x: number, y: number): void {
-    for (const c of this.layers()) {
+  setJoy(x: number, y: number, which: 'upper' | 'lower' | 'both' = 'both'): void {
+    for (const c of this.targetLayers(which)) {
       for (const v of c.voices) v.port.postMessage({ type: 'joy', x, y })
     }
+  }
+
+  /**
+   * Joystick performance sliders (manual "To Oscillator / To Filter Sliders"):
+   * these live on the panel, not in patches, and survive program changes.
+   */
+  setPerformance(perf: Partial<JoystickPerformance>): void {
+    this.perf = { ...this.perf, ...perf }
+    for (const c of this.layers()) {
+      for (const v of c.voices) v.port.postMessage({ type: 'perf', perf: this.perf })
+    }
+  }
+
+  private targetLayers(which: 'upper' | 'lower' | 'both'): LayerChain[] {
+    if (which === 'upper') return this.upper ? [this.upper] : []
+    if (which === 'lower') return this.lower ? [this.lower] : []
+    return this.layers()
   }
 
   // -------------------------------------------------------------------------
@@ -353,6 +389,7 @@ export class Synth {
     const snap = structuredClone(toPlainObject(layer))
     for (const v of chain.voices) {
       v.port.postMessage({ type: 'patch', patch: snap })
+      v.port.postMessage({ type: 'perf', perf: this.perf })
     }
   }
 
@@ -420,6 +457,11 @@ export class Synth {
     }
   }
 
+  /** Synthex STEREO/MONO switch — true sums the output to mono. */
+  setMono(mono: boolean): void {
+    if (this.monoSum) this.monoSum.channelCount = mono ? 1 : 2
+  }
+
   getAnalyser(): AnalyserNode | null {
     return this.analyser
   }
@@ -429,6 +471,7 @@ export class Synth {
     if (this.lower) this.destroyLayerChain(this.lower)
     this.master?.disconnect()
     this.limiter?.disconnect()
+    this.monoSum?.disconnect()
     this.analyser?.disconnect()
     if (this.ownsContext) await this.context.close()
   }

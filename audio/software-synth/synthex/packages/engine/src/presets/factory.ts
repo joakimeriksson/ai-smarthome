@@ -33,8 +33,8 @@ import type { Patch, LayerPatch } from '../patch.ts'
 const ADSR = (a: number, d: number, s: number, r: number) => ({ a, d, s, r })
 
 const defaults = (): LayerPatch => ({
-  osc1:  { wave: 'sawtooth', octave: 0, pwm: 0.5, glide: { amount: 0, speed: 0.05 } },
-  osc2:  { wave: 'sawtooth', octave: 0, detune: 0, pwm: 0.5, sync: false, glide: { amount: 0, speed: 0.05 } },
+  osc1:  { wave: 'sawtooth', octave: -1, pwm: 0.5, glide: { amount: 0, speed: 0.05 } },
+  osc2:  { wave: 'sawtooth', octave: -1, detune: 0, pwm: 0.5, sync: false, glide: { amount: 0, speed: 0.05 } },
   mix:   { osc1: 0.5, osc2: 0.5, noise: 0, noiseColor: 'white', ringMod: false, crossMod: 0, crossMod2: 0 },
   filter:{ mode: 'lp24', cutoff: 0.6, resonance: 0.2, envAmount: 0.3, keyTrack: 0.5 },
   envFilter: ADSR(0.005, 0.4, 0.4, 0.3),
@@ -52,7 +52,7 @@ const defaults = (): LayerPatch => ({
     velToAmp: 0, velToCutoff: 0, velToEnv1: 0,
   },
   velocity: { amp: 0, cutoff: 0, env1: 0 },
-  glide:    { time: 0, mode: 'off' },
+  glide:    { time: 0, amount: 0, mode: 'off', osc1: true, osc2: true },
   keyAssign: 'poly',
   multiTrigger: true,
   pan: 0,
@@ -392,51 +392,32 @@ const PRESETS_B4: Record<number, Patch> = {
     envAmp:    ADSR(0.005, 0.25, 0.0, 0.1),
   })),
   // 46 — Wiffen's Laser Harp ("Ring mod.")
-  // Verified against the canonical Wiffen patch (KVR Audio thread; switched-on
-  // synthesizer blog reconstruction; perkristian's recording).
+  // Tuned against Cherry Audio Elka-X Laser Harp.elkaxpreset decoded values.
   //
-  // Original Synthex front panel:
-  //   OSC1: 8' (oct 0), Pulse, PW −1/±5, vol 7
-  //   OSC2: 2' (oct +2) + Transpose 7 (perfect 5th), waveform = "OSC1 PWM + Ring Mod"
-  //          (i.e. cross-mod ON + ring mod ON simultaneously), Sync ON, vol 7
-  //   LFO:  Triangle → PW2, Freq 3, Depth 3, no delay
-  //   Filter: LP24, Freq 5, Reso 0, Kbd-track 10 (full), Env amount 5
-  //   Env-Filter: A=0 D=2 S=2 R=0
-  //   Env-Amp:    A=0 D=5 S=5 R=3 (release env ON)
-  //   Chorus: setting 1 (slowest/shallowest)
-  //   "OSC2 Glide" (a Synthex-specific OSC2 pitch envelope, NOT note portamento)
-  //
-  // Mapping notes:
-  //   - OSC2 +24 semis (oct=2) + 700 ct gives the +31 semi free-running pitch.
-  //     With sync, this sets the formant the sync detune sweeps over.
-  //   - Synthex "OSC2 Glide" ≈ env1→OSC2 pitch (the filter-env swoop on attack).
-  //     Note portamento (glide.time) is OFF — that's a different control.
+  // Cherry Audio: Glide mode ON, OSC2 only, Amount=14, Speed=14000.
+  // filtEnvMod≈0.5, ampDecay≈8s, lfoFreq≈0.93Hz, depthA=0.53, delay=1s.
+  // Mono + legato (multi-trigger off).
   6: single('Ring mod.', L({
-    // OSC1 plays straight; OSC2 starts a major-second above target and
-    // slides down on each note attack — Wiffen's "OSC2 Glide. Speed 10.
-    // Amount 2." This per-osc Glide IS the laser harp swoop. Note portamento
-    // (glide.time) stays off — different feature.
-    osc1: { wave: 'square', octave: 0, pwm: 0.45,
-            glide: { amount: 0, speed: 0.05 } },              // not glided
-    osc2: { wave: 'square', octave: 2, detune: 700, pwm: 0.45, sync: true,
-            glide: { amount: 2, speed: 0.05 } },              // +2 semi swoop
-    mix:  { osc1: 0.5, osc2: 0.5, ringMod: true, crossMod: 0.55 },
-    filter: { mode: 'lp24', cutoff: 0.5, resonance: 0, envAmount: 0.5, keyTrack: 1.0 },
-    // Synthex ADSR knobs are logarithmic: 0 ≈ instant, 2 ≈ 0.5 s, 5 ≈ 2 s,
-    // 9 ≈ 20 s+. The original published values were misread as small linear
-    // numbers in the first pass.
-    envFilter: ADSR(0.001, 0.5, 0.2, 0.05),                   // A=0 D=2 S=2 R=0
-    envAmp:    ADSR(0.001, 2.0, 0.4, 1.5),                    // A=0 D=5 S=5 R=3
-    glide: { time: 0, mode: 'off' },                          // portamento off
-    lfo1: { shape: 'tri', rate: 2.5, sync: false, delay: 0 }, // LFO Freq 3
+    osc1: { wave: 'square', octave: -1, pwm: 0.50,
+            glide: { amount: 0, speed: 0.05 } },
+    osc2: { wave: 'square', octave: 1, detune: 700, pwm: 0.39, sync: true,
+            glide: { amount: 0, speed: 0.05 } },
+    mix:  { osc1: 0.7, osc2: 0.7, ringMod: true, crossMod: 0.55 },
+    filter: { mode: 'lp24', cutoff: 0.44, resonance: 0, envAmount: 0.5, keyTrack: 0.5 },
+    envFilter: ADSR(0.001, 1.0, 0.65, 0.3),
+    // Release measured from Elka-X capture: silent ≤0.4 s after note-off.
+    envAmp:    ADSR(0.001, 8.0, 0.75, 0.3),
+    // Panel Glide: mode='glide', routed to OSC2 only — the Laser Harp swoop.
+    // Amount = semitones of initial pitch offset; time = decay speed (seconds).
+    glide: { time: 1.0, amount: 8, mode: 'glide', osc1: false, osc2: true },
+    keyAssign: 'poly',
+    multiTrigger: true,
+    lfo1: { shape: 'tri', rate: 0.93, sync: false, delay: 1.0, depthA: 0.53 },
     modMatrix: {
-      lfo1ToOsc2Pwm: 0.33,      // LFO Triangle → PW2, Depth 3 of 9
+      lfo1ToOsc2Pwm: 0.75,
     },
   }), {
-    chorus: { mode: 1, mix: 0.55 },                           // Chorus setting 1
-    // perkristian's reference is recorded with room reverb. The Synthex has
-    // no onboard reverb, but we add a modest amount so the demo matches the
-    // reference's space and the bell decay can ring out audibly.
+    chorus: { mode: 1, mix: 0.55 },
     reverb: { enabled: true, size: 0.6, damping: 0.4, mix: 0.25 },
   }),
   7: single('Phased sweep', L({
@@ -589,7 +570,7 @@ const MEM_B2: Record<number, MemoryEntry> = {
     filter: { mode: 'lp24', cutoff: 0.6, resonance: 0.6, envAmount: 0.4 },
     envFilter: ADSR(0.005, 0.5, 0.5, 0.3),
     envAmp:    ADSR(0.005, 0.3, 0.95, 0.25),
-    glide: { time: 0.05, mode: 'legato' },
+    glide: { time: 0.05, amount: 0, mode: 'portamento', osc1: true, osc2: true },
   }))},
 
   1: { name: 'Solo Violin', patch: single('Solo Violin', L({
@@ -629,7 +610,7 @@ const MEM_B2: Record<number, MemoryEntry> = {
     filter: { mode: 'lp12', cutoff: 0.5, resonance: 0.2, envAmount: 0.2 },
     envFilter: ADSR(0.4, 0.8, 0.7, 0.8),
     envAmp:    ADSR(0.3, 0.5, 0.9, 0.8),
-    glide: { time: 0.25, mode: 'always' },
+    glide: { time: 0.25, amount: 6, mode: 'glide', osc1: true, osc2: true },
     lfo2: { rate: 4.5 },
     modMatrix: { lfo2ToOsc1Pitch: 0.003, lfo2ToOsc2Pitch: 0.003 },
   }), { chorus: { mode: 2, mix: 0.5 } })},
@@ -782,7 +763,7 @@ const MEM_B3: Record<number, MemoryEntry> = {
     filter: { mode: 'lp24', cutoff: 0.6, resonance: 0.3, envAmount: 0.3 },
     envFilter: ADSR(0.005, 0.4, 0.6, 0.3),
     envAmp:    ADSR(0.005, 0.3, 0.9, 0.3),
-    glide: { time: 0.4, mode: 'always' },
+    glide: { time: 0.4, amount: 7, mode: 'glide', osc1: true, osc2: true },
   }))},
 }
 
@@ -869,7 +850,7 @@ const MEM_B4: Record<number, MemoryEntry> = {
     filter: { mode: 'lp24', cutoff: 0.55, resonance: 0.45, envAmount: 0.4 },
     envFilter: ADSR(0.005, 0.4, 0.5, 0.3),
     envAmp:    ADSR(0.005, 0.3, 0.9, 0.25),
-    glide: { time: 0.06, mode: 'legato' },
+    glide: { time: 0.06, amount: 0, mode: 'portamento', osc1: true, osc2: true },
   }))},
 
   9: { name: 'Steel Drums', patch: single('Steel Drums', L({

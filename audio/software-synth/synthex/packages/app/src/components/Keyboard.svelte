@@ -83,11 +83,11 @@
     gap: 0;
     height: 130px;
     background:
-      linear-gradient(180deg, #2a221a 0%, #15110d 100%);
+      linear-gradient(180deg, #1a1614 0%, #0e0c0a 100%);
     border: 1px solid #000;
     border-radius: 3px;
     padding: 3px;
-    padding-top: 6px;   /* extra room for the black-key shadow */
+    padding-top: 6px;
     user-select: none;
     touch-action: none;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);

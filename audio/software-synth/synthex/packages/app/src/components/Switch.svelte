@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Synthex-style 2-position toggle: tall rocker on a recessed plate. The
-  // "lit" state shows the orange LED dot above the OFF marker.
+  // Synthex pushbutton — same style as Selector buttons.
+  // Label above, plain white square with red LED dot.
 
   interface Props {
     value: boolean
@@ -11,19 +11,17 @@
 </script>
 
 <div class="sw" role="group" aria-label={label}>
-  <div class="rocker" class:on={value}>
-    <button
-      type="button"
-      class="rocker-btn"
-      aria-pressed={value}
-      aria-label={label}
-      onclick={() => onchange(!value)}
-    >
-      <span class="led" aria-hidden="true"></span>
-      <span class="paddle" aria-hidden="true"></span>
-    </button>
-  </div>
   <div class="lbl">{label}</div>
+  <button
+    type="button"
+    class:on={value}
+    aria-pressed={value}
+    aria-label={label}
+    onclick={() => onchange(!value)}
+  >
+    <span class="led-area"><span class="led" aria-hidden="true"></span></span>
+    <span class="body"></span>
+  </button>
 </div>
 
 <style>
@@ -31,69 +29,64 @@
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.32rem;
-    width: 32px;
+    gap: 0.1rem;
+    flex-shrink: 0;
+    width: 20px;
   }
-  .rocker {
-    width: 28px;
-    height: 36px;
-    position: relative;
-    /* Recessed plate the rocker sits in */
-    background:
-      linear-gradient(180deg, #5e5645 0%, #2a241c 100%);
-    border-radius: 3px;
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.6),
-      0 1px 0 rgba(255, 255, 255, 0.55);
-    padding: 3px;
+  .lbl {
+    font-family: 'Saira Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 0.48rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
   }
-  .rocker-btn {
-    width: 100%;
-    height: 100%;
-    background: transparent;
+  button {
+    width: 20px;
+    display: flex;
+    flex-direction: column;
     border: 0;
     padding: 0;
     cursor: pointer;
+    border-radius: 1px;
+    overflow: hidden;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 1px 0 rgba(0, 0, 0, 0.15);
+    transition: transform 60ms ease, box-shadow 60ms ease;
+  }
+  button:hover .body {
+    background: linear-gradient(180deg, #f4f0e8 0%, #eae6de 100%);
+  }
+  button.on {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(1px);
+  }
+  .led-area {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    padding: 3px 0;
+    background: linear-gradient(180deg, #ccc8c0 0%, #d8d4cc 100%);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.1);
   }
   .led {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #6a1a08, #3a0a04 80%);
-    box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.7);
+    background: radial-gradient(circle at 40% 35%, #6a2a10, #3a0a04 80%);
+    box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.3);
     transition: background 80ms ease, box-shadow 80ms ease;
   }
-  .rocker.on .led {
-    background: radial-gradient(circle at 35% 30%, #ffe8b0 0%, var(--led) 35%, #b01608 100%);
-    box-shadow: 0 0 5px var(--led-glow), 0 0 10px var(--led-glow);
+  button.on .led {
+    background: radial-gradient(circle at 35% 30%, #ff6050 0%, #ff2010 50%, #c01008 100%);
+    box-shadow: 0 0 3px rgba(255, 40, 20, 0.6), 0 0 6px rgba(255, 40, 20, 0.3);
   }
-  .paddle {
-    /* The rocker paddle itself — cream cap, tilts visually */
-    width: 100%;
-    height: 18px;
-    background: linear-gradient(180deg, #f5efdc 0%, #d6cdb1 50%, #b1a587 100%);
-    border-radius: 2px;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.6),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.25),
-      0 1px 1px rgba(0, 0, 0, 0.4);
-    transition: transform 80ms ease;
-  }
-  .rocker.on .paddle {
-    /* Slightly raised — top edge highlight */
-    transform: translateY(-1px);
-  }
-  .lbl {
-    font-family: 'Saira Condensed', sans-serif;
-    font-weight: 600;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--ink);
-    line-height: 1;
+  .body {
+    padding: 5px 0;
+    background: linear-gradient(180deg, #ede8e0 0%, #ddd8d0 100%);
   }
 </style>

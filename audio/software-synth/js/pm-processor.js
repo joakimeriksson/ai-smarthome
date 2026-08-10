@@ -1,8 +1,13 @@
 // Physical Modeling Synth AudioWorklet Processor
 // Karplus-Strong with extended controls: exciter types, body resonance, damping, pickup position
 
+import {
+  Chorus,
+  StereoDelay,
+  Freeverb,
+} from './dsp-lib.js';
+
 const NUM_VOICES = 8;
-const TWO_PI = 2 * Math.PI;
 const MAX_DELAY = 4096; // enough for ~12Hz at 48kHz
 
 // ─── Karplus-Strong Voice ───────────────────────────────────────────────────
@@ -22,6 +27,11 @@ class KSVoice {
 
     // Feedback filter state
     this.lpState = 0;
+
+    // Jaffe-Smith tuning allpass state (fractional part of the loop delay).
+    this.apCoef = 0;
+    this.apX = 0;
+    this.apY = 0;
 
     // Body resonator (second short delay for body)
     this.bodyDelay = new Float32Array(512);
@@ -45,7 +55,17 @@ class KSVoice {
     this.energy = 1.0;
 
     const freq = 440 * Math.pow(2, (note - 69) / 12);
-    this.delayLen = Math.max(2, Math.round(this.sr / freq));
+    // The loop's total delay must be sr/freq EXACTLY. An integer delay line
+    // quantises that to a whole sample — up to 33 cents sharp around E6 — and
+    // the averaging filter adds roughly another half sample. The classic
+    // Jaffe-Smith fix: take the integer part in the buffer and put the
+    // remaining fraction in a first-order allpass inside the loop.
+    // The averaging filter's own delay (about avgMix/2, set per block in
+    // _processVoice) is subtracted there, where avgMix is known.
+    this.freq = freq;
+    this.delayLen = Math.max(2, Math.floor(this.sr / freq));
+    this.apX = 0;
+    this.apY = 0;
 
     // Clear delay line
     this.delay.fill(0);
@@ -116,73 +136,30 @@ class KSVoice {
 
 // ─── Effects ────────────────────────────────────────────────────────────────
 
-class Chorus {
-  constructor(sr) {
-    this.sr = sr; this.mix = 0.3; this.rate = 0.5; this.depth = 0.005; this.enabled = false;
-    const m = Math.ceil(sr * 0.03);
-    this.bufL = new Float32Array(m); this.bufR = new Float32Array(m);
-    this.bufSize = m; this.writeIdx = 0; this.phase = 0;
-  }
-  process(inL, inR) {
-    if (!this.enabled) return [inL, inR];
-    this.bufL[this.writeIdx] = inL; this.bufR[this.writeIdx] = inR;
-    this.phase += this.rate / this.sr; if (this.phase >= 1) this.phase -= 1;
-    const m1 = Math.sin(TWO_PI * this.phase) * this.depth * this.sr;
-    const m2 = Math.sin(TWO_PI * this.phase + Math.PI) * this.depth * this.sr;
-    const read = (buf, d) => { const p = this.writeIdx - d, i = Math.floor(p), f = p - i; const a = ((i % this.bufSize) + this.bufSize) % this.bufSize, b = ((i+1) % this.bufSize + this.bufSize) % this.bufSize; return buf[a] + f * (buf[b] - buf[a]); };
-    const oL = inL + this.mix * read(this.bufL, 0.007*this.sr+m1);
-    const oR = inR + this.mix * read(this.bufR, 0.007*this.sr+m2);
-    this.writeIdx = (this.writeIdx + 1) % this.bufSize;
-    return [oL, oR];
-  }
+// Phase delay of the two-tap filter b0 + b1·z⁻¹ at frequency w (rad/sample).
+function phaseDelay2tap(b0, b1, w) {
+  const phi = Math.atan2(-b1 * Math.sin(w), b0 + b1 * Math.cos(w));
+  return -phi / w;
 }
 
-class StereoDelay {
-  constructor(sr) {
-    this.sr = sr; this.mix = 0.3; this.feedback = 0.4; this.timeL = 0.375; this.timeR = 0.5; this.enabled = false;
-    const m = Math.ceil(sr * 2);
-    this.bufL = new Float32Array(m); this.bufR = new Float32Array(m);
-    this.bufSize = m; this.writeIdx = 0; this.lpL = 0; this.lpR = 0;
+/**
+ * Allpass coefficient whose PHASE DELAY at frequency w equals `d` samples.
+ * The usual C = (1-d)/(1+d) is only the DC limit; solving at the fundamental
+ * keeps the string in tune at the top of the keyboard too. Delay decreases
+ * monotonically with C, so bisection converges fast.
+ */
+function allpassCoefFor(d, w) {
+  const delayAt = (C) => {
+    const phi = Math.atan2(-Math.sin(w), C + Math.cos(w)) -
+                Math.atan2(-C * Math.sin(w), 1 + C * Math.cos(w));
+    return -phi / w;
+  };
+  let lo = -0.98, hi = 0.98;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (delayAt(mid) > d) lo = mid; else hi = mid;
   }
-  process(inL, inR) {
-    if (!this.enabled) return [inL, inR];
-    const dL = Math.floor(this.timeL*this.sr), dR = Math.floor(this.timeR*this.sr);
-    const iL = ((this.writeIdx-dL)%this.bufSize+this.bufSize)%this.bufSize;
-    const iR = ((this.writeIdx-dR)%this.bufSize+this.bufSize)%this.bufSize;
-    let tL = this.bufL[iL], tR = this.bufR[iR];
-    this.lpL += 0.3*(tL-this.lpL); this.lpR += 0.3*(tR-this.lpR); tL = this.lpL; tR = this.lpR;
-    this.bufL[this.writeIdx] = inL + tR*this.feedback; this.bufR[this.writeIdx] = inR + tL*this.feedback;
-    this.writeIdx = (this.writeIdx + 1) % this.bufSize;
-    return [inL + tL*this.mix, inR + tR*this.mix];
-  }
-}
-
-class Freeverb {
-  constructor(sr) {
-    this.sr = sr; this.mix = 0.2; this.roomSize = 0.8; this.damping = 0.5; this.enabled = false;
-    const scale = sr / 44100;
-    const combLens = [1116,1188,1277,1356,1422,1491,1557,1617].map(n => Math.round(n*scale));
-    const apLens = [556,441,341,225].map(n => Math.round(n*scale));
-    this.combsL = combLens.map(n => ({buf:new Float32Array(n),idx:0,len:n,filt:0}));
-    this.combsR = combLens.map(n => {const l=n+Math.round(23*scale);return{buf:new Float32Array(l),idx:0,len:l,filt:0};});
-    this.apsL = apLens.map(n => ({buf:new Float32Array(n),idx:0,len:n}));
-    this.apsR = apLens.map(n => {const l=n+Math.round(23*scale);return{buf:new Float32Array(l),idx:0,len:l};});
-  }
-  process(inL, inR) {
-    if (!this.enabled) return [inL, inR];
-    const input = (inL+inR)*0.5, fb = this.roomSize*0.28+0.7, d1 = this.damping*0.4, d2 = 1-d1;
-    let outL = 0, outR = 0;
-    for (let i = 0; i < 8; i++) {
-      const cL = this.combsL[i]; const sL = cL.buf[cL.idx]; cL.filt = sL*d2+cL.filt*d1; cL.buf[cL.idx] = input+cL.filt*fb; cL.idx = (cL.idx+1)%cL.len; outL += sL;
-      const cR = this.combsR[i]; const sR = cR.buf[cR.idx]; cR.filt = sR*d2+cR.filt*d1; cR.buf[cR.idx] = input+cR.filt*fb; cR.idx = (cR.idx+1)%cR.len; outR += sR;
-    }
-    for (let i = 0; i < 4; i++) {
-      const aL = this.apsL[i]; const bL = aL.buf[aL.idx]; aL.buf[aL.idx] = outL+bL*0.5; outL = bL-outL; aL.idx = (aL.idx+1)%aL.len;
-      const aR = this.apsR[i]; const bR = aR.buf[aR.idx]; aR.buf[aR.idx] = outR+bR*0.5; outR = bR-outR; aR.idx = (aR.idx+1)%aR.len;
-    }
-    const wet = this.mix, dry = 1-wet;
-    return [inL*dry+outL*wet, inR*dry+outR*wet];
-  }
+  return (lo + hi) / 2;
 }
 
 // ─── Main Processor ─────────────────────────────────────────────────────────
@@ -275,6 +252,21 @@ class PMSynthProcessor extends AudioWorkletProcessor {
     // Damping: extra HF loss
     const dampLoss = 1 - p.damping * 0.3 / dLen;
 
+    // Fractional loop delay for the tuning allpass: what remains of sr/freq
+    // after the integer buffer and the averaging filter. Both filter delays
+    // are evaluated AT THE FUNDAMENTAL, not with their DC approximations —
+    // the difference is small at low notes and tens of cents by A6.
+    const targetDelay = this.sr / (voice.freq || (this.sr / dLen));
+    const w0 = 2 * Math.PI / targetDelay;
+    // Sign matters: the averaging filter's second tap reads readIdx+1, one
+    // sample NEWER than the main tap, so the filter SHORTENS the loop by its
+    // phase delay — the allpass must add it back, not subtract it.
+    const avgDelay = phaseDelay2tap(1 - avgMix * 0.5, avgMix * 0.5, w0);
+    let frac = targetDelay - dLen + avgDelay;
+    if (frac < 0.07) frac = 0.07;
+    if (frac > 1.7) frac = 1.7;
+    const apCoef = allpassCoefFor(frac, w0);
+
     // Pickup position
     const pickupOffset = Math.max(1, Math.round(dLen * Math.max(0.02, p.pickup)));
 
@@ -287,6 +279,13 @@ class PMSynthProcessor extends AudioWorkletProcessor {
 
       // Karplus-Strong averaging filter: blend between s0 and average(s0,s1)
       let out = s0 * (1 - avgMix) + (s0 + s1) * 0.5 * avgMix;
+
+      // Tuning allpass: supplies the fractional part of the loop delay that
+      // the integer buffer cannot, so the string is in tune everywhere.
+      const apIn = out;
+      out = apCoef * apIn + voice.apX - apCoef * voice.apY;
+      voice.apX = apIn;
+      voice.apY = out;
 
       // Pickup position: comb filter
       if (p.pickup > 0.02) {

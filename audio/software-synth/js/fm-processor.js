@@ -1,9 +1,21 @@
 // FM Synth AudioWorklet Processor — DX7-style 6-operator FM synthesis
 // 8 algorithms, per-operator ADSR, feedback, LFO, 8-voice polyphony
 
+import {
+  Envelope,
+  Chorus,
+  StereoDelay,
+  Freeverb,
+  TWO_PI,
+  ENV_OFF,
+  ENV_ATTACK,
+  ENV_DECAY,
+  ENV_SUSTAIN,
+  ENV_RELEASE,
+} from './dsp-lib.js';
+
 const NUM_VOICES = 8;
 const NUM_OPS = 6;
-const TWO_PI = 2 * Math.PI;
 
 // ─── Algorithms ─────────────────────────────────────────────────────────────
 // mod[opIdx] = array of operator indices that modulate this op
@@ -31,39 +43,6 @@ const ALGORITHMS = [
 
 // ─── Envelope ───────────────────────────────────────────────────────────────
 
-const ENV_OFF = 0, ENV_ATTACK = 1, ENV_DECAY = 2, ENV_SUSTAIN = 3, ENV_RELEASE = 4;
-
-class Envelope {
-  constructor(sr) {
-    this.sr = sr; this.stage = ENV_OFF; this.level = 0;
-    this.attack = 0.01; this.decay = 0.3; this.sustain = 0.7; this.release = 0.3;
-    this.aCoeff = 0; this.dCoeff = 0; this.rCoeff = 0;
-    this._recalc();
-  }
-  _recalc() {
-    this.aCoeff = this.attack < 0.001 ? 1 : 1 - Math.exp(-1 / (this.attack * this.sr));
-    this.dCoeff = this.decay < 0.001 ? 1 : 1 - Math.exp(-1 / (this.decay * this.sr));
-    this.rCoeff = this.release < 0.001 ? 1 : 1 - Math.exp(-1 / (this.release * this.sr));
-  }
-  setParams(a, d, s, r) { this.attack = a; this.decay = d; this.sustain = s; this.release = r; this._recalc(); }
-  gate(on) { if (on) this.stage = ENV_ATTACK; else if (this.stage !== ENV_OFF) this.stage = ENV_RELEASE; }
-  process() {
-    switch (this.stage) {
-      case ENV_ATTACK:
-        this.level += (1.05 - this.level) * this.aCoeff;
-        if (this.level >= 1.0) { this.level = 1.0; this.stage = ENV_DECAY; } break;
-      case ENV_DECAY:
-        this.level += (this.sustain - this.level) * this.dCoeff;
-        if (Math.abs(this.level - this.sustain) < 0.0001) { this.level = this.sustain; this.stage = ENV_SUSTAIN; } break;
-      case ENV_SUSTAIN: this.level = this.sustain; break;
-      case ENV_RELEASE:
-        this.level += -this.level * this.rCoeff;
-        if (this.level < 0.0001) { this.level = 0; this.stage = ENV_OFF; } break;
-    }
-    return this.level;
-  }
-  isActive() { return this.stage !== ENV_OFF; }
-}
 
 // ─── LFO ────────────────────────────────────────────────────────────────────
 
@@ -122,77 +101,6 @@ class FMVoice {
 }
 
 // ─── Effects ────────────────────────────────────────────────────────────────
-
-class Chorus {
-  constructor(sr) {
-    this.sr = sr; this.mix = 0.3; this.rate = 0.5; this.depth = 0.005; this.enabled = false;
-    const m = Math.ceil(sr * 0.03);
-    this.bufL = new Float32Array(m); this.bufR = new Float32Array(m);
-    this.bufSize = m; this.writeIdx = 0; this.phase = 0;
-  }
-  process(inL, inR) {
-    if (!this.enabled) return [inL, inR];
-    this.bufL[this.writeIdx] = inL; this.bufR[this.writeIdx] = inR;
-    this.phase += this.rate / this.sr; if (this.phase >= 1) this.phase -= 1;
-    const m1 = Math.sin(TWO_PI * this.phase) * this.depth * this.sr;
-    const m2 = Math.sin(TWO_PI * this.phase + Math.PI) * this.depth * this.sr;
-    const read = (buf, d) => { const p = this.writeIdx - d, i = Math.floor(p), f = p - i; const a = ((i % this.bufSize) + this.bufSize) % this.bufSize, b = ((i+1) % this.bufSize + this.bufSize) % this.bufSize; return buf[a] + f * (buf[b] - buf[a]); };
-    const oL = inL + this.mix * read(this.bufL, 0.007*this.sr+m1);
-    const oR = inR + this.mix * read(this.bufR, 0.007*this.sr+m2);
-    this.writeIdx = (this.writeIdx + 1) % this.bufSize;
-    return [oL, oR];
-  }
-}
-
-class StereoDelay {
-  constructor(sr) {
-    this.sr = sr; this.mix = 0.3; this.feedback = 0.4; this.timeL = 0.375; this.timeR = 0.5; this.enabled = false;
-    const m = Math.ceil(sr * 2);
-    this.bufL = new Float32Array(m); this.bufR = new Float32Array(m);
-    this.bufSize = m; this.writeIdx = 0; this.lpL = 0; this.lpR = 0;
-  }
-  process(inL, inR) {
-    if (!this.enabled) return [inL, inR];
-    const dL = Math.floor(this.timeL*this.sr), dR = Math.floor(this.timeR*this.sr);
-    const iL = ((this.writeIdx-dL)%this.bufSize+this.bufSize)%this.bufSize;
-    const iR = ((this.writeIdx-dR)%this.bufSize+this.bufSize)%this.bufSize;
-    let tL = this.bufL[iL], tR = this.bufR[iR];
-    this.lpL += 0.3*(tL-this.lpL); this.lpR += 0.3*(tR-this.lpR); tL = this.lpL; tR = this.lpR;
-    this.bufL[this.writeIdx] = inL + tR*this.feedback; this.bufR[this.writeIdx] = inR + tL*this.feedback;
-    this.writeIdx = (this.writeIdx + 1) % this.bufSize;
-    return [inL + tL*this.mix, inR + tR*this.mix];
-  }
-}
-
-class Freeverb {
-  constructor(sr) {
-    this.sr = sr; this.mix = 0.2; this.roomSize = 0.8; this.damping = 0.5; this.enabled = false;
-    const scale = sr / 44100;
-    const combLens = [1116,1188,1277,1356,1422,1491,1557,1617].map(n => Math.round(n*scale));
-    const apLens = [556,441,341,225].map(n => Math.round(n*scale));
-    this.combsL = combLens.map(n => ({buf:new Float32Array(n),idx:0,len:n,filt:0}));
-    this.combsR = combLens.map(n => {const l=n+Math.round(23*scale);return{buf:new Float32Array(l),idx:0,len:l,filt:0};});
-    this.apsL = apLens.map(n => ({buf:new Float32Array(n),idx:0,len:n}));
-    this.apsR = apLens.map(n => {const l=n+Math.round(23*scale);return{buf:new Float32Array(l),idx:0,len:l};});
-  }
-  process(inL, inR) {
-    if (!this.enabled) return [inL, inR];
-    const input = (inL+inR)*0.5, fb = this.roomSize*0.28+0.7, d1 = this.damping*0.4, d2 = 1-d1;
-    let outL = 0, outR = 0;
-    for (let i = 0; i < 8; i++) {
-      const cL = this.combsL[i]; const sL = cL.buf[cL.idx]; cL.filt = sL*d2+cL.filt*d1; cL.buf[cL.idx] = input+cL.filt*fb; cL.idx = (cL.idx+1)%cL.len; outL += sL;
-      const cR = this.combsR[i]; const sR = cR.buf[cR.idx]; cR.filt = sR*d2+cR.filt*d1; cR.buf[cR.idx] = input+cR.filt*fb; cR.idx = (cR.idx+1)%cR.len; outR += sR;
-    }
-    for (let i = 0; i < 4; i++) {
-      const aL = this.apsL[i]; const bL = aL.buf[aL.idx]; aL.buf[aL.idx] = outL+bL*0.5; outL = bL-outL; aL.idx = (aL.idx+1)%aL.len;
-      const aR = this.apsR[i]; const bR = aR.buf[aR.idx]; aR.buf[aR.idx] = outR+bR*0.5; outR = bR-outR; aR.idx = (aR.idx+1)%aR.len;
-    }
-    const wet = this.mix, dry = 1-wet;
-    return [inL*dry+outL*wet, inR*dry+outR*wet];
-  }
-}
-
-function fastTanh(x) { if (x < -3) return -1; if (x > 3) return 1; const x2 = x*x; return x*(27+x2)/(27+9*x2); }
 
 // ─── Main Processor ─────────────────────────────────────────────────────────
 

@@ -8,15 +8,21 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @synthex/app",
+    "studio": "npm run dev --workspace @synthex/studio",
     "build": "npm run build --workspace @synthex/engine && npm run build --workspace @synthex/app",
+    "build:studio": "npm run build --workspace @synthex/studio",
     "test": "vitest run",
     "test:watch": "vitest",
+    "fm-fit": "node --experimental-transform-types tools/fm-fit/run.ts",
+    "drum-fit": "node --experimental-transform-types tools/drum-fit/run.ts",
     "compare": "node --experimental-transform-types tools/compare/run.ts",
-    "typecheck": "tsc -b && cd packages/app && svelte-check --tsconfig ./tsconfig.json"
+    "capture": "node --experimental-transform-types tools/compare/capture.ts",
+    "typecheck": "tsc -b && cd packages/app && svelte-check --tsconfig ./tsconfig.json && cd ../studio && svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "@julusian/midi": "^3.6.1",
+    "@types/node": "^22.9.0",
     "typescript": "^5.6.3",
-    "vitest": "^2.1.4",
-    "@types/node": "^22.9.0"
+    "vitest": "^2.1.4"
   }
 }

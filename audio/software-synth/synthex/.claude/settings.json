@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx svelte-check --tsconfig ./tsconfig.json)",
+      "Bash(npx svelte-check --tsconfig ./tsconfig.json *)",
+      "Bash(npx tsc -b)",
+      "Bash(npx tsc -b *)",
+      "Bash(npm test)",
+      "Bash(npm run typecheck)",
+      "Bash(curl -s localhost:*)",
+      "mcp__claude-in-chrome__navigate"
+    ]
+  }
+}

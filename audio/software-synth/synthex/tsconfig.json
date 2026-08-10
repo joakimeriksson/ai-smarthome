@@ -1,4 +1,4 @@
 {
-  "files": [],
+  "extends": "./tsconfig.base.json",
   "include": ["packages/engine/src/**/*.ts", "tools/**/*.ts"]
 }

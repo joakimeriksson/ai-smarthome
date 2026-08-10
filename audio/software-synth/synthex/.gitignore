@@ -8,3 +8,15 @@ dist/
 # reference audio is third-party (don't redistribute via git).
 tools/compare/out/
 tools/compare/refs/
+
+# Studio: copied/extracted from the standalone synths by predev + prebuild.
+# The originals in ../js are the source of truth.
+packages/studio/public/worklets/
+packages/studio/public/synths/
+
+# tsc emits .js next to sources when run outside the build; never commit them.
+packages/engine/src/**/*.js
+packages/engine/tests/*.js
+tools/compare/*.js
+tools/drum-fit/*.js
+tools/fm-fit/*.js

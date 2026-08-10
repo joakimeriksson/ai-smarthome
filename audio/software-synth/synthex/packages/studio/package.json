@@ -1,0 +1,25 @@
+{
+  "name": "@synthex/studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync-worklets": "node scripts/sync-worklets.mjs",
+    "sync-synth-data": "node scripts/sync-synth-data.mjs",
+    "predev": "npm run sync-worklets && npm run sync-synth-data",
+    "dev": "vite",
+    "prebuild": "npm run sync-worklets && npm run sync-synth-data",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@synthex/engine": "*",
+    "idb": "^8.0.0",
+    "svelte": "^5.1.13"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte-check": "^4.0.5",
+    "vite": "^6.0.0"
+  }
+}

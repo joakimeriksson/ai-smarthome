@@ -1,0 +1,377 @@
+{
+  "E.Piano 1": {
+    "algorithm": 6,
+    "feedback": 0.24,
+    "ops": [
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 1,
+        "attack": 0.001,
+        "decay": 1.496,
+        "sustain": 0,
+        "release": 0.4,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 1,
+        "attack": 0.03,
+        "decay": 0.765,
+        "sustain": 0.25,
+        "release": 0.3,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1.001,
+        "level": 0.315,
+        "attack": 0.014,
+        "decay": 0.6,
+        "sustain": 0,
+        "release": 0.4,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 14,
+        "fine": 1,
+        "level": 0.08378999999999999,
+        "attack": 0.001,
+        "decay": 0.0028079999999999993,
+        "sustain": 0,
+        "release": 0.1,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 0.999,
+        "level": 0.21,
+        "attack": 0.01,
+        "decay": 1.53,
+        "sustain": 0.15,
+        "release": 0.4,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.3,
+        "attack": 0.03,
+        "decay": 0.51,
+        "sustain": 0.25,
+        "release": 0.3,
+        "velSens": 0
+      }
+    ],
+    "lfoRate": 0,
+    "lfoPitchDepth": 0,
+    "lfoAmpDepth": 0
+  },
+  "DX Brass": {
+    "algorithm": 6,
+    "feedback": 0.44,
+    "ops": [
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.95,
+        "attack": 0.084,
+        "decay": 0.48,
+        "sustain": 0.48,
+        "release": 0.15,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 1,
+        "attack": 0.028,
+        "decay": 0.18,
+        "sustain": 0.264,
+        "release": 0.15,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1.003,
+        "level": 0.826,
+        "attack": 0.08,
+        "decay": 0.48,
+        "sustain": 0.8,
+        "release": 0.15,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.42,
+        "attack": 0.2,
+        "decay": 0.5,
+        "sustain": 0.5,
+        "release": 0.15,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 0.997,
+        "level": 0.425,
+        "attack": 0.05,
+        "decay": 0.48,
+        "sustain": 0.48,
+        "release": 0.15,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.55,
+        "attack": 0.09,
+        "decay": 0.5,
+        "sustain": 0.5,
+        "release": 0.15,
+        "velSens": 0
+      }
+    ],
+    "lfoRate": 0,
+    "lfoPitchDepth": 0,
+    "lfoAmpDepth": 0
+  },
+  "Strings": {
+    "algorithm": 6,
+    "feedback": 0.5,
+    "ops": [
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.5355,
+        "attack": 1.8199999999999998,
+        "decay": 1.2,
+        "sustain": 0.9,
+        "release": 0.6,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.47500055119999984,
+        "attack": 0.046875,
+        "decay": 0.36,
+        "sustain": 0.55296,
+        "release": 0.6,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1.004,
+        "level": 0.49979999999999997,
+        "attack": 1.68,
+        "decay": 1.2,
+        "sustain": 0.9,
+        "release": 0.6,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 3,
+        "fine": 0.996,
+        "level": 0.2744,
+        "attack": 1.6,
+        "decay": 0.9,
+        "sustain": 0.5,
+        "release": 0.6,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 0.996,
+        "level": 0.595,
+        "attack": 2.7439999999999993,
+        "decay": 1.2,
+        "sustain": 0.9,
+        "release": 0.6,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.42,
+        "attack": 0.7349999999999999,
+        "decay": 1.7,
+        "sustain": 0.72,
+        "release": 0.6,
+        "velSens": 0
+      }
+    ],
+    "lfoRate": 3.5200000000000005,
+    "lfoPitchDepth": 0.03,
+    "lfoAmpDepth": 0.22499999999999998
+  },
+  "Organ": {
+    "algorithm": 7,
+    "feedback": 0.1,
+    "ops": [
+      {
+        "on": true,
+        "ratio": 0.5,
+        "fine": 1.004,
+        "level": 0.7615587839999997,
+        "attack": 0.004,
+        "decay": 0.1,
+        "sustain": 1,
+        "release": 0.05,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 0.998,
+        "level": 0.26239499999999993,
+        "attack": 0.0112,
+        "decay": 0.06,
+        "sustain": 0.216,
+        "release": 0.05,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1.5,
+        "fine": 1,
+        "level": 1,
+        "attack": 0.008,
+        "decay": 0.06,
+        "sustain": 0.96,
+        "release": 0.05,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 4,
+        "fine": 1,
+        "level": 0.020168399999999993,
+        "attack": 0.004,
+        "decay": 0.021599999999999998,
+        "sustain": 0.2304,
+        "release": 0.05,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 6,
+        "fine": 1.002,
+        "level": 0.12004999999999996,
+        "attack": 0.008,
+        "decay": 0.136,
+        "sustain": 0.31104,
+        "release": 0.05,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 8,
+        "fine": 0.994,
+        "level": 0.10114452599999996,
+        "attack": 0.004,
+        "decay": 0.036,
+        "sustain": 0.9216000000000001,
+        "release": 0.05,
+        "velSens": 0
+      }
+    ],
+    "lfoRate": 6.24,
+    "lfoPitchDepth": 0.015,
+    "lfoAmpDepth": 0.27
+  },
+  "Wurlitzer": {
+    "algorithm": 6,
+    "feedback": 0.768,
+    "ops": [
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.791,
+        "attack": 0.0588,
+        "decay": 0.432,
+        "sustain": 0,
+        "release": 0.35,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 1,
+        "attack": 0.028811999999999994,
+        "decay": 0.5952000000000001,
+        "sustain": 0.08639999999999999,
+        "release": 0.3,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.2744,
+        "attack": 0.01,
+        "decay": 0.2304,
+        "sustain": 0,
+        "release": 0.35,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 7,
+        "fine": 1,
+        "level": 0.416,
+        "attack": 0.001,
+        "decay": 0.051,
+        "sustain": 0.1152,
+        "release": 0.1,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.245,
+        "attack": 0.00375,
+        "decay": 0.26880000000000004,
+        "sustain": 0,
+        "release": 0.35,
+        "velSens": 0
+      },
+      {
+        "on": true,
+        "ratio": 1,
+        "fine": 1,
+        "level": 0.5852799999999999,
+        "attack": 0.013999999999999999,
+        "decay": 0.722,
+        "sustain": 0.432,
+        "release": 0.3,
+        "velSens": 0
+      }
+    ],
+    "lfoRate": 0,
+    "lfoPitchDepth": 0,
+    "lfoAmpDepth": 0
+  }
+}

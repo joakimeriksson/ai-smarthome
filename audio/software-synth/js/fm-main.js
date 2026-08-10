@@ -1,10 +1,10 @@
 // FM Synth — Main thread controller
 
 const NUM_VOICES = 8;
+const pool = new SynthShell.VoicePool(NUM_VOICES);
 let audioCtx = null, workletNode = null, analyser = null, keyboard = null;
 
-const voices = new Array(NUM_VOICES).fill(null).map(() => ({ note: -1, active: false, age: 0 }));
-let voiceAge = 0, sustainOn = false;
+let sustainOn = false;
 const sustainedNotes = new Set();
 
 function allocateVoice(note) {
@@ -23,7 +23,7 @@ function releaseVoice(note) {
 
 function noteOn(note, velocity = 100) {
   if (!workletNode) return;
-  const v = allocateVoice(note);
+  const v = pool.alloc(note);
   workletNode.port.postMessage({ type: 'noteOn', voice: v, note, velocity });
   updateVoiceDisplay();
   if (keyboard) keyboard.highlightKey(note, true);
@@ -32,7 +32,7 @@ function noteOn(note, velocity = 100) {
 function noteOff(note) {
   if (!workletNode) return;
   if (sustainOn) { sustainedNotes.add(note); return; }
-  const v = releaseVoice(note);
+  const v = pool.release(note);
   if (v >= 0) { workletNode.port.postMessage({ type: 'noteOff', voice: v }); updateVoiceDisplay(); }
   if (keyboard) keyboard.highlightKey(note, false);
 }
@@ -43,24 +43,8 @@ function sendParam(param, value) {
 
 // ─── UI Binding ─────────────────────────────────────────────────────────────
 
-function bindSlider(id, paramPath, opts = {}) {
-  const el = document.getElementById(id); if (!el) return;
-  const valEl = document.getElementById(id + '-val');
-  const fmt = opts.format || (v => parseFloat(v).toFixed(2));
-  const map = opts.map || (v => parseFloat(v));
-  el.oninput = () => { const m = map(el.value); if (valEl) valEl.textContent = fmt(el.value); sendParam(paramPath, m); };
-  if (valEl) valEl.textContent = fmt(el.value);
-}
-
-function bindSelect(id, paramPath, opts = {}) {
-  const el = document.getElementById(id); if (!el) return;
-  el.onchange = () => sendParam(paramPath, (opts.map || parseInt)(el.value));
-}
-
-function bindCheckbox(id, paramPath) {
-  const el = document.getElementById(id); if (!el) return;
-  el.onchange = () => sendParam(paramPath, el.checked);
-}
+const bind = SynthShell.createBinder(sendParam);
+const bindSlider = bind.slider, bindSelect = bind.select, bindCheckbox = bind.checkbox;
 
 function sliderToTime(v) { return 0.001 * Math.pow(10000, parseFloat(v)); }
 function timeFormat(v) { const t = sliderToTime(v); return t >= 1 ? t.toFixed(1)+'s' : Math.round(t*1000)+'ms'; }
@@ -140,28 +124,10 @@ function updateOpRoles(algo) {
 // ─── Scope ──────────────────────────────────────────────────────────────────
 
 function initScope() {
-  const canvas = document.getElementById('scope');
-  if (!canvas || !analyser) return;
-  const ctx = canvas.getContext('2d');
-  const buf = new Float32Array(analyser.frequencyBinCount);
-  (function draw() {
-    requestAnimationFrame(draw);
-    analyser.getFloatTimeDomainData(buf);
-    ctx.fillStyle = '#1a1208'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 1.5; ctx.beginPath();
-    const sw = canvas.width / buf.length;
-    for (let i = 0, x = 0; i < buf.length; i++, x += sw) {
-      const y = (1 - buf[i]) * canvas.height / 2;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  })();
+  SynthShell.startScope({ canvasId: 'scope', analyser, background: '#1a0d00', stroke: '#ff8800' });
 }
 
-function updateVoiceDisplay() {
-  const el = document.getElementById('voice-display');
-  if (el) el.textContent = `Voices: ${voices.filter(v => v.active).length}/${NUM_VOICES}`;
-}
+function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool); }
 
 // ─── Presets ────────────────────────────────────────────────────────────────
 
@@ -170,12 +136,20 @@ function op(ratio, fine, level, a, d, s, r, vel) {
 }
 function opOff() { return { on: false, ratio: 1, fine: 1, level: 0, attack: 0.01, decay: 0.3, sustain: 0, release: 0.3, velSens: 0 }; }
 
+// E.Piano 1, Wurlitzer, DX Brass, Strings and Organ are FITTED against real
+// DX7 recordings (soundpacks.com sample pack) by tools/fm-fit — structure from
+// the documented patches, numbers by coordinate descent on a harmonic-ladder +
+// envelope distance. velSens was added after fitting (the pack is single-
+// velocity), so velocity response is convention, not measurement.
 const FACTORY_PRESETS = [
-  { name: 'E.Piano 1', params: { algorithm: 4, feedback: 0.2, ops: [
-    op(1,1,85, 0.001,0.8,0.3,0.5, 0.3), op(1,1,75, 0.001,0.6,0.2,0.4, 0.5),
-    op(1,1,50, 0.001,0.4,0.0,0.3, 0.8), op(14,1,35, 0.001,0.12,0.0,0.1, 0.9),
-    opOff(), opOff()
-  ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.5, mix: 0.15 } } },
+  { name: 'E.Piano 1', params: { algorithm: 6, feedback: 0.24, ops: [
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.001, decay: 1.496, sustain: 0, release: 0.4, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.03, decay: 0.765, sustain: 0.25, release: 0.3, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1.001, level: 0.315, attack: 0.014, decay: 0.6, sustain: 0, release: 0.4, velSens: 0.3 },
+    { on: true, ratio: 14, fine: 1, level: 0.084, attack: 0.001, decay: 0.003, sustain: 0, release: 0.1, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 0.999, level: 0.21, attack: 0.01, decay: 1.53, sustain: 0.15, release: 0.4, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.3, attack: 0.03, decay: 0.51, sustain: 0.25, release: 0.3, velSens: 0.6 }
+  ], lfoRate: 0, lfoWaveform: 0, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.5, mix: 0.15 } } },
 
   { name: 'E.Piano 2', params: { algorithm: 1, feedback: 0.2, ops: [
     op(1,1,90, 0.001,1.0,0.2,0.6, 0.3), op(1,1,50, 0.001,0.5,0.0,0.3, 0.7),
@@ -183,6 +157,14 @@ const FACTORY_PRESETS = [
     op(1,1,20, 0.001,0.2,0.0,0.1, 0.5), op(1,1,15, 0.001,0.8,0.0,0.3, 0.5)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { chorus: { enabled: true, rate: 0.3, depth: 0.003, mix: 0.2 } } },
 
+  { name: 'Wurlitzer', params: { algorithm: 6, feedback: 0.768, ops: [
+    { on: true, ratio: 1, fine: 1, level: 0.791, attack: 0.0588, decay: 0.432, sustain: 0, release: 0.35, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.0288, decay: 0.595, sustain: 0.086, release: 0.3, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1, level: 0.274, attack: 0.01, decay: 0.23, sustain: 0, release: 0.35, velSens: 0.3 },
+    { on: true, ratio: 7, fine: 1, level: 0.416, attack: 0.001, decay: 0.051, sustain: 0.115, release: 0.1, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 1, level: 0.245, attack: 0.0037, decay: 0.269, sustain: 0, release: 0.35, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.585, attack: 0.014, decay: 0.722, sustain: 0.432, release: 0.3, velSens: 0.6 }
+  ], lfoRate: 0, lfoWaveform: 0, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.4, mix: 0.12 } } },
   { name: 'FM Bass', params: { algorithm: 6, feedback: 0.15, ops: [
     op(1,1,90, 0.001,0.2,0.6,0.1, 0.3), op(1,1,50, 0.001,0.12,0.0,0.08, 0.8),
     op(1,1,85, 0.001,0.3,0.5,0.15, 0.3), op(2,1,40, 0.001,0.08,0.0,0.05, 0.9),
@@ -195,11 +177,14 @@ const FACTORY_PRESETS = [
     op(4,1,25, 0.001,0.02,0.0,0.01, 0.95), op(1,1,20, 0.001,0.05,0.0,0.02, 0.5)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: {} },
 
-  { name: 'DX Brass', params: { algorithm: 2, feedback: 0.25, ops: [
-    op(1,1,90, 0.05,0.3,0.8,0.2, 0.3), op(1,1,50, 0.08,0.4,0.3,0.3, 0.6),
-    op(1,1,45, 0.1,0.5,0.2,0.3, 0.7), op(1,1,35, 0.12,0.5,0.15,0.3, 0.8),
-    op(3,1,30, 0.08,0.3,0.1,0.2, 0.8), op(1,1,20, 0.1,0.4,0.1,0.3, 0.5)
-  ], lfoRate: 5, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.6, mix: 0.15 } } },
+  { name: 'DX Brass', params: { algorithm: 6, feedback: 0.44, ops: [
+    { on: true, ratio: 1, fine: 1, level: 0.95, attack: 0.084, decay: 0.48, sustain: 0.48, release: 0.15, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.028, decay: 0.18, sustain: 0.264, release: 0.15, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1.003, level: 0.826, attack: 0.08, decay: 0.48, sustain: 0.8, release: 0.15, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.42, attack: 0.2, decay: 0.5, sustain: 0.5, release: 0.15, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 0.997, level: 0.425, attack: 0.05, decay: 0.48, sustain: 0.48, release: 0.15, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.55, attack: 0.09, decay: 0.5, sustain: 0.5, release: 0.15, velSens: 0.6 }
+  ], lfoRate: 0, lfoWaveform: 0, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.4, mix: 0.12 } } },
 
   { name: 'Warm Pad', params: { algorithm: 3, feedback: 0.1, ops: [
     op(1,1,85, 0.3,0.5,0.8,0.8, 0.2), op(2,1,30, 0.2,0.6,0.2,0.5, 0.3),
@@ -219,11 +204,14 @@ const FACTORY_PRESETS = [
     op(1,1,30, 0.001,0.12,0.0,0.1, 0.5), opOff(), opOff(), opOff()
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.5, mix: 0.2 } } },
 
-  { name: 'Organ', params: { algorithm: 7, feedback: 0.2, ops: [
-    op(0.5,1,75, 0.001,0.05,0.95,0.05, 0.1), op(1,1,80, 0.001,0.05,0.95,0.05, 0.1),
-    op(2,1,65, 0.001,0.05,0.9,0.05, 0.1), op(3,1,50, 0.001,0.05,0.85,0.05, 0.1),
-    op(4,1,40, 0.001,0.05,0.8,0.05, 0.1), op(8,1,30, 0.001,0.05,0.75,0.05, 0.1)
-  ], lfoRate: 6, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { chorus: { enabled: true, rate: 1.0, depth: 0.002, mix: 0.2 } } },
+  { name: 'Organ', params: { algorithm: 7, feedback: 0.1, ops: [
+    { on: true, ratio: 0.5, fine: 1.004, level: 0.762, attack: 0.004, decay: 0.1, sustain: 1, release: 0.05, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 0.998, level: 0.262, attack: 0.0112, decay: 0.06, sustain: 0.216, release: 0.05, velSens: 0.3 },
+    { on: true, ratio: 1.5, fine: 1, level: 1, attack: 0.008, decay: 0.06, sustain: 0.96, release: 0.05, velSens: 0.3 },
+    { on: true, ratio: 4, fine: 1, level: 0.02, attack: 0.004, decay: 0.022, sustain: 0.23, release: 0.05, velSens: 0.3 },
+    { on: true, ratio: 6, fine: 1.002, level: 0.12, attack: 0.008, decay: 0.136, sustain: 0.311, release: 0.05, velSens: 0.3 },
+    { on: true, ratio: 8, fine: 0.994, level: 0.101, attack: 0.004, decay: 0.036, sustain: 0.922, release: 0.05, velSens: 0.3 }
+  ], lfoRate: 6.24, lfoWaveform: 0, lfoPitchDepth: 0.015, lfoAmpDepth: 0.27 }, fx: { reverb: { enabled: true, roomSize: 0.3, mix: 0.1 } } },
 
   { name: 'Synth Lead', params: { algorithm: 6, feedback: 0.35, ops: [
     op(1,1,88, 0.01,0.2,0.8,0.15, 0.4), op(1,1,50, 0.001,0.12,0.3,0.1, 0.7),
@@ -231,12 +219,14 @@ const FACTORY_PRESETS = [
     op(1,0.995,85, 0.01,0.2,0.8,0.15, 0.4), op(2,1,35, 0.001,0.12,0.15,0.1, 0.7)
   ], lfoRate: 5, lfoPitchDepth: 0.3, lfoAmpDepth: 0 }, fx: { delay: { enabled: true, timeL: 0.3, feedback: 0.3, mix: 0.15 } } },
 
-  { name: 'Strings', params: { algorithm: 6, feedback: 0.05, ops: [
-    op(1,1,85, 0.15,0.3,0.85,0.4, 0.2), op(1,1,35, 0.1,0.4,0.2,0.3, 0.5),
-    op(1,1.003,82, 0.18,0.35,0.83,0.45, 0.2), op(2,1,30, 0.12,0.4,0.15,0.3, 0.5),
-    op(1,0.997,80, 0.2,0.3,0.8,0.5, 0.2), op(1,1,25, 0.15,0.4,0.1,0.3, 0.5)
-  ], lfoRate: 0.2, lfoPitchDepth: 0.15, lfoAmpDepth: 0.05 },
-  fx: { chorus: { enabled: true, rate: 0.15, depth: 0.004, mix: 0.3 }, reverb: { enabled: true, roomSize: 0.8, mix: 0.25 } } },
+  { name: 'Strings', params: { algorithm: 6, feedback: 0.5, ops: [
+    { on: true, ratio: 1, fine: 1, level: 0.535, attack: 1.82, decay: 1.2, sustain: 0.9, release: 0.6, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.475, attack: 0.0469, decay: 0.36, sustain: 0.553, release: 0.6, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1.004, level: 0.5, attack: 1.68, decay: 1.2, sustain: 0.9, release: 0.6, velSens: 0.3 },
+    { on: true, ratio: 3, fine: 0.996, level: 0.274, attack: 1.6, decay: 0.9, sustain: 0.5, release: 0.6, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 0.996, level: 0.595, attack: 2.744, decay: 1.2, sustain: 0.9, release: 0.6, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.42, attack: 0.735, decay: 1.7, sustain: 0.72, release: 0.6, velSens: 0.6 }
+  ], lfoRate: 3.52, lfoWaveform: 0, lfoPitchDepth: 0.03, lfoAmpDepth: 0.225 }, fx: { chorus: { enabled: true, rate: 0.4, depth: 0.004, mix: 0.3 }, reverb: { enabled: true, roomSize: 0.7, mix: 0.25 } } },
 
   { name: 'Tubular Bell', params: { algorithm: 6, feedback: 0.15, ops: [
     op(1,1,80, 0.001,3.0,0.0,2.0, 0.2), op(3.5,1,40, 0.001,0.8,0.0,0.5, 0.5),
@@ -245,20 +235,12 @@ const FACTORY_PRESETS = [
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.9, mix: 0.4 } } },
 ];
 
-let userPresets = [];
-
-function loadPresets() { try { const s = localStorage.getItem('fm-synth-presets'); if (s) userPresets = JSON.parse(s); } catch(e) {} }
-function savePresetsToStorage() { try { localStorage.setItem('fm-synth-presets', JSON.stringify(userPresets)); } catch(e) {} }
-
-function populatePresetSelect() {
-  const sel = document.getElementById('preset-select'); if (!sel) return;
-  sel.innerHTML = '<option value="">-- Preset --</option>';
-  FACTORY_PRESETS.forEach((p, i) => sel.innerHTML += `<option value="f:${i}">${p.name}</option>`);
-  if (userPresets.length > 0) {
-    sel.innerHTML += '<option disabled>──────────</option>';
-    userPresets.forEach((p, i) => sel.innerHTML += `<option value="u:${i}">${p.name}</option>`);
-  }
-}
+const presets = new SynthShell.PresetStore({
+  storageKey: 'fm-synth-presets',
+  factory: FACTORY_PRESETS,
+  apply: (p) => applyPreset(p),
+});
+function populatePresetSelect() { presets.populateSelect(); }
 
 function applyPreset(preset) {
   if (!workletNode) return;
@@ -296,21 +278,7 @@ function updateUIFromPreset(preset) {
   set('master-vol', p.masterVolume || 0.7);
 }
 
-function initPresets() {
-  loadPresets(); populatePresetSelect();
-  document.getElementById('preset-select').onchange = (e) => {
-    const val = e.target.value; if (!val) return;
-    const [type, idx] = val.split(':');
-    const preset = type === 'f' ? FACTORY_PRESETS[idx] : userPresets[idx];
-    if (preset) applyPreset(preset);
-  };
-  document.getElementById('save-preset-btn').onclick = () => {
-    const name = prompt('Preset name:'); if (!name) return;
-    // TODO: read current state
-    const preset = { name, params: { algorithm: 0, feedback: 0.5, ops: [] } };
-    userPresets.push(preset); savePresetsToStorage(); populatePresetSelect();
-  };
-}
+function initPresets() { presets.init(); }
 
 // ─── Init ───────────────────────────────────────────────────────────────────
 

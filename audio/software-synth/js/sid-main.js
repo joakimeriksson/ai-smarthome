@@ -1,34 +1,19 @@
 // SID Synth — Main thread controller
 
 const NUM_VOICES = 3; // 1 SID chip per voice, 3-note polyphony (authentic C64)
+const pool = new SynthShell.VoicePool(NUM_VOICES);
 
 let audioCtx = null;
 let workletNode = null;
 let analyser = null;
 let keyboard = null;
 
-const voices = new Array(NUM_VOICES).fill(null).map(() => ({ note: -1, active: false, age: 0 }));
-let voiceAge = 0;
 let sustainOn = false;
 const sustainedNotes = new Set();
 
-function allocateVoice(note) {
-  for (let i = 0; i < NUM_VOICES; i++) if (voices[i].note === note && voices[i].active) return i;
-  for (let i = 0; i < NUM_VOICES; i++) if (!voices[i].active) { voices[i].note = note; voices[i].active = true; voices[i].age = ++voiceAge; return i; }
-  let oldest = 0;
-  for (let i = 1; i < NUM_VOICES; i++) if (voices[i].age < voices[oldest].age) oldest = i;
-  voices[oldest].note = note; voices[oldest].active = true; voices[oldest].age = ++voiceAge;
-  return oldest;
-}
-
-function releaseVoice(note) {
-  for (let i = 0; i < NUM_VOICES; i++) if (voices[i].note === note && voices[i].active) { voices[i].active = false; return i; }
-  return -1;
-}
-
 function noteOn(note, velocity = 100) {
   if (!workletNode) return;
-  const v = allocateVoice(note);
+  const v = pool.alloc(note);
   workletNode.port.postMessage({ type: 'noteOn', voice: v, note, velocity });
   updateVoiceDisplay();
   if (keyboard) keyboard.highlightKey(note, true);
@@ -37,7 +22,7 @@ function noteOn(note, velocity = 100) {
 function noteOff(note) {
   if (!workletNode) return;
   if (sustainOn) { sustainedNotes.add(note); return; }
-  const v = releaseVoice(note);
+  const v = pool.release(note);
   if (v >= 0) { workletNode.port.postMessage({ type: 'noteOff', voice: v }); updateVoiceDisplay(); }
   if (keyboard) keyboard.highlightKey(note, false);
 }
@@ -246,31 +231,8 @@ function initTableEditor() {
 
 // ─── UI Binding ─────────────────────────────────────────────────────────────
 
-function bindSlider(id, paramPath, opts = {}) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const valEl = document.getElementById(id + '-val');
-  const fmt = opts.format || (v => parseFloat(v).toFixed(2));
-  const map = opts.map || (v => parseFloat(v));
-  el.oninput = () => {
-    const mapped = map(el.value);
-    if (valEl) valEl.textContent = fmt(el.value);
-    sendParam(paramPath, mapped);
-  };
-  if (valEl) valEl.textContent = fmt(el.value);
-}
-
-function bindSelect(id, paramPath, opts = {}) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.onchange = () => sendParam(paramPath, (opts.map || parseInt)(el.value));
-}
-
-function bindCheckbox(id, paramPath) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.onchange = () => sendParam(paramPath, el.checked);
-}
+const bind = SynthShell.createBinder(sendParam);
+const bindSlider = bind.slider, bindSelect = bind.select, bindCheckbox = bind.checkbox;
 
 // ─── Waveform Toggle Buttons ────────────────────────────────────────────────
 
@@ -373,31 +335,10 @@ function initUI() {
 // ─── Scope ──────────────────────────────────────────────────────────────────
 
 function initScope() {
-  const canvas = document.getElementById('scope');
-  if (!canvas || !analyser) return;
-  const ctx = canvas.getContext('2d');
-  const buf = new Float32Array(analyser.frequencyBinCount);
-  (function draw() {
-    requestAnimationFrame(draw);
-    analyser.getFloatTimeDomainData(buf);
-    ctx.fillStyle = '#181840';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#7878ff';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    const sw = canvas.width / buf.length;
-    for (let i = 0, x = 0; i < buf.length; i++, x += sw) {
-      const y = (1 - buf[i]) * canvas.height / 2;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  })();
+  SynthShell.startScope({ canvasId: 'scope', analyser, background: '#0d0d20', stroke: '#7878ff' });
 }
 
-function updateVoiceDisplay() {
-  const el = document.getElementById('voice-display');
-  if (el) el.textContent = `Voices: ${voices.filter(v => v.active).length}/${NUM_VOICES}`;
-}
+function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool); }
 
 // ─── Presets ────────────────────────────────────────────────────────────────
 
@@ -411,6 +352,156 @@ function mkTable(entries) {
 // Preset helper: ad=attack<<4|decay, sr=sustain<<4|release (SID register format)
 const FACTORY_PRESETS = [
   // ── Table-based presets ──
+  // ── Galway / Hubbard tribute presets ──
+  // Martin Galway's signature is the slow PWM sweep (Wizball, Times of Lore):
+  // a pulse whose width the pulsetable walks up and down at frame rate. Rob
+  // Hubbard's are the frame-rate chord arp, the PWM-wobble lead and the
+  // resonant filter-sweep bass (Monty on the Run, Sanxion). All authored as
+  // GT2 tables, the same mechanism the originals used.
+  {
+    name: 'Galway PWM Lead',
+    params: { waveform: 0x41, pulseWidth: 0x200, ad: 0x2A, sr: 0xA6,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 0xC8, filterReso: 1, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 0, pulsePtr: 1, filterPtr: 0,
+      wtbl: null, ftbl: null,
+      // PW 0x200, up 60 frames at +0x28, down 60 at -0x28, loop: ~2.4 s sweep.
+      ptbl: mkTable([[0x82,0x00],[0x3C,0x28],[0x3C,0xD8],[0xFF,0x02]]) },
+  },
+  {
+    name: 'Galway PWM Bass',
+    params: { waveform: 0x41, pulseWidth: 0x300, ad: 0x09, sr: 0x96,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 0x70, filterReso: 3, filterEnvAmt: 0.2,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 0, pulsePtr: 1, filterPtr: 0,
+      wtbl: null, ftbl: null,
+      // Sweep 0x580..0x880, centred on 50% duty: a pulse's level goes as
+      // sin(pi*duty), so a sweep spanning 19..47% breathed ~3 dB with the
+      // width. Around the 50% point the level curve is flat while the
+      // harmonic content still moves — the creamy version of the trick.
+      ptbl: mkTable([[0x85,0x80],[0x18,0x20],[0x18,0xE0],[0xFF,0x02]]) },
+  },
+  {
+    name: 'Galway Ring Bell',
+    params: { waveform: 0x11, pulseWidth: 0x800, ad: 0x0B, sr: 0x0A,
+      osc2On: true, ringMod: true, hardSync: false, osc2Detune: 14, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+  },
+  {
+    name: 'Hubbard Lead',
+    params: { waveform: 0x41, pulseWidth: 0x400, ad: 0x08, sr: 0xA8,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 0xE0, filterReso: 1, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 0, pulsePtr: 1, filterPtr: 0,
+      wtbl: null, ftbl: null,
+      // Faster, narrower wobble than the Galway sweep — buzzy, not creamy.
+      ptbl: mkTable([[0x84,0x00],[0x10,0x60],[0x20,0xA0],[0x10,0x60],[0xFF,0x02]]) },
+  },
+  {
+    name: 'Hubbard Filter Bass',
+    params: { waveform: 0x21, pulseWidth: 0x800, ad: 0x09, sr: 0x86,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 0x60, filterReso: 11, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0x00, masterVolume: 0x0F },
+    tables: { wavePtr: 0, pulsePtr: 0, filterPtr: 1,
+      wtbl: null, ptbl: null,
+      // One-shot resonant sweep down to 0x20 per note — not to zero, so the
+      // sustain keeps speaking.
+      ftbl: mkTable([[0x90,0xE0],[0x10,0xF4],[0xFF,0x00]]) },
+  },
+  {
+    name: 'Hubbard Arp',
+    params: { waveform: 0x41, pulseWidth: 0x600, ad: 0x0A, sr: 0xA5,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0,
+      ptbl: null, ftbl: null,
+      // Minor triad cycled at frame rate: root, +3, +7 — THE C64 chord.
+      wtbl: mkTable([[0x41,0x80],[0x41,0x03],[0x41,0x07],[0xFF,0x01]]) },
+  },
+  // ── Hubbard percussion & layered voices ──
+  // Drums are the classic wavetable trick: a noise crack and a tone whose
+  // pitch FALLS through the table to the played note (offsets are up-only, so
+  // the played key is the drum's floor). The layered presets use the chip's
+  // third oscillator (ch1) — previously idle — for simultaneous noise+tone
+  // drums, detuned/octave doubling, and the delayed echo blip. Envelopes
+  // self-terminate (sustain 0) so drums are one-shots however long the key.
+
+  { name: 'Hubbard Kick',
+    params: { waveform: 0x41, pulseWidth: 0x800, ad: 0x08, sr: 0x06,
+      layerOn: true, layerWave: 0x81, layerDetune: 40, layerAd: 0x04, layerSr: 0x00, layerDelay: 0,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x81,0x24],[0x41,0x14],[0x41,0x0A],[0x41,0x04],[0x41,0x00],[0xFF,0x00]]) } },
+  { name: 'Hubbard Snare',
+    params: { waveform: 0x41, pulseWidth: 0x800, ad: 0x08, sr: 0x05,
+      layerOn: true, layerWave: 0x81, layerDetune: 30, layerAd: 0x08, layerSr: 0x00, layerDelay: 0,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x41,0x10],[0x41,0x07],[0x41,0x02],[0xFF,0x00]]) } },
+  { name: 'Hubbard Tom',
+    params: { waveform: 0x41, pulseWidth: 0x800, ad: 0x09, sr: 0x05,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x41,0x18],[0x41,0x13],[0x41,0x0E],[0x41,0x09],[0x41,0x04],[0x41,0x00],[0xFF,0x00]]) } },
+  { name: 'Hubbard Hat',
+    params: { waveform: 0x81, pulseWidth: 0x800, ad: 0x05, sr: 0x04,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x40, filterCutoff: 0xB0, filterReso: 4, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x81,0x48],[0x01,0x80],[0xE0,0x00],[0xFF,0x00]]) } },
+  { name: 'Hubbard Blip',
+    params: { waveform: 0x41, pulseWidth: 0x600, ad: 0x06, sr: 0x05,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x41,0x0C],[0x41,0x00],[0xFF,0x00]]) } },
+  { name: 'Hubbard Echo Blip',
+    params: { waveform: 0x41, pulseWidth: 0x600, ad: 0x06, sr: 0x05,
+      layerOn: true, layerWave: 0x41, layerDetune: 12, layerPW: 0x300, layerAd: 0x06, layerSr: 0x04, layerDelay: 4,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x41,0x0C],[0x41,0x00],[0xFF,0x00]]) } },
+  { name: 'Galway Fat PWM',
+    params: { waveform: 0x41, pulseWidth: 0x200, ad: 0x2A, sr: 0xA6,
+      layerOn: true, layerWave: 0x41, layerDetune: 0, layerFine: 28, layerPW: 0xA00, layerAd: 0x2A, layerSr: 0xA6, layerDelay: 0,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 0xC8, filterReso: 1, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 0, pulsePtr: 1, filterPtr: 0,
+      wtbl: null, ftbl: null,
+      ptbl: mkTable([[0x82,0x00],[0x3C,0x28],[0x3C,0xD8],[0xFF,0x02]]) } },
+  { name: 'Hubbard Octave Lead',
+    params: { waveform: 0x41, pulseWidth: 0x400, ad: 0x08, sr: 0xA8,
+      layerOn: true, layerWave: 0x41, layerDetune: 12, layerFine: 10, layerPW: 0x700, layerAd: 0x08, layerSr: 0xA8, layerDelay: 0,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 0xE0, filterReso: 1, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 0, pulsePtr: 1, filterPtr: 0,
+      wtbl: null, ftbl: null,
+      ptbl: mkTable([[0x84,0x00],[0x10,0x60],[0x20,0xA0],[0x10,0x60],[0xFF,0x02]]) } },
+  { name: 'Hubbard Zap',
+    params: { waveform: 0x21, pulseWidth: 0x800, ad: 0x08, sr: 0x07,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF6, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0, ptbl: null, ftbl: null,
+      wtbl: mkTable([[0x21,0x30],[0x21,0x2A],[0x21,0x24],[0x21,0x1E],[0x21,0x18],[0x21,0x12],[0x21,0x0C],[0x21,0x06],[0x21,0x00],[0xE0,0x00],[0xFF,0x00]]) } },
   {
     name: 'Noise→Pulse',
     params: { waveform: 0x41, pulseWidth: 0x800, ad: 0x0A, sr: 0xA4,
@@ -502,26 +593,13 @@ const FACTORY_PRESETS = [
   },
 ];
 
-let userPresets = [];
-
-function loadPresets() {
-  try { const s = localStorage.getItem('sid-synth-presets'); if (s) userPresets = JSON.parse(s); } catch(e) {}
-}
-
-function savePresetsToStorage() {
-  try { localStorage.setItem('sid-synth-presets', JSON.stringify(userPresets)); } catch(e) {}
-}
-
-function populatePresetSelect() {
-  const sel = document.getElementById('preset-select');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">-- Preset --</option>';
-  FACTORY_PRESETS.forEach((p, i) => sel.innerHTML += `<option value="f:${i}">${p.name}</option>`);
-  if (userPresets.length > 0) {
-    sel.innerHTML += '<option disabled>──────────</option>';
-    userPresets.forEach((p, i) => sel.innerHTML += `<option value="u:${i}">${p.name}</option>`);
-  }
-}
+const presets = new SynthShell.PresetStore({
+  storageKey: 'sid-synth-presets',
+  factory: FACTORY_PRESETS,
+  apply: (p) => applyPreset(p),
+  capture: () => capturePreset(),
+});
+function populatePresetSelect() { presets.populateSelect(); }
 
 function applyPreset(preset) {
   if (!workletNode) return;
@@ -574,51 +652,36 @@ function updateUIFromPreset(preset) {
   set('flt-sustain', (fsr >> 4) & 0xF); set('flt-release', fsr & 0xF);
 }
 
-function initPresets() {
-  loadPresets();
-  populatePresetSelect();
-  document.getElementById('preset-select').onchange = (e) => {
-    const val = e.target.value; if (!val) return;
-    const [type, idx] = val.split(':');
-    const preset = type === 'f' ? FACTORY_PRESETS[idx] : userPresets[idx];
-    if (preset) applyPreset(preset);
-  };
-  document.getElementById('save-preset-btn').onclick = () => {
-    const name = prompt('Preset name:');
-    if (!name) return;
-    // Build preset from current UI state
-    const rv = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) : 0; };
-    const rc = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
-    const preset = {
-      name,
-      params: {
-        waveform: mainWaveCtrl ? mainWaveCtrl.get() : 0x40,
-        pulseWidth: Math.round(rv('pulse-width') * 4095),
-        attack: Math.round(rv('attack')), decay: Math.round(rv('decay')),
-        sustain: Math.round(rv('sustain')), release: Math.round(rv('release')),
-        osc2On: rc('osc2-on'), osc2Waveform: modWaveCtrl ? modWaveCtrl.get() : 0x10,
-        osc2Detune: rv('osc2-detune'), osc2EnvAmt: rv('osc2-env-amt'), ringMod: rc('ring-mod'), hardSync: rc('hard-sync'),
-        filterOn: rc('filter-on'), filterMode: parseInt(document.getElementById('filter-mode').value),
-        filterCutoff: Math.round(rv('filter-cutoff') * 2047), filterReso: Math.round(rv('filter-reso')),
-        filterEnvAmt: rv('filter-env-amt'), filterKeyTrack: rv('filter-keytrack'),
-        fltAttack: Math.round(rv('flt-attack')), fltDecay: Math.round(rv('flt-decay')),
-        fltSustain: Math.round(rv('flt-sustain')), fltRelease: Math.round(rv('flt-release')),
-        lfoRate: rv('lfo-rate'), lfoWaveform: parseInt(document.getElementById('lfo-wave').value),
-        lfoPWMDepth: rv('lfo-pwm'), lfoFilterDepth: rv('lfo-filter'),
-        portamento: rc('portamento-on'), portamentoTime: rv('portamento-time'),
-        masterVolume: rv('master-vol'),
-      },
-      fx: {
-        chorus: { enabled: rc('fx-chorus-on') },
-        delay: { enabled: rc('fx-delay-on') },
-        reverb: { enabled: rc('fx-reverb-on') }
-      }
-    };
-    const existing = userPresets.findIndex(p => p.name === name);
-    if (existing >= 0) userPresets[existing] = preset; else userPresets.push(preset);
-    savePresetsToStorage(); populatePresetSelect();
+function capturePreset() {
+  const rv = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) : 0; };
+  const rc = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
+  return {
+    params: {
+      waveform: mainWaveCtrl ? mainWaveCtrl.get() : 0x40,
+      pulseWidth: Math.round(rv('pulse-width') * 4095),
+      attack: Math.round(rv('attack')), decay: Math.round(rv('decay')),
+      sustain: Math.round(rv('sustain')), release: Math.round(rv('release')),
+      osc2On: rc('osc2-on'), osc2Waveform: modWaveCtrl ? modWaveCtrl.get() : 0x10,
+      osc2Detune: rv('osc2-detune'), osc2EnvAmt: rv('osc2-env-amt'), ringMod: rc('ring-mod'), hardSync: rc('hard-sync'),
+      filterOn: rc('filter-on'), filterMode: parseInt(document.getElementById('filter-mode').value),
+      filterCutoff: Math.round(rv('filter-cutoff') * 2047), filterReso: Math.round(rv('filter-reso')),
+      filterEnvAmt: rv('filter-env-amt'), filterKeyTrack: rv('filter-keytrack'),
+      fltAttack: Math.round(rv('flt-attack')), fltDecay: Math.round(rv('flt-decay')),
+      fltSustain: Math.round(rv('flt-sustain')), fltRelease: Math.round(rv('flt-release')),
+      lfoRate: rv('lfo-rate'), lfoWaveform: parseInt(document.getElementById('lfo-wave').value),
+      lfoPWMDepth: rv('lfo-pwm'), lfoFilterDepth: rv('lfo-filter'),
+      portamento: rc('portamento-on'), portamentoTime: rv('portamento-time'),
+      masterVolume: rv('master-vol'),
+    },
+    fx: {
+      chorus: { enabled: rc('fx-chorus-on') },
+      delay: { enabled: rc('fx-delay-on') },
+      reverb: { enabled: rc('fx-reverb-on') }
+    }
   };
 }
+
+function initPresets() { presets.init(); }
 
 // ─── Init ───────────────────────────────────────────────────────────────────
 

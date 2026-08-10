@@ -1950,9 +1950,20 @@ jsSID.ReSID.prototype.generateIntoBuffer = function(count, buffer, offset) {
         for (var i = offset; i < offset + count; i++) {
                 buffer[i] = 0;
         }
-	var delta = (this.cycles_per_sample * count) >> jsSID.ReSID.const.FIXP_SHIFT;
+	// Carry the fixed-point cycle remainder across calls. Flooring it away
+	// each call starved the clock of one sample's worth of cycles every ~33
+	// blocks, leaving a single zeroed sample behind — an audible ~10 Hz tick
+	// even when nothing was playing.
+	if (this.cycle_remainder === undefined) this.cycle_remainder = 0;
+	var budget = this.cycles_per_sample * count + this.cycle_remainder;
+	var delta = budget >> jsSID.ReSID.const.FIXP_SHIFT;
+	this.cycle_remainder = budget & ((1 << jsSID.ReSID.const.FIXP_SHIFT) - 1);
 	var s = this.clock(delta, buffer, count, 1, offset);
-        //console.log("jsSID.ReSID.generateIntoBuffer (delta: " + delta + ", samples clocked: " + s + ")");
+	// Belt and braces: if the clock still comes up short, repeat the last
+	// sample rather than emit the zeroed one (a DC step is a click).
+	for (var fill = offset + s; fill < offset + count; fill++) {
+		buffer[fill] = fill > offset ? buffer[fill - 1] : 0;
+	}
 	return s;
 };
 
@@ -2022,9 +2033,12 @@ const TWO_PI = 2 * Math.PI;
 
 // Convert MIDI note to SID frequency register value
 function midiToSidFreq(note) {
-  // SID note range: MIDI 24 (C1) = SID note 0, up to MIDI 119 = SID note 95
-  // Interpolate between table entries for smooth fractional-semitone sweeps
-  const sidNote = note - 24;
+  // The GT2 table starts at C0: entry 57 is 0x1d46, which at the PAL clock is
+  // 440.1 Hz — A4. So table index = MIDI note - 12. The previous offset of 24
+  // played EVERYTHING an octave flat (A4 came out at 220 Hz), which also made
+  // SID tracks sit an octave under every other instrument in the studio.
+  // Interpolate between entries for smooth fractional-semitone sweeps.
+  const sidNote = note - 12;
   const idx = Math.max(0, Math.min(94, Math.floor(sidNote)));
   const frac = sidNote - idx;
   const freqA = freqtbllo[idx] | (freqtblhi[idx] << 8);
@@ -2068,6 +2082,7 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         chip: i,                      // 1 SID chip per voice
         baseNote: 0,
         sweep: 0,  // current sweep level 0-255 (decays from 255 to 0)
+        layerPending: 0, layerCtrl: 0,
         tbl: {
           wavePtr: 0, wavetime: 0, waveActive: false,
           wave: 0x41, tableNote: 0,
@@ -2119,6 +2134,15 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
 
     // 50Hz tick
     this.tickCounter = 0;
+    this._dcX = 0;
+    this._dcY = 0;
+    this._dcPrimed = false;
+    // Output warm-up: chip initialisation steps the 6581's DC level several
+    // times (volume, filter model setup), and each step through the DC
+    // blocker becomes an audible pop — a fresh SID track went off like a
+    // -16 dB thump before anyone played a note. Mute-then-ramp the first
+    // ~150 ms; nothing musical can be playing that early.
+    this._warmup = Math.round(sampleRate * 0.15);
     this.samplesPerTick = Math.round(sampleRate / 50);
 
     this.port.onmessage = (e) => this._handleMessage(e.data);
@@ -2212,8 +2236,34 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
           }
         }
 
-        // === Channel 1: unused ===
-        sid.poke(0x0B, 0x00);
+        // === Channel 1: the LAYER oscillator ===
+        // The chip has three oscillators; ch0 carries the note (and its
+        // wavetable), ch2 is the sync/ring helper — ch1 was sitting idle.
+        // Presets can light it as a second audible voice: detuned unison and
+        // octave doubling (the fat Galway/Hubbard leads), or a noise layer
+        // fired WITH a tone drum instead of after it. `layerDelay` (frames)
+        // gates it late for flam/echo blips.
+        if (p.layerOn) {
+          const lFreq = midiToSidFreq(msg.note + (p.layerDetune | 0)) + (p.layerFine | 0);
+          sid.poke(0x07, lFreq & 0xFF);
+          sid.poke(0x08, (lFreq >> 8) & 0xFF);
+          const lpw = p.layerPW !== undefined ? p.layerPW : p.pulseWidth;
+          sid.poke(0x09, lpw & 0xFF);
+          sid.poke(0x0A, (lpw >> 8) & 0x0F);
+          sid.poke(0x0C, p.layerAd !== undefined ? p.layerAd : p.ad);
+          sid.poke(0x0D, p.layerSr !== undefined ? p.layerSr : p.sr);
+          if ((p.layerDelay | 0) > 0) {
+            v.layerPending = p.layerDelay | 0;
+            v.layerCtrl = ((p.layerWave !== undefined ? p.layerWave : p.waveform) & 0xF0) | 0x01;
+            sid.poke(0x0B, 0x00);
+          } else {
+            v.layerPending = 0;
+            sid.poke(0x0B, ((p.layerWave !== undefined ? p.layerWave : p.waveform) & 0xF0) | 0x01);
+          }
+        } else {
+          v.layerPending = 0;
+          sid.poke(0x0B, 0x00);
+        }
 
         // === Channel 0 control: waveform + gate + sync + ring ===
         let ctrl = (p.waveform & 0xF0) | 0x01;
@@ -2223,12 +2273,6 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
 
         // Init osc2 sweep (starts at max, decays to 0)
         v.sweep = (p.osc2EnvAmt !== 0) ? 255 : 0;
-
-        // Debug sync state
-        if (p.hardSync) {
-          const w0 = sid.voice[0].wave, w2 = sid.voice[2].wave;
-          console.log(`SYNC DEBUG chip${vi}: v0.sync=${w0.sync} v0.freq=${w0.freq} v2.freq=${w2.freq} v2.waveform=${w2.waveform} syncSource=${w0.sync_source === w2 ? 'v2(correct)' : 'WRONG'} syncDest=${w2.sync_dest === w0 ? 'v0(correct)' : 'WRONG'}`);
-        }
 
         // Filter & volume (filter also sets reg 0x18 with volume)
         this._updateFilter(vi);
@@ -2257,7 +2301,10 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         // Gate off: keep waveform bits but clear gate
         sid.poke(0x04, this.params.waveform & 0xF0);
         sid.poke(0x12, this.params.osc2Waveform & 0xF0);
-        sid.poke(0x0B, 0x00);
+        v.layerPending = 0;
+        sid.poke(0x0B, this.params.layerOn
+          ? ((this.params.layerWave !== undefined ? this.params.layerWave : this.params.waveform) & 0xF0)
+          : 0x00);
         this.fltEnvs[vi].stage = 4;
         break;
       }
@@ -2386,13 +2433,6 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     const t = v.tbl;
     if (!t.pulseActive || t.pulsePtr === 0) return;
 
-    // Debug first few ticks
-    if (!this._ptblDbg) this._ptblDbg = 0;
-    if (this._ptblDbg < 10) {
-      console.log(`PTBL v${vi}: ptr=${t.pulsePtr} modTicks=${t.pulseModTicks} pw=${t.tablePulse} active=${t.pulseActive}`);
-      this._ptblDbg++;
-    }
-
     if (t.pulseModTicks > 0) {
       t.pulseModTicks--;
       t.tablePulse = (t.tablePulse + t.pulseModSpeed) & 0xFFF;
@@ -2479,6 +2519,10 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
 
     for (let i = 0; i < NUM_VOICES; i++) {
       const v = this.voices[i];
+      // Delayed layer gate (flam / echo-blip): fires layerDelay frames late.
+      if (v.active && v.layerPending > 0) {
+        if (--v.layerPending === 0) this.sids[i].poke(0x0B, v.layerCtrl);
+      }
       if (!v.active && v.sweep === 0 && this.fltEnvs[i].stage === 0) continue;
 
       // === Osc2 pitch sweep (independent, simple decay) ===
@@ -2555,16 +2599,42 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
       this._tickEnvelopes();
     }
 
-    // Generate audio from all 3 SID chips and mix
+    // Generate audio from all 3 SID chips and mix.
+    //
+    // Previously each chip was pre-divided by 3 to guard the worst case of
+    // all three playing loud — which left a solo voice ~13 dB quieter than
+    // the other synths in the studio. Full gain with a soft clip on the sum
+    // keeps single notes healthy and rounds off the rare loud tutti instead
+    // of pre-emptively strangling everything.
     outL.fill(0); outR.fill(0);
     for (let c = 0; c < NUM_CHIPS; c++) {
       const samples = this.sids[c].generate(blockSize);
-      for (let s = 0; s < blockSize; s++) {
-        // ReSID output is roughly -1 to +1 float
-        const v = samples[s] * 0.33; // scale down since we're mixing 3 chips
-        outL[s] += v;
-        outR[s] += v;
+      for (let s = 0; s < blockSize; s++) outL[s] += samples[s];
+    }
+    // DC blocker, then soft clip. A pulse wave's mean level follows its duty
+    // cycle, so a PWM sweep rides on a moving DC pedestal — and the gate step
+    // adds a thump. The real C64 strips this with its output coupling cap;
+    // without the blocker the DC shifts the tanh's operating point and the
+    // sweep distorts asymmetrically. (~15 Hz highpass.)
+    if (!this._dcPrimed) {
+      // Prime the blocker with the first real sample so the power-on DC level
+      // enters as "always was" rather than as a step.
+      this._dcX = outL[0];
+      this._dcPrimed = true;
+    }
+    for (let s = 0; s < blockSize; s++) {
+      const x = outL[s];
+      const y = x - this._dcX + 0.9979 * this._dcY;
+      this._dcX = x;
+      this._dcY = y;
+      let v = Math.tanh(y * 1.4);
+      if (this._warmup > 0) {
+        this._warmup--;
+        const w = this._warmup > 2205 ? 0 : 1 - this._warmup / 2205;
+        v *= w;                        // mute, then a 50 ms ramp in
       }
+      outL[s] = v;
+      outR[s] = v;
     }
 
     return true;

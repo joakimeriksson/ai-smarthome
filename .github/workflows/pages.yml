@@ -1,0 +1,73 @@
+# Build every web demo in this repo and publish them as one GitHub Pages site,
+# each under its own folder. Adding a demo means one entry in
+# scripts/build-pages.mjs, not a change here.
+#
+# Deploys from the Actions artifact rather than a gh-pages branch, so no build
+# output is ever committed. Enable it once under
+# Settings -> Pages -> Source: "GitHub Actions".
+
+name: Deploy demos to Pages
+
+on:
+  push:
+    branches: [master, main]
+    # Only rebuild when something a demo depends on actually changed.
+    paths:
+      - 'audio/software-synth/**'
+      - 'audio/sid-synth/**'
+      - 'c64-chat-client/**'
+      - 'js-postit/**'
+      - 'cytoscape-graph/**'
+      - 'scripts/build-pages.mjs'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one more.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: audio/software-synth/synthex/package-lock.json
+
+      - name: Install synth workspace
+        working-directory: audio/software-synth/synthex
+        run: npm ci
+
+      # The suite covers the DSP and, crucially, that the built AudioWorklet
+      # actually loads — a broken one still renders a perfect silent page.
+      - name: Test
+        working-directory: audio/software-synth/synthex
+        run: npm test
+
+      - name: Build all demos
+        run: node scripts/build-pages.mjs --base "/${{ github.event.repository.name }}/"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

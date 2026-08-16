@@ -15,9 +15,6 @@ on:
     paths:
       - 'audio/software-synth/**'
       - 'audio/sid-synth/**'
-      - 'c64-chat-client/**'
-      - 'js-postit/**'
-      - 'cytoscape-graph/**'
       - 'scripts/build-pages.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

@@ -33,7 +33,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # submodules is REQUIRED, not a nicety: the SID Tracker loads its whole
+      # reSID audio engine from the jsSID submodule (9 script tags in
+      # audio/sid-synth/index.html). checkout's default is submodules:false,
+      # which leaves that directory EMPTY - the page then deploys and renders
+      # perfectly while every one of those scripts 404s, so the tracker is
+      # silent. Verified against the live site before this was added.
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v4
         with:

@@ -1,3 +1,9 @@
 [submodule "audio/sid-synth/jsSID"]
 	path = audio/sid-synth/jsSID
-	url = https://github.com/jhohertz/jsSID.git
+	# Fork of jhohertz/jsSID (GPL v2). The tracker needs two things that are
+	# not upstream: a JXG stub for reSID waveform-table decompression, and the
+	# 6502 assembler/parser that audio/sid-synth/index.html loads as modules.
+	# Upstream cannot carry them, so the fork holds them and this points there
+	# - otherwise the pinned commit resolves nowhere and every clone and CI
+	# checkout yields an empty jsSID/ and a silent tracker.
+	url = https://github.com/joakimeriksson/jsSID.git

@@ -266,7 +266,14 @@ class SynthexInstrument implements Instrument {
   static async create(ctx: AudioContext): Promise<SynthexInstrument> {
     // The engine feeds this node; the studio connects it onward to the strip.
     const bus = new GainNode(ctx, { gain: 1 })
-    const synth = new Synth({ context: ctx, destination: bus, polyphony: 8 })
+    // Same prebuilt worklet the standalone app uses, copied next to the
+    // vanilla processors by the engine's build-worklet script.
+    const synth = new Synth({
+      context: ctx,
+      destination: bus,
+      polyphony: 8,
+      workletUrl: `${import.meta.env.BASE_URL}worklets/synthex-voice-processor.js`,
+    })
     await synth.init()
     // Boot on the iconic Laser Harp, like the standalone app does.
     const laser = PRESETS.find(s => s.address === 46)?.patch ?? factoryDefault()

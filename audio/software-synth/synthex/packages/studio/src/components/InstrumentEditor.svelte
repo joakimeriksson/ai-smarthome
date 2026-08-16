@@ -31,10 +31,22 @@
     pm: 'pm-synth.html',
     drum: 'drum-machine.html',
   }
+  /**
+   * Where the standalone pages live. Defaults suit a static deploy that puts
+   * the studio, the Synthex app and the six pages under one root; the dev
+   * ports are the fallback so `npm run studio` still links correctly. Set
+   * VITE_SYNTHEX_URL / VITE_PAGES_URL to point elsewhere.
+   */
+  const DEV = import.meta.env.DEV
+  const SYNTHEX_URL = import.meta.env['VITE_SYNTHEX_URL']
+    ?? (DEV ? 'http://localhost:5173/' : '../synthex/')
+  const PAGES_URL = import.meta.env['VITE_PAGES_URL']
+    ?? (DEV ? 'http://localhost:8123/' : '../')
+
   const standaloneUrl = $derived(
     track.kind === 'synthex'
-      ? 'http://localhost:5173/'
-      : `http://localhost:8123/${STANDALONE[track.kind] ?? ''}`,
+      ? SYNTHEX_URL
+      : `${PAGES_URL}${STANDALONE[track.kind] ?? ''}`,
   )
 
   let data = $state<SynthData | null>(null)

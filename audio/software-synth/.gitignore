@@ -1,0 +1,2 @@
+# Assembled demo build — regenerate with `node scripts/build-demo.mjs`.
+dist/

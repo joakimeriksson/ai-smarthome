@@ -10,7 +10,8 @@
     "./worklets/voice-processor.ts": "./src/worklets/voice-processor.ts"
   },
   "scripts": {
-    "build": "tsc -b",
-    "typecheck": "tsc -b"
+    "build": "tsc -b && npm run build-worklet",
+    "typecheck": "tsc -b",
+    "build-worklet": "node scripts/build-worklet.mjs"
   }
 }

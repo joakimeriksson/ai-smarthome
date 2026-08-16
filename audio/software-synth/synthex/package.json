@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @synthex/app",
     "studio": "npm run dev --workspace @synthex/studio",
-    "build": "npm run build --workspace @synthex/engine && npm run build --workspace @synthex/app",
+    "build": "npm run build --workspace @synthex/engine && npm run build --workspace @synthex/app && npm run build --workspace @synthex/studio",
     "build:studio": "npm run build --workspace @synthex/studio",
     "test": "vitest run",
     "test:watch": "vitest",

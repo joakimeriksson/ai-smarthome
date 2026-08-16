@@ -218,7 +218,14 @@
     if (synth) return
     startError = null
     try {
-      synth = new Synth({ polyphony: 8 })
+      // Relative to the page, and resolved through Vite's BASE_URL so the
+      // app also works when deployed under a sub-path (project Pages sites).
+      // The worklet is a prebuilt .js — see engine/scripts/build-worklet.mjs
+      // for why it cannot be loaded from the .ts source in a production build.
+      synth = new Synth({
+        polyphony: 8,
+        workletUrl: `${import.meta.env.BASE_URL}synthex-voice-processor.js`,
+      })
       await synth.init()
       store.attach(synth)
       startStepIndicator()

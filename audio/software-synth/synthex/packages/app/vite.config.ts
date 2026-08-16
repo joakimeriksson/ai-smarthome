@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 export default defineConfig({
+  // Sub-path deploys (e.g. a GitHub project Pages site) set VITE_BASE; all
+  // asset and worklet URLs are resolved through import.meta.env.BASE_URL.
+  base: process.env.VITE_BASE ?? '/',
   plugins: [svelte()],
   server: {
     port: 5173,

@@ -6,9 +6,9 @@
   "scripts": {
     "sync-worklets": "node scripts/sync-worklets.mjs",
     "sync-synth-data": "node scripts/sync-synth-data.mjs",
-    "predev": "npm run sync-worklets && npm run sync-synth-data",
+    "predev": "npm run sync-worklets && npm run sync-synth-data && npm run build-worklet --workspace @synthex/engine",
     "dev": "vite",
-    "prebuild": "npm run sync-worklets && npm run sync-synth-data",
+    "prebuild": "npm run sync-worklets && npm run sync-synth-data && npm run build-worklet --workspace @synthex/engine",
     "build": "vite build",
     "preview": "vite preview"
   },

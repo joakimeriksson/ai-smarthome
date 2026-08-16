@@ -14,6 +14,12 @@
 import InstrumentEditor from './components/InstrumentEditor.svelte'
 
   const studio = new Studio()
+
+  // Sibling apps under a shared static root in a deploy; dev ports otherwise.
+  const synthexUrl = import.meta.env['VITE_SYNTHEX_URL']
+    ?? (import.meta.env.DEV ? 'http://localhost:5173/' : '../synthex/')
+  const pagesUrl = import.meta.env['VITE_PAGES_URL']
+    ?? (import.meta.env.DEV ? 'http://localhost:8123/' : '../')
   let meters = $state<Record<number, number>>({})
   let masterMeter = $state(0)
   let octave = $state(4)
@@ -262,8 +268,8 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
   <footer>
     <span>Keys <kbd>Z</kbd>/<kbd>Q</kbd> rows play the focused track · <kbd>−</kbd>/<kbd>=</kbd> octave ({octave}) · <kbd>Space</kbd> transport</span>
     <span class="links">
-      Standalone: <a href="http://localhost:5173/" target="_blank" rel="noreferrer">Synthex</a>
-      · <a href="../../../index.html" target="_blank" rel="noreferrer">synth pages</a>
+      Standalone: <a href={synthexUrl} target="_blank" rel="noreferrer">Synthex</a>
+      · <a href={pagesUrl} target="_blank" rel="noreferrer">synth pages</a>
     </span>
   </footer>
 </div>

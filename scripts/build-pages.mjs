@@ -38,18 +38,19 @@ const OUT = resolve(ROOT, arg('--out', '_site'))
  */
 const PROFILE = {
   name: 'Joakim Eriksson',
-  tagline: 'Audio DSP, embedded systems and machine learning.',
+  tagline: 'Side projects — sound, sensing and small machines.',
   intro:
-    'I build things that make sound and things that sense the world — ' +
-    'synthesiser engines modelled from real hardware, embedded and IoT ' +
-    'experiments, and applied machine learning. Most of it lives in one ' +
-    'repository and most of it started as a question I wanted answered.',
+    'This is where I keep the things I build for fun. Synthesiser engines ' +
+    'written from scratch, a tracker for a 1982 sound chip, and a long tail ' +
+    'of experiments in embedded devices, home automation and machine ' +
+    'learning. Most of it started as a question I wanted answered, and most ' +
+    'of it lives in one repository.',
   // Areas actually present in the repo, for the closing note.
   also: [
     'Home Assistant integrations and MQTT plumbing',
     'MicroPython and embedded devices',
     'Computer vision experiments (MediaPipe, PoseNet, YOLO)',
-    'Reverse-engineering Roland synth patch formats',
+    'Local LLMs, speech and Swedish text-to-speech',
   ],
   github: 'https://github.com/joakimeriksson/ai-smarthome',
 }

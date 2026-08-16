@@ -16,6 +16,17 @@ import { resolve } from 'node:path'
 const WORKLET = resolve(__dirname, '../../engine/dist-worklet/synthex-voice-processor.js')
 const built = existsSync(WORKLET)
 
+// Locally the artifact may simply not have been built yet, so these skip. In
+// CI they must not: a skipped guard is indistinguishable from a passing one in
+// the summary, and this is the guard standing between a broken worklet and a
+// deployed silent synth. Fail loudly instead, and tell the pipeline what to fix.
+if (!built && process.env['CI']) {
+  throw new Error(
+    'Synthex worklet not built. CI must run the build before the tests — ' +
+    '`npm run build-worklet --workspace @synthex/engine`.',
+  )
+}
+
 describe.skipIf(!built)('built Synthex worklet', () => {
   it('is plain JavaScript with no TypeScript syntax left', () => {
     const src = readFileSync(WORKLET, 'utf8')

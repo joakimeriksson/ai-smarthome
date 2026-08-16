@@ -45,14 +45,18 @@ jobs:
         working-directory: audio/software-synth/synthex
         run: npm ci
 
-      # The suite covers the DSP and, crucially, that the built AudioWorklet
-      # actually loads — a broken one still renders a perfect silent page.
-      - name: Test
-        working-directory: audio/software-synth/synthex
-        run: npm test
-
+      # Build BEFORE testing, so the suite runs against the artifact that is
+      # about to be deployed. The worklet test can only check a worklet that
+      # exists; run it first and it skips, which looks identical to passing.
       - name: Build all demos
         run: node scripts/build-pages.mjs --base "/${{ github.event.repository.name }}/"
+
+      # Covers the DSP and, crucially, that the built AudioWorklet actually
+      # loads — a broken one still renders a perfect, silent page. Failing here
+      # stops the deploy, because `deploy` needs this job.
+      - name: Test the built output
+        working-directory: audio/software-synth/synthex
+        run: npm test
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

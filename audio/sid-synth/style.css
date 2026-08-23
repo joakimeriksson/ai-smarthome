@@ -44,6 +44,13 @@
     --btn-bg:         var(--c64-darkgray);
     --btn-text:       var(--c64-lightgreen);
     --btn-border:     var(--c64-green);
+
+    /* The C64 Pro Mono font is a bitmap face designed for 8px, which is what
+       every font-size below assumes. On a modern display that is about a
+       quarter of the size it had on a 1980s TV, so scale the whole UI instead
+       of touching the sizes -- integer values stay pixel-perfect. Set by
+       ui-scale.js from localStorage; the Tools panel has the selector. */
+    --ui-scale: 1.5;
 }
 
 /* === Global Reset & Body === */
@@ -52,6 +59,7 @@
 }
 
 body {
+    zoom: var(--ui-scale);
     font-family: 'C64 Pro Mono', 'Courier New', monospace;
     display: flex;
     flex-direction: column;

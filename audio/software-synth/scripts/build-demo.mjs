@@ -11,7 +11,7 @@
 // from localhost: AudioWorklet requires a secure context, so a plain http://
 // host will render the pages and produce no sound at all.
 
-import { cp, mkdir, rm, readdir, writeFile } from 'node:fs/promises'
+import { cp, mkdir, rm, readdir, readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -34,11 +34,35 @@ function run(cmd, args, cwd, env = {}) {
 await rm(OUT, { recursive: true, force: true })
 await mkdir(OUT, { recursive: true })
 
+const problems = []
+
 // ── 1. The six standalone pages: already static, copy as-is ────────────────
 const pages = (await readdir(ROOT)).filter(f => f.endsWith('.html'))
 for (const f of pages) await cp(resolve(ROOT, f), resolve(OUT, f))
 for (const dir of ['css', 'js']) await cp(resolve(ROOT, dir), resolve(OUT, dir), { recursive: true })
 console.log(`[demo] ${pages.length} pages + css/ + js/`)
+
+// index.html is the LOCAL landing page: it points Studio and Synthex at the
+// dev servers you start by hand. In the built site they are plain siblings, so
+// rewrite those two links -- shipped as-is they send every visitor to a
+// localhost that only exists on the developer's machine. Guarded, because a
+// silent no-match here deploys the dead links again.
+const DEV_LINKS = [
+  ['http://localhost:5180/', `${base}studio/`],
+  ['http://localhost:5173/', `${base}synthex/`],
+]
+const indexPath = resolve(OUT, 'index.html')
+let indexHtml = await readFile(indexPath, 'utf8')
+for (const [devUrl, builtUrl] of DEV_LINKS) {
+  if (!indexHtml.includes(devUrl)) problems.push(`index.html: no ${devUrl} to rewrite`)
+  indexHtml = indexHtml.replaceAll(devUrl, builtUrl)
+}
+// That note tells the reader to go start those dev servers; untrue once built.
+indexHtml = indexHtml.replace(
+  /Studio and Synthex run from their own dev servers[^<]*/,
+  'Audio needs a click to start (browser autoplay policy).')
+await writeFile(indexPath, indexHtml)
+console.log('[demo] index.html: dev-server links -> built siblings')
 
 // ── 2. Synthex app ─────────────────────────────────────────────────────────
 run('npm', ['run', 'build', '--workspace', '@synthex/app'], SYNTHEX,
@@ -57,7 +81,6 @@ await cp(resolve(SYNTHEX, 'packages/studio/dist'), resolve(OUT, 'studio'), { rec
 console.log('[demo] studio')
 
 // ── 4. Sanity checks — the failures worth catching are all silent ──────────
-const problems = []
 const worklets = [
   'synthex/synthex-voice-processor.js',
   'studio/worklets/synthex-voice-processor.js',

@@ -1,0 +1,12 @@
+idf_component_register(SRCS "main.c" "board.c" "net.c" "prices.c" "hass.c"
+                            "energy.c" "ui.c" "ui_settings.c" "settings.c"
+                            "logbuf.c" "sidplay.c" "demo.c"
+                       INCLUDE_DIRS "."
+                       EMBED_FILES "sids/Commando.sid"
+                                   "sids/Wizball.sid"
+                                   "sids/Arkanoid.sid"
+                                   "sids/Irish_Dream.sid"
+                                   "sids/Funtempo.sid"
+                                   "sids/Flash_It_Back.sid"
+                                   "sids/Garden_Party.sid"
+                                   "sids/On_the_Edge.sid")

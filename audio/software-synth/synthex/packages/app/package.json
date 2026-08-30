@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@synthex/engine": "*",
-    "svelte": "^5.1.13"
+    "svelte": "^5.56.9"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

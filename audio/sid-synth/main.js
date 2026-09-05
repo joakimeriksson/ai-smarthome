@@ -9,7 +9,7 @@ import { gt2TableManager } from './table-manager-gt2.js';
 import { recordMode } from './record-mode.js';
 import { keyboardInput } from './keyboard-input.js';
 import { gt2FrameEngine } from './gt2-frame-engine.js';
-import { setupGT2ImportUI, gt2Importer } from './gt2-importer.js';
+import { setupGT2ImportUI, gt2Importer, updateSongInfo } from './gt2-importer.js';
 import { parseSng } from './gt2-sng-parser.js';
 import { initGT2PatternEditor } from './gt2-pattern-editor.js';
 import { initGT2OrderEditor } from './gt2-order-editor.js';
@@ -992,7 +992,28 @@ window.updateWorkletTelemetry = (function () {
 // Load sids/default-song.sng through the normal import path. Any failure
 // (file:// origin, missing file, parse error) leaves the built-in fallback
 // patterns from pattern-manager-gt2.js in place - the app must still boot.
-export async function loadDefaultSong(url = 'sids/default-song.sng') {
+export const DEFAULT_SONG_URL = 'sids/default-song.sng';
+
+/**
+ * Which .sng the tracker boots with. `?song=` overrides it, which is how the
+ * birthday build is tested against the same files it deploys - the build
+ * itself just swaps sids/default-song.sng (scripts/build-pages.mjs `overlay`),
+ * so the deployed page needs no query string.
+ *
+ * Only a relative path is accepted: this value is fetched, and an attacker-
+ * supplied absolute URL would make the page load a song from any origin.
+ */
+export function defaultSongUrl() {
+    const asked = new URLSearchParams(window.location.search).get('song');
+    if (!asked) return DEFAULT_SONG_URL;
+    if (/^[a-z][a-z0-9+.-]*:|^\/\//i.test(asked) || asked.startsWith('/')) {
+        console.warn(`?song= must be a relative path - ignoring "${asked}"`);
+        return DEFAULT_SONG_URL;
+    }
+    return asked;
+}
+
+export async function loadDefaultSong(url = defaultSongUrl()) {
     // NEVER clobber a real song the user asked for. This function is async, so
     // its fetch resolves AFTER the rest of window.onload has run - including
     // checkSIDRipperImport(), which imports synchronously. Without this guard
@@ -1018,6 +1039,12 @@ export async function loadDefaultSong(url = 'sids/default-song.sng') {
             return false;
         }
         gt2Importer.importCompleteSong(parsed, 0);
+        // The song-info bar is filled by gt2-importer's updateSongInfo on the
+        // file-import path and by main.js on the rip path - but nothing called
+        // it here, so the app booted showing "Untitled / Author: Unknown /
+        // Patterns: 0" over a song that was fully loaded. `parsed` is the same
+        // shape the file-import path passes, so it goes through the same call.
+        updateSongInfo(parsed);
         if (window.gt2PatternEditor) window.gt2PatternEditor.renderPattern();
         if (window.gt2OrderEditor) window.gt2OrderEditor.renderOrderLists();
         console.log(`🎵 Default song loaded: ${parsed.name} by ${parsed.author}`);

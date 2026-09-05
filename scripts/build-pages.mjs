@@ -1,6 +1,6 @@
 // Assemble every web demo in this repo into one static tree for GitHub Pages.
 //
-//   node scripts/build-pages.mjs [--base /ai-smarthome/] [--out _site]
+//   node scripts/build-pages.mjs [--base /ai-smarthome/] [--out _site] [--only slug,slug]
 //
 // GitHub Pages serves one site per repository, but that site can contain any
 // nesting — so each demo simply gets its own folder. Adding a demo is one
@@ -10,7 +10,7 @@
 //   - Static demos must use relative URLs (all of this repo's do).
 //   - Built apps must be told their base path; Vite bakes it into asset URLs.
 
-import { cp, mkdir, rm, writeFile, readdir } from 'node:fs/promises'
+import { cp, mkdir, rm, readFile, writeFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -30,6 +30,11 @@ const arg = (name, fallback) => {
 const rawBase = arg('--base', '/ai-smarthome/')
 const BASE = rawBase.endsWith('/') ? rawBase : `${rawBase}/`
 const OUT = resolve(ROOT, arg('--out', '_site'))
+
+// --only slug[,slug] builds a subset. The full site needs `npm ci` in
+// audio/software-synth/synthex (CI does that); --only lets you iterate on a
+// static demo without it.
+const ONLY = (arg('--only', '') || '').split(',').filter(Boolean)
 
 /**
  * Landing-page copy. Written from what is observably in this repository —
@@ -65,6 +70,15 @@ const PROFILE = {
  * it. `build` receives the absolute output dir and the base URL this demo will
  * be served from; omit it for plain static folders.
  *
+ * Two optional fields let one source folder ship as more than one demo, so a
+ * variant costs an entry here instead of a forked copy of the app:
+ *   `overlay` — { path-in-output: path-from-repo-root } files copied over the
+ *               demo AFTER it lands, e.g. to swap the tune it starts with.
+ *   `replace` — { path-in-output: [[find, replaceWith], …] } literal string
+ *               substitutions, for the handful of places a variant needs its
+ *               own name. Every `find` must match, or the build fails: a
+ *               silently-skipped rename would deploy a mislabelled page.
+ *
  * Only demos listed here are published. The repo holds other web experiments
  * (c64-chat-client, js-postit, cytoscape-graph) that are deliberately left
  * out — add an entry to publish one.
@@ -91,6 +105,30 @@ const DEMOS = [
     src: 'audio/sid-synth',
     accent: '#8f88ff',            // C64 screen blue
   },
+  {
+    // The same tracker, opened on a different tune. Nothing is forked: the
+    // build copies audio/sid-synth again and drops the birthday .sng in as the
+    // song the app boots with (audio/sid-synth/main.js loads
+    // sids/default-song.sng by name). Regenerate the tune with
+    //   node tools/make-birthday-song.js
+    // from audio/sid-synth; it is covered by `make verify` like every other
+    // song in the corpus.
+    slug: 'sid-tracker-birthday',
+    title: 'SID Tracker — Happy Birthday',
+    blurb: 'The tracker again, opened on a three-voice SID arrangement of ' +
+           'Happy Birthday. Press play, then take it apart.',
+    src: 'audio/sid-synth',
+    accent: '#ffb02e',            // candle yellow
+    overlay: {
+      'sids/default-song.sng': 'audio/sid-synth/sids/happy-birthday.sng',
+    },
+    replace: {
+      'index.html': [
+        ['<title>SID Tracker</title>', '<title>SID Tracker — Happy Birthday</title>'],
+        ['<h1>SID Tracker</h1>', '<h1>SID Tracker <small>Happy Birthday</small></h1>'],
+      ],
+    },
+  },
 ]
 
 function run(cmd, args, cwd) {
@@ -103,6 +141,7 @@ await mkdir(OUT, { recursive: true })
 
 const published = []
 for (const demo of DEMOS) {
+  if (ONLY.length && !ONLY.includes(demo.slug)) continue
   const srcPath = resolve(ROOT, demo.src)
   if (!existsSync(srcPath)) {
     console.warn(`[pages] SKIP ${demo.slug}: ${demo.src} not found`)
@@ -121,6 +160,25 @@ for (const demo of DEMOS) {
     recursive: true,
     filter: (p) => !/node_modules|(^|\/)\.git(\/|$)/.test(p),
   })
+
+  for (const [to, fromPath] of Object.entries(demo.overlay ?? {})) {
+    await cp(resolve(ROOT, fromPath), resolve(dest, to))
+    console.log(`[pages]   overlay ${to} <- ${fromPath}`)
+  }
+
+  for (const [file, edits] of Object.entries(demo.replace ?? {})) {
+    const target = resolve(dest, file)
+    let text = await readFile(target, 'utf8')
+    for (const [find, replaceWith] of edits) {
+      if (!text.includes(find)) {
+        throw new Error(`[pages] ${demo.slug}: ${file} has no "${find}" to replace`)
+      }
+      text = text.split(find).join(replaceWith)
+    }
+    await writeFile(target, text)
+    console.log(`[pages]   patched ${file} (${edits.length} replacement${edits.length === 1 ? '' : 's'})`)
+  }
+
   published.push({ ...demo, href: `${base}${demo.entry ?? ''}` })
   console.log(`[pages] ${demo.slug} -> ${demo.href ?? base}`)
 }

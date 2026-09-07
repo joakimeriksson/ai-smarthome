@@ -98,36 +98,25 @@ const DEMOS = [
     // Landing page inside the demo, rather than its bare index.
     entry: 'demo.html',
   },
+  // The tracker outgrew this repository and lives in its own now, deploying
+  // itself on every push. It stays on this page because it belongs on it -
+  // but as a link, so there is no copy of it here to drift.
   {
     slug: 'sid-tracker',
     title: 'SID Tracker',
     blurb: 'A GoatTracker2-compatible tracker for the C64 SID chip, with .SID export.',
-    src: 'audio/sid-synth',
+    external: 'https://joakimeriksson.github.io/sid-tracker/',
+    repo: 'https://github.com/joakimeriksson/sid-tracker',
     accent: '#8f88ff',            // C64 screen blue
   },
   {
-    // The same tracker, opened on a different tune. Nothing is forked: the
-    // build copies audio/sid-synth again and drops the birthday .sng in as the
-    // song the app boots with (audio/sid-synth/main.js loads
-    // sids/default-song.sng by name). Regenerate the tune with
-    //   node tools/make-birthday-song.js
-    // from audio/sid-synth; it is covered by `make verify` like every other
-    // song in the corpus.
     slug: 'sid-tracker-birthday',
     title: 'SID Tracker — Happy Birthday',
     blurb: 'The tracker again, opened on a three-voice SID arrangement of ' +
            'Happy Birthday. Press play, then take it apart.',
-    src: 'audio/sid-synth',
+    external: 'https://joakimeriksson.github.io/sid-tracker/happy-birthday/',
+    repo: 'https://github.com/joakimeriksson/sid-tracker',
     accent: '#ffb02e',            // candle yellow
-    overlay: {
-      'sids/default-song.sng': 'audio/sid-synth/sids/happy-birthday.sng',
-    },
-    replace: {
-      'index.html': [
-        ['<title>SID Tracker</title>', '<title>SID Tracker — Happy Birthday</title>'],
-        ['<h1>SID Tracker</h1>', '<h1>SID Tracker <small>Happy Birthday</small></h1>'],
-      ],
-    },
   },
 ]
 
@@ -142,6 +131,15 @@ await mkdir(OUT, { recursive: true })
 const published = []
 for (const demo of DEMOS) {
   if (ONLY.length && !ONLY.includes(demo.slug)) continue
+
+  // Demos hosted from their own repository are linked, never built: there is
+  // no source here to copy, and nothing to keep in sync.
+  if (demo.external) {
+    published.push({ ...demo, href: demo.external })
+    console.log(`[pages] ${demo.slug} -> ${demo.external} (external)`)
+    continue
+  }
+
   const srcPath = resolve(ROOT, demo.src)
   if (!existsSync(srcPath)) {
     console.warn(`[pages] SKIP ${demo.slug}: ${demo.src} not found`)
@@ -234,6 +232,8 @@ await writeFile(resolve(OUT, 'index.html'), `<!doctype html>
     transform:translateX(3px); border-color:var(--accent); outline:none;
   }
   .demos .t { font-weight:600; margin-bottom:.25rem }
+  .demos .x { color:var(--dim); font-size:.8em; margin-left:.4em; font-weight:400 }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
   .demos .b { color:var(--dim); font-size:.94rem }
   .also { margin:0 0 clamp(2.5rem,6vw,4rem); padding:0; list-style:none;
           display:grid; gap:.45rem; color:var(--dim); font-size:.94rem }
@@ -254,8 +254,8 @@ await writeFile(resolve(OUT, 'index.html'), `<!doctype html>
 
   <h2>Live demos</h2>
   <ul class="demos">
-${published.map(d => `    <li><a href="${d.href}" style="--accent:${d.accent ?? '#8e8e97'}">
-      <div class="t">${esc(d.title)}</div>
+${published.map(d => `    <li><a href="${d.href}" style="--accent:${d.accent ?? '#8e8e97'}"${d.external ? ' rel="noopener"' : ''}>
+      <div class="t">${esc(d.title)}${d.external ? '<span class="x" aria-hidden="true">\u2197</span><span class="sr">(separate site)</span>' : ''}</div>
       <div class="b">${esc(d.blurb)}</div>
     </a></li>`).join('\n')}
   </ul>

@@ -54,6 +54,12 @@
       justify-content:center; padding-bottom:5px; font-size:9px; color:var(--dim);
       cursor:pointer; user-select:none; }
   .keys div.on { background:var(--accent); color:#04262b; }
+  .oct { display:flex; align-items:center; gap:6px; margin-top:14px; font-size:11px;
+         color:var(--dim); }
+  .oct button { width:26px; height:22px; background:#1c212a; color:var(--fg);
+         border:1px solid var(--line); border-radius:3px; font:inherit; cursor:pointer; }
+  .oct button:disabled { opacity:.35; cursor:default; }
+  .oct b { color:var(--fg); min-width:3.5em; text-align:center; font-weight:600; }
   .warn { color:var(--warn); }
   footer { position:fixed; bottom:0; left:0; right:0; background:var(--panel);
            border-top:1px solid var(--line); padding:6px 18px; font-size:11px;
@@ -73,6 +79,12 @@
   <section class="body">
     <div class="tabs" id="parts"></div>
     <div class="grid" id="panels"></div>
+    <div class="oct">
+      <button id="octdn" title="Octave down (z)">−</button>
+      <b id="octlbl"></b>
+      <button id="octup" title="Octave up (x)">+</button>
+      <span>z / x</span>
+    </div>
     <div class="keys" id="keys"></div>
   </section>
 </main>
@@ -83,6 +95,7 @@
 </footer>
 
 <script type="module">
+import { MATRIX_FULL } from "./va-dsp.js";
 const $ = s => document.querySelector(s);
 let ctx, node, tone = 0, partial = 1, patch = null, schema = {};
 const held = new Set();
@@ -221,7 +234,27 @@ function draw() {
     card(`LFO 2 · ${n}`,
       ["LFO_2_FORM","LFO_2_RATE","LFO_2_PIT_DEPTH","LFO_2_TVF_DEPTH"]
         .map(id => control(`PTL_LFO_${n}`, id,
-             p.lfo2[id.replace("LFO_2_","").toLowerCase()])));
+             p.lfo2[id.replace("LFO_2_","").toLowerCase()]))) +
+    (p.matrix || []).map((m, i) => matrixCard(P, n, i + 1, m)).join("");
+}
+
+/* One matrix control: a source and four destination/sens pairs. Destinations
+ * the synth does not play yet are flagged - Zenology would still apply them. */
+function matrixCard(P, n, c, m) {
+  const rows = [control(P, `MCTL_${c}_SRC`, m.src, "Source")];
+  const skipped = [];
+  m.dst.forEach((d, k) => {
+    rows.push(control(P, `MCTL_${c}_DST${k + 1}`, d.dst, `Dest ${k + 1}`),
+              control(P, `MCTL_${c}_SENS${k + 1}`, d.sens, `Sens ${k + 1}`));
+    const lbl = d.dst?.label;
+    if (m.src?.label !== "OFF" && lbl && lbl !== "OFF" && d.sens && !(lbl in MATRIX_FULL)) {
+      skipped.push(lbl);
+    }
+  });
+  if (skipped.length) {
+    rows.push(`<div class="row warn">not played by this synth: ${skipped.join(", ")}</div>`);
+  }
+  return card(`Matrix ${c} · ${n}`, rows);
 }
 
 /* ---- editing ----------------------------------------------------------- */
@@ -255,16 +288,30 @@ const MAP = { a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12 };
 const NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B","C"];
 $("#keys").innerHTML = Object.entries(MAP)
   .map(([k,s]) => `<div data-semi="${s}">${NAMES[s]}<br>${k}</div>`).join("");
-const noteOn = s => { const n = 12*(octave+1)+s; if (held.has(n)) return; held.add(n);
+// The note each on-screen key is sounding, so note-off releases that note even
+// if the octave changed while it was held.
+const sounding = new Map();
+const noteOn = s => { const n = 12*(octave+1)+s; if (held.has(n) || sounding.has(s)) return;
+  held.add(n); sounding.set(s, n);
   node?.port.postMessage({type:"noteOn",note:n,velocity:100});
   document.querySelector(`[data-semi="${s}"]`)?.classList.add("on"); };
-const noteOff = s => { const n = 12*(octave+1)+s; held.delete(n);
+const noteOff = s => { const n = sounding.get(s); if (n === undefined) return;
+  sounding.delete(s); held.delete(n);
   node?.port.postMessage({type:"noteOff",note:n});
   document.querySelector(`[data-semi="${s}"]`)?.classList.remove("on"); };
+const setOctave = o => {
+  octave = Math.max(0, Math.min(8, o));
+  $("#octlbl").textContent = `C${octave}`;
+  $("#octdn").disabled = octave === 0;
+  $("#octup").disabled = octave === 8;
+};
+setOctave(octave);
+$("#octdn").onclick = () => setOctave(octave - 1);
+$("#octup").onclick = () => setOctave(octave + 1);
 addEventListener("keydown", async e => {
   if (e.repeat || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-  if (e.key === "z") return void (octave = Math.max(0, octave-1));
-  if (e.key === "x") return void (octave = Math.min(8, octave+1));
+  if (e.key === "z") return void setOctave(octave - 1);
+  if (e.key === "x") return void setOctave(octave + 1);
   if (!(e.key in MAP)) return;
   await audio(); noteOn(MAP[e.key]);
 });

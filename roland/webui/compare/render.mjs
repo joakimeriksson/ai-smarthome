@@ -6,6 +6,8 @@
  *
  *   python3 webui/compare/dump_va.py User2.svz 2 > /tmp/patch.json
  *   node webui/compare/render.mjs /tmp/patch.json /tmp/out.wav --note 62 --hold 2 --dur 3.5
+ *   (--velocity 1..127, default 100 - it matters once the tone has a matrix
+ *    route from VELOCITY)
  *
  * Note/hold/dur default to the conventions in the Synthex compare harness
  * (tools/compare/capture_ref.py), so renders line up with captures.
@@ -32,6 +34,7 @@ if (!patchPath || !outPath) {
 }
 
 const note = arg("note", 62);
+const velocity = arg("velocity", 100);
 const hold = arg("hold", 2.0);
 const dur = arg("dur", 3.5);
 
@@ -91,7 +94,7 @@ for (const m of marks) {
   render(m.at);
   if (m.kind === "on") {
     const v = new VAVoice(SR, patch);
-    v.noteOn(m.ev.note);
+    v.noteOn(m.ev.note, velocity);
     live.set(m.ev, v);
   } else {
     live.get(m.ev)?.noteOff();

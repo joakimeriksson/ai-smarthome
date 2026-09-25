@@ -4,7 +4,7 @@ The `PAT` record holds ~945 parameters, most of which describe the PCM sample
 engine. A partial whose ``OSC_TYPE`` is VA / SuperSAW / Noise generates its
 waveform numerically and touches no sample data at all, so a synth that only
 implements the VA path needs a much smaller slice - the 86 parameters gathered
-here.
+here, plus the partial's matrix control (4 sources x 4 destinations + sens).
 
 This module is a *view*: it decodes, labels and groups, and never changes bytes.
 It deliberately contains no synthesis and no web code, so it is safe for both
@@ -56,6 +56,24 @@ def _lfo(tone, n, which):
     return {k.replace(f"LFO_{which}_", "").lower(): v for k, v in out.items()}
 
 
+def _matrix(tone, group) -> list:
+    """The partial's four matrix controls: one source, up to four destinations.
+
+    Every slot is reported, OFF included, so a UI can show the whole grid and a
+    synth can skip what it does not implement. Labels come from the schema.
+    """
+    return [
+        {
+            "src": _val(tone, group, f"MCTL_{c}_SRC"),
+            "dst": [{"dst": _val(tone, group, f"MCTL_{c}_DST{k}"),
+                     "sens": tone.get(group, f"MCTL_{c}_SENS{k}")}
+                    for k in range(1, 5)],
+        }
+        for c in range(1, 5)
+        if tone.schema.has(group, f"MCTL_{c}_SRC")
+    ]
+
+
 def _partial(tone, n: int) -> dict:
     P, S = f"PCMT_PTL_{n}", f"PCMS_PTL_{n}"
     osc = _fields(tone, S, ("OSC_TYPE", "VA_FORM", "PW", "PWM_DEPTH", "SSAW_DETUNE",
@@ -82,6 +100,7 @@ def _partial(tone, n: int) -> dict:
         "aenv": _env(tone, f"PTL_AENV_{n}", _AMP_ENV),
         "lfo1": _lfo(tone, n, 1),
         "lfo2": _lfo(tone, n, 2),
+        "matrix": _matrix(tone, P),
     }
 
 

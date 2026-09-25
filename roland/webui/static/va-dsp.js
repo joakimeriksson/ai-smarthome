@@ -22,8 +22,18 @@
 const K = (globalThis.__ZC_SCALE ??= {});
 
 export const SCALE = {
-  // cutoff 0..1023 -> Hz, exponential: base * 2^(v/1023 * octaves).  UNFITTED
-  cutoffHz: (v) => (K.cutBase ?? 20) * Math.pow(2, (v / 1023) * (K.cutOct ?? 10)),
+  // cutoff 0..1023 -> Hz, exponential: base * 2^(v/1023 * octaves).  FITTED
+  // 2026-09-23 against Zenology 2.0.9 "MEAS SAW" (user slot 5: one VA saw,
+  // LPF -24, reso 0, KF 0, velocity 1). Reproduce with
+  //   webui/compare/zen_bank.py --slot 5 --param PCMT_PTL_1.CUTOFF \
+  //     --values 192,256,...,896 --out renders/cutoff
+  //   webui/compare/fit_cutoff.py renders/cutoff
+  // Measured on CUTOFF 320..640 (6 points, notes 36/48/60, within 29 cents);
+  // the endpoints 0 -> 5.5 Hz and 1023 -> 19.2 kHz are extrapolated. Below 320
+  // the corner is under the test notes' fundamentals and cannot be located;
+  // above ~640 our filter's SHAPE stops matching Zenology's (residual 0.7 dB at
+  // 640, 4.2 dB at 896) - a filter-model problem, not a constant.
+  cutoffHz: (v) => (K.cutBase ?? 5.505) * Math.pow(2, (v / 1023) * (K.cutOct ?? 11.767)),
   // envelope time 0..1023 -> seconds, exponential, scaled by envMul. UNFITTED
   envTime: (v) => (K.envMul ?? 1) * 0.001 * Math.pow(2, (v / 1023) * 13),
   // envelope level 0..1023 -> linear 0..1.                        UNFITTED
@@ -32,8 +42,11 @@ export const SCALE = {
   pitchSemis: (level, depth) => (level / 511) * (depth / 100) * 48,
   // LFO rate 0..1023 -> Hz, assumed exponential 0.05..~30 Hz.     UNFITTED
   lfoHz: (v) => 0.05 * Math.pow(2, (v / 1023) * 9),
-  // resonance 0..1023 -> filter Q.                                UNFITTED
-  resoQ: (v) => 0.707 + (v / 1023) * 12,
+  // resonance 0..1023 -> filter feedback. Feedback at RESO 0 MEASURED 2026-09-22:
+  // Zenology's reso-0 lowpass matches a plain cascade (feedback 0) best on all
+  // three notes of the MEAS SAW fit; 0.707 roughly doubled the residual. The
+  // slope above 0 is still UNFITTED.
+  resoQ: (v) => (K.resoBase ?? 0) + (v / 1023) * 12,
 };
 
 const TAU = Math.PI * 2;
@@ -51,6 +64,14 @@ const label = (f) => (f && typeof f === "object" ? f.label : null);
 function blep(t, dt) {
   if (t < dt) { t /= dt; return t + t - t * t - 1; }
   if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
+  return 0;
+}
+
+/** polyBLAMP - the same correction for a kink (a jump in slope) rather than a
+ *  jump in value. Scale by the slope change per sample. */
+function blamp(t, dt) {
+  if (t < dt) { t = t / dt - 1; return -t * t * t / 3; }
+  if (t > 1 - dt) { t = (t - 1) / dt + 1; return t * t * t / 3; }
   return 0;
 }
 
@@ -77,20 +98,40 @@ export class VAOsc {
 
   /** Roland applies PULSE WIDTH to VA waveforms other than SQR - the manual
    *  says so explicitly, and factory preset "Kaihou Keys" runs PW=127 on SAW
-   *  partials. Model it as a duty-cycle phase warp, identity at PW=64.
-   *  UNFITTED: the warp shape is a guess; only its presence is verified. */
+   *  partials. SAW has its own measured morph (sawMorph); for the other forms
+   *  this is a duty-cycle phase warp, identity at PW=64.
+   *  UNFITTED for everything but SAW: the warp shape is a guess. */
   warp(p) {
     const w = this.pw;
     if (w <= 0.001 || w >= 0.999 || Math.abs(w - 0.5) < 1e-4) return p;
     return p < w ? 0.5 * (p / w) : 0.5 + 0.5 * ((p - w) / (1 - w));
   }
 
+  /** SAW under PW, MEASURED 2026-09-24 against Zenology 2.0.9 ("MEAS SAW",
+   *  PW 0..127, renders/mx-pw): PW 64 is a plain saw, and moving PW either way
+   *  turns it into a variable-slope triangle whose short edge takes
+   *  |PW-64|/127 of the cycle, capped at a pure triangle (1/2). So PW 0 is a
+   *  pure triangle while a stored PW 127 stops just short of one (harmonic 2
+   *  at -45 dB) - but a matrix route pushing PW past 127 does reach it, so the
+   *  cap is on the shape, not on PW. The harmonic nulls land where that shape
+   *  puts them (PW 32: k = 4, 8, 12 at -41..-62 dB) and the level stays
+   *  constant, as it does for a fixed-peak triangle.
+   *  Aliasing: polyBLAMP on both kinks; it helps little once the short edge is
+   *  under ~2 samples (very high notes near PW 64). */
+  sawMorph(p, dt) {
+    const r = Math.min(0.5, Math.abs(this.pw * 127 - 64) / 127);
+    if (r < dt) return 2 * p - 1 - blep(p, dt);          // edge shorter than a sample
+    const q = 1 - r;                                      // where the peak sits
+    const v = p < q ? -1 + (2 * p) / q : 1 - (2 * (p - q)) / r;
+    const k = (2 / r + 2 / q) * dt;                       // slope change per sample
+    return v + k * blamp(p, dt) - k * blamp((p - q + 1) % 1, dt);
+  }
+
   shape(p, dt) {
+    if (this.form === "SAW") return this.sawMorph(p, dt);
     // SQR carries its own duty cycle; everything else is warped by PW.
     if (this.form !== "SQR" && this.form !== "JUNO") p = this.warp(p);
     switch (this.form) {
-      case "SAW":
-        return 2 * p - 1 - blep(p, dt);
       case "RAMP":
         return -(2 * p - 1 - blep(p, dt));
       case "SQR": {
@@ -205,7 +246,9 @@ export class LFO {
   constructor(sr, cfg) {
     this.sr = sr;
     this.form = label(cfg.form) || "TRI";
-    this.hz = SCALE.lfoHz(raw(cfg.rate, 650));
+    this.rate = raw(cfg.rate, 650);
+    this.hz = SCALE.lfoHz(this.rate);
+    this.rateMod = 0;                 // matrix LFOn-RATE offset, RATE units
     this.delay = SCALE.envTime(raw(cfg.delay, 0));
     this.fade = SCALE.envTime(raw(cfg.fade, 0));
     this.keyTrig = !!raw(cfg.key_trig, 0);
@@ -225,7 +268,10 @@ export class LFO {
   tick() {
     this.t += 1 / this.sr;
     const prev = this.phase;
-    this.phase = (this.phase + this.hz / this.sr) % 1;
+    const hz = this.rateMod
+      ? SCALE.lfoHz(Math.max(0, Math.min(1023, this.rate + this.rateMod)))
+      : this.hz;
+    this.phase = (this.phase + hz / this.sr) % 1;
     const p = this.phase;
     let v;
     switch (this.form) {
@@ -247,6 +293,57 @@ export class LFO {
     if (this.t < this.delay) return 0;
     const f = this.fade > 0 ? Math.min(1, (this.t - this.delay) / this.fade) : 1;
     return v * f;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Matrix control - 4 per partial, each one source to up to 4 destinations
+ * ---------------------------------------------------------------------- */
+
+/** How far sens 63 at full source moves each destination, in that
+ *  destination's own parameter units (and what those units mean here).
+ *
+ *  MEASURED 2026-09-24 for PW only (Zenology 2.0.9, MEAS SAW, renders/mx-vel and
+ *  renders/mx-sens): the offset is sens/63 * source * 127, i.e. sens 63 at full
+ *  source spans the whole 0..127 range. It was linear in sens (+-8, 16, 24, 31
+ *  -> 15, 32, 48, 63 PW units) and in velocity (1..127). Beyond that the SAW
+ *  shape saturates at a pure triangle rather than PW clamping at 0/127.
+ *
+ *  UNFITTED for every other row: each assumes the same rule - full scale is the
+ *  destination parameter's whole schema range. PCH in particular (96 semitones
+ *  at sens 63, from PIT_CRS -48..48) is a guess worth measuring first. */
+export const MATRIX_FULL = {
+  PW: 127,                 // PW units 0..127                          MEASURED
+  PWM: 126,                // PWM_DEPTH units -63..63                  UNFITTED
+  PCH: 96,                 // semitones                                UNFITTED
+  CUT: 1023,               // CUTOFF units                             UNFITTED
+  RES: 1023,               // RESO units                               UNFITTED
+  LEV: 127,                // LEVEL units                              UNFITTED
+  PAN: 127,                // PAN units -64..63                        UNFITTED
+  ATT: 255,                // OSC_ATT units                            UNFITTED
+  "PIT-LFO1": 200, "PIT-LFO2": 200,   // LFO depth units -100..100     UNFITTED
+  "TVF-LFO1": 200, "TVF-LFO2": 200,
+  "TVA-LFO1": 200, "TVA-LFO2": 200,
+  "LFO1-RATE": 1023, "LFO2-RATE": 1023,  // LFO RATE units             UNFITTED
+};
+
+/** Source values, 0..1 or -1..1. VELOCITY is MEASURED: unipolar and linear,
+ *  velocity/127 (the PW offset grew in proportion from 1 to 127, with no
+ *  centre at 64). The rest are UNFITTED assumptions:
+ *  LFOs and envelopes pass their own output through, KEYFOLLOW is bipolar
+ *  around C4 reaching +-1 five octaves away. Controllers (CCxx, BEND, AFT,
+ *  SYS-CTRLn) read Voice.controllers, which nothing sets yet - so they are 0,
+ *  which is what an untouched mod wheel sends. */
+function matrixSource(name, st) {
+  switch (name) {
+    case "VELOCITY": return st.vel;
+    case "KEYFOLLOW": return st.key;
+    case "LFO1": return st.l1;
+    case "LFO2": return st.l2;
+    case "PIT-ENV": return st.pe;
+    case "TVF-ENV": return st.fe;
+    case "TVA-ENV": return st.ae;
+    default: return st.ctl?.[name] ?? 0;
   }
 }
 
@@ -282,11 +379,41 @@ class Partial {
     this.pwmDepth = raw(cfg.osc.PWM_DEPTH, 0) / 63;
     this.basePw = this.osc.pw;
     this.att = raw(cfg.osc.OSC_ATT, 255) / 255;
+    this.basePan = this.pan;
     this.vel = 1;
+
+    // Active matrix routes. Anything this synth has no place for is listed in
+    // `unsupported` rather than silently dropped, so the UI can say so.
+    this.routes = [];
+    this.unsupported = [];
+    for (const c of cfg.matrix || []) {
+      const src = label(c.src);
+      if (!src || src === "OFF") continue;
+      for (const d of c.dst) {
+        const dst = label(d.dst);
+        if (!dst || dst === "OFF" || !d.sens) continue;
+        if (dst in MATRIX_FULL) {
+          this.routes.push({ src, dst, amt: (d.sens / 63) * MATRIX_FULL[dst] });
+        } else {
+          this.unsupported.push(`${src}->${dst}`);
+        }
+      }
+    }
+    this.mod = Object.fromEntries(Object.keys(MATRIX_FULL).map((k) => [k, 0]));
+    this.state = { vel: 0, key: 0, l1: 0, l2: 0, pe: 0, fe: 0, ae: 0, ctl: null };
+  }
+
+  /** Sum every route into this.mod. Envelope and LFO sources use the previous
+   *  sample's values, so a route may feed its own source (LFO1 -> LFO1-RATE). */
+  evalMatrix() {
+    const m = this.mod;
+    for (const k in m) m[k] = 0;
+    for (const r of this.routes) m[r.dst] += r.amt * matrixSource(r.src, this.state);
   }
 
   noteOn(velocity = 100) {
     this.vel = velocity / 127;
+    this.state.vel = velocity / 127;
     this.aenv.noteOn(); this.fenv.noteOn(); this.penv.noteOn();
     this.lfo1.reset(); this.lfo2.reset();
     this.osc.reset(0);
@@ -296,37 +423,64 @@ class Partial {
 
   /** One sample. `hz` is the note frequency before this partial's own tuning.
    *  `detune` is the unison voice's offset in cents. */
-  tick(hz, detune = 0) {
-    const l1 = this.lfo1.tick();
-    const l2 = this.lfo2.tick();
+  tick(hz, detune = 0, controllers = null) {
+    const st = this.state;
+    st.key = Math.log2(Math.max(hz, 1) / 261.6) / 5;
+    st.ctl = controllers;
+    const m = this.mod;
+    if (this.routes.length) this.evalMatrix();
 
-    const pitchMod = SCALE.pitchSemis(this.penv.tick() * 511, this.penvDepth)
-                   + (this.lfo1.pitch * l1 + this.lfo2.pitch * l2) * 12;
+    this.lfo1.rateMod = m["LFO1-RATE"];
+    this.lfo2.rateMod = m["LFO2-RATE"];
+    const l1 = (st.l1 = this.lfo1.tick());
+    const l2 = (st.l2 = this.lfo2.tick());
+    const pe = (st.pe = this.penv.tick());
+    const fe = (st.fe = this.fenv.tick());
+    const ae = (st.ae = this.aenv.tick());
+
+    const pitchMod = SCALE.pitchSemis(pe * 511, this.penvDepth)
+                   + ((this.lfo1.pitch + m["PIT-LFO1"] / 100) * l1
+                    + (this.lfo2.pitch + m["PIT-LFO2"] / 100) * l2) * 12
+                   + m.PCH;
     const f = hz * Math.pow(2,
       (this.coarse + this.fine + pitchMod + detune / 100) / 12);
 
-    // PWM is driven by LFO2 - the manual is explicit about that
-    if (this.pwmDepth) {
-      this.osc.pw = Math.min(0.95, Math.max(0.05,
-        this.basePw + l2 * this.pwmDepth * 0.45));
+    // PWM is driven by LFO2 - the manual is explicit about that. The matrix
+    // adds to both the static PW and the PWM depth.
+    const pwmDepth = this.pwmDepth + m.PWM / 63;
+    if (pwmDepth || m.PW) {
+      const pw = this.basePw + m.PW / 127 + l2 * pwmDepth * 0.45;
+      // SAW saturates by itself (see sawMorph) - clamping PW here would stop
+      // it short of the pure triangle Zenology reaches. The pulse shapes keep
+      // their old guard against a zero-width (silent) pulse.
+      this.osc.pw = this.osc.form === "SAW"
+        ? pw
+        : Math.min(0.95, Math.max(0.05, pw));
     }
 
-    let s = this.osc.tick(f) * this.att;
+    let s = this.osc.tick(f) * Math.max(0, this.att + m.ATT / 255);
 
-    // cutoff: patch value + filter envelope + LFOs + velocity + key follow
+    // cutoff: patch value + filter envelope + LFOs + velocity + key follow + matrix
     let cut = this.cutoff
-      + this.fenv.tick() * 1023 * (this.fenvDepth / 63)
-      + (this.lfo1.tvf * l1 + this.lfo2.tvf * l2) * 512
+      + fe * 1023 * (this.fenvDepth / 63)
+      + ((this.lfo1.tvf + m["TVF-LFO1"] / 100) * l1
+       + (this.lfo2.tvf + m["TVF-LFO2"] / 100) * l2) * 512
       + this.cutoffVSens * (this.vel - 0.5) * 1023
-      + this.cutoffKF * Math.log2(Math.max(hz, 1) / 261.6) * 170;
+      + this.cutoffKF * Math.log2(Math.max(hz, 1) / 261.6) * 170
+      + m.CUT;
     cut = Math.max(0, Math.min(1023, cut));
-    s = this.filter.process(s, SCALE.cutoffHz(cut), SCALE.resoQ(this.reso),
+    const reso = Math.max(0, Math.min(1023, this.reso + m.RES));
+    s = this.filter.process(s, SCALE.cutoffHz(cut), SCALE.resoQ(reso),
                             this.ftype, this.poles);
 
+    this.pan = Math.max(-1, Math.min(1, this.basePan + m.PAN / 64));
+
     // amp: envelope, patch level, velocity sensitivity, LFO tremolo
-    const trem = 1 + (this.lfo1.tva * l1 + this.lfo2.tva * l2);
+    const trem = 1 + ((this.lfo1.tva + m["TVA-LFO1"] / 100) * l1
+                    + (this.lfo2.tva + m["TVA-LFO2"] / 100) * l2);
     const velGain = 1 + this.levelVSens * (this.vel - 0.5) * 2;
-    return s * this.aenv.tick() * this.level * Math.max(0, velGain) * Math.max(0, trem);
+    const level = Math.max(0, this.level + m.LEV / 127);
+    return s * ae * level * Math.max(0, velGain) * Math.max(0, trem);
   }
 
   /** Pan including any LFO movement, as -1..+1. */
@@ -372,6 +526,9 @@ export class VAVoice {
     this.fine = raw(patch.common.PIT_FINE, 0) / 100;
     this.note = 69;
     this.velocity = 100;
+    /** Matrix controller sources by schema label ("SYS-CTRL1", "CC74", "BEND"
+     *  ...), 0..1 or -1..1. Nothing sets these yet, so they read as 0. */
+    this.controllers = {};
   }
 
   noteOn(note, velocity = 100) {
@@ -408,7 +565,7 @@ export class VAVoice {
             if (other) fmod = other.dsp.osc.shape(other.dsp.osc.phase, 0)
                               * this.xmodDepth * 1200;   // cents
           }
-          let s = dsp.tick(hz, stack.detune + fmod);
+          let s = dsp.tick(hz, stack.detune + fmod, this.controllers);
 
           if (pair === "SYNC" && other && other.dsp.osc.syncedThisSample) {
             dsp.osc.reset(0);                       // slave reset by the master

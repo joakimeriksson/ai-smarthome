@@ -197,5 +197,63 @@ function render(p, note = 57, secs = 0.5) {
      `open ${bright(a).toFixed(4)} shut ${bright(b).toFixed(4)}`);
 }
 
+// --- saw PW morph (measured against Zenology 2.0.9) ------------------------
+{
+  const hs = (pw) => {
+    const o = new VAOsc(SR); o.form = "SAW"; o.pw = pw / 127;
+    const buf = new Float32Array(SR);
+    for (let i = 0; i < SR; i++) buf[i] = o.tick(220);
+    return [1, 2, 3, 4, 5].map((k) => magAt(buf, 220 * k));
+  };
+  const tri = hs(0);
+  ok("SAW at PW 0 is a triangle: no even harmonics", tri[1] / tri[0] < 0.01,
+     `h2/h1 = ${(tri[1]/tri[0]).toFixed(4)}`);
+  ok("SAW at PW 0 is a triangle: h3 ~ 1/9", close(tri[2] / tri[0], 1 / 9, 0.01),
+     `got ${(tri[2]/tri[0]).toFixed(4)}`);
+  const quarter = hs(32);
+  ok("SAW at PW 32 has its null at harmonic 4", quarter[3] / quarter[0] < 0.01,
+     `h4/h1 = ${(quarter[3]/quarter[0]).toFixed(4)}`);
+  const mirror = hs(96);
+  ok("SAW morph is symmetric about PW 64",
+     [1, 2, 4].every((k) => close(mirror[k] / mirror[0], quarter[k] / quarter[0], 0.01)));
+}
+
+// --- matrix control ---------------------------------------------------------
+{
+  const mx = (src, dst, sens) => [
+    { src: { value: 0, label: src }, dst: [
+      { dst: { value: 0, label: dst }, sens },
+      { dst: { value: 0, label: "OFF" }, sens: 0 },
+      { dst: { value: 0, label: "OFF" }, sens: 0 },
+      { dst: { value: 0, label: "OFF" }, sens: 0 }] }];
+  const h2of = (p, vel) => {
+    const n = Math.round(0.4 * SR), L = new Float32Array(n), R = new Float32Array(n);
+    const v = new VAVoice(SR, p); v.noteOn(57, vel); v.process(L, R, n);
+    const seg = L.subarray(SR * 0.1);
+    return { r: magAt(seg, 440) / magAt(seg, 220), v };
+  };
+  const vp = patch();
+  vp.partials[0].matrix = mx("VELOCITY", "PW", -31);
+  ok("VELOCITY->PW: velocity 1 leaves a plain saw", close(h2of(vp, 1).r, 0.5, 0.03),
+     `h2/h1 = ${h2of(vp, 1).r.toFixed(3)}`);
+  ok("VELOCITY->PW: velocity 127 makes a near-triangle", h2of(vp, 127).r < 0.03,
+     `h2/h1 = ${h2of(vp, 127).r.toFixed(3)}`);
+
+  const past = patch();
+  past.partials[0].matrix = mx("VELOCITY", "PW", 63);
+  ok("matrix can push the saw all the way to a triangle", h2of(past, 127).r < 0.005,
+     `h2/h1 = ${h2of(past, 127).r.toFixed(4)}`);
+
+  const wheel = patch();
+  wheel.partials[0].matrix = mx("SYS-CTRL1", "PW", 63);
+  ok("an untouched controller source changes nothing", close(h2of(wheel, 100).r, 0.5, 0.03));
+
+  const odd = patch();
+  odd.partials[0].matrix = mx("VELOCITY", "CHO", 20);
+  const { v } = h2of(odd, 100);
+  ok("unsupported destinations are reported, not dropped",
+     v.stacks[0].partials[0].dsp.unsupported.includes("VELOCITY->CHO"));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -137,18 +137,65 @@ move it up into "Verified facts" *with the evidence that settled it*.
   underneath it — a slot written at 20:27 was gone by 21:25 with Logic still
   open. Quit every host before writing the bank, and re-read the file
   immediately before writing rather than trusting an earlier capture.
-- Whether a tone written into `User.bin` shows up in the plugin is **still
-  untested**. It looked like a failure on 2026-07-31 — a slot we built never
-  appeared in the browser — but the bank had been silently reverted by a running
-  Zenology before the plugin read it (file back to its pre-write size and
-  timestamp). That is the gotcha above, not evidence about slot validity. To
-  test it properly: quit every host, write, confirm the file still holds the
-  slot, THEN start the plugin.
+- **A tone written into `User.bin` IS picked up by the plugin** (verified
+  2026-09-22). With every host quit, 12 copies of slot 005 differing only in
+  `PCMT_PTL_1.CUTOFF` were written with `set_tone_bytes` + `pack_ext` +
+  `refresh_meta` + `build`, and a fresh plugin instance rendered each one with
+  the filter moving exactly as the stored value predicted. Writing the unchanged
+  tone reproduced the original file byte for byte. The earlier apparent failure
+  (2026-07-31) was the running-Zenology revert described above. Only an edit to
+  an existing slot's tone record has been tested, not a new slot.
 - Measurement noise floors, measured 2026-07-30, for anything comparing audio:
   BlackHole capture of the same patch twice differs by **2.57 dB**; an offline
   DawDreamer render of the same patch twice differs by **1.30 dB** (the plugin
   is not deterministic - Analog Feel, pitch drift, free-running LFOs). Any
   "improvement" smaller than those numbers is not a result.
+
+  Tone-dependent: on a tone with Analog Feel 0 and no free LFOs ("MEAS SAW",
+  2026-09-22) four DawDreamer renders were identical, so the floor there is ~0.
+
+## Zenology as an audio reference (verified 2026-09-22, Zenology 2.0.9)
+
+- DawDreamer hosts the VST3 headlessly. If the plugin says **Demo Mode**
+  (ZENOLOGY Lite) every render is exact silence - log in via Roland Cloud first.
+- A fresh plugin instance opens on the **last tone selected** in any host, so the
+  tone under test is chosen by selecting it once in the editor.
+- Loading the plugin rewrites `User.bin` (new mtime, identical bytes).
+- The per-partial host parameters (`TVF CUTOFF 1..4` etc.) read 0 whatever the
+  tone holds and **change nothing** when set. The common macros (`CUTOFF`,
+  `RESO`, `ATTACK`, `RELEASE`, -64..+63) do work, as offsets.
+- **PW turns Zenology's VA SAW into a variable-slope triangle** (measured
+  2026-09-24, `renders/mx-pw`): PW 64 is a plain saw, and the short edge takes
+  |PW-64|/127 of the cycle, capped at a pure triangle. Symmetric about 64, level
+  constant. Implemented in `VAOsc.sawMorph` in `webui/static/va-dsp.js`.
+- **Matrix control** (`MCTL_1..4` per partial, one source -> up to four
+  destinations with sens -63..+63). Measured for VELOCITY -> PW only
+  (`renders/mx-vel`, `renders/mx-sens`): VELOCITY is unipolar and linear
+  (velocity/127, no centre at 64), and the offset is sens/63 * source * 127 PW
+  units - linear in both. Pushed past the end, the saw saturates at a pure
+  triangle (the cap is on the shape, not on PW). Every other destination's
+  scaling in `MATRIX_FULL` is an assumption (full scale = the destination's
+  schema range) and is marked UNFITTED. Controller sources (CCxx, BEND, AFT,
+  SYS-CTRLn) read 0 because nothing feeds them yet.
+- Which tones carry which routes: "MEAS SAW" has VELOCITY -> PW -31 because it
+  was set by hand. INIT tones do NOT (Test1 has no live route); the hand-built
+  corpus tones route SYS-CTRL1 (normally the mod wheel) to CUT / PIT-LFO1 /
+  LFO1-RATE, which is silent until a controller moves.
+- Level still rises ~3.8 dB from velocity 1 to 127 with the matrix route off -
+  that is `LEVEL_VSENS` (10 on MEAS SAW), which our synth models more weakly
+  (~1.7 dB). Unfitted.
+- Correction: an earlier note here said velocity 64 renders silence. It did not
+  reproduce (`renders/mx-vel`, velocity 63/64/65 all normal) - that render was a
+  glitch, not a property of the plugin.
+- **Tools:** `webui/compare/zen_bank.py` renders copies of a user-bank tone
+  that differ in one parameter (writes the bank, renders each in a fresh
+  plugin, restores the bank byte for byte - also keeps `User.bin.orig` in the
+  output dir). `webui/compare/fit_cutoff.py` fits `SCALE.cutoffHz` to a
+  CUTOFF run. The `SCALE.cutoffHz` comment in `webui/static/va-dsp.js` records
+  the exact commands, what was measured and what is extrapolated.
+- A cutoff can only be located from a note whose fundamental sits below it:
+  otherwise every harmonic is on the -24 dB/oct slope and level alignment hides
+  where the slope starts. `fit_cutoff.py` drops those points.
 
 ## Layout
 
@@ -222,7 +269,8 @@ same measure-don't-guess approach the rest of the project uses.
 
 `zencore/va.py` is the contract between them: 86 parameters, all present in the
 schema, covering oscillator / structure / filter / three envelopes / two LFOs /
-unison. A partial with `OSC_TYPE` of VA, SuperSAW or Noise synthesises and needs
+unison, plus each partial's matrix control (`partials[n].matrix`: 4 controls x
+{src, 4 x {dst, sens}}, every slot reported, OFF included). A partial with `OSC_TYPE` of VA, SuperSAW or Noise synthesises and needs
 no wave data; `patch["playable"]` says whether a VA-only synth can play a tone.
 
 Enum labels now come from `Param.values` (Roland's `desc_val`, added to the

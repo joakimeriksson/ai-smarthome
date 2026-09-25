@@ -22,18 +22,12 @@
 const K = (globalThis.__ZC_SCALE ??= {});
 
 export const SCALE = {
-  // cutoff 0..1023 -> Hz, exponential: base * 2^(v/1023 * octaves).  FITTED
-  // 2026-09-23 against Zenology 2.0.9 "MEAS SAW" (user slot 5: one VA saw,
-  // LPF -24, reso 0, KF 0, velocity 1). Reproduce with
-  //   webui/compare/zen_bank.py --slot 5 --param PCMT_PTL_1.CUTOFF \
-  //     --values 192,256,...,896 --out renders/cutoff
-  //   webui/compare/fit_cutoff.py renders/cutoff
-  // Measured on CUTOFF 320..640 (6 points, notes 36/48/60, within 29 cents);
-  // the endpoints 0 -> 5.5 Hz and 1023 -> 19.2 kHz are extrapolated. Below 320
-  // the corner is under the test notes' fundamentals and cannot be located;
-  // above ~640 our filter's SHAPE stops matching Zenology's (residual 0.7 dB at
-  // 640, 4.2 dB at 896) - a filter-model problem, not a constant.
-  cutoffHz: (v) => (K.cutBase ?? 5.505) * Math.pow(2, (v / 1023) * (K.cutOct ?? 11.767)),
+  // cutoff 0..1023 -> Hz for the partial's VCF model. MEASURED - see VCF_MODELS.
+  // __ZC_SCALE.cutBase/cutOct override it with a plain exponential, which
+  // render_grid.mjs uses to pin the filter at a chosen frequency.
+  cutoffHz: (v, model = "VCF1") => K.cutBase != null
+    ? K.cutBase * Math.pow(2, (v / 1023) * (K.cutOct ?? 0))
+    : vcfModel(model).hz(v),
   // envelope time 0..1023 -> seconds, exponential, scaled by envMul. UNFITTED
   envTime: (v) => (K.envMul ?? 1) * 0.001 * Math.pow(2, (v / 1023) * 13),
   // envelope level 0..1023 -> linear 0..1.                        UNFITTED
@@ -42,11 +36,9 @@ export const SCALE = {
   pitchSemis: (level, depth) => (level / 511) * (depth / 100) * 48,
   // LFO rate 0..1023 -> Hz, assumed exponential 0.05..~30 Hz.     UNFITTED
   lfoHz: (v) => 0.05 * Math.pow(2, (v / 1023) * 9),
-  // resonance 0..1023 -> filter feedback. Feedback at RESO 0 MEASURED 2026-09-22:
-  // Zenology's reso-0 lowpass matches a plain cascade (feedback 0) best on all
-  // three notes of the MEAS SAW fit; 0.707 roughly doubled the residual. The
-  // slope above 0 is still UNFITTED.
-  resoQ: (v) => (K.resoBase ?? 0) + (v / 1023) * 12,
+  // resonance 0..1023 -> ladder feedback k (self-oscillation at 4) for the
+  // partial's VCF model. MEASURED - see VCF_MODELS.
+  resoK: (v, model = "VCF1") => vcfModel(model).k(v),
 };
 
 const TAU = Math.PI * 2;
@@ -153,6 +145,8 @@ export class VAOsc {
         return Math.sign(t) * Math.pow(Math.abs(t), 0.6);
       }
       case "SIN": return Math.sin(TAU * p);
+      // ZEN-Core's Noise oscillator; Zenology's is white to 0.3 dB (renders/noise-open)
+      case "NOISE": return Math.random() * 2 - 1;
       case "SIN2": {
         const s = Math.sin(TAU * p);
         return Math.sign(s) * Math.pow(Math.abs(s), 0.7);
@@ -212,28 +206,239 @@ export class Env {
 }
 
 /* -------------------------------------------------------------------------
- * Filter - cascaded one-poles, 12/18/24 dB per octave
+ * Filter - the ZEN-Core VA lowpass
  * ---------------------------------------------------------------------- */
 
+/** Zenology's VA filter, MEASURED 2026-09-25 (Zenology 2.0.9) with a white-noise
+ *  probe - the Noise oscillator is white to 0.3 dB - through every VCF_TYPE x
+ *  FILTER_SLOPE x RESO x CUTOFF (renders/fs, renders/fd):
+ *
+ *  This is the VCF, used when the partial's filter mode (PCMS FILTER_TYPE) is
+ *  VCF. The TVF - the other mode - is TvfFilter below.
+ *  - In VCF mode it is always a lowpass: the TVF type (PCMT FILTER_TYPE, OFF/
+ *    LPF/BPF/HPF/PKG/LPF2/LPF3) gave byte-identical audio on VCF1 and JP, as
+ *    the Parameter Guide says ("If Filter Type is set to VCF, this will be LPF").
+ *  - Every model is the same structure: four identical one-pole stages with
+ *    resonance fed back from stage 4, and FILTER_SLOPE choosing which stage is
+ *    heard (-12/-18/-24 = after stage 2/3/4). Evidence: the passband drop with
+ *    resonance is identical at every slope, and the peak sits at the stage
+ *    cutoff for all of them.
+ *  - It is a bilinear (zero-delay-feedback) ladder: that digital response fits
+ *    Zenology to 0.01-0.05 dB up to 22 kHz; an analog one misses by 4+ dB above
+ *    CUTOFF 768.
+ *  - No passband compensation: RESO costs level (-13.5 dB at RESO 900), as in
+ *    an analog ladder, i.e. 1 / (1 + k).
+ *
+ *  The models differ only in their cutoff law and resonance curve, tabulated
+ *  in VCF_MODELS from webui/compare/fit_vcf.py. Near self-oscillation the
+ *  ladder saturates: in the feedback (sat) and at its input (insat, per model),
+ *  with MG's top k refitted through that nonlinearity (VCF_EXTRA.knl).
+ *
+ *  Validation vs Zenology, 2026-09-26 (webui/compare/validate_filters.py):
+ *  noise, 108 settings: 0.55-0.60 dB mean (run-to-run spread ~0.05), worst
+ *  ~3 dB on P5 at RESO 900; saw, filter only: RESO 0 0.32 dB, RESO 800 1.24 dB.
+ *  RESO 1023 on a saw is 1-5 dB louder than Zenology's; a ring far below the
+ *  note (CUTOFF 256, strong resonance) is 7-11 dB off - set by the note-on
+ *  transient. */
 export class Filter {
-  constructor(sampleRate) { this.sr = sampleRate; this.z = [0, 0, 0, 0]; }
+  constructor(sampleRate) { this.sr = sampleRate; this.s = [0, 0, 0, 0]; }
 
-  /** type: LPF|BPF|HPF|OFF, poles: 2|3|4 */
-  process(x, hz, q, type, poles) {
-    if (type === "OFF" || type == null) return x;
-    const f = Math.min(0.45, Math.max(1e-5, hz / this.sr));
-    const g = 1 - Math.exp(-TAU * f);
-    const fb = q * (1 - 0.15 * g * g);
-    let v = x - fb * this.z[poles - 1];
-    v = Math.tanh(v * 0.7) / 0.7;                    // soft clip, keeps it stable
-    for (let i = 0; i < poles; i++) {
-      this.z[i] += g * (v - this.z[i]);
-      v = this.z[i];
+  /** hz: stage cutoff; k: feedback (4 = self-oscillation); poles: 2|3|4;
+   *  sat: the feedback's saturation level; insat: the ladder input's (0 = none).
+   *  Both per model, VCF_EXTRA. */
+  process(x, hz, k, poles = 4, sat = 1, insat = 0) {
+    const s = this.s;
+    const g = Math.tan(Math.PI * Math.min(hz, this.sr * 0.49) / this.sr);
+    const G = g / (1 + g);
+    const b = 1 / (1 + g);
+    // Solve the feedback loop for this sample (no unit delay):
+    // y4 = G^4 u + b (G^3 s0 + G^2 s1 + G s2 + s3), u = x - k y4
+    const sigma = b * (G * (G * (G * s[0] + s[1]) + s[2]) + s[3]);
+    const G4 = G * G * G * G;
+    // Saturate only what is fed back: at RESO 0 the filter is then exactly
+    // linear, as Zenology's is (its reso-0 harmonics fit a linear ladder to
+    // 0.1 dB at full level), while self-oscillation stays bounded.
+    const y4 = (G4 * x + sigma) / (1 + k * G4);
+    let u = x - k * sat * Math.tanh(y4 / sat);
+    // Input saturation: fitted per model on Zenology's saw at RESO 0/800/1023
+    // (renders/ab, renders/selfosc); it tames strong resonance without
+    // touching RESO 0, which stays within 0.1-0.2 dB. MG fits best without it.
+    const L = K.vcfInSat ?? insat;
+    if (L) u = L * Math.tanh(u / L);
+    let out = u;
+    for (let i = 0; i < 4; i++) {                    // all four run: stage 4 feeds back
+      const w = (u - s[i]) * G;
+      const y = w + s[i];
+      s[i] = y + w;
+      u = y;
+      if (i === poles - 1) out = y;
     }
-    if (type === "LPF") return v;
-    if (type === "HPF") return x - v;
-    if (type === "BPF") return this.z[0] - v;
-    return v;
+    return out;
+  }
+}
+
+/** Per-model tables: cutoff law [[CUTOFF, Hz], ...] and resonance [[RESO, k], ...],
+ *  each point a fit of the bilinear ladder to a Zenology noise render. Values
+ *  between points are interpolated (log-frequency for the cutoff). */
+export const VCF_MODELS = /*VCF_TABLES*/{
+  VCF1: {
+    cut: [[128, 14.3], [256, 40.51], [384, 115.61], [512, 330.89], [640, 948.45], [768, 2713.74], [896, 7754.23], [1023, 22045.55]],
+    k: [[0, 0.0], [128, 0.522], [256, 1.045], [384, 1.566], [512, 2.086], [640, 2.604], [768, 3.102], [896, 3.546], [1023, 4.262]],
+  },
+  JP: {
+    cut: [[128, 43.18], [256, 108.63], [384, 273.86], [512, 691.35], [640, 1745.41], [768, 4391.84], [896, 11014.81], [1023, 22045.59]],
+    k: [[0, 0.0], [128, 0.196], [256, 0.522], [384, 0.98], [512, 1.566], [640, 2.215], [768, 2.851], [896, 3.439], [1023, 4.331]],
+  },
+  MG: {
+    cut: [[128, 54.72], [256, 137.79], [384, 347.57], [512, 880.06], [640, 2214.17], [768, 5561.9], [896, 13950.78], [1023, 22045.59]],
+    k: [[0, 0.0], [128, 0.114], [256, 0.457], [384, 1.029], [512, 1.826], [640, 2.833], [768, 3.75], [896, 3.76], [1023, 4.35]],
+  },
+  P5: {
+    cut: [[128, 15.77], [256, 39.45], [384, 99.2], [512, 250.09], [640, 631.27], [768, 1593.98], [896, 4010.32], [1023, 10000.35]],
+    k: [[0, 0.0], [128, 0.375], [256, 0.979], [384, 1.81], [512, 2.853], [640, 3.721], [768, 3.752], [896, 3.799], [1023, 4.223]],
+  },
+}/*END_VCF_TABLES*/;
+
+/** VCF-mode extras, MEASURED 2026-09-26 (renders/vcf-hpf, renders/vcf-gc; hpf and
+ *  gc written by fit_vcf.py, knl and insat by fit_vcf_nl.py). hpf: [HPF_CUTOFF, Hz, leak dB, gain dB] - a one-pole bilinear
+ *  highpass plus a small dry leak; it does nothing in TVF mode (measured, as
+ *  the Parameter Guide says). gc: VCF_GC is a flat make-up gain for the level
+ *  resonance costs, 1 + gc * (VCF_GC/127) * k; no effect at RESO 0 (measured).
+ *  The HPF's position relative to the ladder is not known - it sits before it. */
+export const VCF_EXTRA = /*VCF_EXTRA*/{"hpf": [[128, 14.34, -25.8, -0.43], [256, 40.78, -25.8, -0.43], [384, 116.18, -25.8, -0.43], [512, 332.73, -24.2, -0.52], [640, 945.52, -24.9, -0.49], [768, 2619.41, -26.0, -0.5], [896, 6133.88, -28.8, -1.02], [1023, 9628.07, -35.8, -4.31]], "gc": 1.177, "knl": {"MG": [[768, 4.1], [896, 4.1], [1023, 4.2]]}, "insat": {"VCF1": 4, "JP": 2.5, "P5": 2.5}}/*END_VCF_EXTRA*/;
+
+/** One-pole zero-delay-feedback highpass with the measured leak. */
+export class HighPass {
+  constructor(sampleRate) { this.sr = sampleRate; this.s = 0; }
+  process(x, hz, leak, gain) {
+    const g = Math.tan(Math.PI * Math.min(hz, this.sr * 0.49) / this.sr);
+    const v = (x - this.s) * (g / (1 + g));
+    const lp = v + this.s;
+    this.s = lp + v;
+    return (x - lp + leak * x) * gain;
+  }
+}
+
+function interp(table, v, log) {
+  if (v <= table[0][0]) {
+    // below the first point, continue the first segment (the laws are exponential)
+    const [[x0, y0], [x1, y1]] = table;
+    const t = (v - x0) / (x1 - x0);
+    return log ? y0 * Math.pow(y1 / y0, t) : y0 + (y1 - y0) * t;
+  }
+  for (let i = 1; i < table.length; i++) {
+    const [x1, y1] = table[i];
+    if (v <= x1) {
+      const [x0, y0] = table[i - 1];
+      const t = (v - x0) / (x1 - x0);
+      return log ? y0 * Math.pow(y1 / y0, t) : y0 + (y1 - y0) * t;
+    }
+  }
+  return table[table.length - 1][1];
+}
+
+const vcfCache = {};
+function vcfModel(name) {
+  if (vcfCache[name]) return vcfCache[name];
+  const m = VCF_MODELS[name] || VCF_MODELS.VCF1;
+  // Where the ladder saturates, a linear fit reads k too low (P5 plateaued at
+  // 3.7-3.8 from RESO 640). VCF_EXTRA.knl holds k refitted by simulating this
+  // nonlinear filter against Zenology's noise and saw renders; it replaces the
+  // linear points it covers.
+  const nl = VCF_EXTRA.knl?.[name] || [];
+  const ktab = m.k.filter(([r]) => !nl.some(([n]) => n === r)).concat(nl)
+    .sort((a, b) => a[0] - b[0]);
+  return (vcfCache[name] = {
+    hz: (v) => interp(m.cut, v, true),
+    k: (v) => Math.max(0, interp(ktab, v, false)),     // feedback is never negative
+  });
+}
+
+/** The TVF: the partial filter in TVF mode (Zenology's INIT tone uses it).
+ *  MEASURED 2026-09-26 against Zenology 2.0.9 with the white-noise probe
+ *  (renders/tvf; tables from webui/compare/fit_tvf.py):
+ *
+ *  - A Chamberlin state-variable filter (low += F band; high = x - low - q band;
+ *    band += F high) - its slope flattens toward Nyquist exactly as Zenology's
+ *    does; a bilinear filter misses by up to 11 dB. F = 2 sin(pi fc / fs) on
+ *    VCF1's cutoff law, to 0.2%.
+ *  - LPF, BPF and HPF are its low, band and high outputs, +1.2 dB hotter than
+ *    the VCF path; PKG is low + high + w band at its own gain (+0.7 dB). All
+ *    fit to ~0.01 dB.
+ *  - Resonance sets q (TVF.q), and costs no passband level. At RESO 0 the
+ *    damping eases toward the top of the range (TVF.m); with resonance up it
+ *    holds within 1-4%, so the easing is weighted by q / q(RESO 0).
+ *  - -24 is a fixed stage at the RESO-0 damping followed by the resonant one
+ *    (two identical resonant stages miss by up to 6.5 dB). -18 runs as -12.
+ *  - LPF2 is LPF with resonance ignored - statically identical at every cutoff;
+ *    it differs under the filter envelope (see Partial.tick). LPF3 ignores
+ *    resonance too and is critically damped, q = min(2, 1/F).
+ *  - Top of the range: with resonance, F follows the law up to CUTOFF 896's
+ *    value (TVF.fclamp); at low resonance Zenology sits at F = 1, q = 1, which
+ *    leaves the lowpass fully open. 896 and 1023 render identically.
+ *  - RESO 1023 is q = 0: a lossless resonator, rung by the note-on and held at
+ *    a steady, near-pure sine (harmonics 28-100 dB down) for the whole note.
+ *
+ *  Validation vs Zenology, 2026-09-26 (webui/compare/validate_filters.py):
+ *  noise, 206 settings below RESO 1023: 0.38 dB mean, 0.21 median; saw, filter
+ *  only, 72 settings: 0.45 dB (RESO 0) / 0.55 dB (RESO 800). Weakest: PKG at
+ *  CUTOFF 640-896 (1.5-3 dB), and PKG -24 at strong resonance on a saw, where
+ *  the ring beats against the note and per-harmonic levels are not stable. */
+/** TVF LPF2's envelope sweep: Hz added at full depth (2.66 Hz x 63^2). */
+export const LPF2_HZ = 10557;
+
+export const TVF = /*TVF_TABLES*/{"q": [[0, 1.15474], [128, 0.59968], [256, 0.35884], [384, 0.21697], [512, 0.1341], [640, 0.08654], [768, 0.06021], [896, 0.04246], [1023, 0.0]], "m": [[0.0, 1.0], [0.1351, 0.9869], [0.3845, 0.9324], [1.0, 0.8735]], "lpf3q": 2.0066, "pkg": 2.071, "pkggain": 1.0849, "gain": 1.1424, "fclamp": 1.0494}/*END_TVF_TABLES*/;
+
+export class TvfFilter {
+  constructor(sampleRate) { this.sr = sampleRate; this.low = [0, 0]; this.band = [0, 0]; }
+
+  /** One Chamberlin stage; returns the requested output. */
+  stage(i, x, F, q, type) {
+    const low = this.low[i] + F * this.band[i];
+    const high = x - low - q * this.band[i];
+    const band = F * high + this.band[i];
+    // At RESO 1023 q = 0: a lossless resonator the note-on rings, holding a
+    // steady near-pure sine (measured, renders/selfosc/tvf) - so no amplitude
+    // limiting in the audible range. Past |64| a soft ceiling guards against
+    // an input that sits exactly on the cutoff and would pump it forever.
+    this.low[i] = low;
+    const a = band < 0 ? -band : band;
+    this.band[i] = a <= 64 ? band : Math.sign(band) * (64 + 64 * Math.tanh((a - 64) / 64));
+    if (type === "HPF") return high;
+    if (type === "BPF") return band;
+    if (type === "PKG") return low + high + TVF.pkg * band;
+    return low;
+  }
+
+  process(x, hz, reso, type, poles) {
+    if (type === "OFF") return x * TVF.gain;
+    const flat = type === "LPF2" || type === "LPF3";
+    const q0 = TVF.q[0][1];
+    let F = 2 * Math.sin(Math.PI * Math.min(hz, this.sr / 2) / this.sr);
+    let q = type === "LPF3" ? TVF.lpf3q : interp(TVF.q, flat ? 0 : reso, false);
+    // RESO-0 damping of the fixed first stage of -24
+    let qf = type === "LPF3" ? TVF.lpf3q : q0;
+    if (type === "LPF3") {
+      // LPF3: critically damped (q = 2) until F q reaches 1, then q = 1/F -
+      // measured F q = 0.997 / 1.001 / 1.000 at CUTOFF 800 / 832 / 864
+      q = qf = Math.min(q, 1 / F);
+    } else {
+      const ease = interp(TVF.m, Math.min(F, 1), false);
+      q *= 1 - (1 - ease) * Math.min(1, q / q0);
+      qf *= 1 - (1 - ease) * Math.min(1, qf / q0);
+    }
+    if (F >= 1) {
+      // top of the range: resonant settings follow the law to the clamp; low
+      // resonance settles at F = 1, q = 1 (the open lowpass)
+      if (q >= 0.95) { F = 1; q = 1; } else F = Math.min(F, TVF.fclamp);
+      qf = 1;
+    }
+    let y = x;
+    if (poles === 4) {
+      // the fixed stage runs at the clamped F too
+      y = this.stage(1, y, Math.min(F, 1), qf, type);
+    }
+    return this.stage(0, y, F, q, type) * (type === "PKG" ? TVF.pkggain : TVF.gain);
   }
 }
 
@@ -352,9 +557,25 @@ class Partial {
     this.sr = sr;
     this.cfg = cfg;
     this.osc = new VAOsc(sr);
-    this.osc.form = label(cfg.osc.VA_FORM) || "SAW";
+    this.osc.form = label(cfg.osc.OSC_TYPE) === "Noise" ? "NOISE"
+                  : label(cfg.osc.VA_FORM) || "SAW";
     this.osc.pw = raw(cfg.osc.PW, 64) / 127;
-    this.filter = new Filter(sr);
+    // PCMS FILTER_TYPE, surfaced as FILTER_MODE by va.py. Absent means TVF,
+    // which is what Zenology's INIT tone uses.
+    this.fmode = label(cfg.filter.FILTER_MODE) || "TVF";
+    this.filter = this.fmode === "VCF" ? new Filter(sr) : new TvfFilter(sr);
+    this.tvfType = label(cfg.filter.FILTER_TYPE) || "LPF";
+    // VCF-mode highpass and gain correction (see VCF_EXTRA)
+    const hpfCut = raw(cfg.filter.HPF_CUTOFF, 0);
+    this.hpf = null;
+    if (this.fmode === "VCF" && hpfCut > 0 && VCF_EXTRA.hpf) {
+      const col = (i) => VCF_EXTRA.hpf.map((r) => [r[0], r[i]]);
+      this.hpf = new HighPass(sr);
+      this.hpfHz = interp(col(1), hpfCut, true);
+      this.hpfLeak = Math.pow(10, interp(col(2), hpfCut, false) / 20);
+      this.hpfGain = Math.pow(10, interp(col(3), hpfCut, false) / 20);
+    }
+    this.vcfGc = raw(cfg.filter.VCF_GC, 0) / 127;
     this.aenv = new Env(sr, cfg.aenv, { amp: true });
     this.fenv = new Env(sr, cfg.fenv);
     this.penv = new Env(sr, cfg.penv);
@@ -371,7 +592,8 @@ class Partial {
     this.reso = raw(cfg.filter.RESO, 0);
     this.cutoffVSens = raw(cfg.filter.CUTOFF_VSENS, 0) / 100;
     this.cutoffKF = raw(cfg.filter.CUTOFF_KF, 0) / 100;
-    this.ftype = label(cfg.filter.FILTER_TYPE) || "LPF";
+    // key follow pivots on the Cutoff Keyfollow Base Point key (60 = C4)
+    this.kfBaseHz = 440 * Math.pow(2, (raw(cfg.filter.CUTOFF_KF_BP, 60) - 69) / 12);
     this.poles = { "-12": 2, "-18": 3, "-24 [dB/Oct]": 4 }[label(cfg.filter.FILTER_SLOPE)] || 4;
     this.vcf = label(cfg.filter.VCF_TYPE) || "VCF1";
     this.penvDepth = raw(cfg.penv.DEPTH, 0);
@@ -461,17 +683,35 @@ class Partial {
     let s = this.osc.tick(f) * Math.max(0, this.att + m.ATT / 255);
 
     // cutoff: patch value + filter envelope + LFOs + velocity + key follow + matrix
+    // Filter envelope, MEASURED 2026-09-26 (renders/env, envelope held at full
+    // level): the cutoff moves by 1023 * sign(d) * (d/63)^2 CUTOFF units - a
+    // quadratic depth law, to within 1 unit for VCF1 and TVF LPF alike. TVF LPF2
+    // is the exception for positive depth: it adds frequency instead, LPF2_HZ *
+    // (d/63)^2 Hz (2.66 Hz x d^2, same from base CUTOFF 256 and 384) - the
+    // "sensitivity" difference the Parameter Guide mentions. Negative depth on
+    // LPF2 behaves like LPF.
+    const dq = (this.fenvDepth / 63) * Math.abs(this.fenvDepth / 63);
+    const lpf2Hz = this.fmode === "TVF" && this.tvfType === "LPF2" && dq > 0;
     let cut = this.cutoff
-      + fe * 1023 * (this.fenvDepth / 63)
+      + (lpf2Hz ? 0 : fe * 1023 * dq)
       + ((this.lfo1.tvf + m["TVF-LFO1"] / 100) * l1
        + (this.lfo2.tvf + m["TVF-LFO2"] / 100) * l2) * 512
       + this.cutoffVSens * (this.vel - 0.5) * 1023
-      + this.cutoffKF * Math.log2(Math.max(hz, 1) / 261.6) * 170
+      + this.cutoffKF * Math.log2(Math.max(hz, 1) / this.kfBaseHz) * 170
       + m.CUT;
     cut = Math.max(0, Math.min(1023, cut));
     const reso = Math.max(0, Math.min(1023, this.reso + m.RES));
-    s = this.filter.process(s, SCALE.cutoffHz(cut), SCALE.resoQ(reso),
-                            this.ftype, this.poles);
+    if (this.fmode === "VCF") {
+      if (this.hpf) s = this.hpf.process(s, this.hpfHz, this.hpfLeak, this.hpfGain);
+      const k = K.vcfK ?? SCALE.resoK(reso, this.vcf);     // K.vcfK: fitting override
+      s = this.filter.process(s, SCALE.cutoffHz(cut, this.vcf), k, this.poles,
+                              K.vcfSat ?? VCF_EXTRA.sat?.[this.vcf] ?? 1,
+                              VCF_EXTRA.insat?.[this.vcf] ?? 0)
+        * (1 + (VCF_EXTRA.gc ?? 0) * this.vcfGc * k);
+    } else {
+      const fcHz = SCALE.cutoffHz(cut, "VCF1") + (lpf2Hz ? LPF2_HZ * dq * fe : 0);
+      s = this.filter.process(s, fcHz, reso, this.tvfType, this.poles);
+    }
 
     this.pan = Math.max(-1, Math.min(1, this.basePan + m.PAN / 64));
 

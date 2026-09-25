@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Fit SCALE.cutoffHz in va-dsp.js to Zenology renders from zen_bank.py.
 
+SUPERSEDED by fit_vcf.py (2026-09-25), which fits every VCF model from a white-
+noise probe and is not limited to cutoffs above the note's fundamental. Kept
+because it still works for checking a saw-based run.
+
 For each rendered CUTOFF value it finds the filter frequency at which OUR
 filter produces the same harmonic pattern, then fits log2(Hz) against the raw
 value - the exponential law cutoffHz assumes:

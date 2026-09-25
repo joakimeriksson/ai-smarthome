@@ -187,15 +187,81 @@ move it up into "Verified facts" *with the evidence that settled it*.
 - Correction: an earlier note here said velocity 64 renders silence. It did not
   reproduce (`renders/mx-vel`, velocity 63/64/65 all normal) - that render was a
   glitch, not a property of the plugin.
+- **The VA filter** - every mode, type, slope and setting measured 2026-09-25/26
+  against Zenology with a white-noise probe AND a saw (renders/fs, fd, tvf,
+  vcf-hpf, vcf-gc, env, ab, tvf-saw, selfosc). Full notes on `Filter` and
+  `TvfFilter` in `webui/static/va-dsp.js`; all tables are written by tools.
+  - **Each partial has two filters, chosen by `PCMS_PTL_n.FILTER_TYPE`
+    (TVF / VCF)** - which shares its id with `PCMT_PTL_n.FILTER_TYPE`, the
+    TVF's own type (OFF/LPF/BPF/HPF/PKG/LPF2/LPF3). `va.py` surfaces the switch
+    as `filter.FILTER_MODE`. In VCF mode the TVF type is forced to LPF:
+    measured byte-identical audio for all seven types (VCF1 and JP), and the
+    FANTOM Parameter Guide p.28 says so. Zenology's INIT tone is TVF, and so
+    are 7 VA partials in the corpus (LPF, HPF, PKG).
+  - **VCF: `VCF_TYPE` picks the model** (VCF1, JP, MG, P5). All four are one
+    structure - a bilinear (zero-delay-feedback) 4-stage ladder, resonance fed
+    back from stage 4, `FILTER_SLOPE` choosing the tap (stage 2/3/4 = -12/-18/
+    -24) - differing only in cutoff law and resonance curve (`VCF_MODELS`).
+    Every cutoff law is an exact exponential; VCF1: 4.94 Hz x 2^(12.12 v/1023),
+    JP/MG/P5 a shared 10.7-octave slope, P5 topping out at exactly 10 kHz.
+    Resonance costs passband level, 1/(1+k). Near self-oscillation the ladder
+    saturates, so a linear fit reads k too low: MG's top k is refitted by
+    simulation (`VCF_EXTRA.knl`, `fit_vcf_nl.py`); P5's refit made noise worse
+    for no saw gain and was rejected. The ladder input saturates too, per
+    model (`VCF_EXTRA.insat`: VCF1 4, JP 2.5, P5 2.5, MG none - fitted on the
+    resonant saw, noise unchanged within its run-to-run spread).
+  - **VCF extras:** `HPF_CUTOFF` is a one-pole (-6 dB/oct) bilinear highpass
+    plus ~5% dry leak, on VCF1's law up to 640 then falling behind (9.6 kHz at
+    1023); it does nothing in TVF mode. `VCF_GC` is a flat make-up gain,
+    1 + 1.18 (GC/127) k, none at RESO 0 (exactly linear in GC; 1.21 VCF1, 1.14
+    MG).
+  - **TVF: a Chamberlin state-variable filter** on VCF1's cutoff law, F =
+    2 sin(pi fc/fs) - its slope flattens toward Nyquist as Zenology's does,
+    where a bilinear filter misses by up to 11 dB. LPF/BPF/HPF are its low/
+    band/high outputs (+1.16 dB over the VCF path); PKG is low + high + 2.07
+    band at +0.71 dB. Resonance sets q (no passband loss; Q 0.87 -> 23.6, q = 0
+    at 1023 - a lossless resonator the note-on rings at a steady, near-pure
+    sine). -24 = a fixed stage at the RESO-0 damping, then the resonant one;
+    -18 runs as -12. LPF2 = LPF with resonance ignored; LPF3 = critically damped,
+    q = min(2, 1/F). Top of the range: with resonance F follows the law to
+    CUTOFF 896's value; at low resonance it sits at F = 1, q = 1 (open lowpass).
+    Tables from `fit_tvf.py`.
+  - **Filter envelope depth is quadratic:** the cutoff moves 1023 x sign(d) x
+    (d/63)^2 units (VCF1 and TVF LPF, to within 1 unit). TVF LPF2 with
+    positive depth instead adds 2.66 d^2 Hz - its "sensitivity" difference.
+  - **Validation:** `webui/compare/validate_filters.py` re-renders any set of
+    zen_bank runs through our synth and scores it (noise: the response; saw:
+    the filter alone, each synth over its own open saw). Results 2026-09-26 are
+    in the `Filter` / `TvfFilter` comments. Re-run it before trusting a change.
+  - **Known residuals:** strong resonance on a saw with the cutoff far below
+    the note (VCF, CUTOFF 256) - the ring's level depends on the note-on
+    transient, 7-11 dB off; VCF at RESO 1023 is 1-5 dB louder than Zenology's;
+    PKG at high cutoff (640-896) 1.5-3 dB; LPF2's damping also changes under
+    the envelope (~1 dB, unmodelled); our saw's harmonics 10-50 differ by up to
+    ~2 dB from Zenology's (an oscillator matter, not the filter).
+  - **Zenology's Noise oscillator is white** (flat to 0.3 dB) and at the saw's
+    level (+0.3 dB) - which is what makes it the filter probe. It is random
+    per render, so noise scores move ~0.05 dB run to run: repeat before
+    deciding on a change that small.
+  - **Zenology's absolute level drifts ~0.5 dB between sessions** (the same
+    open saw, rendered 2026-09-24 and -26, differed by 0.54 dB, near-uniform).
+    Compare against a reference rendered in the same session - validate_filters
+    divides each synth by its own open render for exactly this reason.
+- **Roland's documentation:** the FANTOM-06/07/08 Parameter Guide
+  (`FANTOM-06_07_08_Parameter_eng01_W.pdf`) describes ZEN-Core's tone
+  parameters - pp.24-36 cover OSC, FILTER and MATRIX CONTROL. It is
+  qualitative: no scalings, curves or ranges beyond the schema's, so
+  measurement stays the source of every number. The ZENOLOGY owner's manual
+  covers the model expansions and effects, not the ZEN-Core partial.
 - **Tools:** `webui/compare/zen_bank.py` renders copies of a user-bank tone
-  that differ in one parameter (writes the bank, renders each in a fresh
-  plugin, restores the bank byte for byte - also keeps `User.bin.orig` in the
-  output dir). `webui/compare/fit_cutoff.py` fits `SCALE.cutoffHz` to a
-  CUTOFF run. The `SCALE.cutoffHz` comment in `webui/static/va-dsp.js` records
-  the exact commands, what was measured and what is extrapolated.
-- A cutoff can only be located from a note whose fundamental sits below it:
-  otherwise every harmonic is on the -24 dB/oct slope and level alignment hides
-  where the slope starts. `fit_cutoff.py` drops those points.
+  that differ in one parameter (`--set` holds others fixed, `--param velocity`
+  sweeps the note velocity) - it writes the bank, renders each in a fresh
+  plugin, restores the bank byte for byte, and keeps `User.bin.orig` in the
+  output dir. `webui/compare/fit_vcf.py` (VCF models, HPF, GC), `fit_tvf.py`
+  (TVF) and `fit_vcf_nl.py` (nonlinear k) fit the filter from noise/saw runs
+  and `--write` their tables into `va-dsp.js`; each docstring has the exact
+  render commands. `fit_cutoff.py` (saw harmonics) is superseded - it can only
+  locate a cutoff above the note's fundamental, and it assumed the old filter.
 
 ## Layout
 

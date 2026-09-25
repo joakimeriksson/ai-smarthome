@@ -3,8 +3,9 @@
  *
  * The cutoff is pinned to an absolute frequency (cutOct = 0 makes
  * SCALE.cutoffHz a constant) and the feedback is pinned per run, so each output
- * is "our filter at fc Hz, feedback q" regardless of the patch's CUTOFF. That
- * gives fit_cutoff.py a library to match Zenology renders against. Anything
+ * is "our filter at fc Hz, feedback q" (SCALE.resoK) regardless of the patch's
+ * CUTOFF and VCF model. That gives fit_cutoff.py a library to match Zenology
+ * renders against. Anything
  * else that moves the cutoff (filter envelope, LFO, key follow, velocity) still
  * applies, so fit tones should keep those at zero.
  *
@@ -46,7 +47,7 @@ const off = Math.min(n, Math.round((lead + hold) * SR));
 mkdirSync(outdir, { recursive: true });
 
 for (const q of list(arg("q", "0"))) {
-  SCALE.resoQ = () => q;
+  SCALE.resoK = () => q;
   for (const fc of list(arg("fc"))) {
     globalThis.__ZC_SCALE.cutBase = fc;
     const L = new Float32Array(n), R = new Float32Array(n);

@@ -210,11 +210,22 @@ function draw() {
         .map(id => control(S, id, p.osc[id]))) +
     card(`Pitch ${n}`,
       ["PIT_CRS","PIT_FINE","PIT_KF","PIT_RND"].map(id => control(P, id, p.pitch[id]))) +
-    card(`Filter ${n}`,
-      ["FILTER_TYPE","CUTOFF","RESO","CUTOFF_KF","CUTOFF_VSENS"]
-        .map(id => control(P, id, p.filter[id]))
-      .concat(["VCF_TYPE","FILTER_SLOPE","HPF_CUTOFF"]
-        .map(id => control(S, id, p.filter[id])))) +
+    // A VA partial has two filters: the VCF ladders (VCF_TYPE picks the model;
+    // the TVF type is forced to LPF) and the TVF (its seven types apply).
+    card(`Filter ${n}`, p.synthesised
+      ? [control(S, "FILTER_TYPE", p.filter.FILTER_MODE, "Filter mode")]
+          .concat(p.filter.FILTER_MODE?.label === "VCF"
+            ? ["VCF_TYPE","FILTER_SLOPE"].map(id => control(S, id, p.filter[id]))
+            : [control(P, "FILTER_TYPE", p.filter.FILTER_TYPE),
+               control(S, "FILTER_SLOPE", p.filter.FILTER_SLOPE)])
+          .concat(["CUTOFF","RESO","CUTOFF_KF","CUTOFF_VSENS"]
+            .map(id => control(P, id, p.filter[id])))
+          .concat(p.filter.FILTER_MODE?.label === "VCF"
+            ? [control(S, "HPF_CUTOFF", p.filter.HPF_CUTOFF),
+               control(S, "VCF_GC", p.filter.VCF_GC, "Gain correction")]
+            : [])
+      : ["FILTER_TYPE","CUTOFF","RESO","CUTOFF_KF","CUTOFF_VSENS"]
+          .map(id => control(P, id, p.filter[id]))) +
     card(`Amp ${n}`,
       ["LEVEL","PAN","LEVEL_VSENS"].map(id => control(P, id, p.amp[id]))) +
     card(`Amp env ${n}`,
@@ -268,6 +279,8 @@ async function edit(group, id, value) {
   $("#dirty").textContent = j.unchanged ? "" : "modified — unsaved";
   patch = await (await fetch(`/api/tone/${tone}/va`)).json();
   push();
+  // the filter mode decides which controls the Filter card shows
+  if (group.startsWith("PCMS_PTL") && id === "FILTER_TYPE") draw();
 }
 $("#panels").addEventListener("input", async e => {
   const t = e.target;

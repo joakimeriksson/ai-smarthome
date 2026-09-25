@@ -38,7 +38,7 @@ VST = "/Library/Audio/Plug-Ins/VST3/Roland/ZENOLOGY.vst3"
 #: (index, label, what it should tell us). Indices from the 301-parameter dump.
 SWEEPS = [
     (90,  "CUTOFF",        "SCALE.cutoffHz - filter frequency law"),
-    (91,  "RESO",          "SCALE.resoQ - resonance law"),
+    (91,  "RESO",          "SCALE.resoK - resonance law"),
     (92,  "ATTACK",        "SCALE.envTime - envelope attack law"),
     (93,  "RELEASE",       "SCALE.envTime - envelope release law"),
     (123, "TVF CUTOFF 1",  "absolute per-partial cutoff (did nothing on a pad)"),

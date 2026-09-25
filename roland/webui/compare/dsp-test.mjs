@@ -11,7 +11,7 @@
  *   node webui/compare/dsp-test.mjs
  */
 
-import { VAVoice, VAOsc, Env, LFO, SCALE } from "../static/va-dsp.js";
+import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA } from "../static/va-dsp.js";
 
 const SR = 44100;
 let pass = 0, fail = 0;
@@ -253,6 +253,111 @@ function render(p, note = 57, secs = 0.5) {
   const { v } = h2of(odd, 100);
   ok("unsupported destinations are reported, not dropped",
      v.stacks[0].partials[0].dsp.unsupported.includes("VELOCITY->CHO"));
+}
+
+// --- VA filter (measured against Zenology 2.0.9, renders/fs + renders/fd) ---
+{
+  // steady-state gain of the Filter at one frequency
+  const gain = (hz, fc, k, poles, amp = 0.01) => {
+    const f = new Filter(SR), n = SR;
+    let peak = 0;
+    for (let i = 0; i < n; i++) {
+      const y = f.process(amp * Math.sin(TAU * hz * i / SR), fc, k, poles);
+      if (i > n / 2) peak = Math.max(peak, Math.abs(y));
+    }
+    return peak / amp;
+  };
+  const db = (g) => 20 * Math.log10(g);
+  for (const [poles, want] of [[2, -12], [3, -18], [4, -24]]) {
+    const oct = db(gain(3200, 100, 0, poles)) - db(gain(1600, 100, 0, poles));
+    ok(`slope tap ${poles} falls ~${want} dB/oct`, close(oct, want, 2), `got ${oct.toFixed(1)}`);
+  }
+  // feedback is always from stage 4, so resonance costs the same passband at every tap
+  const pb = [2, 3, 4].map((p) => db(gain(20, 2000, 2, p)));
+  ok("resonance k=2 costs -9.5 dB passband at every slope",
+     pb.every((v) => close(v, db(1 / 3), 0.3)), pb.map((v) => v.toFixed(2)).join(" "));
+  ok("resonance peaks at the stage cutoff",
+     gain(1000, 1000, 3.5, 4) > gain(700, 1000, 3.5, 4) && gain(1000, 1000, 3.5, 4) > gain(1400, 1000, 3.5, 4));
+  const lo = gain(200, 1000, 0, 4, 0.01), hi = gain(200, 1000, 0, 4, 1);
+  ok("the filter is linear at RESO 0, even at full level", close(lo, hi, 1e-3),
+     `${lo.toFixed(5)} vs ${hi.toFixed(5)}`);
+
+  const at = (m) => SCALE.cutoffHz(512, m);
+  ok("VCF1 at CUTOFF 512 is ~331 Hz", close(at("VCF1"), 331, 3), `${at("VCF1").toFixed(1)}`);
+  ok("models order P5 < VCF1 < JP < MG at CUTOFF 512",
+     at("P5") < at("VCF1") && at("VCF1") < at("JP") && at("JP") < at("MG"));
+  ok("every model has a cutoff law and a resonance curve",
+     ["VCF1", "JP", "MG", "P5"].every((m) => VCF_MODELS[m]?.cut?.length && VCF_MODELS[m]?.k?.length));
+  ok("cutoff keeps falling below the first table point",
+     SCALE.cutoffHz(0, "VCF1") < SCALE.cutoffHz(64, "VCF1") && SCALE.cutoffHz(64, "VCF1") < SCALE.cutoffHz(128, "VCF1"));
+
+  // filter mode: VCF ignores the TVF type (measured - byte-identical in
+  // Zenology); TVF mode applies it (Parameter Guide p.28)
+  const mode = (m) => ({ value: m === "VCF" ? 1 : 0, label: m });
+  const typ = (t) => ({ value: ["OFF", "LPF", "BPF", "HPF"].indexOf(t), label: t });
+  const fpatch = (m, t, extra = {}) => {
+    const p = patch();
+    p.partials[0].filter = { FILTER_MODE: mode(m), FILTER_TYPE: typ(t), CUTOFF: 400, RESO: 300, ...extra };
+    return p;
+  };
+  const same = (x, y) => x.every((v, i) => v === y[i]);
+  ok("VCF mode ignores the TVF filter type",
+     same(render(fpatch("VCF", "LPF")).L, render(fpatch("VCF", "HPF")).L));
+  const seg = (p) => render(p).L.subarray(SR * 0.1, SR * 0.4);
+  const lowShare = (x) => magAt(x, 220) / (magAt(x, 1760) + 1e-12);
+  ok("TVF mode applies the type: HPF keeps far less low end than LPF",
+     lowShare(seg(fpatch("TVF", "HPF"))) < lowShare(seg(fpatch("TVF", "LPF"))) * 0.1);
+  const sl = (v, l) => ({ value: v, label: l });
+  ok("TVF -18 runs as -12 (Parameter Guide)",
+     same(render(fpatch("TVF", "LPF", { FILTER_SLOPE: sl(1, "-18") })).L,
+          render(fpatch("TVF", "LPF", { FILTER_SLOPE: sl(0, "-12") })).L));
+  const lpf2 = (r) => render(fpatch("TVF", "LPF2", { FILTER_TYPE: { value: 5, label: "LPF2" }, RESO: r })).L;
+  ok("TVF LPF2 ignores resonance (Parameter Guide)", same(lpf2(0), lpf2(900)));
+}
+
+// --- TVF (measured against Zenology 2.0.9, renders/tvf) ---------------------
+{
+  // steady-state TVF gain at one frequency, relative to the TVF path gain
+  const tg = (type, hz, fc, reso, poles = 2, amp = 0.01) => {
+    const f = new TvfFilter(SR); let pk = 0;
+    for (let i = 0; i < SR; i++) {
+      const y = f.process(amp * Math.sin(TAU * hz * i / SR), fc, reso, type, poles);
+      if (i > SR / 2) pk = Math.max(pk, Math.abs(y));
+    }
+    return 20 * Math.log10(pk / amp);
+  };
+  const g0 = 20 * Math.log10(TVF.gain);
+  ok("TVF path is ~+1.1 dB over the VCF path", close(g0, 1.16, 0.1), g0.toFixed(2));
+  ok("TVF LPF passes lows at the path gain", close(tg("LPF", 30, 331, 0), g0, 0.3));
+  ok("TVF HPF passes highs at the path gain", close(tg("HPF", 8000, 331, 0), g0, 0.5));
+  ok("TVF LPF -12 falls ~12 dB/oct", close(tg("LPF", 3200, 100, 0) - tg("LPF", 1600, 100, 0), -12, 1.5));
+  ok("TVF LPF -24 falls ~24 dB/oct", close(tg("LPF", 3200, 100, 0, 4) - tg("LPF", 1600, 100, 0, 4), -24, 2));
+  ok("TVF resonance costs no passband level",
+     close(tg("LPF", 30, 331, 896), tg("LPF", 30, 331, 0), 0.3));
+  ok("TVF resonance peaks at the cutoff", tg("LPF", 331, 331, 640) > tg("LPF", 30, 331, 640) + 15);
+  ok("TVF LPF is fully open at the top of the range (RESO 0)",
+     [200, 2000, 12000].every((hz) => close(tg("LPF", hz, 22000, 0), g0, 0.2)));
+  ok("TVF resonance survives near the top (peak at ~7.7 kHz)",
+     tg("LPF", 7700, 22000, 512) > tg("LPF", 1000, 22000, 512) + 10);
+  ok("TVF PKG boosts the cutoff ~4.8 dB at RESO 0",
+     close(tg("PKG", 331, 331, 0) - tg("PKG", 30, 331, 0), 4.8, 1.0));
+  ok("TVF LPF3 stays stable where 1/F < 2", isFinite(tg("LPF3", 1000, 6000, 0)));
+  ok("TVF LPF2 ignores resonance", close(tg("LPF2", 331, 331, 900), tg("LPF2", 331, 331, 0), 1e-6));
+}
+
+// --- VCF-mode highpass and gain correction (renders/vcf-hpf, renders/vcf-gc) -
+{
+  const hg = (hz, fc) => {
+    const h = new HighPass(SR); let pk = 0;
+    for (let i = 0; i < SR; i++) {
+      const y = h.process(Math.sin(TAU * hz * i / SR), fc, 0, 1);
+      if (i > SR / 2) pk = Math.max(pk, Math.abs(y));
+    }
+    return 20 * Math.log10(pk);
+  };
+  ok("VCF HPF is one-pole: -6 dB/oct below its cutoff", close(hg(50, 1000) - hg(25, 1000), 6, 0.5));
+  ok("VCF HPF table and gain correction are present",
+     VCF_EXTRA.hpf?.length >= 8 && close(VCF_EXTRA.gc, 1.18, 0.1));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

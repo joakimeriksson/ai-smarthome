@@ -90,6 +90,10 @@ def _partial(tone, n: int) -> dict:
         "amp": _fields(tone, P, ("LEVEL", "PAN", "PAN_KF", "PAN_RND", "LEVEL_VSENS",
                                  "LEVEL_VCRV")),
         "filter": {
+            # The TVF/VCF switch. Its id is FILTER_TYPE too, but in the PCMS
+            # group - the PCMT FILTER_TYPE below is the TVF's own type, which
+            # only applies in TVF mode (Parameter Guide p.28).
+            "FILTER_MODE": _val(tone, S, "FILTER_TYPE"),
             **_fields(tone, P, ("FILTER_TYPE", "CUTOFF", "RESO", "CUTOFF_KF",
                                 "CUTOFF_VSENS", "CUTOFF_VCRV", "RESO_VSENS")),
             **_fields(tone, S, ("VCF_TYPE", "FILTER_SLOPE", "HPF_CUTOFF",

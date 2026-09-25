@@ -28,12 +28,14 @@ export const SCALE = {
   cutoffHz: (v, model = "VCF1") => K.cutBase != null
     ? K.cutBase * Math.pow(2, (v / 1023) * (K.cutOct ?? 0))
     : vcfModel(model).hz(v),
-  // envelope time 0..1023 -> seconds, exponential, scaled by envMul. UNFITTED
+  // LFO delay / fade time 0..1023 -> seconds. UNFITTED - envelopes no longer
+  // use it; their measured times are ENV.time / ENV.attack.
   envTime: (v) => (K.envMul ?? 1) * 0.001 * Math.pow(2, (v / 1023) * 13),
-  // envelope level 0..1023 -> linear 0..1.                        UNFITTED
-  envLevel: (v) => v / 1023,
-  // pitch-env level -511..511 with depth -100..100 -> semitones.  UNFITTED
-  pitchSemis: (level, depth) => (level / 511) * (depth / 100) * 48,
+  // pitch-env level -511..511 with depth -100..100 -> semitones. MEASURED
+  // 2026-09-26 (renders/penv): linear in level; the depth law is ENV.pdepth,
+  // semitones at full level (60 at depth 100, ~11.7 at 50), mirrored for -d.
+  pitchSemis: (level, depth) => (level / 511) * Math.sign(depth)
+    * (ENV.pdepth ? interp(ENV.pdepth, Math.abs(depth), false) : Math.abs(depth) / 100 * 48),
   // LFO rate 0..1023 -> Hz, assumed exponential 0.05..~30 Hz.     UNFITTED
   lfoHz: (v) => 0.05 * Math.pow(2, (v / 1023) * 9),
   // resonance 0..1023 -> ladder feedback k (self-oscillation at 4) for the
@@ -167,39 +169,128 @@ export class VAOsc {
  * Envelope - Roland's 4-time / 5-level shape
  * ---------------------------------------------------------------------- */
 
+/** Envelope tables, MEASURED 2026-09-26 against Zenology 2.0.9 with a sine and
+ *  the filter open (renders/aenv, renders/adsr; written by fit_env.py).
+ *  time: the shared segment-time table (decay, release, and every falling or
+ *  middle segment) - 2.048 ms per step up to ~384, then ~doubling per 128 steps,
+ *  30 s at 1023. attack: the attack-time table (a separate curve: ~2 ms at 0).
+ *  b: ADSR-off level law, amplitude = (2^(L/b) - 1) / (2^(1023/b) - 1).
+ *  c: ADSR-off attack curve. adsr: ADSR-on attack curve and times, and the RC
+ *  decay/release - tau = distance x T / x, aimed delta below the target. */
+export const ENV = /*ENV_TABLES*/{"b": 125.601, "c": 0.9475, "attack": [[0, 0.0019], [128, 0.21456], [256, 0.43052], [384, 0.64649], [512, 1.38822], [640, 2.92513], [768, 6.06244], [896, 12.46662], [1023, 24.92909]], "time": [[0, 0.003], [128, 0.26379], [256, 0.51833], [384, 0.77401], [512, 1.64531], [640, 3.46646], [704, 4.99429], [768, 7.27959], [832, 10.28916], [896, 14.74058], [1023, 30.02187]], "adsr": {"c": 1.9005, "attack": [[0, 0.0019], [128, 0.2128], [256, 0.42783], [384, 0.64295], [512, 1.38176], [640, 2.91251], [768, 6.03742], [896, 12.41615], [1023, 25.02098]], "x": 4.5598, "delta": 0.01112}, "release0": 0.013, "pdepth": [[0, 0.0], [1, 0.106], [3, 0.302], [6, 0.752], [9, 1.508], [12, 2.244], [18, 3.746], [25, 5.497], [31, 7.001], [37, 8.499], [44, 10.253], [50, 11.747], [56, 17.002], [60, 20.998], [63, 24.001], [64, 24.499], [66, 26.001], [70, 29.998], [75, 35.0], [82, 42.0], [88, 48.001], [94, 54.0], [97, 57.001], [100, 60.0]]}/*END_ENV_TABLES*/;
+
+/** Segment time for a 0..1023 setting: linear up to 384, exponential above. */
+function envSeconds(table, v) {
+  if (v <= 384) return interp(table, v, false);
+  return interp(table, v, true);
+}
+
+/** ADSR-off amplitude of level L (0..1023) and its inverse. */
+const levelAmp = (L) => (Math.pow(2, L / ENV.b) - 1) / (Math.pow(2, 1023 / ENV.b) - 1);
+const ampLevel = (a) => ENV.b * Math.log2(1 + Math.max(0, a) * (Math.pow(2, 1023 / ENV.b) - 1));
+
+/** Attack curve: fraction of the way at s = t / T (fast start, 1 at s = 1). */
+const attackCurve = (s, c) => (1 - Math.exp(-c * s)) / (1 - Math.exp(-c));
+
+/** Roland's 4-time envelope, MEASURED 2026-09-26 (renders/aenv, adsr, penv).
+ *  ADSR off:
+ *   - amp: T1 is the attack curve toward L1's amplitude on its own table
+ *     (ENV.attack); T2, T3, T4 ramp the LEVEL linearly over the full time of
+ *     the shared table, whatever the distance; amplitude is levelAmp(L).
+ *   - pitch (and filter, assumed the same - not measured separately): every
+ *     segment, T1 included, is a straight line over the shared table.
+ *  ADSR on (the guide: T2, L1, L2 ignored) - one model for every envelope, in
+ *  levels normalised to its top (amp and filter 1023, pitch 511): L0 is
+ *  ignored (starts at 0); the amp ADSR attack curve to the top; an RC decay to
+ *  L3 whose time constant scales with the distance; an RC release to 0 with a
+ *  fixed one. Amp levels are then linear amplitude.
+ *  tick() returns amplitude 0..1 for amp envelopes, level / 1023 otherwise. */
 export class Env {
-  /** stages: {T1..T4, L0..L4}. Amp envelopes have no L0/L4 (silence at both). */
-  constructor(sampleRate, stages, { amp = false } = {}) {
+  constructor(sampleRate, stages, { amp = false, adsr = false, top = 1023 } = {}) {
     this.sr = sampleRate;
-    const t = (k) => Math.max(1e-4, SCALE.envTime(raw(stages[k], 0)));
-    const l = (k, d) => (stages[k] == null ? d : SCALE.envLevel(raw(stages[k])));
-    this.t = [t("T1"), t("T2"), t("T3"), t("T4")];
-    this.l = amp
-      ? [0, l("L1", 1), l("L2", 1), l("L3", 1), 0]
-      : [l("L0", 0), l("L1", 0), l("L2", 0), l("L3", 0), l("L4", 0)];
+    this.amp = amp;
+    this.adsr = adsr;
+    this.top = top;
+    const L = (k, d) => (stages[k] == null ? d : raw(stages[k], d));
+    const hasEnv = !!(ENV.time && ENV.attack);
+    const T = (k, table) => Math.max(1e-4, hasEnv ? envSeconds(table, raw(stages[k], 0))
+                                                  : SCALE.envTime(raw(stages[k], 0)));
+    // At 0, amp segments keep a measured minimum (release ~13 ms, middle
+    // ~3 ms); pitch/filter segments at 0 are instant (renders/penv).
+    const zero = (tab, v) => hasEnv ? [[0, v]].concat(tab.slice(1)) : tab;
+    const time = amp ? ENV.time : zero(ENV.time, 1e-4);
+    const relTable = amp && ENV.release0 != null ? zero(ENV.time, ENV.release0) : time;
+    const t1Table = adsr ? ENV.adsr?.attack ?? ENV.attack : amp ? ENV.attack : time;
+    this.t = [T("T1", t1Table), adsr ? 0 : T("T2", time), T("T3", time), T("T4", relTable)];
+    // levels in the envelope's own units (0..1023 amp/filter, -511..511 pitch)
+    this.L = adsr
+      ? [0, top, top, L("L3", amp ? 1023 : 0), 0]
+      : amp ? [0, L("L1", 1023), L("L2", 1023), L("L3", 1023), 0]
+            : [L("L0", 0), L("L1", 0), L("L2", 0), L("L3", 0), L("L4", 0)];
     this.stage = 0;
-    this.value = this.l[0];
     this.time = 0;
+    this.level = this.L[0];             // current level, envelope units
+    this.value = this.out(this.level);
     this.released = false;
   }
 
-  noteOn() { this.stage = 0; this.time = 0; this.value = this.l[0]; this.released = false; }
-  noteOff() { this.stage = 3; this.time = 0; this.released = true; this.from = this.value; }
+  /** Output for a level: amplitude for amp envelopes, level / 1023 otherwise. */
+  out(L) {
+    if (!this.amp) return L / 1023;
+    return this.adsr || !ENV.b ? L / 1023 : levelAmp(L);
+  }
+
+  noteOn() { this.stage = 0; this.time = 0; this.released = false; this.from = this.level; }
+  noteOff() { this.stage = 3; this.time = 0; this.released = true; this.from = this.level; }
 
   get done() { return this.released && this.stage > 3; }
 
   tick() {
     if (this.stage > 3) return this.value;
-    const dur = this.t[this.stage];
-    const from = this.stage === 3 ? (this.from ?? this.value) : this.l[this.stage];
-    const to = this.l[this.stage + 1];
+    const st = this.stage, dur = this.t[st];
     this.time += 1 / this.sr;
-    const k = Math.min(1, this.time / dur);
-    this.value = from + (to - from) * k;
-    if (k >= 1) {
-      if (this.stage === 2 && !this.released) return this.value;  // sustain
+    const s = dur > 0 ? Math.min(1, this.time / dur) : 1;
+    let finished = s >= 1;
+    const to = this.L[st + 1];
+    if (st === 0 && (this.amp || this.adsr)) {
+      // attack curve (amp; and every envelope in ADSR mode)
+      const c = this.adsr ? ENV.adsr?.c ?? 1.9 : ENV.c ?? 0.95;
+      if (this.amp && !this.adsr) {
+        // ADSR-off amp: the curve runs in amplitude
+        const a0 = this.out(this.from), a1 = this.out(to);
+        const a = a0 + (a1 - a0) * attackCurve(s, c);
+        this.level = ampLevel(a);
+        this.value = a;
+        return this.advance(finished);
+      }
+      this.level = this.from + (to - this.from) * attackCurve(s, c);
+    } else if (this.adsr && (st === 2 || st === 3)) {
+      // RC toward the target in normalised units; decay's time constant scales
+      // with the distance, release's does not
+      const n0 = this.from / this.top, n1 = to / this.top;
+      const dist = Math.abs(n0 - n1), dir = n1 < n0 ? -1 : 1;
+      const scale = st === 2 ? Math.max(1e-6, dist) : 1;
+      const tau = scale * this.t[st] / (ENV.adsr?.x ?? 4.6);
+      const d = (ENV.adsr?.delta ?? 0.01) * scale;
+      const aim = n1 + dir * d;                      // just past the target
+      const n = aim + (n0 - aim) * Math.exp(-this.time / tau);
+      const past = dir < 0 ? n <= n1 : n >= n1;
+      this.level = (past ? n1 : n) * this.top;
+      finished = past;
+    } else {
+      // straight line in level over the full segment time
+      this.level = this.from + (to - this.from) * s;
+    }
+    this.value = this.out(this.level);
+    return this.advance(finished);
+  }
+
+  advance(finished) {
+    if (finished) {
+      if (this.stage === 2 && !this.released) return this.value;   // sustain
       this.stage += 1;
       this.time = 0;
+      this.from = this.level;
     }
     return this.value;
   }
@@ -576,9 +667,11 @@ class Partial {
       this.hpfGain = Math.pow(10, interp(col(3), hpfCut, false) / 20);
     }
     this.vcfGc = raw(cfg.filter.VCF_GC, 0) / 127;
-    this.aenv = new Env(sr, cfg.aenv, { amp: true });
-    this.fenv = new Env(sr, cfg.fenv);
-    this.penv = new Env(sr, cfg.penv);
+    // the ADSR switch is per partial (PCMS ADSR_ENV_SW; va.py carries it in filter)
+    const adsr = !!raw(cfg.filter.ADSR_ENV_SW, 0);
+    this.aenv = new Env(sr, cfg.aenv, { amp: true, adsr });
+    this.fenv = new Env(sr, cfg.fenv, { adsr });
+    this.penv = new Env(sr, cfg.penv, { adsr, top: 511 });
     this.lfo1 = new LFO(sr, cfg.lfo1 || {});
     this.lfo2 = new LFO(sr, cfg.lfo2 || {});
 
@@ -660,7 +753,7 @@ class Partial {
     const fe = (st.fe = this.fenv.tick());
     const ae = (st.ae = this.aenv.tick());
 
-    const pitchMod = SCALE.pitchSemis(pe * 511, this.penvDepth)
+    const pitchMod = SCALE.pitchSemis(pe * 1023, this.penvDepth)   // pe = level / 1023
                    + ((this.lfo1.pitch + m["PIT-LFO1"] / 100) * l1
                     + (this.lfo2.pitch + m["PIT-LFO2"] / 100) * l2) * 12
                    + m.PCH;

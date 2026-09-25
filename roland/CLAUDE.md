@@ -247,6 +247,32 @@ move it up into "Verified facts" *with the evidence that settled it*.
     open saw, rendered 2026-09-24 and -26, differed by 0.54 dB, near-uniform).
     Compare against a reference rendered in the same session - validate_filters
     divides each synth by its own open render for exactly this reason.
+- **The envelopes** - measured 2026-09-26 with a sine, filter open (amp:
+  renders/aenv, adsr; pitch: renders/penv, a sine's instantaneous pitch).
+  Tables written by `webui/compare/fit_env.py`; notes on `Env` in va-dsp.js.
+  - **Time law, shared by every envelope:** 2.048 ms per step up to ~384, then
+    ~doubling per 128 steps - 30 s at 1023 (`ENV.time`). The amp attack has
+    its own table (`ENV.attack`, ~0.84x, ~2 ms at 0). Each segment takes its
+    full table time whatever the distance - except in ADSR mode (below).
+  - **The ADSR switch (`PCMS_PTL_n.ADSR_ENV_SW`, per partial) changes the
+    envelope, not just which params count.** 16 of 20 corpus VA partials use it.
+    ADSR off: amp levels follow an exponential law, amplitude =
+    (2^(L/125.6) - 1)/(2^(1023/125.6) - 1) (L3 512 = -24.9 dB); the amp attack
+    is a fast-start curve; T2-T4 ramp the level linearly. ADSR on (T2, L0-L2
+    ignored): levels are linear (L3 512 = -6.0 dB); attack to the top on its
+    own curve; decay is an RC fall whose time constant scales with distance;
+    release an RC fall with a fixed one (from half level it falls at the same
+    dB rate as from full).
+  - **Pitch envelope:** linear in level, depth law `ENV.pdepth` - 60 semitones
+    at depth 100 and level 511, ~11.75 at depth 50, on quarter-semitone steps.
+    ADSR off its segments are straight lines (T1 included); ADSR on it follows
+    the amp ADSR model in levels normalised to 511. The filter envelope is
+    assumed to behave like it - not measured separately.
+  - Validation (our synth vs Zenology, per render): amp, 77 renders, median
+    0.13 dB; pitch, 41 renders, median 0.015 semitones.
+  - **DawDreamer sometimes glitches a render's note-off** (late or missing):
+    5 of ~160 envelope renders on 2026-09-26. A release that starts late or
+    never happens is a glitch until a re-render reproduces it.
 - **Roland's documentation:** the FANTOM-06/07/08 Parameter Guide
   (`FANTOM-06_07_08_Parameter_eng01_W.pdf`) describes ZEN-Core's tone
   parameters - pp.24-36 cover OSC, FILTER and MATRIX CONTROL. It is
@@ -258,7 +284,8 @@ move it up into "Verified facts" *with the evidence that settled it*.
   sweeps the note velocity) - it writes the bank, renders each in a fresh
   plugin, restores the bank byte for byte, and keeps `User.bin.orig` in the
   output dir. `webui/compare/fit_vcf.py` (VCF models, HPF, GC), `fit_tvf.py`
-  (TVF) and `fit_vcf_nl.py` (nonlinear k) fit the filter from noise/saw runs
+  (TVF), `fit_vcf_nl.py` (nonlinear k) and `fit_env.py` (envelopes) fit the
+  synth from noise/saw/sine runs
   and `--write` their tables into `va-dsp.js`; each docstring has the exact
   render commands. `fit_cutoff.py` (saw harmonics) is superseded - it can only
   locate a cutoff above the note's fundamental, and it assumed the old filter.

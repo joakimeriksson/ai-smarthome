@@ -11,7 +11,7 @@
  *   node webui/compare/dsp-test.mjs
  */
 
-import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA } from "../static/va-dsp.js";
+import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV } from "../static/va-dsp.js";
 
 const SR = 44100;
 let pass = 0, fail = 0;
@@ -358,6 +358,43 @@ function render(p, note = 57, secs = 0.5) {
   ok("VCF HPF is one-pole: -6 dB/oct below its cutoff", close(hg(50, 1000) - hg(25, 1000), 6, 0.5));
   ok("VCF HPF table and gain correction are present",
      VCF_EXTRA.hpf?.length >= 8 && close(VCF_EXTRA.gc, 1.18, 0.1));
+}
+
+// --- envelopes (measured against Zenology 2.0.9, renders/aenv, adsr, penv) -
+{
+  const dB = (v) => 20 * Math.log10(Math.max(v, 1e-12));
+  // run an envelope; returns a sampler of its value at time t (s)
+  const runEnv = (stages, opts, secs, offAt = null) => {
+    const e = new Env(SR, stages, opts); e.noteOn();
+    const buf = new Float64Array(Math.round(secs * SR));
+    for (let i = 0; i < buf.length; i++) { if (offAt !== null && i === Math.round(offAt * SR)) e.noteOff(); buf[i] = e.tick(); }
+    return { at: (t) => buf[Math.min(buf.length - 1, Math.round(t * SR))], e };
+  };
+  const hold = { T1: 0, T2: 0, T3: 0, T4: 0, L1: 1023, L2: 1023 };
+  ok("amp, ADSR off: sustain L3 512 sits at the exponential law's -24.9 dB",
+     close(dB(runEnv({ ...hold, L3: 512 }, { amp: true }, 0.5).at(0.4)), -24.9, 0.3));
+  ok("amp, ADSR on: sustain L3 512 is linear, -6.0 dB",
+     close(dB(runEnv({ ...hold, L3: 512 }, { amp: true, adsr: true }, 0.5).at(0.4)), -6.02, 0.1));
+  const a = runEnv({ ...hold, T1: 512, L3: 1023 }, { amp: true }, 2);
+  const ta = ENV.attack.find(([v]) => v === 512)[1];
+  ok("amp attack 512 completes at its measured time (~1.39 s), fast start",
+     a.at(ta * 0.5) > 0.6 && a.at(ta * 0.5) < 0.8 && a.at(ta * 1.02) > 0.999);
+  const r = runEnv({ ...hold, T4: 512, L3: 1023 }, { amp: true }, 3, 0.2);
+  const tr = ENV.time.find(([v]) => v === 512)[1];
+  ok("amp release 512 (ADSR off) ramps the level over the full ~1.65 s",
+     close(dB(r.at(0.2 + tr / 2)), dB((Math.pow(2, 511.5 / ENV.b) - 1) / (Math.pow(2, 1023 / ENV.b) - 1)), 0.5)
+     && r.at(0.2 + tr * 1.01) === 0);
+  const full = runEnv({ ...hold, T4: 256, L3: 1023 }, { amp: true, adsr: true }, 1, 0.2);
+  const half = runEnv({ ...hold, T4: 256, L3: 512 }, { amp: true, adsr: true }, 1, 0.2);
+  const drop = (x, s0) => dB(x.at(0.3)) - dB(x.at(s0));
+  ok("amp, ADSR on: release falls at the same dB rate from half level as from full",
+     close(drop(full, 0.199), drop(half, 0.199), 1.0), `${drop(full, 0.199).toFixed(2)} vs ${drop(half, 0.199).toFixed(2)}`);
+  ok("pitch: level 511 at depth 100 is +60 semitones", close(SCALE.pitchSemis(511, 100), 60, 0.05));
+  ok("pitch: depth 50 is ~11.75 semitones at full level", close(SCALE.pitchSemis(511, 50), 11.75, 0.05));
+  ok("pitch: negative depth mirrors", close(SCALE.pitchSemis(256, -50), -SCALE.pitchSemis(256, 50), 1e-9));
+  const p = runEnv({ T1: 512, T2: 0, T3: 0, T4: 0, L0: 0, L1: 511, L2: 511, L3: 511, L4: 0 }, {}, 2);
+  ok("pitch envelope segments are straight lines over the shared time table",
+     close(p.at(tr / 2) * 1023, 511 / 2, 4) && close(p.at(tr * 1.01) * 1023, 511, 0.5));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

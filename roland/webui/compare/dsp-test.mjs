@@ -11,7 +11,7 @@
  *   node webui/compare/dsp-test.mjs
  */
 
-import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV } from "../static/va-dsp.js";
+import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV, WAVES, SSAW } from "../static/va-dsp.js";
 
 const SR = 44100;
 let pass = 0, fail = 0;
@@ -200,7 +200,7 @@ function render(p, note = 57, secs = 0.5) {
 // --- saw PW morph (measured against Zenology 2.0.9) ------------------------
 {
   const hs = (pw) => {
-    const o = new VAOsc(SR); o.form = "SAW"; o.pw = pw / 127;
+    const o = new VAOsc(SR); o.form = "SAW"; o.pw = 0.5 + (pw - 64) / 127;
     const buf = new Float32Array(SR);
     for (let i = 0; i < SR; i++) buf[i] = o.tick(220);
     return [1, 2, 3, 4, 5].map((k) => magAt(buf, 220 * k));
@@ -395,6 +395,62 @@ function render(p, note = 57, secs = 0.5) {
   const p = runEnv({ T1: 512, T2: 0, T3: 0, T4: 0, L0: 0, L1: 511, L2: 511, L3: 511, L4: 0 }, {}, 2);
   ok("pitch envelope segments are straight lines over the shared time table",
      close(p.at(tr / 2) * 1023, 511 / 2, 4) && close(p.at(tr * 1.01) * 1023, 511, 0.5));
+}
+
+// --- oscillator levels and shapes (measured, renders/osc/octaves) -----------
+{
+  const fund = (form, locked = true) => {
+    const o = new VAOsc(SR); o.form = form; o.pw = 0.5; o.pwLocked = locked;
+    const buf = new Float32Array(SR);
+    for (let i = 0; i < SR; i++) buf[i] = o.tick(130.81);
+    return { h: (k) => magAt(buf.subarray(SR / 4), 130.81 * k) };
+  };
+  const dB = (x) => 20 * Math.log10(x);
+  const saw = fund("SAW").h(1);
+  ok("every VA waveform has captured tables", ["SAW", "SQR", "TRI", "SIN", "RAMP", "JUNO", "TRI2", "TRI3", "SIN2"]
+     .every((f) => WAVES.tables?.[f]?.length === 6));
+  for (const [form, want] of [["SQR", 0.14], ["TRI", -0.81], ["SIN", -0.02], ["RAMP", -5.0], ["JUNO", -9.2], ["SIN2", -0.01]]) {
+    const got = dB(fund(form).h(1) / saw);
+    ok(`${form} fundamental sits ${want} dB from SAW's (Zenology's levelling)`, close(got, want, 0.3), got.toFixed(2));
+  }
+  ok("the analytic square (PW moving) keeps the table's level",
+     close(dB(fund("SQR", false).h(1) / fund("SQR").h(1)), 0, 0.3));
+  ok("JUNO's energy is in the 2nd harmonic, as captured", fund("JUNO").h(2) > fund("JUNO").h(1));
+}
+
+// --- SuperSAW (measured against Zenology 2.0.9, renders/ssaw) ---------------
+{
+  const run = (detune, { pw = 0.5, secs = 1, hz = 261.63 } = {}) => {
+    const o = new VAOsc(SR); o.form = "SSAW"; o.pw = pw; o.setDetune(detune); o.reset(0);
+    const b = new Float32Array(Math.round(secs * SR));
+    for (let i = 0; i < b.length; i++) b[i] = o.tick(hz);
+    return b;
+  };
+  ok("SuperSAW has 14 voices with fixed detunes", SSAW.cents?.length === 14 && SSAW.phase?.length === 14);
+  const at = (d) => SSAW.amp[SSAW.detune.indexOf(d)];
+  const outer = (row) => Math.max(...row.slice(7)), inner = (row) => Math.max(...row.slice(0, 7));
+  ok("detune 0 is the inner stack, the outer 15+ dB down", outer(at(0)) < inner(at(0)) * 0.18);
+  ok("detune 127 has the outer stack louder than the inner", outer(at(127)) > inner(at(127)));
+  const a = run(64), b = run(64);
+  ok("every note restarts at the same phases (Zenology's is sample-identical)", a.every((v, i) => v === b[i]));
+  const p0 = run(64, { pw: 0 }), p1 = run(64, { pw: 1 });
+  ok("SuperSAW ignores PW (Zenology: byte-identical)", p0.every((v, i) => v === p1[i]));
+  // the highpass: energy at each voice's exact k-th harmonic, with and without
+  const hz = 1046.5, secs = 4;
+  const render = (hpf) => {
+    const o = new VAOsc(SR); o.form = "SSAW"; o.setDetune(127); o.reset(0);
+    if (!hpf) o.ssawHpf = 0;
+    const b = new Float32Array(secs * SR);
+    for (let i = 0; i < b.length; i++) b[i] = o.tick(hz);
+    return b.subarray(SR / 2);
+  };
+  const withF = render(true), without = render(false);
+  const energy = (buf, k) => SSAW.cents.reduce((e, c) => e + magAt(buf, k * hz * Math.pow(2, c / 1200)) ** 2, 0);
+  const d1 = 10 * Math.log10(energy(withF, 1) / energy(without, 1));
+  const d3 = 10 * Math.log10(energy(withF, 3) / energy(without, 3));
+  ok("the pitch-tracking highpass takes ~3.6 dB off the fundamental at detune 127",
+     close(d1, -3.6, 0.6), `${d1.toFixed(2)} dB`);
+  ok("... and leaves the 3rd harmonic alone", close(d3, 0, 0.3), `${d3.toFixed(2)} dB`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

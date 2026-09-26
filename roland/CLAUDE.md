@@ -13,8 +13,10 @@ Juno-X, Verselab) use to exchange tones.
 Plan of record:
 
 1. **Core library** (`zencore/`) — done, tested, byte-exact. Do not regress it.
-2. **Local web UI** — next. Python serves a small HTTP API over the core; the
-   browser renders the editor. Not started.
+2. **Local web UI** — working. Python serves a small HTTP API over the core
+   (`webui/server.py`); the browser renders a schema-driven editor with a VA
+   synth (`webui/static/`) that is being measured against Zenology feature by
+   feature - see "Zenology as an audio reference".
 3. MIDI/SysEx to talk to hardware directly — **out of scope for now.** Do not
    add a MIDI dependency without asking.
 
@@ -273,6 +275,55 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - **DawDreamer sometimes glitches a render's note-off** (late or missing):
     5 of ~160 envelope renders on 2026-09-26. A release that starts late or
     never happens is a glitch until a re-render reproduces it.
+- **The oscillator waveforms** - measured 2026-09-26 (renders/osc; tables by
+  `webui/compare/fit_osc.py`). Zenology levels its waveforms against each
+  other: SAW, SQR and SIN share a fundamental level (so the square is half a
+  +-1 saw's peak), the triangles sit 0.8 dB below, RAMP 5 dB, JUNO 9 dB (its
+  energy is in the 2nd harmonic). RAMP, JUNO, TRI2, TRI3 and SIN2 are shapes no
+  formula matched, so all nine play from captured harmonic tables - one per
+  octave C1-C6, since Zenology's top-end roll-off depends on pitch - band-
+  limited at playback. SAW and SQR use their tables only while PW is fixed at
+  64 (no PWM, no matrix route to PW); otherwise the analytic, PW-following
+  versions. PW 64 is exactly 50:50 (the guide); one PW step is 1/127.
+  Our synth vs Zenology: levels within 0.06 dB, shapes within 0.02-0.44 dB.
+  The voice gain is calibrated to it (VOICE_GAIN).
+  - **Not measured:** how TRI/SIN/RAMP/JUNO/TRI2/TRI3/SIN2 follow PW. They do
+    (half a PW step gives SIN a 2nd harmonic 29 dB up); the synth phase-warps
+    them, a guess that tracks SIN/TRI2/RAMP roughly - JUNO is left unwarped.
+  - **Zenology's VA SAW falls** (harmonic phases 0, +pi/2, pi, -pi/2 ...): the
+    analytic PW-morph saw is negated to match, and every table's phase is
+    anchored to its fundamental so octave tables share one origin.
+  - Capture gotcha: resampling a render by linear interpolation low-passes it
+    (sinc^2: -1.5 dB at 10 kHz) - fit_osc.py corrects for it. And measure
+    harmonics on exact period-resampled data: picking FFT peaks near k*f0
+    catches neighbouring harmonics at low notes and reported 8 dB errors that
+    were not there.
+- **SuperSAW** - measured 2026-09-26 (renders/ssaw; tables by
+  `webui/compare/fit_ssaw.py`; notes on `SSAW` in va-dsp.js).
+  - **14 steady VA saws in two stacks of 7**: inner at -10.8 -5.8 -1.2 +0.2
+    +3.0 +7.2 +11.4 cents (the JP-8000 spread), outer at -35.4 -18.9 -16.0
+    -4.0 +9.6 +24.2 +40.1. The detunes are fixed in cents at every pitch and
+    **do not move with `SSAW_DETUNE`**, which instead fades the outer stack in
+    (-60 dB at 0, -17 at 32, -11 at 127, per voice vs one VA saw) and the inner
+    one down (-14.5 -> -20 dB).
+  - **PW does nothing** (byte-identical). **Every note restarts at fixed
+    phases**: the same note is sample-identical take to take in one plugin
+    instance (`zen_bank.py --repeat`). The phases depend on the note, not the
+    detune; the synth uses C6's for every note.
+  - **The fundamental is 2-4 dB weaker** than a stack of VA saws gives, growing
+    with detune: modelled as a pitch-tracking 2-pole highpass at 0.90-1.07 x f0.
+    It is uneven per voice (-1 to -9 dB), so Zenology's voices are not quite
+    plain saws - the synth models the aggregate.
+  - Our synth vs Zenology (aggregate energy per harmonic): C5-C7 0.5 dB, level
+    0.56 dB; C1-C4 1.6 dB per harmonic, level 0.73 dB.
+  - **Why low notes cannot do better without per-note phases:** inner voices
+    1.4 cents apart beat once per 18 s at C2 (37 s at C1), so the start phases
+    set a held low note's timbre for its whole length - and a few seconds of
+    render measure the phases, not the spectrum. Capturing phases per note
+    needs a fit on high harmonics (voices separate there) with per-note
+    frequency refinement; not done.
+  - Also seen, not modelled: a ~0.63 Hz modulation on every voice (sidebands
+    constant in Hz at every harmonic, ~0.2 cent, +-0.5 dB).
 - **Roland's documentation:** the FANTOM-06/07/08 Parameter Guide
   (`FANTOM-06_07_08_Parameter_eng01_W.pdf`) describes ZEN-Core's tone
   parameters - pp.24-36 cover OSC, FILTER and MATRIX CONTROL. It is
@@ -281,11 +332,13 @@ move it up into "Verified facts" *with the evidence that settled it*.
   covers the model expansions and effects, not the ZEN-Core partial.
 - **Tools:** `webui/compare/zen_bank.py` renders copies of a user-bank tone
   that differ in one parameter (`--set` holds others fixed, `--param velocity`
-  sweeps the note velocity) - it writes the bank, renders each in a fresh
+  sweeps the note velocity, `--repeat N` plays each note N times in one
+  plugin instance) - it writes the bank, renders each in a fresh
   plugin, restores the bank byte for byte, and keeps `User.bin.orig` in the
   output dir. `webui/compare/fit_vcf.py` (VCF models, HPF, GC), `fit_tvf.py`
-  (TVF), `fit_vcf_nl.py` (nonlinear k) and `fit_env.py` (envelopes) fit the
-  synth from noise/saw/sine runs
+  (TVF), `fit_vcf_nl.py` (nonlinear k), `fit_env.py` (envelopes),
+  `fit_osc.py` (waveforms) and `fit_ssaw.py` (SuperSAW) fit the synth from
+  noise/saw/sine runs
   and `--write` their tables into `va-dsp.js`; each docstring has the exact
   render commands. `fit_cutoff.py` (saw harmonics) is superseded - it can only
   locate a cutoff above the note's fundamental, and it assumed the old filter.
@@ -354,8 +407,10 @@ tf.save("out.svz")
 
 ## The web UI and the VA synth
 
-**Started 2026-07-30.** `webui/server.py` is the thin HTTP layer; the browser
-side is not written yet. Decided: an AudioWorklet synth that plays the *VA*
+**Started 2026-07-30; working since.** `webui/server.py` is the thin HTTP layer;
+`webui/static/index.html` is the editor and `va-dsp.js` the synth DSP, shared by
+the AudioWorklet and the offline renderer (`webui/compare/render.mjs`). Decided:
+an AudioWorklet synth that plays the *VA*
 path only (no PCM samples), fed patch JSON by this API, and validated by
 rendering the same patch in both it and Zenology and comparing spectra — the
 same measure-don't-guess approach the rest of the project uses.

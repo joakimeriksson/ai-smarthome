@@ -107,15 +107,19 @@ def render_child(a):
     engine = dd.RenderEngine(SR, 512)
     p = engine.make_plugin_processor("zen", a.plugin)
     for note in a.notes:
-        p.clear_midi()
-        p.add_midi_note(note, a.velocity, a.lead, a.hold)
-        engine.load_graph([(p, [])])
-        engine.render(a.dur)
-        audio = engine.get_audio()
-        if float(np.abs(audio).max()) == 0.0:
-            raise SystemExit("silent render - is the plugin in Demo Mode? "
-                             "Log in via Roland Cloud Manager")
-        wavfile.write(f"{a.child}_n{note}.wav", SR, audio.T.astype(np.float32))
+        # --repeat plays the note again in the SAME plugin instance, to see
+        # whether state (oscillator phases, drift) carries over between notes
+        for r in range(a.repeat):
+            p.clear_midi()
+            p.add_midi_note(note, a.velocity, a.lead, a.hold)
+            engine.load_graph([(p, [])])
+            engine.render(a.dur)
+            audio = engine.get_audio()
+            if float(np.abs(audio).max()) == 0.0:
+                raise SystemExit("silent render - is the plugin in Demo Mode? "
+                                 "Log in via Roland Cloud Manager")
+            suffix = "" if r == 0 else f"_r{r}"
+            wavfile.write(f"{a.child}_n{note}{suffix}.wav", SR, audio.T.astype(np.float32))
     return 0
 
 
@@ -136,6 +140,9 @@ def main(argv=None):
     ap.add_argument("--lead", type=float, default=0.1, help="seconds before note-on")
     ap.add_argument("--hold", type=float, default=1.3, help="note length, seconds")
     ap.add_argument("--dur", type=float, default=1.6, help="render length, seconds")
+    ap.add_argument("--repeat", type=int, default=1,
+                    help="render each note this many times in one plugin instance "
+                         "(extra takes are saved as ..._n<note>_r<i>.wav)")
     ap.add_argument("--plugin", default=VST)
     ap.add_argument("--child", help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
@@ -179,6 +186,7 @@ def main(argv=None):
         "base_value": a.velocity if by_velocity else base.get(group, pid),
         "values": values, "fixed": {f"{g}.{i}": v for (g, i), v in fixed.items()},
         "notes": a.notes, "velocity": None if by_velocity else a.velocity,
+        "repeat": a.repeat,
         "lead": a.lead, "hold": a.hold, "dur": a.dur,
         "bank_sha1": sha(orig), "files": {},
     }
@@ -202,7 +210,7 @@ def main(argv=None):
                  "--notes", ",".join(map(str, a.notes)),
                  "--velocity", str(v if by_velocity else a.velocity),
                  "--lead", str(a.lead), "--hold", str(a.hold), "--dur", str(a.dur),
-                 "--plugin", a.plugin],
+                 "--repeat", str(a.repeat), "--plugin", a.plugin],
                 capture_output=True, text=True)
             if r.returncode != 0:
                 raise SystemExit(f"render of {pid}={v} failed:\n{r.stderr[-800:]}")

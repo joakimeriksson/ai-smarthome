@@ -453,5 +453,45 @@ function render(p, note = 57, secs = 0.5) {
   ok("... and leaves the 3rd harmonic alone", close(d3, 0, 0.3), `${d3.toFixed(2)} dB`);
 }
 
+// --- FAT, square PW, velocity and level laws (measured, renders/gap) --------
+{
+  const osc = (form, { fat = 64, pw = 64, hz = 220, secs = 1 } = {}) => {
+    const o = new VAOsc(SR); o.form = form; o.pw = 0.5 + (pw - 64) / 127; o.setFat(fat); o.reset(0);
+    const b = new Float32Array(Math.round(secs * SR));
+    for (let i = 0; i < b.length; i++) b[i] = o.tick(hz);
+    return b.subarray(SR / 4);
+  };
+  const rms = (b) => Math.sqrt(b.reduce((a, x) => a + x * x, 0) / b.length);
+  const f64 = osc("SAW"), f0 = osc("SAW", { fat: 0 }), f32 = osc("SAW", { fat: 32 });
+  ok("FAT 64 has no energy an octave down", magAt(f64, 110) < magAt(f64, 220) * 0.01);
+  ok("FAT 0 plays a full octave down", magAt(f0, 110) > magAt(f0, 220));
+  ok("FAT changes no level (Zenology: rms constant)", close(rms(f0) / rms(f64), 1, 0.03) && close(rms(f32) / rms(f64), 1, 0.03));
+  ok("FAT 127 equals FAT 0 (both a full octave down)",
+     close(magAt(osc("SAW", { fat: 127 }), 110), magAt(f0, 110), magAt(f0, 110) * 0.05));
+  const q32 = osc("SQR", { pw: 32 });
+  ok("SQR PW 32 is a 25% pulse: harmonic 4 vanishes", magAt(q32, 880) < magAt(q32, 220) * 0.02);
+  const q0 = osc("SQR", { pw: 0 }), q1 = osc("SQR", { pw: 1 });
+  ok("SQR PW 0 and 1 are the same clamped pulse", q0.every((v, i) => Math.abs(v - q1[i]) < 1e-9));
+  ok("SQR narrows DC-free: PW 0 is ~15 dB below PW 64",
+     close(20 * Math.log10(rms(q0) / rms(osc("SQR"))), -15.3, 1.5));
+
+  const tone = (over) => { const p = patch(); Object.assign(p.partials[0].amp, over); return p; };
+  const lvl = (p, vel, common = 127) => {
+    p.common.LEVEL = common;
+    const n = Math.round(0.4 * SR), L = new Float32Array(n), R = new Float32Array(n);
+    const v = new VAVoice(SR, p); v.noteOn(57, vel); v.process(L, R, n);
+    return rms(L.subarray(SR * 0.1));
+  };
+  const dB = (a, b) => 20 * Math.log10(a / b);
+  ok("LEVEL_VSENS 50: velocity 64 is (64/127)^2 of velocity 127",
+     close(dB(lvl(tone({ LEVEL_VSENS: 50 }), 64), lvl(tone({ LEVEL_VSENS: 50 }), 127)), 40 * Math.log10(64 / 127), 0.2));
+  ok("LEVEL_VSENS -50 mutes velocity 127", lvl(tone({ LEVEL_VSENS: -50 }), 127) < 1e-6);
+  ok("LEVEL_VSENS 0 is flat", close(dB(lvl(tone({ LEVEL_VSENS: 0 }), 20), lvl(tone({ LEVEL_VSENS: 0 }), 127)), 0, 0.05));
+  ok("partial LEVEL 64 is (64/127)^2 of 127 (-11.9 dB)",
+     close(dB(lvl(tone({ LEVEL: 64, LEVEL_VSENS: 0 }), 100), lvl(tone({ LEVEL: 127, LEVEL_VSENS: 0 }), 100)), -11.95, 0.1));
+  ok("tone LEVEL 59 is (59/127)^2 of 127 (-13.3 dB)",
+     close(dB(lvl(tone({ LEVEL_VSENS: 0 }), 100, 59), lvl(tone({ LEVEL_VSENS: 0 }), 100, 127)), -13.32, 0.1));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

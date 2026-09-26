@@ -39,7 +39,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
-from zencore import Schema  # noqa: E402
+from zencore import Schema, ToneFile  # noqa: E402
 from zencore.container import build, parse  # noqa: E402
 from zencore.svd import pack_ext, refresh_meta, unpack_ext  # noqa: E402
 from zencore.tone import Tone  # noqa: E402
@@ -60,14 +60,24 @@ def running_hosts():
     return r.stdout.strip()
 
 
-def variant(bank, index, changes, schema):
+def source_tone(spec, bank, schema):
+    """The tone record --tone names: 'slot:N' (1-based, from the bank as read)
+    or 'FILE.svz#I' (0-based tone index in an exported file)."""
+    if spec.startswith("slot:"):
+        return unpack_ext(parse(bank)).image.tone_bytes(int(spec[5:]) - 1)
+    path, _, i = spec.partition("#")
+    return ToneFile.open(path, schema).tones[int(i or 0)].data
+
+
+def variant(bank, index, changes, schema, source=None):
     """The bank with parameters of one slot changed, verified by re-reading.
 
-    changes: {(group, id): value}. Returns (bank bytes, the edited Tone).
+    changes: {(group, id): value}. source: a whole tone record to put in the
+    slot first (--tone). Returns (bank bytes, the edited Tone).
     """
     svz = parse(bank)
     ext = unpack_ext(svz)
-    tone = Tone(ext.image.tone_bytes(index), schema)
+    tone = Tone(source if source is not None else ext.image.tone_bytes(index), schema)
     name = tone.name
     for (group, pid), value in changes.items():
         tone.set(group, pid, value)
@@ -110,14 +120,25 @@ def render_child(a):
         # --repeat plays the note again in the SAME plugin instance, to see
         # whether state (oscillator phases, drift) carries over between notes
         for r in range(a.repeat):
-            p.clear_midi()
-            p.add_midi_note(note, a.velocity, a.lead, a.hold)
-            engine.load_graph([(p, [])])
-            engine.render(a.dur)
-            audio = engine.get_audio()
-            if float(np.abs(audio).max()) == 0.0:
-                raise SystemExit("silent render - is the plugin in Demo Mode? "
-                                 "Log in via Roland Cloud Manager")
+            # DawDreamer now and then starts a note late (0.5-1.8 s, seen
+            # 2026-09-26) - re-render until the note-on lands on time
+            for attempt in range(4):
+                p.clear_midi()
+                p.add_midi_note(note, a.velocity, a.lead, a.hold)
+                engine.load_graph([(p, [])])
+                engine.render(a.dur)
+                audio = engine.get_audio()
+                peak = float(np.abs(audio).max())
+                if peak == 0.0:
+                    # a setting can mute a tone (LEVEL_VSENS -50 at velocity 127
+                    # does); the parent fails the run only if EVERY render is silent
+                    print(f"note {note}: silent render", file=sys.stderr)
+                    break
+                env = np.abs(audio).max(axis=0)
+                late = float(np.argmax(env > 0.02 * peak)) / SR - a.lead
+                if late < 0.05:
+                    break
+                print(f"note {note}: note-on {late:.2f} s late, re-rendering", file=sys.stderr)
             suffix = "" if r == 0 else f"_r{r}"
             wavfile.write(f"{a.child}_n{note}{suffix}.wav", SR, audio.T.astype(np.float32))
     return 0
@@ -126,6 +147,9 @@ def render_child(a):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--slot", type=int, help="user tone number, 1-based as Zenology shows it")
+    ap.add_argument("--tone", help="render THIS tone in --slot instead of the slot's own: "
+                                   "'slot:N' or 'FILE.svz#I' (the slot must still be the "
+                                   "one Zenology has selected)")
     ap.add_argument("--param", help="GROUP.ID, e.g. PCMT_PTL_1.CUTOFF - or 'velocity' "
                                     "to sweep the note velocity of one fixed tone")
     ap.add_argument("--values", help="comma-separated raw values")
@@ -173,7 +197,8 @@ def main(argv=None):
         raise SystemExit(f"quit these first, they would overwrite the bank:\n{hosts}")
 
     orig = BANK.read_bytes()
-    _data, base = variant(orig, index, fixed, schema)     # the tone as rendered
+    source = source_tone(a.tone, orig, schema) if a.tone else None
+    _data, base = variant(orig, index, fixed, schema, source)     # the tone as rendered
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     # If this process is killed outright, the finally below never runs - this
@@ -182,7 +207,7 @@ def main(argv=None):
     (out / "patch.json").write_text(json.dumps(va_patch(base), indent=1))
     manifest = {
         "date": time.strftime("%Y-%m-%d %H:%M"),
-        "slot": a.slot, "tone": base.name, "param": a.param,
+        "slot": a.slot, "tone": base.name, "source": a.tone, "param": a.param,
         "base_value": a.velocity if by_velocity else base.get(group, pid),
         "values": values, "fixed": {f"{g}.{i}": v for (g, i), v in fixed.items()},
         "notes": a.notes, "velocity": None if by_velocity else a.velocity,
@@ -196,12 +221,13 @@ def main(argv=None):
     # Ctrl-C and SIGTERM both unwind through the finally below.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     expected = orig
+    silent = total = 0
     try:
         for v in values:
             if BANK.read_bytes() != expected:
                 raise SystemExit("User.bin changed underneath us - is a host running?")
             changes = dict(fixed) if by_velocity else {**fixed, (group, pid): v}
-            data, _tone = variant(orig, index, changes, schema)
+            data, _tone = variant(orig, index, changes, schema, source)
             BANK.write_bytes(data)
             expected = data
             prefix = out / f"{pid}-{v}"
@@ -214,6 +240,8 @@ def main(argv=None):
                 capture_output=True, text=True)
             if r.returncode != 0:
                 raise SystemExit(f"render of {pid}={v} failed:\n{r.stderr[-800:]}")
+            silent += r.stderr.count("silent render")
+            total += len(a.notes) * a.repeat
             manifest["files"][str(v)] = {str(n): f"{prefix.name}_n{n}.wav" for n in a.notes}
             print(f"  {pid}={v:5d}  ok", flush=True)
     finally:
@@ -223,6 +251,11 @@ def main(argv=None):
         if not ok:
             raise SystemExit(f"restore FAILED - original bank sha1 {sha(orig)}")
 
+    if total and silent == total:
+        raise SystemExit("every render was silent - is the plugin in Demo Mode? "
+                         "Log in via Roland Cloud Manager")
+    if silent:
+        print(f"{silent} of {total} renders were silent (the setting muted the tone)")
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
     print(f"wrote {out}/manifest.json")
     return 0

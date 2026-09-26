@@ -102,8 +102,11 @@ function ssawAmps(detune) {
 }
 
 const WT_SIZE = 2048;
-/** Output gain of a voice at full tone level, calibrated against Zenology. */
-const VOICE_GAIN = 0.25 * Math.pow(10, 0.44 / 20);
+/** Output gain of a voice at full tone level, calibrated against Zenology:
+ *  +0.44 dB from the waveform captures, +2.94 dB when the measured LEVEL_VSENS
+ *  law replaced the old guess the first calibration had absorbed (the captures
+ *  ran at velocity 1 with VSENS 10: old law 0.902, measured 0.643). */
+const VOICE_GAIN = 0.25 * Math.pow(10, (0.44 + 2.94) / 20);
 const wtCache = new Map();
 
 /** One period of a captured waveform, band-limited to maxK harmonics. */
@@ -137,6 +140,8 @@ export class VAOsc {
     this.phase = 0;
     this.form = "SAW";
     this.pw = 0.5;
+    this.cyc = 0;          // which of the two cycles FAT's segments span
+    this.fatA = 0.5;       // FAT 64: no split (see setFat)
     /** SAW and SQR play their captured tables only while PW is fixed at 64;
      *  anything moving PW needs the analytic, PW-following versions. */
     this.pwLocked = false;
@@ -145,6 +150,7 @@ export class VAOsc {
 
   reset(phase = 0) {
     this.phase = phase;
+    this.cyc = 0;
     if (this.form === "SSAW" && SSAW.phase) {
       this.ssawPh = Float64Array.from(SSAW.phase);
       if (this.hpS) this.hpS = [0, 0];
@@ -169,25 +175,61 @@ export class VAOsc {
     if (this.form === "SSAW" && SSAW.cents) return this.tickSsaw(hz, dt);
     const tabled = this.form in (WAVES.tables || {})
       && (this.pwLocked || (this.form !== "SAW" && this.form !== "SQR"));
-    if (!tabled) this.table = null;
+    // FAT splits two cycles into segments of 2a and 2(1-a) cycles (see setFat);
+    // each plays one full waveform, so each needs its own band limit
+    const a = this.fatA ?? 0.5;
+    if (!tabled) this.table = this.tableB = null;
     // re-pick at most every 32 samples, so audio-rate pitch modulation (XMOD)
     // does not rebuild or look up tables on every sample
     else if (!this.table || (((this.tableTick = (this.tableTick | 0) + 1) & 31) === 0
              && Math.abs(hz / this.tableHz - 1) > 0.03)) {
-      // nearest captured octave, band-limited to this pitch
+      // per segment: the captured octave nearest the pitch it actually plays
+      // at, band-limited to that pitch (FAT 0 plays a full octave down)
       const caps = WAVES.tables[this.form];
-      const note = 69 + 12 * Math.log2(Math.max(hz, 1) / 440);
-      let idx = 0;
-      for (let i = 1; i < caps.length; i++) {
-        if (Math.abs(caps[i].note - note) < Math.abs(caps[idx].note - note)) idx = i;
-      }
-      this.table = waveTable(this.form, idx, harmonicBudget(hz * 1.03, this.sr));
+      const seg = (len) => {
+        const f = hz / Math.max(2 * len, 1e-3);
+        const note = 69 + 12 * Math.log2(Math.max(f, 1) / 440);
+        let idx = 0;
+        for (let i = 1; i < caps.length; i++) {
+          if (Math.abs(caps[i].note - note) < Math.abs(caps[idx].note - note)) idx = i;
+        }
+        return waveTable(this.form, idx, harmonicBudget(f * 1.03, this.sr));
+      };
+      this.table = seg(a === 0.5 ? 0.5 : a || 1);
+      this.tableB = a === 0.5 ? this.table : seg(1 - a || 1);
       this.tableHz = hz;
     }
     this.phase += dt;
     this.syncedThisSample = this.phase >= 1;
-    if (this.syncedThisSample) this.phase -= Math.floor(this.phase);
-    return this.shape(this.phase, dt);
+    if (this.syncedThisSample) {
+      this.phase -= Math.floor(this.phase);
+      this.cyc ^= 1;
+    }
+    if (a === 0.5) return this.shape(this.phase, dt);
+    // FAT: the sub-phase q runs over two cycles; segment A is [0, a), B [a, 1)
+    const q = (this.cyc + this.phase) / 2;
+    if (q < a) return this.shape(q / a, dt / (2 * a));
+    const tA = this.table;
+    this.table = this.tableB;
+    const out = this.shape((q - a) / (1 - a), dt / (2 * (1 - a)));
+    this.table = tA;
+    return out;
+  }
+
+  /** FAT (0..127), MEASURED 2026-09-26 against Zenology 2.0.9 (renders/gap/fat-f0,
+   *  fat-f1; the model fits every value at correlation >= 0.999, saw and square):
+   *  not a filter and no level change (rms constant) - it splits every TWO
+   *  cycles into two segments of 1-x and 1+x cycles, each playing one full
+   *  waveform. x = |FAT-64|/64 below 64, /63 above, so FAT 64 is the plain
+   *  oscillator and FAT 0 and 127 play it a full octave down. Below 64 the
+   *  short segment comes first, above 64 the long one. Stored as a, the first
+   *  segment's share of the two cycles. Applies to the VA waveforms (the guide:
+   *  "effective if OSC Type is VA"); its interaction with PW is not measured. */
+  setFat(fat) {
+    const f = Math.max(0, Math.min(127, fat));
+    const x = f <= 64 ? (64 - f) / 64 : Math.min(1, (f - 64) / 63);
+    const a = f <= 64 ? (1 - x) / 2 : (1 + x) / 2;
+    if (a !== this.fatA) { this.fatA = a; this.table = null; }
   }
 
   /** SuperSAW: 14 SAW-table voices at their fixed detunes and measured levels. */
@@ -281,9 +323,15 @@ export class VAOsc {
       return this.table[i] + (this.table[i + 1] - this.table[i]) * f;
     }
     if (this.form === "SQR") {
-      let v = p < this.pw ? 1 : -1;
+      // Duty from PW, MEASURED 2026-09-26 (renders/gap/sqr-pw, harmonic fit):
+      // PW/128 below 64, 0.5 + (PW-64)/126 above, clamped at 1.15% both ends
+      // (PW 0-1 and 126-127 are the same pulse). The pulse is DC-free - its
+      // level falls as it narrows (-15 dB at the clamp), as Zenology's does.
+      const pwv = 64 + (this.pw - 0.5) * 127;
+      const w = Math.min(0.9885, Math.max(0.0115, pwv < 64 ? pwv / 128 : 0.5 + (pwv - 64) / 126));
+      let v = (p < w ? 1 : -1) - (2 * w - 1);
       v += blep(p, dt);
-      v -= blep((p - this.pw + 1) % 1, dt);
+      v -= blep((p - w + 1) % 1, dt);
       return v * (WAVES.sqr ?? 0.5);
     }
     if (this.form === "SAW") return this.sawMorph(p, dt);
@@ -786,6 +834,7 @@ export const MATRIX_FULL = {
   "TVA-LFO1": 200, "TVA-LFO2": 200,
   "LFO1-RATE": 1023, "LFO2-RATE": 1023,  // LFO RATE units             UNFITTED
   "SSAW-DETN": 127,        // SSAW_DETUNE units                        UNFITTED
+  FAT: 127,                // FAT units                                UNFITTED
 };
 
 /** Source values, 0..1 or -1..1. VELOCITY is MEASURED: unipolar and linear,
@@ -817,6 +866,8 @@ class Partial {
     this.osc.form = oscType === "Noise" ? "NOISE" : oscType === "SuperSAW" ? "SSAW"
                   : label(cfg.osc.VA_FORM) || "SAW";
     this.ssawDetune = raw(cfg.osc.SSAW_DETUNE, 64);
+    this.fat = raw(cfg.osc.FAT, 64);
+    if (this.osc.form !== "SSAW" && this.osc.form !== "NOISE") this.osc.setFat(this.fat);
     if (this.osc.form === "SSAW") this.osc.setDetune(this.ssawDetune);
     // PW 64 is exactly 50:50 (Parameter Guide); one PW step is 1/127 of the cycle
     this.osc.pw = 0.5 + (raw(cfg.osc.PW, 64) - 64) / 127;
@@ -847,7 +898,10 @@ class Partial {
     this.coarse = raw(cfg.pitch.PIT_CRS, 0);
     this.fine = raw(cfg.pitch.PIT_FINE, 0) / 100;
     this.keyfollow = raw(cfg.pitch.PIT_KF, 100) / 100;
-    this.level = raw(cfg.amp.LEVEL, 127) / 127;
+    // partial LEVEL, and tone LEVEL below, are both (L/127)^2 - MEASURED
+    // 2026-09-26 (renders/gap/level-*), exact to 4 decimals at 14 values
+    this.levelRaw = raw(cfg.amp.LEVEL, 127);
+    this.level = (this.levelRaw / 127) ** 2;
     this.pan = raw(cfg.amp.PAN, 0) / 64;
     this.levelVSens = raw(cfg.amp.LEVEL_VSENS, 0) / 100;
     this.cutoff = raw(cfg.filter.CUTOFF, 1023);
@@ -935,16 +989,19 @@ class Partial {
 
     // PWM is driven by LFO2 - the manual is explicit about that. The matrix
     // adds to both the static PW and the PWM depth.
+    if ((this.fatRoute ??= this.routes.some((r) => r.dst === "FAT"))
+        && this.osc.form !== "SSAW" && this.osc.form !== "NOISE") {
+      this.osc.setFat(this.fat + m.FAT);
+    }
     if (this.osc.form === "SSAW" && m["SSAW-DETN"] !== undefined) {
       this.osc.setDetune(this.ssawDetune + m["SSAW-DETN"]);
     }
     const pwmDepth = this.pwmDepth + m.PWM / 63;
     if (pwmDepth || m.PW) {
       const pw = this.basePw + m.PW / 127 + l2 * pwmDepth * 0.45;
-      // SAW saturates by itself (see sawMorph) - clamping PW here would stop
-      // it short of the pure triangle Zenology reaches. The pulse shapes keep
-      // their old guard against a zero-width (silent) pulse.
-      this.osc.pw = this.osc.form === "SAW"
+      // SAW and SQR clamp inside their own shapes (sawMorph; SQR's measured
+      // 1.15% limit); the other forms keep a guard against a zero-width warp
+      this.osc.pw = this.osc.form === "SAW" || this.osc.form === "SQR"
         ? pw
         : Math.min(0.95, Math.max(0.05, pw));
     }
@@ -987,8 +1044,14 @@ class Partial {
     // amp: envelope, patch level, velocity sensitivity, LFO tremolo
     const trem = 1 + ((this.lfo1.tva + m["TVA-LFO1"] / 100) * l1
                     + (this.lfo2.tva + m["TVA-LFO2"] / 100) * l2);
-    const velGain = 1 + this.levelVSens * (this.vel - 0.5) * 2;
-    const level = Math.max(0, this.level + m.LEV / 127);
+    // LEVEL_VSENS, MEASURED 2026-09-26 (renders/gap/vsens*, at LEVEL_VCRV 1):
+    // s = VSENS/50; s >= 0: (1 - s(1 - v/127))^2, s < 0: (1 - |s| v/127)^2,
+    // floored at 0 - so VSENS 50 is (v/127)^2, 100 mutes velocity < ~64, -50
+    // mutes velocity 127, and 0 is flat. The velocity curves 2-7 are not measured.
+    const sv = this.levelVSens * 2;
+    const velGain = sv >= 0 ? Math.max(0, 1 - sv * (1 - this.vel)) ** 2
+                            : Math.max(0, 1 + sv * this.vel) ** 2;
+    const level = m.LEV ? (Math.max(0, Math.min(127, this.levelRaw + m.LEV)) / 127) ** 2 : this.level;
     return s * ae * level * Math.max(0, velGain) * Math.max(0, trem);
   }
 
@@ -1029,7 +1092,7 @@ export class VAVoice {
     this.struct34 = label(patch.structure.pair34) || "OFF";
     this.ringLevel = raw(patch.structure.RING12_LEVEL, 127) / 127;
     this.xmodDepth = raw(patch.structure.XMOD12_DEPTH, 1200) / 1200;
-    this.toneLevel = raw(patch.common.LEVEL, 127) / 127;
+    this.toneLevel = (raw(patch.common.LEVEL, 127) / 127) ** 2;     // measured, see Partial
     this.octave = raw(patch.common.OCTAVE, 0);
     this.coarse = raw(patch.common.PIT_CRS, 0);
     this.fine = raw(patch.common.PIT_FINE, 0) / 100;
@@ -1057,8 +1120,7 @@ export class VAVoice {
     const hz = 440 * Math.pow(2,
       (this.note - 69 + this.octave * 12 + this.coarse + this.fine) / 12);
     // keep the level sane as unison and partials stack up
-    // VOICE_GAIN is calibrated to Zenology: every captured waveform came out
-    // 0.44 dB low at 0.25 (renders/osc/octaves), uniformly
+    // VOICE_GAIN is calibrated to Zenology (see its definition)
     const g = this.toneLevel * VOICE_GAIN / Math.sqrt(this.uniSize);
 
     for (let i = 0; i < n; i++) {

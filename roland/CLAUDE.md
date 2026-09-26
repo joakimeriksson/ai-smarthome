@@ -183,9 +183,38 @@ move it up into "Verified facts" *with the evidence that settled it*.
   was set by hand. INIT tones do NOT (Test1 has no live route); the hand-built
   corpus tones route SYS-CTRL1 (normally the mod wheel) to CUT / PIT-LFO1 /
   LFO1-RATE, which is silent until a controller moves.
-- Level still rises ~3.8 dB from velocity 1 to 127 with the matrix route off -
-  that is `LEVEL_VSENS` (10 on MEAS SAW), which our synth models more weakly
-  (~1.7 dB). Unfitted.
+- **Level laws** - measured 2026-09-26 (renders/gap; our synth within 0.1 dB):
+  - Tone `LEVEL` and partial `LEVEL` are both **(L/127)^2** (exact to 4
+    decimals at 14 values) - not linear: level 59 is -13.3 dB, 64 is -11.9.
+  - `LEVEL_VSENS` (at velocity curve 1): s = VSENS/50; s >= 0 gives
+    (1 - s(1 - v/127))^2, s < 0 gives (1 - |s| v/127)^2, floored at 0. VSENS 0 is
+    flat, 50 is (v/127)^2, 100 mutes velocity below ~64, -50 mutes velocity
+    127 (a render can be legitimately silent - zen_bank.py allows it). The
+    velocity curves 2-7 are not measured.
+- **FAT is a period-doubling phase split, not a filter** (measured 2026-09-26,
+  renders/gap/fat-f0, fat-f1; model fits every value at correlation >= 0.999):
+  every two cycles become segments of 1-x and 1+x cycles, each playing one
+  full waveform; x = |FAT-64|/64 below 64 (short segment first), /63 above
+  (long first). FAT 64 is plain, FAT 0 and 127 a full octave down; the level
+  never changes. Two corpus tones sit at FAT 0 - they play an octave down.
+  Our synth: rms within 0.04 dB, line shape 0.9 dB (2-4 dB at mid values, top
+  note, saw). Its interaction with PW is not measured.
+- **SQR follows PW** (renders/gap/sqr-pw): duty PW/128 below 64, 0.5 +
+  (PW-64)/126 above, clamped at 1.15% (PW 0-1 = 126-127); the pulse is DC-free,
+  so it gets quieter as it narrows (-15 dB at the clamp). Within 0.26 dB shape.
+- **Whole-tone check** (`webui/compare/compare_tones.py`, renders/tones: the
+  seven playable corpus/bank tones rendered dry and wet via `zen_bank.py
+  --tone`). After the fixes above, 2026-09-26: MEAS SAW 0.2 dB level / 0.8 dB
+  spectrum; the rest 1.6-8.4 dB spectrum. Remaining, largest first:
+  - **Partial structure**: the sync and ring tones are 7-17 dB too QUIET in
+    our synth, constant per tone (Laser Sync Harp, OSC-SyncLd, OscSync-
+    Thriller, JP-6 Rings). Sync/ring/xmod are not measured at all.
+  - **LFOs**: rate, waveform, delay/fade and the PWM depth law are guesses;
+    c64 poly (full PWM depth) is ~6 dB too loud, likely from PWM depth.
+  - TVF PKG at high cutoff (korg minipop, +6 dB); a 3-partial sum with Analog
+    Feel 20 (Kaihou Keys, +5 dB).
+  - Zenology's MFX barely changes these tones' spectra (wet vs dry mostly
+    under 1 dB) - the gap is the voice, not the effects.
 - Correction: an earlier note here said velocity 64 renders silence. It did not
   reproduce (`renders/mx-vel`, velocity 63/64/65 all normal) - that render was a
   glitch, not a property of the plugin.
@@ -333,7 +362,9 @@ move it up into "Verified facts" *with the evidence that settled it*.
 - **Tools:** `webui/compare/zen_bank.py` renders copies of a user-bank tone
   that differ in one parameter (`--set` holds others fixed, `--param velocity`
   sweeps the note velocity, `--repeat N` plays each note N times in one
-  plugin instance) - it writes the bank, renders each in a fresh
+  plugin instance, `--tone slot:N|FILE.svz#I` renders any tone in the
+  selected slot; late note-ons are re-rendered automatically) - it writes the
+  bank, renders each in a fresh
   plugin, restores the bank byte for byte, and keeps `User.bin.orig` in the
   output dir. `webui/compare/fit_vcf.py` (VCF models, HPF, GC), `fit_tvf.py`
   (TVF), `fit_vcf_nl.py` (nonlinear k), `fit_env.py` (envelopes),

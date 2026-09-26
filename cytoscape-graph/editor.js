@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
     buildExtraFields();
     populateEditor();
     fetchImages();
-    editorContainer.style.display = 'block';
+    editorContainer.style.display = 'flex';
     insertMode = false;
     addNodeBtn.style.display = 'inline-block';
     updateNodeBtn.style.display = 'none';
@@ -209,6 +209,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   saveEditorBtn.addEventListener('click', function() {
+    // One undo step for the whole batch of raw edits.
+    if (window.Edit) Edit.checkpoint('Edited the raw data');
     graphData = JSON.parse(JSON.stringify(currentGraphData));
 
     // Re-render current view

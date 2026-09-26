@@ -27,13 +27,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
 DEFAULT_OUT = os.path.join(BASE_DIR, "public")
 
-# Copied verbatim. Note editor.js / workshop.js are absent by design.
+# Copied verbatim. editor.js and editing.js are absent by design: the public
+# build is a viewer. inspector.js renders read-only without editing.js.
 ASSETS = [
-    "code.js", "queries.js", "style.css",
-    "cytoscape.min.js", "cytoscape.klay.js", "cytoscape-icons.js",
-    "ontology.json",
+    "code.js", "queries.js", "inspector.js", "palette.js", "style.css",
+    "cytoscape.min.js", "ontology.json",
 ]
-ASSET_DIRS = ["imgs"]
+ASSET_DIRS = ["imgs", "vendor", "fonts"]
 
 # Node fields allowed into the public build. An allowlist, not a blocklist:
 # a new internal-only attribute must be added here deliberately before it can
@@ -50,15 +50,18 @@ PUBLIC_EDGE_FIELDS = {"source", "target", "type", "id"}
 # Removed from index.html to make the viewer read-only. Each MUST be found —
 # a silent miss would ship an editor to the public, so the build fails instead.
 HTML_CUTS = [
-    ('<script src="editor.js"></script>', "editor script"),
-    ('<script src="workshop.js"></script>', "workshop script"),
-    ('<button id="edit-graph-btn">Edit Graph</button>', "Edit Graph button"),
-    ('<button id="workshop-btn">Workshop</button>', "Workshop button"),
+    ('<script src="editor.js"></script>', "raw editor script"),
+    ('<script src="editing.js"></script>', "editing script"),
+    ('<button id="edit-toggle" class="btn btn-primary" type="button" aria-pressed="false">Edit journeys</button>',
+     "Edit journeys button"),
+    ('<button role="menuitem" type="button" id="edit-graph-btn">Edit raw data</button>', "raw editor menu item"),
 ]
-# Larger regions cut by their first/last line (inclusive).
+# Larger regions cut by their opening tag through the matching close (nested divs handled).
 HTML_BLOCK_CUTS = [
-    ('<div id="person-link-bar">', "</div>", "person-link bar"),
-    ('<div id="editor-container" style="display: none;">', "</div>", "editor markup"),
+    ('<div id="link-banner" class="banner" hidden>', "</div>", "person-link banner"),
+    ('<div id="editor-container" class="overlay" style="display: none;">', "</div>", "raw editor markup"),
+    ('<div id="composer" class="composer" hidden>', "</div>", "stone composer"),
+    ('<div id="edit-hint" class="edit-hint">', "</div>", "editing hint"),
 ]
 
 
@@ -87,6 +90,7 @@ def filter_graph(data):
         if d["source"] in kept_ids and d["target"] in kept_ids:
             kept_edges.append({"data": {k: v for k, v in d.items()
                                         if k in PUBLIC_EDGE_FIELDS}})
+
 
     # A view whose types match nothing would render as a blank canvas.
     node_types = {n["data"]["type"] for n in kept_nodes}
@@ -129,15 +133,14 @@ def make_public_html(src_html):
             j += 1
         html = html[:i] + html[j:]
 
-    html = html.replace("<title>CS Department Explorer</title>",
-                        "<title>RISE Computer Science — Technology Journeys</title>")
+    # Keep the page title as is; it already names the unit and the map.
     return html
 
 
 def verify_no_leaks(out_dir):
     """Belt and braces: the built directory must contain no internal data."""
     problems = []
-    for banned in ("editor.js", "workshop.js", "server.py", "orcid_config.json",
+    for banned in ("editor.js", "editing.js", "workshop.js", "server.py", "orcid_config.json",
                    "import_orcid.py", "suggest_links.py", "unit_kista.txt",
                    "resolved_unit_kista.txt", "researcher_topics.txt"):
         if os.path.exists(os.path.join(out_dir, banned)):
@@ -157,7 +160,7 @@ def verify_no_leaks(out_dir):
             problems.append(f"dangling edge: {e['data']['source']} -> {e['data']['target']}")
 
     html = open(os.path.join(out_dir, "index.html"), encoding="utf-8").read()
-    for marker in ("editor.js", "workshop.js", "edit-graph-btn", "person-link-search"):
+    for marker in ("editor.js", "editing.js", "edit-toggle", "edit-graph-btn", "link-banner", "composer-input"):
         if marker in html:
             problems.append(f"index.html still references {marker}")
     return problems

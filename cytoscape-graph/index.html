@@ -1,65 +1,114 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <link href="style.css" rel="stylesheet" />
-  <meta charset=utf-8 />
-  <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
-  <title>CS Department Explorer</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Technology Journeys — RISE Computer Science</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Everything is local: a workshop venue without Wi-Fi must not break the tool. -->
   <script src="cytoscape.min.js"></script>
-  <script src="https://unpkg.com/klayjs@0.4.1/klay.js"></script>
-  <script src="https://unpkg.com/cytoscape-klay@3.1.2/cytoscape-klay.js"></script>
+  <script src="vendor/klay.js"></script>
+  <script src="vendor/cytoscape-klay.js"></script>
 </head>
 <body>
 
-  <div id="cy"></div>
-
-  <div id="view-switcher">
-    <select id="view-select"></select>
-  </div>
-
-  <div id="person-link-bar">
-    <div id="person-link-search-wrap">
-      <input type="text" id="person-link-search" placeholder="Search person to link nodes..." autocomplete="off">
-      <div id="person-link-results"></div>
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-name">Technology journeys</span>
+      <span class="brand-unit">RISE Computer Science</span>
     </div>
-    <div id="person-link-active" style="display: none;">
-      <span id="person-link-name"></span>
-      <span id="person-link-hint">Click nodes to toggle links</span>
-      <button id="person-link-done">Done</button>
+    <span id="save-status" class="save-status" aria-live="polite"></span>
+
+    <nav id="view-tabs" aria-label="Views"></nav>
+    <!-- Kept for code that switches views programmatically; the tabs drive it. -->
+    <select id="view-select" hidden></select>
+
+    <div class="topbar-actions">
+      <button id="search-btn" class="search-trigger" type="button" aria-label="Search or jump to (Command K)">
+        <span class="search-trigger-text">Search or jump to…</span><kbd>⌘K</kbd>
+      </button>
+      <button id="insights-btn" class="btn" type="button" aria-pressed="false">Insights</button>
+      <button id="edit-toggle" class="btn btn-primary" type="button" aria-pressed="false">Edit journeys</button>
+      <button id="present-btn" class="btn" type="button">Present</button>
+      <div class="menu-wrap">
+        <button id="more-btn" class="btn btn-icon" type="button" aria-label="More actions" aria-haspopup="menu" aria-expanded="false">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="4" cy="10" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="16" cy="10" r="1.7"/></svg>
+        </button>
+        <div id="more-menu" class="menu" role="menu" hidden>
+          <button role="menuitem" type="button" id="edit-graph-btn">Edit raw data</button>
+          <button role="menuitem" type="button" data-cmd="export">Download the data (JSON)</button>
+          <button role="menuitem" type="button" data-cmd="shortcuts">Keyboard shortcuts</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="canvas-wrap">
+    <!-- Horizon zones sit BEHIND the transparent graph canvas, so the shading
+         never tints a station and the canvas still gets every click. -->
+    <div id="bands" aria-hidden="true"></div>
+    <div id="cy" role="application" aria-label="Technology journey map"></div>
+
+    <div id="composer" class="composer" hidden>
+      <input id="composer-input" type="text" autocomplete="off" spellcheck="true" aria-describedby="composer-hint">
+      <div id="composer-hint" class="composer-hint"></div>
+    </div>
+
+    <div id="edit-hint" class="edit-hint">
+      Click <b>+</b> to add a stone. Double-click to rename. Drag or <kbd>←</kbd><kbd>→</kbd> to change horizon.
+    </div>
+    <div id="legend" aria-label="Legend"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <aside id="query-panel" class="drawer drawer-left" aria-label="Insights" hidden>
+    <div class="drawer-head">
+      <h2 id="query-panel-title">Insights</h2>
+      <button id="close-query-panel-btn" class="btn-close" type="button" aria-label="Close insights">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+      </button>
+    </div>
+    <div id="query-panel-body" class="drawer-body"></div>
+  </aside>
+
+  <aside id="inspector" class="drawer drawer-right" aria-label="Details" hidden></aside>
+
+  <div id="link-banner" class="banner" hidden>
+    <span>Linking stones for <strong id="link-banner-name"></strong>. Click a stone to add or remove them.</span>
+    <button id="link-banner-done" class="btn btn-primary" type="button">Done</button>
+  </div>
+
+  <div id="palette" class="overlay" hidden>
+    <div class="palette" role="dialog" aria-label="Search or jump to">
+      <input id="palette-input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Search stones, people and commands" aria-controls="palette-list">
+      <div id="palette-list" class="palette-list" role="listbox"></div>
     </div>
   </div>
 
-  <div id="right-buttons">
-    <button id="edit-graph-btn">Edit Graph</button>
-    <button id="workshop-btn">Workshop</button>
-    <button id="insights-btn">Insights</button>
-    <button id="show-persons-btn">Show Persons</button>
+  <div id="shortcuts" class="overlay" hidden>
+    <div class="sheet" role="dialog" aria-labelledby="shortcuts-title">
+      <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+      <dl class="shortcut-list">
+        <dt><kbd>⌘</kbd><kbd>K</kbd> or <kbd>/</kbd></dt><dd>Search or jump to anything</dd>
+        <dt><kbd>E</kbd></dt><dd>Start or stop editing journeys</dd>
+        <dt><kbd>P</kbd></dt><dd>Present full screen</dd>
+        <dt><kbd>Enter</kbd></dt><dd>Rename the selected stone</dd>
+        <dt><kbd>N</kbd></dt><dd>Add a stone after the selected one</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Move the selected stone to an earlier or later horizon</dd>
+        <dt><kbd>C</kbd></dt><dd>Connect the selected stone to another</dd>
+        <dt><kbd>Delete</kbd></dt><dd>Delete the selected stone and rejoin its journey</dd>
+        <dt><kbd>⌘</kbd><kbd>Z</kbd></dt><dd>Undo; add <kbd>Shift</kbd> to redo</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close whatever is open</dd>
+      </dl>
+      <button class="btn" type="button" data-close>Close</button>
+    </div>
   </div>
 
-  <div id="query-panel" style="display: none;">
-    <button id="close-query-panel-btn">&times;</button>
-    <h3 id="query-panel-title">Insights</h3>
-    <div id="query-panel-body"></div>
-  </div>
-
-  <div id="detail-panel" style="display: none;">
-    <button id="close-detail-btn">&times;</button>
-    <h3 id="detail-title"></h3>
-    <div id="detail-type-badge"></div>
-    <div id="detail-description"></div>
-    <div id="detail-meta"></div>
-    <div id="detail-connections"></div>
-  </div>
-
-  <div id="persons-display-container" style="display: none;">
-    <h3>Persons</h3>
-    <ul id="persons-display-list"></ul>
-    <button id="close-persons-display-btn">Close</button>
-  </div>
-
-  <div id="editor-container" style="display: none;">
-    <div id="editor">
-      <h2>Graph Editor</h2>
+  <div id="editor-container" class="overlay" style="display: none;">
+    <div id="editor" role="dialog" aria-labelledby="editor-title">
+      <h2 id="editor-title">Edit raw data</h2>
+      <p class="editor-lede">Every node and edge in the graph. For day-to-day changes, use Edit journeys and the details panel instead.</p>
 
       <div class="editor-section">
         <h3>Nodes</h3>
@@ -70,8 +119,8 @@
         <select id="node-type"></select>
         <div id="node-extra-fields"></div>
         <select id="node-image"></select>
-        <button id="add-node-btn">Add Node</button>
-        <button id="update-node-btn" style="display: none;">Update Node</button>
+        <button id="add-node-btn" class="btn">Add node</button>
+        <button id="update-node-btn" class="btn" style="display: none;">Update node</button>
       </div>
 
       <div class="editor-section">
@@ -79,29 +128,27 @@
         <div id="edges-list"></div>
         <!-- Type-to-search: a plain <select> over 600 nodes is unusable. -->
         <input type="text" id="edge-source" list="node-options" autocomplete="off"
-               placeholder="From — type a name to search…">
+               placeholder="From: type a name to search">
         <input type="text" id="edge-target" list="node-options" autocomplete="off"
-               placeholder="To — type a name to search…">
+               placeholder="To: type a name to search">
         <datalist id="node-options"></datalist>
         <select id="edge-type"></select>
-        <button id="add-edge-btn">Add Edge</button>
+        <button id="add-edge-btn" class="btn">Add edge</button>
       </div>
 
       <div class="editor-controls">
-        <button id="save-editor-btn">Save & Close</button>
-        <button id="export-json-btn">Export to JSON</button>
-        <button id="close-editor-btn">Close without saving</button>
+        <button id="save-editor-btn" class="btn btn-primary">Save and close</button>
+        <button id="export-json-btn" class="btn">Download JSON</button>
+        <button id="close-editor-btn" class="btn">Close without saving</button>
       </div>
     </div>
   </div>
 
-  <div id="legend"></div>
-
-  <script src="cytoscape-icons.js"></script>
   <script src="code.js"></script>
   <script src="queries.js"></script>
-  <script src="workshop.js"></script>
+  <script src="inspector.js"></script>
+  <script src="palette.js"></script>
+  <script src="editing.js"></script>
   <script src="editor.js"></script>
-
 </body>
 </html>

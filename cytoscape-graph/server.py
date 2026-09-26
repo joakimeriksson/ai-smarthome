@@ -88,4 +88,9 @@ def list_images():
 if __name__ == '__main__':
     # Debug (auto-reload + interactive debugger) is opt-in — never on for a
     # shared deployment. Enable locally with FLASK_DEBUG=1.
-    app.run(debug=os.environ.get('FLASK_DEBUG', '0') == '1')
+    # Port 5000 is taken by macOS AirPlay Receiver (ControlCenter), which answers
+    # every request with a bare 403 — on a presenter's Mac the tool would look
+    # broken. Default to 5050; override with PORT=.
+    port = int(os.environ.get('PORT', '5050'))
+    print(f' * Foresight graph: http://127.0.0.1:{port}')
+    app.run(port=port, debug=os.environ.get('FLASK_DEBUG', '0') == '1')

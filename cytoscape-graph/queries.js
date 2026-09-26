@@ -150,7 +150,7 @@
       help: 'Every stepping stone banded by horizon (now / next / beyond).',
       run: function () {
         var order = ['now', 'next', 'beyond', null];
-        var secLabel = { now: 'NOW (0–2 yrs)', next: 'NEXT (2–5 yrs)', beyond: 'BEYOND (5–10 yrs)' };
+        var secLabel = { now: 'Now, 0–2 years', next: 'Next, 2–5 years', beyond: 'Beyond, 5–10 years' };
         var items = [];
         order.forEach(function (h) {
           stones()
@@ -159,7 +159,7 @@
               items.push({
                 id: s.data.id, label: lbl(s),
                 note: s.data.trl != null ? ('TRL ' + s.data.trl) : '',
-                section: h ? secLabel[h] : 'HORIZON UNSET'
+                section: h ? secLabel[h] : 'Horizon not set'
               });
             });
         });
@@ -185,7 +185,7 @@
         stones()
           .filter(function (s) { return s.data.trl == null; })
           .forEach(function (s) {
-            items.push({ id: s.data.id, label: lbl(s), note: horizonNote(s), section: 'TRL unset' });
+            items.push({ id: s.data.id, label: lbl(s), note: horizonNote(s), section: 'Readiness not set' });
           });
         return items;
       }
@@ -219,11 +219,22 @@
 
   function open() {
     if (!panel) build();
-    panel.style.display = 'block';
+    panel.hidden = false;
+    document.body.classList.add('insights-open');
+    setPressed(true);
     showMenu();
+    onCanvasResized();
   }
   function close() {
-    if (panel) panel.style.display = 'none';
+    if (!panel || panel.hidden) return;
+    panel.hidden = true;
+    document.body.classList.remove('insights-open');
+    setPressed(false);
+    onCanvasResized();
+  }
+  function setPressed(on) {
+    var btn = document.getElementById('insights-btn');
+    if (btn) btn.setAttribute('aria-pressed', String(on));
   }
 
   function build() {
@@ -240,8 +251,8 @@
     // Quick counts across the whole graph.
     var summary = document.createElement('div');
     summary.className = 'query-summary';
-    summary.textContent = stones().length + ' stones · ' + destinations().length +
-      ' destinations · ' + researchers().length + ' researchers';
+    summary.textContent = 'Across the whole map: ' + stones().length + ' stepping stones, ' +
+      destinations().length + ' destinations and ' + researchers().length + ' people.';
     body.appendChild(summary);
 
     // Group query buttons by their `group`.
@@ -255,10 +266,19 @@
       body.appendChild(h);
 
       QUERIES.filter(function (q) { return q.group === g; }).forEach(function (q) {
+        // The count sits on the button, so the gaps show before anyone clicks.
         var btn = document.createElement('button');
         btn.className = 'query-item-btn';
-        btn.textContent = q.label;
+        btn.type = 'button';
         btn.title = q.help;
+        var n = q.run().length;
+        var name = document.createElement('span');
+        name.textContent = q.label;
+        var badge = document.createElement('span');
+        badge.className = 'query-item-count' + (g === 'Capability gaps' && n > 0 ? ' has-gap' : '');
+        badge.textContent = n;
+        btn.appendChild(name);
+        btn.appendChild(badge);
         btn.addEventListener('click', function () { runQuery(q); });
         body.appendChild(btn);
       });
@@ -272,7 +292,7 @@
 
     var back = document.createElement('button');
     back.className = 'query-back-btn';
-    back.textContent = '‹ All insights';
+    back.textContent = 'Back to all insights';
     back.addEventListener('click', showMenu);
     body.appendChild(back);
 
@@ -289,7 +309,7 @@
     if (items.length === 0) {
       var empty = document.createElement('div');
       empty.className = 'query-empty';
-      empty.textContent = 'Nothing matches — nice, no gap here (or the data is not linked yet).';
+      empty.textContent = 'Nothing here. Either there is no gap, or the links that would show one have not been made yet.';
       body.appendChild(empty);
       return;
     }
@@ -323,31 +343,14 @@
     body.appendChild(list);
   }
 
-  // Focus a node by id: switch to Full Map if it's outside the current view,
-  // then open its detail panel and centre it.
-  function focusNode(id) {
-    var node = cy.getElementById(id);
-    if (node.empty()) {
-      var full = graphData.views.find(function (v) { return v.id === 'everything'; }) ||
-                 graphData.views[graphData.views.length - 1];
-      if (full) {
-        var sel = document.getElementById('view-select');
-        if (sel) sel.value = full.id;
-        switchView(full.id);
-        node = cy.getElementById(id);
-      }
-    }
-    if (node.nonempty()) {
-      showDetailPanel(node);
-      cy.animate({ center: { eles: node }, duration: 300 });
-    }
-  }
+  // Focus a node: the details panel knows which view to switch to if needed.
+  function focusNode(id) { Inspector.go(id); }
 
   // --- wire the toolbar button ----------------------------------------------
   document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('insights-btn');
     if (btn) btn.addEventListener('click', function () {
-      if (panel && panel.style.display === 'block') { close(); } else { open(); }
+      if (panel && !panel.hidden) { close(); } else { open(); }
     });
   });
 })();

@@ -282,7 +282,12 @@
   // The field must never open half off-screen: nudge the map until it fits.
   function ensureComposerVisible() {
     if (!state.composer || composerEl.hidden) return;
-    var r = composerEl.getBoundingClientRect(), c = cy.container().getBoundingClientRect();
+    // Measure the field AND its key hint: the hint is wider than the field and
+    // hangs outside its box, so checking the field alone let the hint run off-screen.
+    var a = composerEl.getBoundingClientRect(), h = hintEl.getBoundingClientRect();
+    var r = { left: Math.min(a.left, h.left), right: Math.max(a.right, h.right),
+              bottom: Math.max(a.bottom, h.bottom) };
+    var c = cy.container().getBoundingClientRect();
     var m = 14, dx = 0, dy = 0;
     if (r.left < c.left + m) dx = c.left + m - r.left;
     else if (r.right > c.right - m) dx = c.right - m - r.right;

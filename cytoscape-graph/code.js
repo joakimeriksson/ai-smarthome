@@ -556,7 +556,9 @@ function syncBands() {
   roadmapModel.rowLabels.forEach(function(r, i) {
     if (!labels[i]) return;
     labels[i].style.left = (roadmapModel.zones[0].x0 * z + pan.x + 18) + 'px';
-    labels[i].style.top = ((r.y - 50) * z + pan.y) + 'px';
+    // Sit a fixed number of screen pixels above the row's + slots (radius 15
+    // in map units); a map-unit offset collapsed onto them when zoomed out.
+    labels[i].style.top = (r.y * z + pan.y - 15 * z - 28) + 'px';
   });
 }
 
@@ -749,6 +751,14 @@ function buildViewTabs() {
     wrap.appendChild(more); wrap.appendChild(menu);
     nav.appendChild(wrap);
   }
+
+  // Mark the tab strip when it overflows, so CSS can fade its edge.
+  var markOverflow = function() { nav.classList.toggle('is-overflowing', nav.scrollWidth > nav.clientWidth + 1); };
+  window.addEventListener('resize', markOverflow);
+  nav.addEventListener('scroll', function() {
+    nav.classList.toggle('is-overflowing', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1);
+  });
+  setTimeout(markOverflow, 0);
 
   document.addEventListener('view:changed', function(e) {
     var id = e.detail.id, inMore = primary.indexOf(id) < 0;
@@ -1015,6 +1025,8 @@ function setupTopbar() {
       var cmd = e.target.dataset && e.target.dataset.cmd;
       if (cmd === 'export') downloadData();
       if (cmd === 'shortcuts') openDialog('shortcuts');
+      if (cmd === 'insights') document.getElementById('insights-btn').click();
+      if (cmd === 'present') togglePresent(true);
     });
   }
 

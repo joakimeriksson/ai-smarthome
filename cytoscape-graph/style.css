@@ -244,6 +244,7 @@ kbd {
   cursor: pointer;
 }
 .menu button:hover, .menu button:focus-visible { background: var(--zone); outline: none; }
+.menu .menu-narrow { display: none; }
 
 /* ---- Canvas and horizon zones ------------------------------------------- */
 
@@ -333,7 +334,7 @@ body.editing.view-roadmap .toast { bottom: 64px; }
 }
 .composer-hint {
   width: max-content;
-  max-width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
   margin-top: 7px;
   padding: 7px 10px;
   border-radius: var(--radius);
@@ -343,7 +344,7 @@ body.editing.view-roadmap .toast { bottom: 64px; }
   line-height: 1.5;
 }
 .composer-hint strong { font-weight: 800; }
-.composer-hint .keys { display: block; margin-top: 4px; color: #C9CEE0; white-space: nowrap; }
+.composer-hint .keys { display: block; margin-top: 4px; color: #C9CEE0; }
 .composer-hint kbd { background: #2A3259; border-color: #4A5380; color: #fff; }
 
 /* ---- Drawers: insights (left) and details (right) ----------------------- */
@@ -677,12 +678,16 @@ body.present #canvas-wrap { top: 0; left: 0; right: 0; }
 @media (max-width: 1060px) {
   .brand-unit, .save-status { display: none; }
   #view-tabs { overflow-x: auto; scrollbar-width: none; }
+  /* Tabs that don't fit fade out at the edge instead of being cut mid-word. */
+  #view-tabs.is-overflowing { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+                              mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
   :root { --inspector-w: 340px; --insights-w: 300px; }
 }
 @media (max-width: 720px) {
   #topbar { gap: 8px; padding: 0 8px 0 12px; }
   .brand-name { font-size: var(--t-md); }
   #present-btn, #insights-btn { display: none; }
+  .menu .menu-narrow { display: block; }
   :root { --inspector-w: 100vw; --insights-w: 100vw; }
 }
 

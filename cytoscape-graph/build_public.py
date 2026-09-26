@@ -74,6 +74,31 @@ def is_public(node_data):
     return node_data.get("sensitivity") == "public"
 
 
+def bridge_journeys(edges, kept_ids):
+    fwd = {}
+    for e in edges:
+        d = e["data"]
+        if d["type"] == "journey":
+            fwd.setdefault(d["source"], []).append(d["target"])
+
+    bridged, seen_pairs = [], set()
+    for start in kept_ids:
+        # Walk forward through internal stones until reaching public ones.
+        stack, visited = list(fwd.get(start, [])), set()
+        while stack:
+            nxt = stack.pop()
+            if nxt in visited:
+                continue
+            visited.add(nxt)
+            if nxt in kept_ids:
+                if nxt != start and (start, nxt) not in seen_pairs:
+                    seen_pairs.add((start, nxt))
+                    bridged.append({"data": {"source": start, "target": nxt, "type": "journey"}})
+            else:
+                stack.extend(fwd.get(nxt, []))
+    return bridged
+
+
 def filter_graph(data):
     """Keep public nodes, the edges wholly between them, and non-empty views."""
     kept_nodes, kept_ids = [], set()
@@ -87,10 +112,19 @@ def filter_graph(data):
     kept_edges = []
     for e in data["edges"]:
         d = e["data"]
+        if d["type"] == "journey":
+            continue  # bridged below
         if d["source"] in kept_ids and d["target"] in kept_ids:
             kept_edges.append({"data": {k: v for k, v in d.items()
                                         if k in PUBLIC_EDGE_FIELDS}})
 
+    # Journeys are bridged ACROSS internal stones. Keeping only edges wholly
+    # between public nodes broke a published journey in two as soon as an
+    # internal stone sat in its middle — the stones lost their destination and
+    # the destination became an empty journey. Instead, each public stone links
+    # to the next PUBLIC stone along the line; the internal stone's content
+    # never ships, only the fact that the line continues.
+    kept_edges.extend(bridge_journeys(data["edges"], kept_ids))
 
     # A view whose types match nothing would render as a blank canvas.
     node_types = {n["data"]["type"] for n in kept_nodes}

@@ -622,5 +622,51 @@ function render(p, note = 57, secs = 0.5) {
   ok("the hold pedal sustains a released note until the pedal lifts", sustained && held.done);
 }
 
+// --- partial delay and key / velocity window (renders/pmt) -------------------
+{
+  const withDelay = (mode, time) => {
+    const p = patch();
+    p.partials[0].delay = { DELAY_MODE: { label: mode }, DLY_TIME_SYNC: { value: 0, label: "OFF" }, DLY_TIME: time };
+    return p;
+  };
+  // play: key down for `hold` s, render `secs`; returns 10 ms rms frames
+  const trace = (p, hold, secs, note = 60, vel = 100) => {
+    const v = new VAVoice(SR, p); v.noteOn(note, vel);
+    const n = Math.round(secs * SR), l = new Float32Array(n), r = new Float32Array(n);
+    const h = Math.round(hold * SR);
+    v.process(l.subarray(0, h), r.subarray(0, h), h);
+    v.noteOff();
+    v.process(l.subarray(h), r.subarray(h), n - h);
+    const k = SR / 100, out = [];
+    for (let i = 0; i + k <= n; i += k) {
+      let e = 0; for (let j = i; j < i + k; j++) e += l[j] * l[j];
+      out.push(Math.sqrt(e / k));
+    }
+    return { out, done: v.done };
+  };
+  const firstLoud = (f) => f.findIndex((x) => x > 1e-3) / 100;
+  // DLY_TIME 384 = 0.767 s (measured)
+  const nrm = trace(withDelay("NORMAL", 384), 1.0, 2.5).out;
+  ok("NORMAL: starts after the delay (0.767 s at DLY_TIME 384)", close(firstLoud(nrm), 0.76, 0.015), `${firstLoud(nrm)}`);
+  ok("NORMAL: the note-off is delayed too (still sounding at 1.5 s, key up at 1.0)",
+     nrm[150] > 0.5 * nrm[120], `${nrm[150]} vs ${nrm[120]}`);
+  const hold = trace(withDelay("HOLD", 384), 0.3, 1.5);
+  ok("HOLD: a key released before the delay ends leaves it silent",
+     hold.out.every((x) => x < 1e-6) && hold.done);
+  const ko = trace(withDelay("KEYOFF-NORMAL", 384), 1.0, 3.0).out;
+  ok("KEYOFF-NORMAL: silent while held, starts at note-off + delay", close(firstLoud(ko), 1.76, 0.015), `${firstLoud(ko)}`);
+
+  const win = (lo, up, flo, fup) => {
+    const p = patch();
+    p.partials[0].range = { KRANGE_LO: lo, KRANGE_UP: up, KFADE_LO: flo, KFADE_UP: fup,
+                            VRANGE_LO: 1, VRANGE_UP: 127, VFADE_LO: 0, VFADE_UP: 0 };
+    return p;
+  };
+  const lvl = (p, note) => { const t = trace(p, 0.4, 0.4, note).out.slice(10); return t.reduce((a, b) => a + b) / t.length; };
+  const inside = lvl(win(60, 84, 12, 12), 72), half = lvl(win(60, 84, 12, 12), 54), out = lvl(win(60, 84, 12, 12), 47);
+  ok("key window: 6 keys into a 12-key fade is -12 dB ((1/2)^2), past it silent",
+     close(20 * Math.log10(half / inside), -12.04, 0.2) && out < 1e-9, `${(20 * Math.log10(half / inside)).toFixed(2)} dB`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

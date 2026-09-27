@@ -237,19 +237,18 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - No corpus tone uses XMOD/XMOD2; three use SYNC, one RING.
 - **Whole-tone check** (`webui/compare/compare_tones.py`, renders/tones: the
   seven playable corpus/bank tones rendered dry and wet via `zen_bank.py
-  --tone`). After the LFO round, 2026-09-27, level |diff| / spectrum (dB):
-  OscSync-Thriller 0.4 / 1.2, MEAS SAW 0.2 / 0.8, Laser Sync Harp 1.4 / 8.7,
-  c64 poly 2.0 / 1.2 (was 2.5 before the PWM law; level is one note, 48, at
-  +5.8 - it was +5.2 before), korg minipop 1.7 / 1.6, JP-6 Rings 2.2 / 1.6,
-  OSC-SyncLd 4.6 / 5.5, Kaihou Keys 3.7 / 4.7. Tones with random parts move
+  --tone`). After the partial-delay round, 2026-09-27, level |diff| /
+  spectrum (dB): OscSync-Thriller 0.4 / 1.2, MEAS SAW 0.2 / 0.8, Kaihou Keys
+  0.3 / 1.7, Laser Sync Harp 1.6 / 8.7, c64 poly 2.0 / 1.2 (level is one note,
+  48, at +5.8), korg minipop 1.7 / 1.6, JP-6 Rings 2.2 / 1.6, OSC-SyncLd
+  3.5 / 5.5. Tones with random parts move
   a few tenths of a dB from run to run. Remaining:
   - **Laser Sync Harp's timbre** (8.8 dB spectrum; its pitch envelope accounts
     for ~2 dB of it) and **OSC-SyncLd** (phase lock off, unison x3, Analog
     Feel 3).
-  - **Kaihou Keys +3.6 dB** is NOT Analog Feel (modelled since, no change):
-    its partial 3 has `DELAY_MODE` KEYOFF-DECAY, so Zenology keeps it silent
-    while the key is held (rendered alone it is exact silence) - partial delay
-    is being implemented (renders/pmt).
+  - **Kaihou Keys** was +3.6 dB until partial delay went in (now 0.3 dB /
+    1.7 dB spectrum): its partial 3 is KEYOFF-DECAY, silent while the key is
+    held. It was never Analog Feel.
   - TVF PKG at high cutoff; single-note envelope outliers (8-13 dB) look like
     missed note-offs in the Zenology render, which the late-onset retry does
     not catch.
@@ -307,6 +306,29 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - **PIT_RND** +-depth cents per note (uniform); **PAN_RND** up to ~2 x depth
     PAN units, clamped; **Pitch Drift** (RND_PIT_VAL) a constant per-note
     offset, 0.119 cents per unit. CONDITION does nothing to a ZEN-Core tone.
+- **Partial delay and the key / velocity window** - measured 2026-09-27
+  (renders/pmt; `webui/compare/fit_pmt.py` writes `DELAY_T`, `--validate`s).
+  Notes on `Partial.noteOn` in va-dsp.js. Render these with `zen_bank.py
+  --no-retry`: its late-note re-render otherwise fires on every delayed
+  partial and starts the next take inside the last note's tail.
+  - **Delay time has its own law**, not the envelope table: 2.00 ms per step
+    up to ~480 (0.96 s), then growing - 1.70 s at 640, 2.85 at 768, 6.70 at
+    1023 (a table). DLY_TIME_SYNC plays note values at the host tempo
+    (DawDreamer's 120 BPM: 1/8 = 0.25 s, exact).
+  - **Modes** (envelopes, pitch envelope and LFO start when the partial does):
+    NORMAL moves the whole note later - start AND release come the delay late;
+    HOLD starts late but releases at note-off, and a key released before the
+    delay ends leaves it silent; KEYOFF-NORMAL starts at note-off + delay and
+    plays attack and decay, releasing when it reaches sustain; KEYOFF-DECAY's
+    envelope runs silently from note-on and holds at sustain, heard from
+    note-off + delay and releasing from there. Starts within 1 ms, level
+    traces 0.1-1.3 dB.
+  - **Key and velocity window** (`PMT_n_KRANGE/VRANGE` and fades): the fades
+    extend OUTSIDE the range, level ((fade - distance) / fade)^2 - the level
+    law - exact to 0.01 dB for fades 6/12/24 on both sides, and for velocity.
+  - Seen on the way: **Zenology's sine gets quieter above C6**, ~0.16 dB per
+    semitone (-0.9 at F#6, -2.9 at F#7); ours does not - an oscillator gap,
+    not measured for other waveforms.
 - **Controllers and the matrix** - measured 2026-09-27 (renders/ctl;
   `zen_bank.py --ctl cc1=127` / `--param ctl:bend` send them through a MIDI
   file). Notes on `MATRIX_FULL`, `applyMidi` and `VAVoice` in va-dsp.js.
@@ -463,14 +485,15 @@ move it up into "Verified facts" *with the evidence that settled it*.
   that differ in one parameter (`--set` holds others fixed, `--param velocity`
   sweeps the note velocity, `--repeat N` plays each note N times in one
   plugin instance, `--tone slot:N|FILE.svz#I` renders any tone in the
-  selected slot; late note-ons are re-rendered automatically) - it writes the
+  selected slot, `--ctl`/`--param ctl:NAME` send controllers; late note-ons
+  are re-rendered automatically unless `--no-retry`) - it writes the
   bank, renders each in a fresh
   plugin, restores the bank byte for byte, and keeps `User.bin.orig` in the
   output dir. `webui/compare/fit_vcf.py` (VCF models, HPF, GC), `fit_tvf.py`
   (TVF), `fit_vcf_nl.py` (nonlinear k), `fit_env.py` (envelopes),
   `fit_osc.py` (waveforms), `fit_ssaw.py` (SuperSAW), `fit_struct.py`
-  (structure), `fit_lfo.py` (LFOs) and `fit_voice.py` (unison, Analog Feel,
-  randoms) fit the synth from noise/saw/sine runs; `validate_runs.py`
+  (structure), `fit_lfo.py` (LFOs), `fit_voice.py` (unison, Analog Feel,
+  randoms) and `fit_pmt.py` (partial delay, key/velocity windows) fit the synth from noise/saw/sine runs; `validate_runs.py`
   scores our synth against any zen_bank run (level, spectrum, correlation)
   and `--write` their tables into `va-dsp.js`; each docstring has the exact
   render commands. `fit_cutoff.py` (saw harmonics) is superseded - it can only

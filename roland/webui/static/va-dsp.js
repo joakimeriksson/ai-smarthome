@@ -457,8 +457,8 @@ export class Env {
     return this.adsr || !ENV.b ? L / 1023 : levelAmp(L);
   }
 
-  noteOn() { this.stage = 0; this.time = 0; this.released = false; this.from = this.level; }
-  noteOff() { this.stage = 3; this.time = 0; this.released = true; this.from = this.level; }
+  noteOn() { this.stage = 0; this.time = 0; this.released = false; this.atSustain = false; this.from = this.level; }
+  noteOff() { this.stage = 3; this.time = 0; this.released = true; this.atSustain = false; this.from = this.level; }
 
   get done() { return this.released && this.stage > 3; }
 
@@ -504,7 +504,10 @@ export class Env {
 
   advance(finished) {
     if (finished) {
-      if (this.stage === 2 && !this.released) return this.value;   // sustain
+      if (this.stage === 2 && !this.released) {                    // sustain
+        this.atSustain = true;
+        return this.value;
+      }
       this.stage += 1;
       this.time = 0;
       this.from = this.level;
@@ -1108,6 +1111,14 @@ class Partial {
     this.level = (this.levelRaw / 127) ** 2;
     this.pan = Math.max(-1, raw(cfg.amp.PAN, 0) / 63);     // 63 = full; -64 clamps
     this.levelVSens = raw(cfg.amp.LEVEL_VSENS, 0) / 100;
+    // partial delay and the key / velocity window (see noteOn)
+    const dl = cfg.delay || {};
+    this.delayMode = label(dl.DELAY_MODE) || "NORMAL";
+    this.delaySync = !!raw(dl.DLY_TIME_SYNC, 0);
+    this.delayNote = label(dl.DLY_TIME_NOTE) || "1/4";
+    this.delayTime = raw(dl.DLY_TIME, 0);
+    this.range = cfg.range || {};
+    this.rangeGain = 1;
     this.cutoff = raw(cfg.filter.CUTOFF, 1023);
     this.reso = raw(cfg.filter.RESO, 0);
     this.cutoffVSens = raw(cfg.filter.CUTOFF_VSENS, 0) / 100;
@@ -1172,7 +1183,88 @@ class Partial {
     this.drift = af > 0 ? new Drift(this.sr, af) : null;
   }
 
-  noteOn(velocity = 100, phase = 0, clock = 0) {
+  /** Seconds of partial delay: DLY_TIME on DELAY_T, or a note value at the
+   *  voice's tempo when DLY_TIME_SYNC is on. */
+  delaySeconds(tempo = 120) {
+    if (this.delaySync) {
+      const m = /^(\d+)(?:\/(\d+))?([T.]?)/.exec(this.delayNote);
+      if (!m) return 0;
+      let whole = Number(m[1]) / Number(m[2] || 1);
+      if (m[3] === "T") whole *= 2 / 3;
+      if (m[3] === ".") whole *= 1.5;
+      return whole * 4 * 60 / tempo;
+    }
+    return this.delayTime > 0 ? delaySeconds(this.delayTime) : 0;
+  }
+
+  /** Gain from the partial's key and velocity window (KRANGE/VRANGE with
+   *  their fades, which extend OUTSIDE the range): (distance into the fade /
+   *  fade)^2 - the level law (see PMT_RANGE). */
+  windowGain(note, velocity) {
+    const r = this.range;
+    const side = (x, lo, up, flo, fup) => {
+      if (lo === undefined) return 1;
+      if (x < lo) return flo > 0 && x > lo - flo ? ((x - (lo - flo)) / flo) ** 2 : 0;
+      if (x > up) return fup > 0 && x < up + fup ? (((up + fup) - x) / fup) ** 2 : 0;
+      return 1;
+    };
+    return side(note, r.KRANGE_LO, r.KRANGE_UP, r.KFADE_LO, r.KFADE_UP)
+      * side(velocity, r.VRANGE_LO, r.VRANGE_UP, r.VFADE_LO, r.VFADE_UP);
+  }
+
+  /** Key down. The partial delay decides when the partial really starts
+   *  (MEASURED 2026-09-27, renders/pmt; the envelopes and LFOs start when the
+   *  partial does, except in KEYOFF-DECAY):
+   *    NORMAL        the whole note moves later: starts after the delay and
+   *                  releases the delay after note-off
+   *    HOLD          starts after the delay, releases at note-off; a key
+   *                  released before the delay ends leaves it silent
+   *    KEYOFF-NORMAL starts at note-off + delay and plays attack and decay,
+   *                  releasing as it reaches sustain (no sustain)
+   *    KEYOFF-DECAY  its envelope runs from note-on and holds at sustain,
+   *                  silent; heard from note-off + delay, releasing from there */
+  noteOn(velocity = 100, phase = 0, clock = 0, note = 60, tempo = 120) {
+    this.args = [velocity, phase, clock];
+    this.rangeGain = this.windowGain(note, velocity);
+    this.keyDown = true;
+    this.started = false;
+    this.cancelled = this.rangeGain <= 0;
+    this.heard = true;
+    this.noSustain = false;
+    this.elapsed = 0;
+    this.wait = Infinity;                 // until the start (or KEYOFF-DECAY's gate)
+    this.relWait = Infinity;              // until NORMAL's delayed release
+    this.delay = this.delaySeconds(tempo);
+    const m = this.delayMode;
+    if (m === "KEYOFF-NORMAL") return;
+    if (m === "KEYOFF-DECAY") { this.start(0); this.heard = false; return; }
+    if (this.delay > 0) this.wait = this.delay;
+    else this.start(0);
+  }
+  noteOff() {
+    this.keyDown = false;
+    const m = this.delayMode;
+    if (m === "KEYOFF-NORMAL" || m === "KEYOFF-DECAY") { this.wait = this.delay; return; }
+    if (m === "NORMAL" && this.delay > 0) { this.relWait = this.delay; return; }
+    if (this.started) this.release();
+    else this.cancelled = true;           // HOLD released before its start
+  }
+  get done() {
+    if (this.cancelled) return true;
+    return this.started && this.heard && this.aenv.done;
+  }
+  /** The delay has run out: start (or, for KEYOFF-DECAY, become audible). */
+  due() {
+    this.wait = Infinity;
+    const m = this.delayMode;
+    if (m === "KEYOFF-DECAY") { this.heard = true; this.release(); return; }
+    this.start(this.elapsed);
+    if (m === "KEYOFF-NORMAL") this.noSustain = true;
+  }
+
+  start(late) {
+    const [velocity, phase, clock] = this.args;
+    this.started = true;
     // per-note randoms (measured, VOICE_T): a pitch offset of up to
     // +-PIT_RND cents, a pan offset of up to +-2 x PAN_RND, clamped
     this.rndCents = this.pitRnd ? (Math.random() * 2 - 1) * this.pitRnd * VOICE_T.pitRnd : 0;
@@ -1184,14 +1276,13 @@ class Partial {
     this.vel = velocity / 127;
     this.state.vel = velocity / 127;
     this.aenv.noteOn(); this.fenv.noteOn(); this.penv.noteOn();
-    this.lfo1.reset(clock); this.lfo2.reset(clock);
+    this.lfo1.reset(clock + late); this.lfo2.reset(clock + late);
     this.osc.reset(phase);
   }
-  noteOff() {
+  release() {
     this.aenv.noteOff(); this.fenv.noteOff(); this.penv.noteOff();
     this.lfo1.noteOff(); this.lfo2.noteOff();
   }
-  get done() { return this.aenv.done; }
 
   /** One sample. `hz` is the note frequency before this partial's own tuning.
    *  `detune` is the unison voice's offset in cents. */
@@ -1199,6 +1290,19 @@ class Partial {
    *  partial's filter (RING/XMOD mixes); this.lastOsc keeps the raw oscillator
    *  sample, which a cross-mod carrier reads from its modulator. */
   tick(hz, detune = 0, controllers = null, mix = null) {
+    this.elapsed += 1 / this.sr;
+    if (this.wait !== Infinity && (this.wait -= 1 / this.sr) <= 0) this.due();
+    if (this.relWait !== Infinity && (this.relWait -= 1 / this.sr) <= 0) {
+      this.relWait = Infinity;
+      if (this.started) this.release();
+    }
+    if (!this.started || this.cancelled) { this.lastOsc = 0; return 0; }
+    const y = this.run(hz, detune, controllers, mix);
+    if (this.noSustain && this.aenv.atSustain) { this.noSustain = false; this.release(); }
+    return this.heard ? y * this.rangeGain : 0;
+  }
+
+  run(hz, detune, controllers, mix) {
     const st = this.state;
     st.key = Math.log2(Math.max(hz, 1) / 261.6) / 5;
     st.ctl = controllers;
@@ -1304,6 +1408,15 @@ class Partial {
     return s * this.wavGain * ae * level * Math.max(0, velGain) * Math.max(0, trem);
   }
 
+}
+
+/** Partial delay, MEASURED 2026-09-27 (renders/pmt/dly-time*, the moment a
+ *  delayed sine starts; written by webui/compare/fit_pmt.py). time: [DLY_TIME,
+ *  seconds] - its own law, not the envelope table: 2.00 ms per step up to ~480
+ *  (0.96 s), then growing to 6.7 s at 1023. Interpolated linearly. */
+export const DELAY_T = /*DELAY_TABLES*/{"time": [[0, 0.0], [16, 0.0318], [32, 0.0636], [64, 0.1271], [128, 0.2551], [192, 0.3831], [256, 0.5118], [320, 0.6395], [384, 0.7672], [448, 0.8949], [480, 0.9594], [512, 1.0477], [544, 1.1757], [576, 1.3156], [608, 1.5072], [640, 1.6996], [704, 2.2134], [768, 2.849], [832, 3.6112], [896, 4.4996], [960, 5.5417], [1023, 6.6999]]}/*END_DELAY_TABLES*/;
+function delaySeconds(v) {
+  return interp(DELAY_T.time, v, false);
 }
 
 /** Pan law, MEASURED 2026-09-27 (renders/lfo/span, static PAN; LFO pan follows
@@ -1478,6 +1591,7 @@ export class VAVoice {
      *  controller moves every sounding note. */
     this.controllers = {};
     this.pedalHeld = false;
+    this.tempo = 120;                 // for tempo-synced partial delay
   }
 
   /** clock: seconds on the synth's free-running LFO clock (see LFO.reset). */
@@ -1488,7 +1602,9 @@ export class VAVoice {
     for (const s of this.stacks) {
       const off = this.uniSize > 1 ? (Math.random() * 2 - 1) * (VOICE_T.uniPhase ?? 0) : 0;
       for (const p of s.partials) p.dsp.driftCents = drift;
-      for (const p of s.partials) p.dsp.noteOn(velocity, ((this.phaseLock ? 0 : Math.random()) + off + 1) % 1, clock);
+      for (const p of s.partials) {
+        p.dsp.noteOn(velocity, ((this.phaseLock ? 0 : Math.random()) + off + 1) % 1, clock, note, this.tempo);
+      }
     }
   }
   /** Key released. With the hold pedal down, partials that receive Hold-1

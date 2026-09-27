@@ -106,6 +106,11 @@ def _partial(tone, n: int) -> dict:
         "penv": _env(tone, f"PTL_PENV_{n}", _FULL_ENV),
         "fenv": _env(tone, f"PTL_FENV_{n}", _FULL_ENV),
         "aenv": _env(tone, f"PTL_AENV_{n}", _AMP_ENV),
+        # partial delay (PCMT) and the partial's key / velocity window (PMT)
+        "delay": _fields(tone, P, ("DELAY_MODE", "DLY_TIME_SYNC", "DLY_TIME_NOTE", "DLY_TIME")),
+        "range": {k: tone.get("PCMT_PMT", f"PMT_{n}_{k}")
+                  for k in ("KRANGE_LO", "KRANGE_UP", "KFADE_LO", "KFADE_UP",
+                            "VRANGE_LO", "VRANGE_UP", "VFADE_LO", "VFADE_UP")},
         "lfo1": _lfo(tone, n, 1),
         "lfo2": _lfo(tone, n, 2),
         "matrix": _matrix(tone, P),

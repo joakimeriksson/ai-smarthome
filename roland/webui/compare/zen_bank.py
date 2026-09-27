@@ -189,7 +189,9 @@ def render_child(a):
                     break
                 env = np.abs(audio).max(axis=0)
                 late = float(np.argmax(env > 0.02 * peak)) / SR - a.lead
-                if late < 0.05:
+                # --no-retry: a delayed partial starts late on purpose, and a
+                # re-render in the same instance begins inside the last note
+                if late < 0.05 or a.no_retry:
                     break
                 print(f"note {note}: note-on {late:.2f} s late, re-rendering", file=sys.stderr)
             suffix = "" if r == 0 else f"_r{r}"
@@ -224,6 +226,9 @@ def main(argv=None):
     ap.add_argument("--repeat", type=int, default=1,
                     help="render each note this many times in one plugin instance "
                          "(extra takes are saved as ..._n<note>_r<i>.wav)")
+    ap.add_argument("--no-retry", action="store_true",
+                    help="never re-render a late-starting note (for tones that start late "
+                         "on purpose, e.g. partial delay)")
     ap.add_argument("--plugin", default=VST)
     ap.add_argument("--child", help=argparse.SUPPRESS)
     ap.add_argument("--ctl-json", help=argparse.SUPPRESS)
@@ -277,7 +282,7 @@ def main(argv=None):
         "values": values, "fixed": {f"{g}.{i}": v for (g, i), v in fixed.items()},
         "ctl": ctl,
         "notes": a.notes, "velocity": None if by_velocity else a.velocity,
-        "repeat": a.repeat,
+        "repeat": a.repeat, "no_retry": a.no_retry,
         "lead": a.lead, "hold": a.hold, "dur": a.dur,
         "bank_sha1": sha(orig), "files": {},
     }
@@ -304,6 +309,7 @@ def main(argv=None):
                  "--velocity", str(v if by_velocity else a.velocity),
                  "--lead", str(a.lead), "--hold", str(a.hold), "--dur", str(a.dur),
                  "--repeat", str(a.repeat), "--plugin", a.plugin]
+                + (["--no-retry"] if a.no_retry else [])
                 + (["--ctl-json", json.dumps(send)] if send else []),
                 capture_output=True, text=True)
             if r.returncode != 0:

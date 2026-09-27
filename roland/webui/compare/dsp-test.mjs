@@ -11,7 +11,7 @@
  *   node webui/compare/dsp-test.mjs
  */
 
-import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV, WAVES, SSAW } from "../static/va-dsp.js";
+import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV, WAVES, SSAW, STRUCT, LFO_T, lfoHz, lfoPitch, applyMidi } from "../static/va-dsp.js";
 
 const SR = 44100;
 let pass = 0, fail = 0;
@@ -104,6 +104,47 @@ const TAU = Math.PI * 2;
 
   const delayed = new LFO(SR, { form: { value: 1, label: "TRI" }, rate: 650, delay: 500 });
   ok("LFO delay holds output at zero", Math.abs(delayed.tick()) < 1e-9);
+
+  // measured laws (renders/lfo, fit_lfo.py)
+  ok("LFO periods are whole ms: RATE 512 = 992 ms, 704 = 190 ms, 1023 = 8 ms",
+     close(1000 / lfoHz(512), 992, 1e-9) && close(1000 / lfoHz(704), 190, 1e-9) && close(1000 / lfoHz(1023), 8, 1e-9),
+     `${1000 / lfoHz(512)} ${1000 / lfoHz(704)} ${1000 / lfoHz(1023)}`);
+  ok("LFO pitch depth 50 swings +-11.3 semitones, quadratic and signed",
+     close(lfoPitch(50), 11.33, 0.1) && close(lfoPitch(-50), -lfoPitch(50), 1e-9) && close(lfoPitch(100), 48, 0.5),
+     `${lfoPitch(50)} ${lfoPitch(100)}`);
+
+  const run = (cfg, secs) => {
+    const l = new LFO(SR, cfg); l.reset(0);
+    const out = new Float32Array(Math.round(SR * secs));
+    for (let i = 0; i < out.length; i++) out[i] = l.tick();
+    return out;
+  };
+  const hz = lfoHz(640);
+  const sh = run({ form: { value: 7, label: "S&H" }, rate: 640 }, 4.5 / hz);
+  const at = (buf, c) => buf[Math.round((c + 0.5) / hz * SR)];
+  ok("S&H plays Zenology's sequence: 0, -0.171, -0.757, 0.621",
+     [0, -0.171, -0.757, 0.621].every((v, c) => close(at(sh, c), v, 0.005)),
+     [0, 1, 2, 3].map((c) => at(sh, c).toFixed(3)).join(" "));
+  const vs = run({ form: { value: 9, label: "VSIN" }, rate: 640 }, 3 / hz);
+  const peak = (buf, c) => Math.max(...buf.subarray(Math.round(c / hz * SR), Math.round((c + 1) / hz * SR)));
+  ok("VSIN cycle k peaks at 0.75 + 0.25 |random[k]|",
+     close(peak(vs, 0), 0.75, 0.01) && close(peak(vs, 2), 0.75 + 0.25 * 0.757, 0.01),
+     `${peak(vs, 0).toFixed(3)} ${peak(vs, 2).toFixed(3)}`);
+  const fast = [];
+  for (let k = 0; k < 20; k++) {
+    const l = new LFO(SR, { form: { value: 0, label: "SIN" }, rate: 512, rate_detn: 127 }); l.reset(0);
+    fast.push(l.detMul);
+  }
+  ok("RATE_DETN only speeds the LFO up, by at most LFO_T.detn at 127",
+     fast.every((m) => m >= 1 && m <= 1 + LFO_T.detn) && fast.some((m) => m > 1.05),
+     fast.map((m) => m.toFixed(3)).join(" "));
+  // a sine starts at 0 going up; the smoother makes it trail by ~LFO_T.smooth ms
+  const sn = run({ form: { value: 0, label: "SIN" }, rate: 512 }, 1);
+  const q = Math.round(SR / lfoHz(512) / 4);                   // the quarter-cycle peak
+  let pk = 0;
+  for (let i = 1; i < 2 * q; i++) if (sn[i] > sn[pk]) pk = i;
+  ok("LFO output trails its phase by the measured smoothing lag",
+     close((pk - q) / SR * 1000, LFO_T.smooth, 0.3), `peak ${((pk - q) / SR * 1000).toFixed(2)} ms late`);
 }
 
 // --- voice / unison --------------------------------------------------------
@@ -491,6 +532,94 @@ function render(p, note = 57, secs = 0.5) {
      close(dB(lvl(tone({ LEVEL: 64, LEVEL_VSENS: 0 }), 100), lvl(tone({ LEVEL: 127, LEVEL_VSENS: 0 }), 100)), -11.95, 0.1));
   ok("tone LEVEL 59 is (59/127)^2 of 127 (-13.3 dB)",
      close(dB(lvl(tone({ LEVEL_VSENS: 0 }), 100, 59), lvl(tone({ LEVEL_VSENS: 0 }), 100, 127)), -13.32, 0.1));
+}
+
+// --- partial structure and WAV_GAIN (measured, renders/struct, renders/gap) --
+{
+  // a two-partial patch: partial 2 a copy of partial 1
+  const pair = (mode, over = {}) => {
+    const p = patch();
+    const p2 = JSON.parse(JSON.stringify(p.partials[0])); p2.index = 2;
+    p.partials.push(p2);
+    const labels = ["OFF", "SYNC", "RING", "XMOD", "XMOD2"];
+    p.structure = { pair12: { value: labels.indexOf(mode), label: mode }, pair34: { value: 0, label: "OFF" },
+                    RING12_LEVEL: 127, RING_OSC1_LEVEL: 0, RING_OSC2_LEVEL: 0, XMOD12_DEPTH: 1200,
+                    XMOD_OSC1_LEVEL: 127, XMOD_OSC2_LEVEL: 0, XMOD2_12_DEPTH: 0,
+                    PTL_PHS_LOCK: { value: 1, label: "ON" }, ...over };
+    return p;
+  };
+  const play = (p, secs = 0.5) => {
+    const n = Math.round(secs * SR), L = new Float32Array(n), R = new Float32Array(n);
+    const v = new VAVoice(SR, p); v.noteOn(57, 100); v.process(L, R, n);
+    return L.subarray(SR * 0.1);
+  };
+  const rms = (b) => Math.sqrt(b.reduce((a, x) => a + x * x, 0) / b.length);
+  const dB = (a, b) => 20 * Math.log10(a / b);
+  const off = rms(play(pair("OFF")));
+  const one = patch(); const single = rms(play(one));
+  ok("two identical phase-locked partials sum to +6 dB", close(dB(off, single), 6.02, 0.1));
+  const sw = pair("SYNC"); sw.partials[1].on = false;
+  ok("SYNC: the modulator is heard even with its switch off (carrier's switch rules)",
+     close(dB(rms(play(sw)), single), 6.02, 1.5));
+  const ring0 = pair("RING", { RING12_LEVEL: 0 });
+  ok("RING: level 0 and no oscillator mix is silent - neither partial is heard directly",
+     rms(play(ring0)) < 1e-9);
+  const r64 = rms(play(pair("RING", { RING12_LEVEL: 64 }))), r127 = rms(play(pair("RING")));
+  ok("RING level is linear: 64 is -5.95 dB", close(dB(r64, r127), 20 * Math.log10(64 / 127), 0.1));
+  const x0 = pair("XMOD", { XMOD_OSC1_LEVEL: 0 });
+  ok("XMOD: OSC1 level 0 is silent - the modulator is not heard directly", rms(play(x0)) < 1e-9);
+  ok("structure constants are fitted", STRUCT.ring > 0.2 && STRUCT.ring < 0.5 && STRUCT.xmod2.length > 3);
+  const g5 = patch(); g5.partials[0].osc.WAV_GAIN = 5;
+  const g2 = patch(); g2.partials[0].osc.WAV_GAIN = 2;
+  ok("WAV_GAIN is 6.02 dB per step on a VA partial", close(dB(rms(play(g5)), rms(play(g2))), 18.06, 0.1));
+}
+
+// --- controllers ------------------------------------------------------------
+{
+  const ctl = {};
+  applyMidi(ctl, [0xb0, 1, 127]); applyMidi(ctl, [0xe0, 0, 0]); applyMidi(ctl, [0xd0, 64]);
+  applyMidi(ctl, [0xb0, 74, 0]);
+  ok("MIDI folds into the matrix's source labels",
+     ctl.CC01 === 1 && ctl.BEND === -1 && close(ctl.AFT, 64 / 127, 1e-9) && ctl.CC74 === 0,
+     JSON.stringify(ctl));
+
+  const sine = (over = {}) => {
+    const p = patch(over);
+    p.partials[0].osc.VA_FORM = { value: 3, label: "SIN" };
+    return p;
+  };
+  const hzOf = (p, setup) => {
+    const v = new VAVoice(SR, p); setup?.(v); v.noteOn(69, 100);
+    const n = SR, l = new Float32Array(n), r = new Float32Array(n);
+    v.process(l, r, n);
+    let up = 0;
+    for (let i = SR / 10 + 1; i < n; i++) if (l[i - 1] < 0 && l[i] >= 0) up++;
+    return up / 0.9;
+  };
+  const bent = hzOf(sine({ common: { ...patch().common, BEND_RANGE_UP: 7 } }), (v) => { v.controllers.BEND = 1; });
+  ok("pitch bend up by BEND_RANGE_UP semitones", close(bent, 440 * 2 ** (7 / 12), 2), `${bent.toFixed(1)} Hz`);
+  const deaf = sine({ common: { ...patch().common, BEND_RANGE_UP: 7 } });
+  deaf.partials[0].pitch.RX_BEND = { value: 0, label: "OFF" };
+  const still = hzOf(deaf, (v) => { v.controllers.BEND = 1; });
+  ok("a partial with Receive Bender OFF ignores the bend", close(still, 440, 2), `${still.toFixed(1)} Hz`);
+
+  // SYS-CTRL1 is the mod wheel (CC01): route it to pitch
+  const wheel = sine();
+  wheel.partials[0].matrix = [{ src: { label: "SYS-CTRL1" },
+    dst: [{ dst: { label: "PCH" }, sens: 63 }, { dst: { label: "OFF" }, sens: 0 }] }];
+  const up = hzOf(wheel, (v) => { v.controllers.CC01 = 1; });
+  const rest = hzOf(wheel);
+  ok("SYS-CTRL1 routes follow the mod wheel (CC01)", up > rest * 1.5 && close(rest, 440, 2),
+     `${rest.toFixed(1)} -> ${up.toFixed(1)} Hz`);
+
+  // hold: a pedalled note keeps sounding past its note-off until pedalUp
+  const held = new VAVoice(SR, patch());
+  held.noteOn(60, 100); held.noteOff(true);
+  const l = new Float32Array(SR), r = new Float32Array(SR);
+  held.process(l, r, SR);
+  const sustained = !held.done;
+  held.pedalUp(); held.process(l, r, SR);
+  ok("the hold pedal sustains a released note until the pedal lifts", sustained && held.done);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -3,7 +3,7 @@
 The `PAT` record holds ~945 parameters, most of which describe the PCM sample
 engine. A partial whose ``OSC_TYPE`` is VA / SuperSAW / Noise generates its
 waveform numerically and touches no sample data at all, so a synth that only
-implements the VA path needs a much smaller slice - the 86 parameters gathered
+implements the VA path needs a much smaller slice - the ~145 parameters gathered
 here, plus the partial's matrix control (4 sources x 4 destinations + sens).
 
 This module is a *view*: it decodes, labels and groups, and never changes bytes.
@@ -51,7 +51,8 @@ def _env(tone, group, stages):
 def _lfo(tone, n, which):
     ids = [f"LFO_{which}_{s}" for s in
            ("FORM", "RATE", "RATE_SYNC", "RATE_NOTE", "DELAY", "FADE", "FADE_MODE",
-            "KEY_TRIG", "OFST", "PIT_DEPTH", "TVF_DEPTH", "TVA_DEPTH", "PAN_DEPTH")]
+            "KEY_TRIG", "OFST", "PIT_DEPTH", "TVF_DEPTH", "TVA_DEPTH", "PAN_DEPTH",
+            "PHASE_POS", "RATE_DETN", "DELAY_KF", "STEP_MAX", "STEP_CURVE", "STEP")]
     out = _fields(tone, f"PTL_LFO_{n}", ids)
     return {k.replace(f"LFO_{which}_", "").lower(): v for k, v in out.items()}
 
@@ -79,6 +80,9 @@ def _partial(tone, n: int) -> dict:
     osc = _fields(tone, S, ("OSC_TYPE", "VA_FORM", "PW", "PWM_DEPTH", "SSAW_DETUNE",
                             "VA_INVERT_SW", "VA_INIT_PHASE", "CLICK_TYPE", "FAT",
                             "OSC_ATT"))
+    # the waveform gain (-18..+12 dB) lives in the PCM group but applies to VA
+    # oscillators too - measured against Zenology, 6.02 dB per step
+    osc.update(_fields(tone, P, ("WAV_GAIN",)))
     kind = osc.get("OSC_TYPE")
     kind = kind["label"] if isinstance(kind, dict) else kind
     return {
@@ -86,9 +90,9 @@ def _partial(tone, n: int) -> dict:
         "on": bool(tone.get("PCMT_PMT", f"PMT_{n}_PTL_SW")),
         "synthesised": kind in SYNTHESISED,
         "osc": osc,
-        "pitch": _fields(tone, P, ("PIT_CRS", "PIT_FINE", "PIT_KF", "PIT_RND")),
+        "pitch": _fields(tone, P, ("PIT_CRS", "PIT_FINE", "PIT_KF", "PIT_RND", "RX_BEND")),
         "amp": _fields(tone, P, ("LEVEL", "PAN", "PAN_KF", "PAN_RND", "LEVEL_VSENS",
-                                 "LEVEL_VCRV")),
+                                 "LEVEL_VCRV", "RX_EXPR", "RX_HOLD")),
         "filter": {
             # The TVF/VCF switch. Its id is FILTER_TYPE too, but in the PCMS
             # group - the PCMT FILTER_TYPE below is the TVF's own type, which
@@ -122,10 +126,11 @@ def va_patch(tone) -> dict:
                           ("LEVEL", "PAN", "OCTAVE", "PIT_CRS", "PIT_FINE",
                            "MONO_POLY", "LEGATO_SW", "PORTA_SW", "PORTA_MODE",
                            "PORTA_TIME", "PORTA_TYPE", "BEND_RANGE_UP",
-                           "BEND_RANGE_DW", "ANALOG_FEEL")),
+                           "BEND_RANGE_DW", "BEND_MODE", "ANALOG_FEEL")),
         "voice": _fields(tone, "PCMS_CMN",
                          ("UNISON_SW", "UNISON_SIZE", "UNISON_DETN",
-                          "RND_PIT_VAL", "RND_PIT_NUM", "CONDITION")),
+                          "RND_PIT_VAL", "RND_PIT_NUM", "CONDITION",
+                          "BEND_RANGE_FINE_UP", "BEND_RANGE_FINE_DW")),
         "structure": {
             "pair12": _val(tone, "PCMS_PMT", "STRUCT12"),
             "pair34": _val(tone, "PCMS_PMT", "STRUCT34"),
@@ -133,7 +138,8 @@ def va_patch(tone) -> dict:
                       ("RING12_LEVEL", "RING34_LEVEL", "RING_OSC1_LEVEL",
                        "RING_OSC2_LEVEL", "RING_OSC3_LEVEL", "RING_OSC4_LEVEL",
                        "XMOD12_DEPTH", "XMOD34_DEPTH", "XMOD_OSC1_LEVEL",
-                       "XMOD_OSC2_LEVEL", "PTL_PHS_LOCK")),
+                       "XMOD_OSC2_LEVEL", "XMOD_OSC3_LEVEL", "XMOD_OSC4_LEVEL",
+                       "XMOD2_12_DEPTH", "XMOD2_34_DEPTH", "PTL_PHS_LOCK")),
         },
         "partials": partials,
         "playable": any(p["on"] and p["synthesised"] for p in partials),

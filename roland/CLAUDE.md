@@ -176,9 +176,8 @@ move it up into "Verified facts" *with the evidence that settled it*.
   (velocity/127, no centre at 64), and the offset is sens/63 * source * 127 PW
   units - linear in both. Pushed past the end, the saw saturates at a pure
   triangle (the cap is on the shape, not on PW). Every other destination's
-  scaling in `MATRIX_FULL` is an assumption (full scale = the destination's
-  schema range) and is marked UNFITTED. Controller sources (CCxx, BEND, AFT,
-  SYS-CTRLn) read 0 because nothing feeds them yet.
+  scaling in `MATRIX_FULL` was an assumption then; most are measured now
+  (see "Controllers and the matrix"), the rest are marked UNFITTED.
 - Which tones carry which routes: "MEAS SAW" has VELOCITY -> PW -31 because it
   was set by hand. INIT tones do NOT (Test1 has no live route); the hand-built
   corpus tones route SYS-CTRL1 (normally the mod wheel) to CUT / PIT-LFO1 /
@@ -202,22 +201,123 @@ move it up into "Verified facts" *with the evidence that settled it*.
 - **SQR follows PW** (renders/gap/sqr-pw): duty PW/128 below 64, 0.5 +
   (PW-64)/126 above, clamped at 1.15% (PW 0-1 = 126-127); the pulse is DC-free,
   so it gets quieter as it narrows (-15 dB at the clamp). Within 0.26 dB shape.
+- **`WAV_GAIN` applies to VA oscillators too** (the PCM group's -18..+12 dB
+  waveform gain; measured 2026-09-26, renders/gap/wavgain-*): exactly 6.02 dB
+  per step. The calibration tone sits at 2 (-6 dB); corpus tones range -12 to
+  +12 dB, and this - not structure - was most of the whole-tone level gap
+  (OscSync-Thriller at +6/+12 was 17 dB too quiet). The synth applies it after
+  the filter: Zenology stays exactly linear to +18 dB, where the same gain
+  before our saturating ladder clipped.
+- **Partial structure** - measured 2026-09-26 (renders/struct: a two-partial
+  test tone from `fit_struct.py --make-test-tone`, plus switch-offs on the real
+  sync tones). Notes on `STRUCT` / `sounding` / `VAVoice.process` in va-dsp.js.
+  - In a structured pair only the **carrier's partial switch** counts: the
+    modulator (2/4) runs and is heard even when switched off (the guide says
+    so; measured).
+  - **SYNC**: both partials heard; the carrier (1/3) is reset at each cycle of
+    the modulator. Our model matched before any change (level 0.9, spectrum
+    1.5 dB over 18 renders).
+  - **RING**: neither partial is heard directly. The carrier's oscillator is
+    multiplied by the modulator's FINISHED output (its filter, amp envelope and
+    level apply - they act before the multiply), times RING level (linear) and
+    a gain of 0.326, plus RING OSC1 x oscillator 1 and RING OSC2 x 0.49 x the
+    modulator's output; all of it then goes through the carrier's filter and
+    amp. (0.2 dB level, 2.4 dB spectrum, 34 renders.)
+  - **XMOD**: neither partial heard directly. The modulator's RAW oscillator
+    (no filter, envelope or level - measured) bends the carrier's pitch
+    exponentially: cents = osc x depth x 0.316 (~1/pi); the carrier plays XMOD
+    OSC1 x its oscillator + XMOD OSC2 x 0.52 x the raw modulator. (0.06 dB,
+    0.5 dB, 31 renders.) XMOD2 stays harmonic: modelled as phase modulation
+    with a fitted index per depth (1.2 dB spectrum; its level rises ~2 dB at
+    high depth in Zenology, not modelled).
+  - **Partial Phase Lock OFF**: partials do not start in step (two identical
+    saws sum to +0.5 dB, not +6). The synth gives each a random start phase;
+    whether Zenology's offsets are random or fixed is not measured.
+  - Pair 3-4 uses its own settings (it borrowed 1-2's before).
+  - No corpus tone uses XMOD/XMOD2; three use SYNC, one RING.
 - **Whole-tone check** (`webui/compare/compare_tones.py`, renders/tones: the
   seven playable corpus/bank tones rendered dry and wet via `zen_bank.py
-  --tone`). After the fixes above, 2026-09-26: MEAS SAW 0.2 dB level / 0.8 dB
-  spectrum; the rest 1.6-8.4 dB spectrum. Remaining, largest first:
-  - **Partial structure**: the sync and ring tones are 7-17 dB too QUIET in
-    our synth, constant per tone (Laser Sync Harp, OSC-SyncLd, OscSync-
-    Thriller, JP-6 Rings). Sync/ring/xmod are not measured at all.
-  - **LFOs**: rate, waveform, delay/fade and the PWM depth law are guesses;
-    c64 poly (full PWM depth) is ~6 dB too loud, likely from PWM depth.
-  - TVF PKG at high cutoff (korg minipop, +6 dB); a 3-partial sum with Analog
-    Feel 20 (Kaihou Keys, +5 dB).
+  --tone`). After the LFO round, 2026-09-27, level |diff| / spectrum (dB):
+  OscSync-Thriller 0.4 / 1.2, MEAS SAW 0.2 / 0.8, Laser Sync Harp 1.4 / 8.7,
+  c64 poly 2.0 / 1.2 (was 2.5 before the PWM law; level is one note, 48, at
+  +5.8 - it was +5.2 before), korg minipop 1.7 / 1.6, JP-6 Rings 2.2 / 1.6,
+  OSC-SyncLd 4.6 / 5.5, Kaihou Keys 3.7 / 4.7. Tones with random parts move
+  a few tenths of a dB from run to run. Remaining:
+  - **Laser Sync Harp's timbre** (8.8 dB spectrum; its pitch envelope accounts
+    for ~2 dB of it) and **OSC-SyncLd** (phase lock off, unison x3, Analog
+    Feel 3).
+  - **Kaihou Keys +3.6 dB** is NOT Analog Feel (modelled since, no change):
+    its partial 3 has `DELAY_MODE` KEYOFF-DECAY, so Zenology keeps it silent
+    while the key is held (rendered alone it is exact silence) - partial delay
+    is being implemented (renders/pmt).
+  - TVF PKG at high cutoff; single-note envelope outliers (8-13 dB) look like
+    missed note-offs in the Zenology render, which the late-onset retry does
+    not catch.
   - Zenology's MFX barely changes these tones' spectra (wet vs dry mostly
     under 1 dB) - the gap is the voice, not the effects.
-- Correction: an earlier note here said velocity 64 renders silence. It did not
-  reproduce (`renders/mx-vel`, velocity 63/64/65 all normal) - that render was a
-  glitch, not a property of the plugin.
+- **The LFOs** - measured 2026-09-27 on a sine with the filter open (renders/
+  lfo; `webui/compare/fit_lfo.py` writes `LFO_T` and `--validate`s every run
+  as a pitch / level / pan trace). Notes on `LFO_T`, `LFO` and the PWM line in
+  `Partial.tick` in va-dsp.js. LFO1 and LFO2 of partial n both live in group
+  `PTL_LFO_n` (`LFO_1_*`, `LFO_2_*`) - `PTL_LFO_2` is partial 2's pair.
+  - **Rate:** 0.01221 Hz x 2^(RATE/80.4) with the period rounded to whole ms
+    (reproduces every whole-ms period from RATE 352 up, 16 of them); the top
+    ~30 steps accelerate to 8 ms (125 Hz) at 1023 - a table.
+  - **Depths:** pitch = sign(d) k (d/100)^2 semitones, k ~45 (+-11.3 at 50,
+    +-48 at 100); TVF = 1023 sign(d) (d/100)^2 cutoff units (the filter
+    envelope's law); TVA is one-sided, level x (1 - m(|d|) max(0, -sign(d) v)),
+    m = 0.08/0.2/0.4/0.66/1.0 at 10/25/50/75/100; pan uses the static PAN law
+    (quiet side 1 - |p|, loud side min(1 + |p|, 1.427)). LFO2 follows LFO1's
+    laws exactly.
+  - **PWM:** LFO2 only (not LFO1), PW += PWM_DEPTH x LFO2 in PW units (1.003-
+    1.007 over +-8..+-63), around any base PW and clamped like a static PW; on
+    the SAW it drives the same morph.
+  - **Waveforms:** SIN/TRI start at 0 going up, SAW-UP at -1, SAW-DW at +1,
+    SQR high; TRP = clamp(2 tri). RND/S&H/VSIN draw from one deterministic
+    sequence that restarts at each note (0, -0.171, -0.757, 0.621 ...; 182
+    values captured, not periodic within them). VSIN's cycle k has amplitude
+    0.75 + 0.25 |r_k| (correlation 1.0000). **CHS ignores RATE** - sample-
+    identical at four rates, different note to note; modelled as random
+    points at 300 Hz linearly joined, fitted to its level and autocorrelation.
+  - **Timing:** PHASE_POS 0/90/180/270 deg; OFFSET adds OFST/100. Delay (the
+    envelope time table) only mutes - the LFO runs underneath. Fade is linear
+    on the same table; ON-IN / ON-OUT act from note-on, OFF-IN / OFF-OUT hold
+    until note-off. Key trigger OFF runs free across notes on one clock that
+    **starts at the instance's first note** (phase 0 there, whatever the
+    lead). RATE_DETN only speeds up: Hz x (1 + u 0.33 DETN/127), u per note
+    (the same draws, scaled exactly by DETN).
+  - **Output smoothing:** Zenology's LFO trails ours by ~1.2 ms at every rate
+    and loses swing at the top (5% at 48 Hz): a one-pole of 1.04 ms fits both
+    (fast-rate trace 1.78 -> 0.42 st).
+  - Validation: pitch traces, 83 renders, median 0.069 st (all fade modes
+    <0.08); TVA 0.009 dB; pan 0.21 dB (2.7 at depth +-63, where one side
+    swings through silence); TVF/PWM runs by spectrum, 0.32 dB mean.
+  - Not measured: STEP beyond "plays the table", DELAY_KF, the key-trigger-OFF
+    LFO across separate voices of a chord, where the random sequence goes after
+    182 values, and the matrix LFO-rate route's scaling.
+- **Unison, Analog Feel, per-note randoms** - measured 2026-09-27 (renders/af;
+  `webui/compare/fit_voice.py` writes `VOICE_T`, `--validate`s):
+  - **Unison:** voices evenly spaced over +-DETN/2 cents (exact), all centred
+    in pan, each 1 dB down per extra voice (exact, sizes 2-8); at DETN 0 they
+    sum 7-8 dB up, not +9 - start phases spread +-0.2 cycle (fitted).
+  - **Analog Feel:** each partial of each voice drifts in pitch on its own
+    (two identical sines beat to -32 dB), AF x 0.28 cents rms, the same curve
+    scaled at every AF (corr 0.9997); autocorrelation ~0.5 at 0.25 s. The
+    filter and level do not move. Modelled as two filtered-noise parts.
+  - **PIT_RND** +-depth cents per note (uniform); **PAN_RND** up to ~2 x depth
+    PAN units, clamped; **Pitch Drift** (RND_PIT_VAL) a constant per-note
+    offset, 0.119 cents per unit. CONDITION does nothing to a ZEN-Core tone.
+- **Controllers and the matrix** - measured 2026-09-27 (renders/ctl;
+  `zen_bank.py --ctl cc1=127` / `--param ctl:bend` send them through a MIDI
+  file). Notes on `MATRIX_FULL`, `applyMidi` and `VAVoice` in va-dsp.js.
+  - SYS-CTRL1 = CC01, SYS-CTRL2 = aftertouch (the ZENOLOGY manual's defaults,
+    confirmed). Every source is linear in its value.
+  - Pitch bend: BEND_RANGE_UP/DW semitones + FINE cents, exact both ways;
+    RX_BEND OFF ignores it. Expression CC11 = (x/127)^2 on level, exact.
+  - Sens curves per destination: PW 127 and CUT 1134 and PAN 126 units at 63,
+    linear; PCH ~quadratic, 12 semitones at 63; PIT-LFO adds 18 (s/63)^2
+    semitones of swing; LFO-RATE 8.1 RATE units per step; LEV adds sens/63
+    x source to the SQUARED level. 106 renders: level 0.08 dB mean.
 - **The VA filter** - every mode, type, slope and setting measured 2026-09-25/26
   against Zenology with a white-noise probe AND a saw (renders/fs, fd, tvf,
   vcf-hpf, vcf-gc, env, ab, tvf-saw, selfosc). Full notes on `Filter` and
@@ -368,8 +468,10 @@ move it up into "Verified facts" *with the evidence that settled it*.
   plugin, restores the bank byte for byte, and keeps `User.bin.orig` in the
   output dir. `webui/compare/fit_vcf.py` (VCF models, HPF, GC), `fit_tvf.py`
   (TVF), `fit_vcf_nl.py` (nonlinear k), `fit_env.py` (envelopes),
-  `fit_osc.py` (waveforms) and `fit_ssaw.py` (SuperSAW) fit the synth from
-  noise/saw/sine runs
+  `fit_osc.py` (waveforms), `fit_ssaw.py` (SuperSAW), `fit_struct.py`
+  (structure), `fit_lfo.py` (LFOs) and `fit_voice.py` (unison, Analog Feel,
+  randoms) fit the synth from noise/saw/sine runs; `validate_runs.py`
+  scores our synth against any zen_bank run (level, spectrum, correlation)
   and `--write` their tables into `va-dsp.js`; each docstring has the exact
   render commands. `fit_cutoff.py` (saw harmonics) is superseded - it can only
   locate a cutoff above the note's fundamental, and it assumed the old filter.
@@ -446,7 +548,7 @@ path only (no PCM samples), fed patch JSON by this API, and validated by
 rendering the same patch in both it and Zenology and comparing spectra — the
 same measure-don't-guess approach the rest of the project uses.
 
-`zencore/va.py` is the contract between them: 86 parameters, all present in the
+`zencore/va.py` is the contract between them: ~145 parameters, all present in the
 schema, covering oscillator / structure / filter / three envelopes / two LFOs /
 unison, plus each partial's matrix control (`partials[n].matrix`: 4 controls x
 {src, 4 x {dst, sens}}, every slot reported, OFF included). A partial with `OSC_TYPE` of VA, SuperSAW or Noise synthesises and needs

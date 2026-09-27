@@ -60,6 +60,8 @@
          border:1px solid var(--line); border-radius:3px; font:inherit; cursor:pointer; }
   .oct button:disabled { opacity:.35; cursor:default; }
   .oct b { color:var(--fg); min-width:3.5em; text-align:center; font-weight:600; }
+  .oct label { display:flex; align-items:center; gap:6px; margin-left:14px; }
+  .oct input[type=range] { width:110px; }
   .warn { color:var(--warn); }
   footer { position:fixed; bottom:0; left:0; right:0; background:var(--panel);
            border-top:1px solid var(--line); padding:6px 18px; font-size:11px;
@@ -84,6 +86,10 @@
       <b id="octlbl"></b>
       <button id="octup" title="Octave up (x)">+</button>
       <span>z / x</span>
+      <label title="Pitch bend - springs back to centre">BEND
+        <input type="range" id="bend" min="-8192" max="8191" value="0"></label>
+      <label title="Mod wheel (CC01 = SYS-CTRL1)">MOD
+        <input type="range" id="modw" min="0" max="127" value="0"></label>
     </div>
     <div class="keys" id="keys"></div>
   </section>
@@ -356,7 +362,18 @@ function onMidi(e) {
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
     held.delete(d1); node?.port.postMessage({type:"noteOff",note:d1});
   } else if (cmd === 0xb0 && d1 === 123) node?.port.postMessage({type:"allNotesOff"});
+  else if (cmd === 0xb0 || cmd === 0xe0 || cmd === 0xd0 || cmd === 0xa0) {
+    // controllers drive the matrix sources, pitch bend, expression and hold
+    node?.port.postMessage({type:"midi", data:[st, d1, d2]});
+    if (cmd === 0xb0 && d1 === 1) $("#modw").value = d2;
+    if (cmd === 0xe0) $("#bend").value = ((d2 << 7) | d1) - 8192;
+  }
 }
+const sendBend = v => node?.port.postMessage({type:"midi",
+  data:[0xe0, (v + 8192) & 0x7f, ((v + 8192) >> 7) & 0x7f]});
+$("#bend").oninput = e => sendBend(+e.target.value);
+$("#bend").onchange = e => { e.target.value = 0; sendBend(0); };
+$("#modw").oninput = e => node?.port.postMessage({type:"midi", data:[0xb0, 1, +e.target.value]});
 
 await load();
 </script>

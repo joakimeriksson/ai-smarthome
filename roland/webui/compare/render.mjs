@@ -7,7 +7,8 @@
  *   python3 webui/compare/dump_va.py User2.svz 2 > /tmp/patch.json
  *   node webui/compare/render.mjs /tmp/patch.json /tmp/out.wav --note 62 --hold 2 --dur 3.5
  *   (--velocity 1..127, default 100 - it matters once the tone has a matrix
- *    route from VELOCITY)
+ *    route from VELOCITY; --ctl cc1=127, bend=-8192..8191, aft=0..127 -
+ *    repeatable - sets a controller from the start, as zen_bank.py --ctl)
  *
  * Note/hold/dur default to the conventions in the Synthex compare harness
  * (tools/compare/capture_ref.py), so renders line up with captures.
@@ -18,7 +19,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 // Fit parameters must be in place BEFORE va-dsp.js is evaluated, so they are
 // read from the environment here rather than passed as arguments.
 if (process.env.ZC_SCALE) globalThis.__ZC_SCALE = JSON.parse(process.env.ZC_SCALE);
-const { VAVoice } = await import("../static/va-dsp.js");
+const { VAVoice, applyMidi } = await import("../static/va-dsp.js");
 
 const SR = 44100;
 
@@ -80,6 +81,17 @@ for (const e of events) {
 }
 marks.sort((a, b) => a.at - b.at);
 
+// --ctl: one controllers object shared by every voice, as in the worklet
+const ctl = {};
+process.argv.forEach((a, i) => {
+  if (a !== "--ctl") return;
+  const [name, val] = process.argv[i + 1].toLowerCase().split("=");
+  const v = Number(val);
+  if (name === "bend") applyMidi(ctl, [0xe0, (v + 8192) & 0x7f, (v + 8192) >> 7]);
+  else if (name === "aft") applyMidi(ctl, [0xd0, v]);
+  else applyMidi(ctl, [0xb0, Number(name.slice(2)), v]);
+});
+
 const live = new Map();
 let cursor = 0;
 const render = (until) => {
@@ -94,7 +106,10 @@ for (const m of marks) {
   render(m.at);
   if (m.kind === "on") {
     const v = new VAVoice(SR, patch);
-    v.noteOn(m.ev.note, velocity);
+    v.controllers = ctl;
+    // free-running LFOs (key trigger off) keep one clock that starts at the
+    // first note - Zenology's does (renders/lfo/ktoff)
+    v.noteOn(m.ev.note, velocity, (m.at - marks[0].at) / SR);
     live.set(m.ev, v);
   } else {
     live.get(m.ev)?.noteOff();

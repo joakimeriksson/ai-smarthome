@@ -18,6 +18,11 @@ Before running:
   * The slot must be the tone Zenology has selected: a fresh instance opens on
     the last tone selected in any host, so select it once, then quit the host.
 
+Controllers: --ctl cc1=127 (repeatable; also bend=-8192..8191, aft=0..127)
+sends a controller before the note (at half the lead), and --param ctl:cc1
+sweeps one, the way --param velocity sweeps the velocity. They reach the
+plugin as a MIDI file, since DawDreamer's add_midi_note carries only notes.
+
 The original bank is restored byte for byte afterwards, also on error or
 Ctrl-C, and a copy is kept as <out>/User.bin.orig in case the process is
 killed outright. Writes one WAV per (value, note) plus patch.json (the VA view
@@ -94,6 +99,48 @@ def variant(bank, index, changes, schema, source=None):
     return data, tone
 
 
+CTL_RANGE = {"bend": (-8192, 8191), "aft": (0, 127)}
+
+
+def ctl_spec(spec, ap):
+    """'cc1=127' / 'bend=-8192' / 'aft=64' -> (name, value), range-checked."""
+    name, _, val = spec.partition("=")
+    name = name.lower()
+    lo, hi = CTL_RANGE.get(name, (0, 127))
+    if not (name in CTL_RANGE or (name.startswith("cc") and name[2:].isdigit() and 0 <= int(name[2:]) <= 119)):
+        ap.error(f"--ctl {spec!r}: expected ccN, bend or aft")
+    if val and not lo <= int(val) <= hi:
+        ap.error(f"--ctl {spec!r}: {name} is {lo}..{hi}")
+    return name, int(val) if val else None
+
+
+def ctl_bytes(name, value):
+    if name == "bend":
+        v = value + 8192
+        return bytes([0xE0, v & 0x7F, v >> 7])
+    if name == "aft":
+        return bytes([0xD0, value])
+    return bytes([0xB0, int(name[2:]), value])
+
+
+def midi_file(path, events):
+    """A one-track standard MIDI file, 1 tick = 1 ms: events are (seconds, bytes)."""
+    def varlen(n):
+        out = [n & 0x7F]
+        while n > 0x7F:
+            n >>= 7
+            out.insert(0, (n & 0x7F) | 0x80)
+        return bytes(out)
+    track, now = bytearray(b"\x00\xff\x51\x03\x0f\x42\x40"), 0     # 1 000 000 us per quarter
+    for t, msg in sorted(events, key=lambda e: e[0]):
+        tick = int(round(t * 1000))
+        track += varlen(tick - now) + msg
+        now = tick
+    track += b"\x00\xff\x2f\x00"
+    Path(path).write_bytes(b"MThd" + (6).to_bytes(4, "big") + (0).to_bytes(2, "big") + (1).to_bytes(2, "big")
+                           + (1000).to_bytes(2, "big") + b"MTrk" + len(track).to_bytes(4, "big") + bytes(track))
+
+
 def checked(schema, spec, values, ap):
     """Resolve GROUP.ID and range-check values, as a usage error on failure."""
     group, _, pid = spec.partition(".")
@@ -124,6 +171,12 @@ def render_child(a):
             # 2026-09-26) - re-render until the note-on lands on time
             for attempt in range(4):
                 p.clear_midi()
+                if a.ctl_json:
+                    # controllers go in first, through a MIDI file (all events)
+                    ctl = json.loads(a.ctl_json)
+                    mid = f"{a.child}_ctl.mid"
+                    midi_file(mid, [(a.lead / 2, ctl_bytes(n, v)) for n, v in ctl.items()])
+                    p.load_midi(mid, clear_previous=True, beats=False, all_events=True)
                 p.add_midi_note(note, a.velocity, a.lead, a.hold)
                 engine.load_graph([(p, [])])
                 engine.render(a.dur)
@@ -151,7 +204,11 @@ def main(argv=None):
                                    "'slot:N' or 'FILE.svz#I' (the slot must still be the "
                                    "one Zenology has selected)")
     ap.add_argument("--param", help="GROUP.ID, e.g. PCMT_PTL_1.CUTOFF - or 'velocity' "
-                                    "to sweep the note velocity of one fixed tone")
+                                    "to sweep the note velocity of one fixed tone, or "
+                                    "'ctl:cc1' / 'ctl:bend' / 'ctl:aft' to sweep a controller")
+    ap.add_argument("--ctl", action="append", default=[], metavar="NAME=VALUE",
+                    help="send a controller before the note (repeatable): ccN=0..127, "
+                         "bend=-8192..8191, aft=0..127")
     ap.add_argument("--values", help="comma-separated raw values")
     ap.add_argument("--set", action="append", default=[], metavar="GROUP.ID=VALUE",
                     help="hold another parameter at a value for the whole run "
@@ -169,6 +226,7 @@ def main(argv=None):
                          "(extra takes are saved as ..._n<note>_r<i>.wav)")
     ap.add_argument("--plugin", default=VST)
     ap.add_argument("--child", help=argparse.SUPPRESS)
+    ap.add_argument("--ctl-json", help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     a.notes = [int(n) for n in str(a.notes).split(",")]
 
@@ -184,13 +242,20 @@ def main(argv=None):
     for spec in a.set:
         key, _, val = spec.partition("=")
         fixed[checked(schema, key, [int(val)], ap)] = int(val)
+    ctl = dict(ctl_spec(c, ap) for c in a.ctl)
     by_velocity = a.param == "velocity"
+    by_ctl = a.param.startswith("ctl:")
     if by_velocity:
         if [v for v in values if not 1 <= v <= 127]:
             ap.error("velocity values must be 1..127")
         pid = "velocity"
+    elif by_ctl:
+        pid, _ = ctl_spec(a.param[4:], ap)
+        for v in values:
+            ctl_spec(f"{pid}={v}", ap)
     else:
         group, pid = checked(schema, a.param, values, ap)
+    fixed_tone = by_velocity or by_ctl
 
     hosts = running_hosts()
     if hosts:
@@ -208,8 +273,9 @@ def main(argv=None):
     manifest = {
         "date": time.strftime("%Y-%m-%d %H:%M"),
         "slot": a.slot, "tone": base.name, "source": a.tone, "param": a.param,
-        "base_value": a.velocity if by_velocity else base.get(group, pid),
+        "base_value": a.velocity if by_velocity else ctl.get(pid) if by_ctl else base.get(group, pid),
         "values": values, "fixed": {f"{g}.{i}": v for (g, i), v in fixed.items()},
+        "ctl": ctl,
         "notes": a.notes, "velocity": None if by_velocity else a.velocity,
         "repeat": a.repeat,
         "lead": a.lead, "hold": a.hold, "dur": a.dur,
@@ -226,7 +292,8 @@ def main(argv=None):
         for v in values:
             if BANK.read_bytes() != expected:
                 raise SystemExit("User.bin changed underneath us - is a host running?")
-            changes = dict(fixed) if by_velocity else {**fixed, (group, pid): v}
+            changes = dict(fixed) if fixed_tone else {**fixed, (group, pid): v}
+            send = {**ctl, pid: v} if by_ctl else ctl
             data, _tone = variant(orig, index, changes, schema, source)
             BANK.write_bytes(data)
             expected = data
@@ -236,7 +303,8 @@ def main(argv=None):
                  "--notes", ",".join(map(str, a.notes)),
                  "--velocity", str(v if by_velocity else a.velocity),
                  "--lead", str(a.lead), "--hold", str(a.hold), "--dur", str(a.dur),
-                 "--repeat", str(a.repeat), "--plugin", a.plugin],
+                 "--repeat", str(a.repeat), "--plugin", a.plugin]
+                + (["--ctl-json", json.dumps(send)] if send else []),
                 capture_output=True, text=True)
             if r.returncode != 0:
                 raise SystemExit(f"render of {pid}={v} failed:\n{r.stderr[-800:]}")

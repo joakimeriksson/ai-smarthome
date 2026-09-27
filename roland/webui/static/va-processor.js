@@ -9,9 +9,11 @@
  *   {type:'noteOn', note, velocity}
  *   {type:'noteOff', note}
  *   {type:'allNotesOff'}
+ *   {type:'midi', data:[status, d1, d2]}   a controller: CC, pitch bend or
+ *                                          aftertouch (CC64 is the hold pedal)
  */
 
-import { VAVoice } from "./va-dsp.js";
+import { VAVoice, applyMidi } from "./va-dsp.js";
 
 const MAX_VOICES = 8;
 
@@ -21,6 +23,8 @@ class VAProcessor extends AudioWorkletProcessor {
     this.patch = null;
     this.voices = new Map();          // note -> VAVoice
     this.releasing = [];
+    this.ctl = {};                    // shared by every voice (see applyMidi)
+    this.pedal = false;
     this.port.onmessage = (e) => this.onMessage(e.data);
   }
 
@@ -39,8 +43,15 @@ class VAProcessor extends AudioWorkletProcessor {
           const oldest = this.voices.keys().next().value;
           this.release(oldest);
         }
+        // notes held only by the pedal still cost CPU: past 16, let the
+        // oldest go
+        if (this.releasing.length > 16) this.releasing[0].pedalUp();
         const v = new VAVoice(sampleRate, this.patch);
-        v.noteOn(msg.note);
+        v.controllers = this.ctl;
+        // free-running LFOs share one clock from the first note (Zenology's
+        // starts there too - renders/lfo/ktoff)
+        this.lfoClock0 ??= currentTime;
+        v.noteOn(msg.note, msg.velocity ?? 100, currentTime - this.lfoClock0);
         this.voices.set(msg.note, v);
         break;
       }
@@ -48,15 +59,26 @@ class VAProcessor extends AudioWorkletProcessor {
         this.release(msg.note);
         break;
       case "allNotesOff":
+        this.pedal = false;
         for (const n of [...this.voices.keys()]) this.release(n);
+        for (const v of this.releasing) v.pedalUp();
         break;
+      case "midi": {
+        const [st, d1, d2] = msg.data;
+        applyMidi(this.ctl, msg.data);
+        if ((st & 0xf0) === 0xb0 && d1 === 64) {         // Hold 1
+          this.pedal = d2 >= 64;
+          if (!this.pedal) for (const v of this.releasing) v.pedalUp();
+        }
+        break;
+      }
     }
   }
 
   release(note) {
     const v = this.voices.get(note);
     if (!v) return;
-    v.noteOff();
+    v.noteOff(this.pedal);
     this.voices.delete(note);
     this.releasing.push(v);
   }

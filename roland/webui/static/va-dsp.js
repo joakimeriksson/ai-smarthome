@@ -36,8 +36,8 @@ export const SCALE = {
   // semitones at full level (60 at depth 100, ~11.7 at 50), mirrored for -d.
   pitchSemis: (level, depth) => (level / 511) * Math.sign(depth)
     * (ENV.pdepth ? interp(ENV.pdepth, Math.abs(depth), false) : Math.abs(depth) / 100 * 48),
-  // LFO rate 0..1023 -> Hz, assumed exponential 0.05..~30 Hz.     UNFITTED
-  lfoHz: (v) => 0.05 * Math.pow(2, (v / 1023) * 9),
+  // LFO rate 0..1023 -> Hz: MEASURED, see LFO_T / lfoHz
+  lfoHz: (v) => lfoHz(v),
   // resonance 0..1023 -> ladder feedback k (self-oscillation at 4) for the
   // partial's VCF model. MEASURED - see VCF_MODELS.
   resoK: (v, model = "VCF1") => vcfModel(model).k(v),
@@ -205,7 +205,12 @@ export class VAOsc {
       this.phase -= Math.floor(this.phase);
       this.cyc ^= 1;
     }
-    if (a === 0.5) return this.shape(this.phase, dt);
+    if (a === 0.5) {
+      // XMOD2 (phase modulation) offsets where the waveform is read, not the
+      // phase itself, so the pitch and the sync edges are untouched
+      if (this.pm) return this.shape(this.phase + this.pm - Math.floor(this.phase + this.pm), dt);
+      return this.shape(this.phase, dt);
+    }
     // FAT: the sub-phase q runs over two cycles; segment A is [0, a), B [a, 1)
     const q = (this.cyc + this.phase) / 2;
     if (q < a) return this.shape(q / a, dt / (2 * a));
@@ -392,7 +397,7 @@ export class VAOsc {
 export const ENV = /*ENV_TABLES*/{"b": 125.601, "c": 0.9475, "attack": [[0, 0.0019], [128, 0.21456], [256, 0.43052], [384, 0.64649], [512, 1.38822], [640, 2.92513], [768, 6.06244], [896, 12.46662], [1023, 24.92909]], "time": [[0, 0.003], [128, 0.26379], [256, 0.51833], [384, 0.77401], [512, 1.64531], [640, 3.46646], [704, 4.99429], [768, 7.27959], [832, 10.28916], [896, 14.74058], [1023, 30.02187]], "adsr": {"c": 1.9005, "attack": [[0, 0.0019], [128, 0.2128], [256, 0.42783], [384, 0.64295], [512, 1.38176], [640, 2.91251], [768, 6.03742], [896, 12.41615], [1023, 25.02098]], "x": 4.5598, "delta": 0.01112}, "release0": 0.013, "pdepth": [[0, 0.0], [1, 0.106], [3, 0.302], [6, 0.752], [9, 1.508], [12, 2.244], [18, 3.746], [25, 5.497], [31, 7.001], [37, 8.499], [44, 10.253], [50, 11.747], [56, 17.002], [60, 20.998], [63, 24.001], [64, 24.499], [66, 26.001], [70, 29.998], [75, 35.0], [82, 42.0], [88, 48.001], [94, 54.0], [97, 57.001], [100, 60.0]]}/*END_ENV_TABLES*/;
 
 /** Segment time for a 0..1023 setting: linear up to 384, exponential above. */
-function envSeconds(table, v) {
+export function envSeconds(table, v) {
   if (v <= 384) return interp(table, v, false);
   return interp(table, v, true);
 }
@@ -749,59 +754,202 @@ export class TvfFilter {
  * Partial + Voice
  * ---------------------------------------------------------------------- */
 
-/** One LFO: waveform, rate, delay before it starts, fade-in, and depths. */
+/** LFO tables, MEASURED 2026-09-27 against Zenology 2.0.9 with a sine and the
+ *  filter open (renders/lfo; written by webui/compare/fit_lfo.py).
+ *  rate: [f0 Hz at RATE 0, RATE steps per octave] - exponential across the
+ *    range, the period rounded to whole ms (visible at the fast end: 36, 21,
+ *    16 ms exactly); top: [RATE, period ms] where the top ~30 steps accelerate
+ *    beyond the exponential (125 Hz at 1023).
+ *  pitch: [depth, semitones at full swing / (depth/100)^2] - ~45-48, so depth
+ *    100 is +-48 semitones, 50 is +-11.3.
+ *  tva: [depth, fraction of level removed at full swing] - one-sided.
+ *  random: the sequence RND, S&H and VSIN draw from - identical note to note
+ *    (it restarts at each note-on), not periodic within its 182 captured values.
+ *  vsin: [a, b] - VSIN cycle k's amplitude is a + b |random[k]|.
+ *  detn: RATE_DETN only ever speeds the LFO up: Hz x (1 + u detn DETN/127),
+ *    u a per-note random 0..1 (the same draws scaled exactly with DETN).
+ *  chs: CHS is a random signal that ignores RATE (sample-identical at 128,
+ *    400, 640 and 900, different note to note): modelled as uniform random
+ *    points at chs.rate Hz, linearly joined, +-chs.amp - fitted to its measured
+ *    level and autocorrelation.
+ *  smooth: ms, a one-pole smoother on the LFO's output - Zenology's LFO lags
+ *    ours by ~1.2 ms at every rate and loses swing at the top (5% at 48 Hz).
+ *  TVF depth moves the cutoff 1023 x sign(d) x (d/100)^2 units - the filter
+ *  envelope's quadratic law (measured, +64 at 25, +263 at 50). */
+export const LFO_T = /*LFO_TABLES*/{"rate": [0.012206, 80.404], "top": [[992, 16], [1000, 14], [1008, 12], [1016, 10], [1020, 9], [1023, 8]], "pitch": [[0, 45.0], [10, 45.0], [15, 45.3], [20, 45.3], [25, 45.3], [30, 45.3], [35, 45.3], [40, 45.3], [45, 44.4], [50, 45.3], [55, 44.6], [60, 45.8], [65, 45.0], [70, 44.1], [75, 43.7], [80, 44.4], [85, 45.1], [90, 45.8], [95, 47.1], [100, 48.0]], "tva": [[0, 0.0], [10, 0.081], [25, 0.2], [50, 0.398], [75, 0.663], [100, 1.0]], "random": [-0.0, -0.171, -0.757, 0.621, -0.393, -0.901, -0.652, 0.675, 0.337, 0.169, -0.244, -0.795, 0.603, 0.302, -0.053, 0.975, 0.488, 0.244, 0.122, 0.061, 0.03, 0.015, 0.007, -0.168, 0.917, -0.372, -0.984, -0.663, 0.669, -0.495, -0.921, -0.631, 0.685, -0.487, 0.758, 0.378, -0.108, -0.851, -0.723, -0.533, -0.563, 0.72, 0.359, 0.181, -0.238, -0.793, -0.691, 0.654, 0.327, 0.164, 0.081, -0.131, 0.936, -0.362, -0.979, -0.66, 0.671, -0.494, 0.754, 0.377, 0.189, -0.202, -0.806, 0.598, 0.299, -0.053, 0.975, -0.343, -1.0, -0.671, -0.508, 0.747, 0.373, 0.187, 0.093, 0.047, -0.18, 0.911, 0.456, -0.07, 0.966, 0.484, -0.086, 0.958, 0.48, -0.089, 0.957, -0.32, 0.841, -0.252, -0.956, 0.524, -0.411, -0.879, -0.642, 0.679, 0.34, 0.171, -0.243, 0.879, 0.44, 0.22, 0.11, 0.055, -0.176, 0.913, 0.457, 0.229, -0.214, -0.811, -0.701, 0.649, -0.473, -0.91, -0.625, 0.688, 0.344, 0.172, 0.086, 0.042, 0.021, 0.01, -0.167, 0.918, 0.459, -0.068, -0.863, -0.728, 0.636, 0.318, -0.013, 0.995, -0.332, 0.835, -0.255, 0.874, -0.267, 0.867, 0.434, -0.111, 0.945, 0.473, 0.236, 0.118, -0.143, 0.929, -0.365, -0.979, -0.661, -0.503, 0.75, 0.375, -0.016, -0.838, -0.746, 0.627, 0.314, -0.016, 0.993, 0.497, -0.08, -0.87, -0.731, -0.538, 0.732, -0.463, -0.937, -0.638, -0.523, 0.74, -0.459, 0.772, -0.287, -0.942, 0.531, 0.265, -0.04, 0.982, 0.491, 0.246, 0.123, 0.061], "vsin": [0.75, 0.25], "detn": 0.326, "chs": {"rate": 300, "amp": 1.025}, "smooth": 1.044}/*END_LFO_TABLES*/;
+// fitting overrides (fit_lfo.py): __ZC_SCALE.lfo = {chs: ..., ...}
+Object.assign(LFO_T, K.lfo || {});
+
+/** LFO frequency (Hz) for a RATE value 0..1023 (fractional under modulation). */
+export function lfoHz(rate) {
+  const r = Math.max(0, Math.min(1023, rate));
+  const top = LFO_T.top;
+  let ms;
+  if (r > top[0][0]) ms = interp(top, r, true);
+  else ms = Math.max(1, Math.round(1000 / (LFO_T.rate[0] * Math.pow(2, r / LFO_T.rate[1]))));
+  return 1000 / ms;
+}
+
+/** Semitones of pitch swing for an LFO pitch depth -100..100 at LFO value 1. */
+export const lfoPitch = (d) => Math.sign(d) * interp(LFO_T.pitch, Math.abs(d), false) * (d / 100) ** 2;
+/** CUTOFF units of swing for an LFO TVF depth -100..100 (quadratic, measured). */
+export const lfoCutoff = (d) => Math.sign(d) * 1023 * (d / 100) ** 2;
+
+/** The random sequence RND, S&H and VSIN share (LFO_T.random, captured from
+ *  Zenology); past its end - over a minute at 3 Hz - Zenology's generator is
+ *  unknown, so the synth continues with a hash of the index. */
+function lfoRandom(k) {
+  const seq = LFO_T.random || [];
+  if (k < seq.length) return seq[k];
+  let x = (k * 2654435761) >>> 0;                   // integer hash, stable per index
+  x ^= x >>> 16; x = Math.imul(x, 0x45d9f3b) >>> 0; x ^= x >>> 16;
+  return (x / 0xffffffff) * 2 - 1;
+}
+
+/** One LFO, MEASURED 2026-09-27 (see LFO_T and the notes below).
+ *  Waveforms, as pitch traces on a sine: SIN and TRI start at 0 heading up;
+ *  SAW-UP starts at -1, SAW-DW at +1; SQR starts high; TRP is the triangle
+ *  doubled and clipped (full for 1/4 cycle each side); RND ramps linearly
+ *  between successive values of one random sequence, S&H holds them; VSIN is a
+ *  sine whose amplitude changes each cycle; CHS is fast chaotic noise; STEP
+ *  plays the 16-step table (flat when it is all zeros). PHASE_POS starts it at
+ *  0/90/180/270 degrees. OFFSET adds OFST/100 to the value. Key trigger ON
+ *  restarts it at each note; OFF lets it run free (phase continuous from note to
+ *  note within one plugin instance) - here, from the voice's clock.
+ *  Delay (the envelope time table) only MUTES it - it runs from note-on
+ *  underneath. Fade is a linear ramp over the same table: ON-IN mutes during
+ *  the delay then fades in; ON-OUT is full during the delay then fades out;
+ *  OFF-IN / OFF-OUT hold muted / full until note-off, then delay and fade. */
 export class LFO {
   constructor(sr, cfg) {
     this.sr = sr;
     this.form = label(cfg.form) || "TRI";
     this.rate = raw(cfg.rate, 650);
-    this.hz = SCALE.lfoHz(this.rate);
+    this.hz = lfoHz(this.rate);
     this.rateMod = 0;                 // matrix LFOn-RATE offset, RATE units
-    this.delay = SCALE.envTime(raw(cfg.delay, 0));
-    this.fade = SCALE.envTime(raw(cfg.fade, 0));
+    const t = (v) => (ENV.time ? envSeconds(ENV.time, v) : SCALE.envTime(v));
+    this.delayRaw = raw(cfg.delay, 0);
+    this.delay = this.delayRaw > 0 ? t(this.delayRaw) : 0;
+    this.fade = raw(cfg.fade, 0) > 0 ? t(raw(cfg.fade, 0)) : 0;
+    this.fadeMode = label(cfg.fade_mode) || "ON-IN";
     this.keyTrig = !!raw(cfg.key_trig, 0);
+    this.phasePos = raw(cfg.phase_pos, 0) / 4;
     this.offset = raw(cfg.ofst, 0) / 100;
-    this.pitch = raw(cfg.pit_depth, 0) / 100;
-    this.tvf = raw(cfg.tvf_depth, 0) / 100;
-    this.tva = raw(cfg.tva_depth, 0) / 100;
-    this.pan = raw(cfg.pan_depth, 0) / 63;
+    this.detune = raw(cfg.rate_detn, 0);
+    this.pitchDepth = raw(cfg.pit_depth, 0);
+    this.pitch = lfoPitch(this.pitchDepth);            // semitones at full swing
+    this.tvfDepth = raw(cfg.tvf_depth, 0);
+    this.tvaDepth = raw(cfg.tva_depth, 0);
+    this.panDepth = raw(cfg.pan_depth, 0);
+    const hex = typeof cfg.step === "string" ? cfg.step : "";
+    this.steps = [];
+    for (let i = 0; i + 1 < hex.length; i += 2) {
+      const b = parseInt(hex.slice(i, i + 2), 16);
+      this.steps.push((b > 127 ? b - 256 : b) / 72);
+    }
+    this.stepCount = raw(cfg.step_max, 15) + 1;
     this.phase = 0;
+    this.cycle = 0;                   // cycles since note-on (random sequences)
     this.t = 0;
-    this.sh = 0;
-    this.lastCycle = 0;
+    this.released = false;
+    this.relT = 0;
+    this.vsinAmp = vsinAmp(0);
+    this.detMul = 1;
+    this.chsN = 1; this.chsA = this.chsB = 0;
   }
 
-  reset() { if (this.keyTrig) this.phase = 0; this.t = 0; }
+  /** clock: seconds on the synth's free-running LFO clock at this note-on. */
+  reset(clock = 0) {
+    this.t = 0; this.released = false; this.cycle = 0;
+    // RATE_DETN: a per-note random speed-up (LFO_T.detn)
+    this.detMul = this.detune ? 1 + Math.random() * (LFO_T.detn ?? 0.3) * this.detune / 127 : 1;
+    const hz = this.hz * this.detMul;
+    this.phase = this.keyTrig ? this.phasePos % 1 : (clock * hz + this.phasePos) % 1;
+    this.prevPh = this.phase;
+    this.vsinAmp = vsinAmp(0);
+    this.chsN = 1; this.chsA = this.chsB = 0;
+    this.smoothA = undefined;           // the smoother starts on the first value
+  }
+
+  noteOff() { this.released = true; this.relT = 0; }
+
+  /** Gain from delay and fade (see the class note). */
+  gate() {
+    const D = this.delay, F = this.fade, mode = this.fadeMode;
+    if (mode === "ON-IN" || mode === "ON-OUT") {
+      const t = this.t - D;
+      if (t < 0) return mode === "ON-IN" ? 0 : 1;
+      if (!F) return mode === "ON-IN" ? 1 : 0;
+      const x = Math.min(1, t / F);
+      return mode === "ON-IN" ? x : 1 - x;
+    }
+    if (!this.released) return mode === "OFF-IN" ? 0 : 1;
+    const t = this.relT - D;
+    if (t < 0) return mode === "OFF-IN" ? 0 : 1;
+    if (!F) return mode === "OFF-IN" ? 1 : 0;
+    const x = Math.min(1, t / F);
+    return mode === "OFF-IN" ? x : 1 - x;
+  }
 
   tick() {
     this.t += 1 / this.sr;
-    const prev = this.phase;
-    const hz = this.rateMod
-      ? SCALE.lfoHz(Math.max(0, Math.min(1023, this.rate + this.rateMod)))
-      : this.hz;
-    this.phase = (this.phase + hz / this.sr) % 1;
-    const p = this.phase;
+    if (this.released) this.relT += 1 / this.sr;
+    const hz = (this.rateMod ? lfoHz(this.rate + this.rateMod) : this.hz) * this.detMul;
+    let p = this.phase + hz / this.sr;
+    if (p >= 1) { p -= 1; this.cycle++; this.vsinAmp = vsinAmp(this.cycle); }
+    this.phase = p;
     let v;
     switch (this.form) {
       case "SIN": v = Math.sin(TAU * p); break;
-      case "TRI": v = 2 * Math.abs(2 * p - 1) - 1; break;
+      case "TRI": v = p < 0.25 ? 4 * p : p < 0.75 ? 2 - 4 * p : 4 * p - 4; break;
       case "SAW-UP": v = 2 * p - 1; break;
       case "SAW-DW": v = 1 - 2 * p; break;
       case "SQR": v = p < 0.5 ? 1 : -1; break;
-      case "RND":
-      case "S&H":
-        if (p < prev) this.sh = Math.random() * 2 - 1;   // new value each cycle
-        v = this.sh; break;
-      case "TRP": v = Math.max(-1, Math.min(1, (2 * Math.abs(2 * p - 1) - 1) * 2)); break;
-      case "VSIN": { const s = Math.sin(TAU * p); v = Math.sign(s) * Math.pow(Math.abs(s), 0.6); break; }
-      default: v = 2 * Math.abs(2 * p - 1) - 1;
+      case "TRP": {
+        const tri = p < 0.25 ? 4 * p : p < 0.75 ? 2 - 4 * p : 4 * p - 4;
+        v = Math.max(-1, Math.min(1, 2 * tri)); break;
+      }
+      case "RND": {
+        const a = lfoRandom(this.cycle), b = lfoRandom(this.cycle + 1);
+        v = a + (b - a) * p; break;
+      }
+      case "S&H": v = lfoRandom(this.cycle); break;
+      case "CHS": v = this.chaos(); break;
+      case "VSIN": v = Math.sin(TAU * p) * this.vsinAmp; break;
+      case "STEP": {
+        const n = Math.max(1, Math.min(16, this.stepCount));
+        v = this.steps[Math.min(n - 1, Math.floor(p * n))] ?? 0; break;
+      }
+      default: v = Math.sin(TAU * p);
     }
-    v += this.offset;
-    // delay then fade-in, as the schema's DELAY/FADE describe
-    if (this.t < this.delay) return 0;
-    const f = this.fade > 0 ? Math.min(1, (this.t - this.delay) / this.fade) : 1;
-    return v * f;
+    // Zenology's LFO trails ours by ~1.2 ms at every rate and loses 5% of its
+    // swing at 48 Hz: a one-pole smoother of LFO_T.smooth ms (fit_lfo) fits both
+    const y = (v + this.offset) * this.gate();
+    if (this.smoothA === undefined) {
+      this.smoothA = LFO_T.smooth ? 1 - Math.exp(-1000 / (LFO_T.smooth * this.sr)) : 1;
+      this.ys = y;
+    }
+    this.ys += (y - this.ys) * this.smoothA;
+    return this.ys;
   }
+
+  /** CHS: random points at chs.rate Hz, linearly joined (see LFO_T). */
+  chaos() {
+    const c = LFO_T.chs ?? { rate: 150, amp: 0.8 };
+    this.chsN += c.rate / this.sr;
+    if (this.chsN >= 1) {
+      this.chsN -= Math.floor(this.chsN);
+      this.chsA = this.chsB;
+      this.chsB = (Math.random() * 2 - 1) * c.amp;
+    }
+    return this.chsA + (this.chsB - this.chsA) * this.chsN;
+  }
+}
+
+/** VSIN's amplitude in cycle k (LFO_T.vsin). */
+function vsinAmp(k) {
+  const [a, b] = LFO_T.vsin ?? [1, 0];
+  return a + b * Math.abs(lfoRandom(k));
 }
 
 /* -------------------------------------------------------------------------
@@ -809,41 +957,89 @@ export class LFO {
  * ---------------------------------------------------------------------- */
 
 /** How far sens 63 at full source moves each destination, in that
- *  destination's own parameter units (and what those units mean here).
+ *  destination's own units (and what those units mean here). A route adds
+ *  source x sensAmount(dst, sens); every source is linear (a controller as
+ *  value/127, measured for CC01, AFT, BEND, VELOCITY).
  *
- *  MEASURED 2026-09-24 for PW only (Zenology 2.0.9, MEAS SAW, renders/mx-vel and
- *  renders/mx-sens): the offset is sens/63 * source * 127, i.e. sens 63 at full
- *  source spans the whole 0..127 range. It was linear in sens (+-8, 16, 24, 31
- *  -> 15, 32, 48, 63 PW units) and in velocity (1..127). Beyond that the SAW
- *  shape saturates at a pure triangle rather than PW clamping at 0/127.
- *
- *  UNFITTED for every other row: each assumes the same rule - full scale is the
- *  destination parameter's whole schema range. PCH in particular (96 semitones
- *  at sens 63, from PIT_CRS -48..48) is a guess worth measuring first. */
+ *  MEASURED against Zenology 2.0.9 (renders/mx-*, 2026-09-24; renders/ctl,
+ *  2026-09-27, a CC01 route with sens swept), each linear in the source:
+ *    PW    127 PW units, linear in sens.
+ *    PCH   semitones, ~quadratic in sens (MATRIX_CURVE.PCH): 12 at 63, 3.29 at
+ *          32, 0.77 at 16, 0.20 at 8.
+ *    CUT   18 cutoff units per sens step, linear (1134 at 63).
+ *    PAN   2 PAN units per sens step, linear (126 at 63).
+ *    LEV   adds to the SQUARED level: amplitude = max(0, (LEVEL/127)^2 +
+ *          sens/63 x source) - LEVEL 64 + sens 16 doubles it, LEVEL 127 -
+ *          sens 63 at CC 64 halves it, LEVEL 64 - sens 16 silences it.
+ *    PIT-LFO1/2  semitones of swing added to the LFO's own (not depth units
+ *          through its quadratic law): 18 (sens/63)^2, sign kept.
+ *    LFO1/2-RATE  8.1 RATE units per sens step (510 at 63); LFO2 assumed alike.
+ *  UNFITTED, each still assuming full scale = the parameter's whole range:
+ *  PWM, RES, ATT, TVF-/TVA-LFO, SSAW-DETN, FAT. */
 export const MATRIX_FULL = {
-  PW: 127,                 // PW units 0..127                          MEASURED
-  PWM: 126,                // PWM_DEPTH units -63..63                  UNFITTED
-  PCH: 96,                 // semitones                                UNFITTED
-  CUT: 1023,               // CUTOFF units                             UNFITTED
-  RES: 1023,               // RESO units                               UNFITTED
-  LEV: 127,                // LEVEL units                              UNFITTED
-  PAN: 127,                // PAN units -64..63                        UNFITTED
-  ATT: 255,                // OSC_ATT units                            UNFITTED
-  "PIT-LFO1": 200, "PIT-LFO2": 200,   // LFO depth units -100..100     UNFITTED
-  "TVF-LFO1": 200, "TVF-LFO2": 200,
+  PW: 127,                 // PW units                                  MEASURED
+  PWM: 126,                // PWM_DEPTH units -63..63                   UNFITTED
+  PCH: 12,                 // semitones, curve MATRIX_CURVE.PCH         MEASURED
+  CUT: 1134,               // CUTOFF units                              MEASURED
+  RES: 1023,               // RESO units                                UNFITTED
+  LEV: 1,                  // squared-level amplitude (see above)       MEASURED
+  PAN: 126,                // PAN units                                 MEASURED
+  ATT: 255,                // OSC_ATT units                             UNFITTED
+  "PIT-LFO1": 18, "PIT-LFO2": 18,      // semitones of swing, squared  MEASURED
+  "TVF-LFO1": 200, "TVF-LFO2": 200,    // LFO depth units              UNFITTED
   "TVA-LFO1": 200, "TVA-LFO2": 200,
-  "LFO1-RATE": 1023, "LFO2-RATE": 1023,  // LFO RATE units             UNFITTED
-  "SSAW-DETN": 127,        // SSAW_DETUNE units                        UNFITTED
-  FAT: 127,                // FAT units                                UNFITTED
+  "LFO1-RATE": 510, "LFO2-RATE": 510,  // LFO RATE units               MEASURED
+  "SSAW-DETN": 127,        // SSAW_DETUNE units                         UNFITTED
+  FAT: 127,                // FAT units                                 UNFITTED
 };
+/** Destinations whose amount is not linear in sens: "sq" = (sens/63)^2 x
+ *  full; a table = [sens, fraction of full at that sens], interpolated in
+ *  fraction / sens^2 (which is nearly flat). */
+export const MATRIX_CURVE = {
+  PCH: [[0, 1.0336], [8, 1.0336], [16, 1.0002], [32, 1.0634], [63, 1.0]],
+  "PIT-LFO1": "sq", "PIT-LFO2": "sq",
+};
+export function sensAmount(dst, sens) {
+  const full = MATRIX_FULL[dst], c = MATRIX_CURVE[dst], x = sens / 63;
+  if (c === "sq") return Math.sign(x) * x * x * full;
+  if (Array.isArray(c)) return Math.sign(x) * x * x * interp(c, Math.abs(sens), false) * full;
+  return x * full;
+}
+
+/** Which MIDI message each system control is (the ZENOLOGY manual's
+ *  defaults, "PRO EDIT parameters (MATRIX CONTROL)"): SYS-CTRL1 is the mod
+ *  wheel, 2 aftertouch, 3 and 4 CC02 and CC04. Hardware uses its own system
+ *  settings instead. */
+export const SYS_CTRL = { "SYS-CTRL1": "CC01", "SYS-CTRL2": "AFT", "SYS-CTRL3": "CC02", "SYS-CTRL4": "CC04" };
+
+/** Fold one MIDI message into a controllers object keyed by the matrix's
+ *  source labels: "CC01".."CC95" 0..1, "BEND" -1..1, "AFT" 0..1 (channel or
+ *  polyphonic pressure). Returns true if the message was a controller.
+ *  MEASURED (renders/ctl): every source is linear in its value, and SYS-CTRL1
+ *  and 2 are CC01 and aftertouch. */
+export function applyMidi(ctl, [status, d1 = 0, d2 = 0]) {
+  switch (status & 0xf0) {
+    case 0xb0: ctl[`CC${String(d1).padStart(2, "0")}`] = d2 / 127; return true;
+    case 0xe0: {
+      // full scale both ways: -8192 is the whole range down, 8191 the whole
+      // range up (measured: +12.00 st at 8191 with range 12, -24 at -8192)
+      const v = ((d2 << 7) | d1) - 8192;
+      ctl.BEND = v >= 0 ? v / 8191 : v / 8192;
+      return true;
+    }
+    case 0xd0: ctl.AFT = d1 / 127; return true;
+    case 0xa0: ctl.AFT = d2 / 127; return true;
+    default: return false;
+  }
+}
 
 /** Source values, 0..1 or -1..1. VELOCITY is MEASURED: unipolar and linear,
  *  velocity/127 (the PW offset grew in proportion from 1 to 127, with no
  *  centre at 64). The rest are UNFITTED assumptions:
  *  LFOs and envelopes pass their own output through, KEYFOLLOW is bipolar
  *  around C4 reaching +-1 five octaves away. Controllers (CCxx, BEND, AFT,
- *  SYS-CTRLn) read Voice.controllers, which nothing sets yet - so they are 0,
- *  which is what an untouched mod wheel sends. */
+ *  SYS-CTRLn via SYS_CTRL) read Voice.controllers (see applyMidi); an
+ *  untouched controller reads 0. */
 function matrixSource(name, st) {
   switch (name) {
     case "VELOCITY": return st.vel;
@@ -853,7 +1049,7 @@ function matrixSource(name, st) {
     case "PIT-ENV": return st.pe;
     case "TVF-ENV": return st.fe;
     case "TVA-ENV": return st.ae;
-    default: return st.ctl?.[name] ?? 0;
+    default: return st.ctl?.[SYS_CTRL[name] ?? name] ?? 0;
   }
 }
 
@@ -867,6 +1063,14 @@ class Partial {
                   : label(cfg.osc.VA_FORM) || "SAW";
     this.ssawDetune = raw(cfg.osc.SSAW_DETUNE, 64);
     this.fat = raw(cfg.osc.FAT, 64);
+    // WAV_GAIN (0..5 = -18..+12 dB), MEASURED 2026-09-26 (renders/gap/wavgain-*):
+    // exactly 6.02 dB per step on VA waveforms too. The calibration tone sits at
+    // 2 (-6 dB), so the gain is relative to that. Applied AFTER the filter:
+    // Zenology stays exactly linear up to +18 dB, while the same gain before
+    // our saturating ladder clipped (-3.8 dB at step 5) - so it does not drive
+    // the filter harder. Whether Zenology applies it pre-filter with more
+    // headroom is not distinguishable from these renders.
+    this.wavGain = Math.pow(2, raw(cfg.osc.WAV_GAIN, 2) - 2);
     if (this.osc.form !== "SSAW" && this.osc.form !== "NOISE") this.osc.setFat(this.fat);
     if (this.osc.form === "SSAW") this.osc.setDetune(this.ssawDetune);
     // PW 64 is exactly 50:50 (Parameter Guide); one PW step is 1/127 of the cycle
@@ -902,7 +1106,7 @@ class Partial {
     // 2026-09-26 (renders/gap/level-*), exact to 4 decimals at 14 values
     this.levelRaw = raw(cfg.amp.LEVEL, 127);
     this.level = (this.levelRaw / 127) ** 2;
-    this.pan = raw(cfg.amp.PAN, 0) / 64;
+    this.pan = Math.max(-1, raw(cfg.amp.PAN, 0) / 63);     // 63 = full; -64 clamps
     this.levelVSens = raw(cfg.amp.LEVEL_VSENS, 0) / 100;
     this.cutoff = raw(cfg.filter.CUTOFF, 1023);
     this.reso = raw(cfg.filter.RESO, 0);
@@ -914,14 +1118,24 @@ class Partial {
     this.vcf = label(cfg.filter.VCF_TYPE) || "VCF1";
     this.penvDepth = raw(cfg.penv.DEPTH, 0);
     this.fenvDepth = raw(cfg.fenv.DEPTH, 0);
-    this.pwmDepth = raw(cfg.osc.PWM_DEPTH, 0) / 63;
+    this.pwmDepth = raw(cfg.osc.PWM_DEPTH, 0);      // PW units per unit of LFO2
     this.basePw = this.osc.pw;
     // nothing can move PW: no PWM, no matrix route to PW/PWM, PW at 64
     this.osc.pwLocked = this.osc.pw === 0.5 && !this.pwmDepth
       && !(cfg.matrix || []).some((c) => label(c.src) !== "OFF"
         && c.dst.some((d) => ["PW", "PWM"].includes(label(d.dst)) && d.sens));
     this.att = raw(cfg.osc.OSC_ATT, 255) / 255;
+    // per-partial receive switches: pitch bend, expression (CC11), hold (CC64)
+    this.rxBend = !!raw(cfg.pitch.RX_BEND, 1);
+    this.rxExpr = !!raw(cfg.amp.RX_EXPR, 1);
+    this.rxHold = !!raw(cfg.amp.RX_HOLD, 1);
     this.basePan = this.pan;
+    this.staticPan = this.pan;
+    this.pitRnd = raw(cfg.pitch.PIT_RND, 0);           // cents (VOICE_T.pitRnd)
+    this.panRnd = raw(cfg.amp.PAN_RND, 0);             // PAN units (VOICE_T.panRnd)
+    this.rndCents = 0;
+    this.drift = null;                                 // Analog Feel (setAnalogFeel)
+    this.driftCents = 0;                               // the voice's Pitch Drift
     this.vel = 1;
 
     // Active matrix routes. Anything this synth has no place for is listed in
@@ -935,7 +1149,7 @@ class Partial {
         const dst = label(d.dst);
         if (!dst || dst === "OFF" || !d.sens) continue;
         if (dst in MATRIX_FULL) {
-          this.routes.push({ src, dst, amt: (d.sens / 63) * MATRIX_FULL[dst] });
+          this.routes.push({ src, dst, amt: sensAmount(dst, d.sens) });
         } else {
           this.unsupported.push(`${src}->${dst}`);
         }
@@ -953,19 +1167,38 @@ class Partial {
     for (const r of this.routes) m[r.dst] += r.amt * matrixSource(r.src, this.state);
   }
 
-  noteOn(velocity = 100) {
+  /** Analog Feel 0..127: this partial's own slow pitch drift (see VOICE_T). */
+  setAnalogFeel(af) {
+    this.drift = af > 0 ? new Drift(this.sr, af) : null;
+  }
+
+  noteOn(velocity = 100, phase = 0, clock = 0) {
+    // per-note randoms (measured, VOICE_T): a pitch offset of up to
+    // +-PIT_RND cents, a pan offset of up to +-2 x PAN_RND, clamped
+    this.rndCents = this.pitRnd ? (Math.random() * 2 - 1) * this.pitRnd * VOICE_T.pitRnd : 0;
+    this.basePan = this.panRnd
+      ? Math.max(-1, Math.min(1, this.staticPan + (Math.random() * 2 - 1) * this.panRnd * VOICE_T.panRnd / 63))
+      : this.staticPan;
+    this.pan = this.basePan;
+    this.drift?.reset();
     this.vel = velocity / 127;
     this.state.vel = velocity / 127;
     this.aenv.noteOn(); this.fenv.noteOn(); this.penv.noteOn();
-    this.lfo1.reset(); this.lfo2.reset();
-    this.osc.reset(0);
+    this.lfo1.reset(clock); this.lfo2.reset(clock);
+    this.osc.reset(phase);
   }
-  noteOff() { this.aenv.noteOff(); this.fenv.noteOff(); this.penv.noteOff(); }
+  noteOff() {
+    this.aenv.noteOff(); this.fenv.noteOff(); this.penv.noteOff();
+    this.lfo1.noteOff(); this.lfo2.noteOff();
+  }
   get done() { return this.aenv.done; }
 
   /** One sample. `hz` is the note frequency before this partial's own tuning.
    *  `detune` is the unison voice's offset in cents. */
-  tick(hz, detune = 0, controllers = null) {
+  /** One sample. mix(osc) lets a structure pair replace what enters this
+   *  partial's filter (RING/XMOD mixes); this.lastOsc keeps the raw oscillator
+   *  sample, which a cross-mod carrier reads from its modulator. */
+  tick(hz, detune = 0, controllers = null, mix = null) {
     const st = this.state;
     st.key = Math.log2(Math.max(hz, 1) / 261.6) / 5;
     st.ctl = controllers;
@@ -981,14 +1214,18 @@ class Partial {
     const ae = (st.ae = this.aenv.tick());
 
     const pitchMod = SCALE.pitchSemis(pe * 1023, this.penvDepth)   // pe = level / 1023
-                   + ((this.lfo1.pitch + m["PIT-LFO1"] / 100) * l1
-                    + (this.lfo2.pitch + m["PIT-LFO2"] / 100) * l2) * 12
+                   + (this.lfo1.pitch + m["PIT-LFO1"]) * l1
+                   + (this.lfo2.pitch + m["PIT-LFO2"]) * l2
                    + m.PCH;
+    const drift = this.drift ? this.drift.tick() : 0;
     const f = hz * Math.pow(2,
-      (this.coarse + this.fine + pitchMod + detune / 100) / 12);
+      (this.coarse + this.fine + pitchMod + (detune + this.rndCents + this.driftCents + drift) / 100) / 12);
 
-    // PWM is driven by LFO2 - the manual is explicit about that. The matrix
-    // adds to both the static PW and the PWM depth.
+    // PWM, MEASURED 2026-09-27 (renders/lfo/pwm, pwm-pw, pwm-saw, pwm-l1):
+    // LFO2 alone drives it (LFO1 does not), and PW moves by exactly
+    // PWM_DEPTH x LFO2 PW units (1.003-1.007 over depths +-8..+-63, SQR),
+    // around any base PW and clamped as a static PW would be; on the SAW the
+    // morph follows the same law. The matrix adds to PW and to the depth.
     if ((this.fatRoute ??= this.routes.some((r) => r.dst === "FAT"))
         && this.osc.form !== "SSAW" && this.osc.form !== "NOISE") {
       this.osc.setFat(this.fat + m.FAT);
@@ -996,9 +1233,9 @@ class Partial {
     if (this.osc.form === "SSAW" && m["SSAW-DETN"] !== undefined) {
       this.osc.setDetune(this.ssawDetune + m["SSAW-DETN"]);
     }
-    const pwmDepth = this.pwmDepth + m.PWM / 63;
+    const pwmDepth = this.pwmDepth + m.PWM;
     if (pwmDepth || m.PW) {
-      const pw = this.basePw + m.PW / 127 + l2 * pwmDepth * 0.45;
+      const pw = this.basePw + (m.PW + l2 * pwmDepth) / 127;
       // SAW and SQR clamp inside their own shapes (sawMorph; SQR's measured
       // 1.15% limit); the other forms keep a guard against a zero-width warp
       this.osc.pw = this.osc.form === "SAW" || this.osc.form === "SQR"
@@ -1006,7 +1243,10 @@ class Partial {
         : Math.min(0.95, Math.max(0.05, pw));
     }
 
-    let s = this.osc.tick(f) * Math.max(0, this.att + m.ATT / 255);
+    const o = this.osc.tick(f);
+    this.lastOsc = o;                  // raw, for a cross-mod carrier (see tick doc)
+    let s = o * Math.max(0, this.att + m.ATT / 255);
+    if (mix) s = mix(s);
 
     // cutoff: patch value + filter envelope + LFOs + velocity + key follow + matrix
     // Filter envelope, MEASURED 2026-09-26 (renders/env, envelope held at full
@@ -1020,8 +1260,8 @@ class Partial {
     const lpf2Hz = this.fmode === "TVF" && this.tvfType === "LPF2" && dq > 0;
     let cut = this.cutoff
       + (lpf2Hz ? 0 : fe * 1023 * dq)
-      + ((this.lfo1.tvf + m["TVF-LFO1"] / 100) * l1
-       + (this.lfo2.tvf + m["TVF-LFO2"] / 100) * l2) * 512
+      + lfoCutoff(this.lfo1.tvfDepth + m["TVF-LFO1"]) * l1
+      + lfoCutoff(this.lfo2.tvfDepth + m["TVF-LFO2"]) * l2
       + this.cutoffVSens * (this.vel - 0.5) * 1023
       + this.cutoffKF * Math.log2(Math.max(hz, 1) / this.kfBaseHz) * 170
       + m.CUT;
@@ -1039,11 +1279,20 @@ class Partial {
       s = this.filter.process(s, fcHz, reso, this.tvfType, this.poles);
     }
 
-    this.pan = Math.max(-1, Math.min(1, this.basePan + m.PAN / 64));
 
     // amp: envelope, patch level, velocity sensitivity, LFO tremolo
-    const trem = 1 + ((this.lfo1.tva + m["TVA-LFO1"] / 100) * l1
-                    + (this.lfo2.tva + m["TVA-LFO2"] / 100) * l2);
+    // TVA depth only ever attenuates, on one side of the LFO (measured):
+    // level x (1 - m(|d|) x max(0, -sign(d) x v))
+    const tv = (d, l) => {
+      if (!d) return 1;
+      const dd = Math.max(-100, Math.min(100, d));
+      return 1 - interp(LFO_T.tva, Math.abs(dd), false) * Math.max(0, -Math.sign(dd) * l);
+    };
+    const trem = tv(this.lfo1.tvaDepth + m["TVA-LFO1"], l1) * tv(this.lfo2.tvaDepth + m["TVA-LFO2"], l2);
+    // LFO pan: position +- depth/63 x v about the partial's own pan (measured),
+    // plus the matrix PAN route
+    this.pan = Math.max(-1, Math.min(1, this.basePan + m.PAN / 63
+      + (this.lfo1.panDepth * l1 + this.lfo2.panDepth * l2) / 63));
     // LEVEL_VSENS, MEASURED 2026-09-26 (renders/gap/vsens*, at LEVEL_VCRV 1):
     // s = VSENS/50; s >= 0: (1 - s(1 - v/127))^2, s < 0: (1 - |s| v/127)^2,
     // floored at 0 - so VSENS 50 is (v/127)^2, 100 mutes velocity < ~64, -50
@@ -1051,15 +1300,115 @@ class Partial {
     const sv = this.levelVSens * 2;
     const velGain = sv >= 0 ? Math.max(0, 1 - sv * (1 - this.vel)) ** 2
                             : Math.max(0, 1 + sv * this.vel) ** 2;
-    const level = m.LEV ? (Math.max(0, Math.min(127, this.levelRaw + m.LEV)) / 127) ** 2 : this.level;
-    return s * ae * level * Math.max(0, velGain) * Math.max(0, trem);
+    const level = m.LEV ? Math.max(0, (this.levelRaw / 127) ** 2 + m.LEV) : this.level;
+    return s * this.wavGain * ae * level * Math.max(0, velGain) * Math.max(0, trem);
   }
 
-  /** Pan including any LFO movement, as -1..+1. */
-  panNow() {
-    return Math.max(-1, Math.min(1,
-      this.pan + this.lfo1.pan * this.lfo1.sh * 0));   // LFO pan applied in tick order
+}
+
+/** Pan law, MEASURED 2026-09-27 (renders/lfo/span, static PAN; LFO pan follows
+ *  the same law, renders/lfo/pan). Relative to centre (0.5 per side here): the
+ *  quiet side falls linearly, 1 - |p|; the loud side rises as 1 + |p| until it
+ *  is capped at +3.1 dB (x1.427), reached near PAN 32. p = PAN/63. */
+const PAN_CAP = 1.427;
+const panL = (p) => 0.5 * (p <= 0 ? Math.min(1 - p, PAN_CAP) : 1 - p);
+const panR = (p) => 0.5 * (p >= 0 ? Math.min(1 + p, PAN_CAP) : 1 + p);
+
+/** Whether a partial plays. In a structured pair (SYNC/RING/XMOD) only the
+ *  carrier's partial switch counts - the modulator (2 or 4) runs and is heard
+ *  even when its own switch is off: the Parameter Guide says so, and Zenology
+ *  measured the same level either way (renders/struct/sync-sw2). */
+function sounding(patch, p) {
+  const pair = p.index <= 2 ? patch.structure.pair12 : patch.structure.pair34;
+  const structured = (label(pair) || "OFF") !== "OFF";
+  if (structured && (p.index === 2 || p.index === 4)) return !!patch.partials[p.index - 2].on;
+  return !!p.on;
+}
+
+/** Partial-structure constants, MEASURED 2026-09-26 against Zenology 2.0.9
+ *  (renders/struct; fitted by webui/compare/fit_struct.py). ring: gain of the
+ *  ring product osc x modulator-output; ringOsc2: the RING OSC 2 mix (6 dB below
+ *  OSC 1's in Zenology); xmod: cents per unit of modulator oscillator per cent
+ *  of depth; xmodOsc2: the XMOD OSC 2 mix; xmod2: [XMOD2 depth, phase-mod index
+ *  in cycles per unit of modulator oscillator]. */
+export const STRUCT = /*STRUCT_TABLES*/{"ring": 0.32635, "ringOsc2": 0.49472, "xmod": 0.31635, "xmodOsc2": 0.51822, "xmod2": [[0, 0.0], [16, 0.00784], [32, 0.02748], [64, 0.06682], [96, 0.13224], [127, 0.31692]]}/*END_STRUCT_TABLES*/;
+// fitting overrides (fit_struct.py): __ZC_SCALE.struct = {ring: ..., ...}
+Object.assign(STRUCT, K.struct || {});
+
+/** Voice-level laws, MEASURED 2026-09-27 against Zenology 2.0.9 (renders/af;
+ *  written by webui/compare/fit_voice.py).
+ *  uniDetune: the outermost unison voice's offset in cents per DETN unit -
+ *    voices sit evenly between +-DETN x uniDetune, all centred in pan and at
+ *    one level (size 4 at DETN 50: +-25 and +-8.33 cents, exactly).
+ *  uniGain: dB per extra unison voice - each voice is 1 dB quieter per voice
+ *    added, i.e. 2^(-(N-1)/6) (+2.0 +2.8 +3.0 +3.0 +2.8 +2.4 +2.1 dB for
+ *    2..8 detuned voices, exactly).
+ *  uniPhase: each unison voice starts up to +-uniPhase cycles off - at DETN 0
+ *    the voices share a frequency but sum 7-8 dB up, not the +9 of voices in
+ *    phase (a spread fitted to 3 levels; the offsets' pattern is not known).
+ *  af: Analog Feel - each partial of each voice drifts in pitch on its own
+ *    (two identical sines beat to -32 dB), by AF x sd cents rms: smooth random
+ *    noise, a fast (t1 s) and a slow (t2 s) critically damped part mixed w :
+ *    1 - w, fitted to the drift's autocorrelation. Exactly linear in AF (the
+ *    same curve at every AF, correlation 0.9997); the filter does not drift
+ *    and the level moves under 0.05 dB.
+ *  pitRnd: PIT_RND cents per unit at |u| = 1 (u a per-note random in +-1).
+ *  panRnd: PAN units per PAN_RND unit at |u| = 1 - an estimate: 8 notes
+ *    reached 1.63 x PAN_RND; linear in depth, clamped at the sides.
+ *  drift: Pitch Drift (RND_PIT_VAL) cents per unit - a constant per-note
+ *    offset (-30.4 cents at 255 with RND_PIT_NUM 1-8, which fixes it; NUM 0
+ *    draws a new one each note). Modelled as a per-note random at this scale. */
+export const VOICE_T = /*VOICE_TABLES*/{"uniDetune": 0.5003, "uniGain": -1.0, "af": {"sd": 0.2752, "t1": 0.0535, "t2": 0.2983, "w": 0.387}, "pitRnd": 1.0, "panRnd": 2.0, "drift": 0.1188, "uniPhase": 0.2}/*END_VOICE_TABLES*/;
+// fitting overrides (fit_voice.py): __ZC_SCALE.voice = {af: ..., ...}
+Object.assign(VOICE_T, K.voice || {});
+
+/** Analog Feel's pitch drift for one partial: white noise through two
+ *  critically damped lowpasses (VOICE_T.af), normalised to unit variance and
+ *  scaled to AF x sd cents. Updated every 32 samples - it moves at ~1 Hz. */
+class Drift {
+  constructor(sr, af) {
+    const c = VOICE_T.af;
+    this.cents = af * c.sd;
+    this.n = 32;
+    const rate = sr / this.n;
+    this.parts = [[c.t1, c.w], [c.t2, 1 - c.w]].filter(([, w]) => w > 0).map(([t, w]) => {
+      const a = Math.exp(-1 / (t * rate));
+      // var of two cascaded one-poles over uniform noise (var 1/3):
+      // (1-a)^4 (1+a^2) / (1-a^2)^3 / 3
+      const v = ((1 - a) ** 4 * (1 + a * a)) / (1 - a * a) ** 3 / 3;
+      return { a, w, g: Math.sqrt(w / v), y1: 0, y2: 0 };
+    });
+    this.reset();
   }
+  /** a note starts somewhere on the drift, not at its centre */
+  reset() {
+    // each part's output y2 g has variance w when stationary
+    for (const p of this.parts) p.y1 = p.y2 = gauss() * Math.sqrt(p.w) / p.g;
+    this.i = 0;
+    this.v = this.value();
+    this.next = this.v;
+  }
+  value() {
+    let s = 0;
+    for (const p of this.parts) s += p.y2 * p.g;
+    return s * this.cents;
+  }
+  tick() {
+    if (this.i++ % this.n === 0) {
+      this.v = this.next;
+      for (const p of this.parts) {
+        p.y1 += (1 - p.a) * ((Math.random() * 2 - 1) - p.y1);
+        p.y2 += (1 - p.a) * (p.y1 - p.y2);
+      }
+      this.next = this.value();
+    }
+    // linear between control points
+    return this.v + (this.next - this.v) * ((this.i - 1) % this.n) / this.n;
+  }
+}
+function gauss() {
+  const u = Math.random() || 1e-12, v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
 }
 
 export class VAVoice {
@@ -1068,48 +1417,92 @@ export class VAVoice {
     this.sr = sampleRate;
     this.patch = patch;
 
-    // Unison stacks detuned copies of the whole partial set. Size 2..8, detune
-    // 0..100 - spread symmetrically about the note.
+    // Unison stacks copies of the whole partial set (see VOICE_T): evenly
+    // detuned between +-DETN/2 cents, centred, each 1 dB down per extra voice.
     const uni = patch.voice || {};
     this.unison = !!raw(uni.UNISON_SW, 0);
     this.uniSize = this.unison ? Math.max(2, raw(uni.UNISON_SIZE, 4)) : 1;
-    this.uniDetune = raw(uni.UNISON_DETN, 20);
+    this.uniDetune = raw(uni.UNISON_DETN, 20) * VOICE_T.uniDetune;
+    const af = raw(patch.common.ANALOG_FEEL, 0);
 
     this.stacks = [];
     for (let u = 0; u < this.uniSize; u++) {
       const spread = this.uniSize > 1 ? (u / (this.uniSize - 1)) * 2 - 1 : 0;
       this.stacks.push({
         detune: spread * this.uniDetune,          // cents
-        // unison voices sit across the stereo field
-        spread: this.uniSize > 1 ? spread : 0,
         partials: patch.partials
-          .filter((p) => p.on && p.synthesised)
-          .map((p) => ({ n: p.index, dsp: new Partial(sampleRate, p) })),
+          .filter((p) => sounding(patch, p) && p.synthesised)
+          .map((p) => {
+            const dsp = new Partial(sampleRate, p);
+            dsp.setAnalogFeel(af);
+            return { n: p.index, dsp };
+          }),
       });
     }
+    this.pitchDrift = raw(uni.RND_PIT_VAL, 0);
 
-    this.struct12 = label(patch.structure.pair12) || "OFF";
-    this.struct34 = label(patch.structure.pair34) || "OFF";
-    this.ringLevel = raw(patch.structure.RING12_LEVEL, 127) / 127;
-    this.xmodDepth = raw(patch.structure.XMOD12_DEPTH, 1200) / 1200;
+    const st = patch.structure;
+    const lv = (k, d) => raw(st[k], d) / 127;
+    this.struct12 = label(st.pair12) || "OFF";
+    this.struct34 = label(st.pair34) || "OFF";
+    // per pair: [carrier index, modulator index] -> its settings
+    this.pairs = {
+      1: { mode: this.struct12, ring: lv("RING12_LEVEL", 127), r1: lv("RING_OSC1_LEVEL", 0),
+           r2: lv("RING_OSC2_LEVEL", 0), xdepth: raw(st.XMOD12_DEPTH, 1200),
+           x1: lv("XMOD_OSC1_LEVEL", 127), x2: lv("XMOD_OSC2_LEVEL", 0),
+           x2depth: raw(st.XMOD2_12_DEPTH, 0) },
+      3: { mode: this.struct34, ring: lv("RING34_LEVEL", 127), r1: lv("RING_OSC3_LEVEL", 0),
+           r2: lv("RING_OSC4_LEVEL", 0), xdepth: raw(st.XMOD34_DEPTH, 1200),
+           x1: lv("XMOD_OSC3_LEVEL", 127), x2: lv("XMOD_OSC4_LEVEL", 0),
+           x2depth: raw(st.XMOD2_34_DEPTH, 0) },
+    };
+    // Partial Phase Lock OFF: partials do not start in step (measured: two
+    // identical saws sum to +0.5 dB instead of +6). Modelled as a random
+    // start phase per partial - whether Zenology's offsets are random or
+    // fixed is not measured.
+    this.phaseLock = (label(st.PTL_PHS_LOCK) || "ON") === "ON";
     this.toneLevel = (raw(patch.common.LEVEL, 127) / 127) ** 2;     // measured, see Partial
     this.octave = raw(patch.common.OCTAVE, 0);
     this.coarse = raw(patch.common.PIT_CRS, 0);
     this.fine = raw(patch.common.PIT_FINE, 0) / 100;
     this.note = 69;
     this.velocity = 100;
-    /** Matrix controller sources by schema label ("SYS-CTRL1", "CC74", "BEND"
-     *  ...), 0..1 or -1..1. Nothing sets these yet, so they read as 0. */
+    // Pitch bend: BEND_RANGE_UP/DW semitones plus the FINE cents, to each
+    // partial whose Receive Bender is on - measured exactly (renders/ctl/bend,
+    // bendfine, rxbend). BEND_MODE CATCH+LAST is not modelled.
+    const vc = patch.voice || {};
+    this.bendUp = raw(patch.common.BEND_RANGE_UP, 2) * 100 + raw(vc.BEND_RANGE_FINE_UP, 0);
+    this.bendDown = raw(patch.common.BEND_RANGE_DW, 2) * 100 + raw(vc.BEND_RANGE_FINE_DW, 0);
+    /** Controllers by the matrix's source labels ("CC01", "BEND", "AFT" ...;
+     *  see applyMidi). The synth shares one object across its voices, so a
+     *  controller moves every sounding note. */
     this.controllers = {};
+    this.pedalHeld = false;
   }
 
-  noteOn(note, velocity = 100) {
+  /** clock: seconds on the synth's free-running LFO clock (see LFO.reset). */
+  noteOn(note, velocity = 100, clock = 0) {
     this.note = note;
     this.velocity = velocity;
-    for (const s of this.stacks) for (const p of s.partials) p.dsp.noteOn(velocity);
+    const drift = this.pitchDrift ? (Math.random() * 2 - 1) * this.pitchDrift * VOICE_T.drift : 0;
+    for (const s of this.stacks) {
+      const off = this.uniSize > 1 ? (Math.random() * 2 - 1) * (VOICE_T.uniPhase ?? 0) : 0;
+      for (const p of s.partials) p.dsp.driftCents = drift;
+      for (const p of s.partials) p.dsp.noteOn(velocity, ((this.phaseLock ? 0 : Math.random()) + off + 1) % 1, clock);
+    }
   }
-  noteOff() {
-    for (const s of this.stacks) for (const p of s.partials) p.dsp.noteOff();
+  /** Key released. With the hold pedal down, partials that receive Hold-1
+   *  keep sounding until pedalUp(). */
+  noteOff(pedal = false) {
+    this.pedalHeld = pedal;
+    for (const s of this.stacks) {
+      for (const p of s.partials) if (!(pedal && p.dsp.rxHold)) p.dsp.noteOff();
+    }
+  }
+  pedalUp() {
+    if (!this.pedalHeld) return;
+    this.pedalHeld = false;
+    for (const s of this.stacks) for (const p of s.partials) if (p.dsp.rxHold) p.dsp.noteOff();
   }
   get done() {
     return this.stacks.every((s) => s.partials.every((p) => p.dsp.done));
@@ -1119,36 +1512,64 @@ export class VAVoice {
   process(left, right, n) {
     const hz = 440 * Math.pow(2,
       (this.note - 69 + this.octave * 12 + this.coarse + this.fine) / 12);
-    // keep the level sane as unison and partials stack up
+    // unison: 1 dB down per extra voice (VOICE_T.uniGain)
     // VOICE_GAIN is calibrated to Zenology (see its definition)
-    const g = this.toneLevel * VOICE_GAIN / Math.sqrt(this.uniSize);
+    const g = this.toneLevel * VOICE_GAIN * 10 ** (VOICE_T.uniGain * (this.uniSize - 1) / 20);
+    const ctl = this.controllers;
+    const b = ctl.BEND ?? 0;
+    const bendCents = b >= 0 ? b * this.bendUp : b * this.bendDown;
+    // Expression (CC11) scales level as (CC11/127)^2 - measured exactly, like
+    // LEVEL (renders/ctl/expr); RX_EXPR OFF ignores it
+    const expr = ctl.CC11 === undefined ? 1 : ctl.CC11 ** 2;
+    const bend = (p) => (p.dsp.rxBend ? bendCents : 0);
+    const ex = (p) => (p.dsp.rxExpr ? expr : 1);
 
     for (let i = 0; i < n; i++) {
       let l = 0, r = 0;
       for (const stack of this.stacks) {
         const find = (k) => stack.partials.find((p) => p.n === k);
-        for (const { n: idx, dsp } of stack.partials) {
-          const pair = idx === 1 ? this.struct12
-                     : idx === 3 ? this.struct34 : "OFF";
-          const other = (pair !== "OFF") ? find(idx + 1) : null;
-
-          // XMOD: the modulator's output offsets the carrier's frequency
-          let fmod = 0;
-          if (pair === "XMOD" || pair === "XMOD2") {
-            if (other) fmod = other.dsp.osc.shape(other.dsp.osc.phase, 0)
-                              * this.xmodDepth * 1200;   // cents
+        // modulators (2, 4) first, so their carrier reads this sample's values
+        const mods = {};
+        for (const k of [2, 4]) {
+          const mod = find(k);
+          if (!mod) continue;
+          const pr = this.pairs[k - 1];
+          const carrier = pr.mode !== "OFF" && find(k - 1);
+          const y = mod.dsp.tick(hz, stack.detune + bend(mod), ctl) * ex(mod);
+          mods[k] = y;
+          // SYNC: both partials are heard; RING/XMOD: the modulator is heard
+          // only through its carrier's mix (measured, renders/struct)
+          if (carrier && pr.mode !== "SYNC") continue;
+          l += y * panL(mod.dsp.pan);
+          r += y * panR(mod.dsp.pan);
+        }
+        for (const k of [1, 3]) {
+          const car = find(k);
+          if (!car) continue;
+          const pr = this.pairs[k];
+          const mod = pr.mode !== "OFF" ? find(k + 1) : null;
+          let detune = stack.detune + bend(car), mix = null;
+          if (mod && pr.mode === "RING") {
+            // osc x (the modulator's finished output), plus the two
+            // oscillator mixes - all through the carrier's filter and amp
+            const y2 = mods[k + 1];
+            mix = (o) => o * y2 * pr.ring * STRUCT.ring + o * pr.r1 + y2 * pr.r2 * STRUCT.ringOsc2;
+          } else if (mod && pr.mode === "XMOD") {
+            // the modulator's RAW oscillator bends the carrier's pitch
+            const m2 = mod.dsp.lastOsc;
+            detune += m2 * pr.xdepth * STRUCT.xmod;
+            mix = (o) => o * pr.x1 + m2 * pr.x2 * STRUCT.xmodOsc2;
+          } else if (mod && pr.mode === "XMOD2") {
+            const m2 = mod.dsp.lastOsc;
+            car.dsp.osc.pm = m2 * interp(STRUCT.xmod2, pr.x2depth, false);
+            mix = (o) => o * pr.x1 + m2 * pr.x2 * STRUCT.xmodOsc2;
           }
-          let s = dsp.tick(hz, stack.detune + fmod, this.controllers);
-
-          if (pair === "SYNC" && other && other.dsp.osc.syncedThisSample) {
-            dsp.osc.reset(0);                       // slave reset by the master
-          } else if (pair === "RING" && other) {
-            s = s * other.dsp.osc.shape(other.dsp.osc.phase, 0) * this.ringLevel;
+          let s = car.dsp.tick(hz, detune, ctl, mix) * ex(car);
+          if (mod && pr.mode === "SYNC" && mod.dsp.osc.syncedThisSample) {
+            car.dsp.osc.reset(0);                   // slave reset by the master
           }
-
-          const pan = Math.max(-1, Math.min(1, dsp.pan + stack.spread * 0.5));
-          l += s * (1 - pan) * 0.5;
-          r += s * (1 + pan) * 0.5;
+          l += s * panL(car.dsp.pan);
+          r += s * panR(car.dsp.pan);
         }
       }
       left[i] += l * g;

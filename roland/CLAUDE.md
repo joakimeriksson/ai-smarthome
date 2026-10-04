@@ -329,6 +329,20 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - Seen on the way: **Zenology's sine gets quieter above C6**, ~0.16 dB per
     semitone (-0.9 at F#6, -2.9 at F#7); ours does not - an oscillator gap,
     not measured for other waveforms.
+- **Reverb: not yet measurable offline** (investigated 2026-09-28). Zenology
+  has no chorus of its own (CHO sends only act on hardware); its reverb
+  (default SRV-2000) is audible in Logic only with BOTH the partial REV SEND
+  and the tone REV SEND up. The tone REV SEND is not a tone-record parameter
+  and has not been found: every DawDreamer render is dry whatever the partial
+  and MFX sends. The slot's extra block at +22424 (1, 5, 127, 0, then SRV-2000
+  settings) looks like reverb switch/type/level/send, but writing 127 at
+  +22427 changed nothing. In the plugin's saved state (JUCE XML wrapping
+  address/value records) the reverb block is at 0x77240 and 0x77450, the
+  partial send at 0x13c3c and OUT_ASGN at 0x13c50; 0x12f4 is the hold pedal
+  (its "tail" is the note sustaining). Next step: diff Logic-saved plugin
+  settings (base / tone send up / partial send up / type / level) to find the
+  send, then load one into DawDreamer. Plan: an algorithmic reverb of our own
+  fitted to measurements, not a captured impulse response.
 - **Controllers and the matrix** - measured 2026-09-27 (renders/ctl;
   `zen_bank.py --ctl cc1=127` / `--param ctl:bend` send them through a MIDI
   file). Notes on `MATRIX_FULL`, `applyMidi` and `VAVoice` in va-dsp.js.

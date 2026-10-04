@@ -10,6 +10,7 @@
   import { demoProject } from './lib/demo.ts'
   import { DEMOS } from './lib/demos.ts'
   import { SCALE_LABELS, NOTE_NAMES, type ScaleName } from './lib/generate.ts'
+  import { keySignature } from './lib/notation.ts'
   import MixerStrip from './components/MixerStrip.svelte'
   import BusStrip from './components/BusStrip.svelte'
   import FxEditor from './components/FxEditor.svelte'
@@ -163,6 +164,24 @@
   }
 
   function touchPatterns() { studio.tracks = [...studio.tracks] }
+
+  // How melodic patterns are shown; remembered between visits.
+  type PatternView = 'roll' | 'score' | 'steps'
+  const VIEWS: [PatternView, string][] = [['roll', 'PIANO ROLL'], ['score', 'SCORE'], ['steps', 'STEPS']]
+  const savedView = typeof localStorage === 'undefined' ? null : localStorage.getItem('studio-pattern-view')
+  let patternView = $state<PatternView>(VIEWS.some(([v]) => v === savedView) ? savedView as PatternView : 'roll')
+  function setView(v: PatternView) {
+    patternView = v
+    try { localStorage.setItem('studio-pattern-view', v) } catch { /* private mode: not remembered */ }
+  }
+  // One key signature for the song: the one its melodic tracks need fewest accidentals in.
+  const fifths = $derived(keySignature(studio.tracks.filter(t => !t.isPercussion).map(t => t.steps)))
+  /** The piano roll plays what the pattern would: through the track's transpose. */
+  function audition(note: number, down: boolean) {
+    const n = note + (studio.focusedTrack()?.transpose ?? 0)
+    if (down) studio.noteOn(n)
+    else studio.noteOff(n)
+  }
 </script>
 
 <svelte:window onpointerdown={() => studio.resume()} />
@@ -349,6 +368,11 @@
     <div class="pattern-head">
       <h2>PATTERN — {studio.focusedTrack()?.name ?? 'no track'}</h2>
       {#if studio.focusedTrack() && !studio.focusedTrack()!.isPercussion}
+        <div class="views" role="group" aria-label="Pattern view">
+          {#each VIEWS as [v, label] (v)}
+            <button class:on={patternView === v} onclick={() => setView(v)}>{label}</button>
+          {/each}
+        </div>
         <label class="inline">
           GATE
           <input type="range" min="0.1" max="1" step="0.05"
@@ -370,6 +394,9 @@
       currentStep={studio.step}
       playing={studio.playing}
       onchange={touchPatterns}
+      view={patternView}
+      {fifths}
+      onnote={audition}
     />
   </section>
 
@@ -659,6 +686,12 @@
   .inline input[type="number"] { width: 3rem; background: #0a0a0c; border: 1px solid rgba(255,255,255,0.12); color: var(--ink); border-radius: 2px; padding: 0.15rem 0.3rem; font-family: 'Share Tech Mono', monospace; }
   .clear { margin-left: auto; background: #1c1c22; border: 1px solid rgba(255,255,255,0.12); color: var(--dim); padding: 0.22rem 0.5rem; border-radius: 2px; cursor: pointer; font-family: inherit; font-size: 0.6rem; letter-spacing: 0.12em; }
   .clear:hover { color: #ff8a70; border-color: #ff4444; }
+  .views { display: flex; }
+  .views button { background: #1c1c22; border: 1px solid rgba(255,255,255,0.12); color: var(--dim); padding: 0.22rem 0.55rem; cursor: pointer; font-family: inherit; font-size: 0.6rem; letter-spacing: 0.12em; }
+  .views button + button { border-left: 0; }
+  .views button:first-child { border-radius: 2px 0 0 2px; }
+  .views button:last-child { border-radius: 0 2px 2px 0; }
+  .views button.on { background: var(--ink); color: #08080a; border-color: var(--ink); }
 
   footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; color: var(--dim); font-size: 0.68rem; }
   footer a { color: var(--dim); }

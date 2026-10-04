@@ -1,19 +1,28 @@
 <script lang="ts">
-  // Pattern editor for the focused track. Melodic tracks get one note per
-  // step (click to toggle, drag vertically to pitch it) laid out one bar per
-  // row; percussion tracks get the 8-channel grid, all bars on one line.
-  // A step may carry a chord and a hold length (the demo uses both); the
-  // cell names the chord and the steps it holds through show a tie.
+  // Pattern editor for the focused track. Percussion tracks get the
+  // 8-channel grid, all bars on one line. Melodic tracks have three views of
+  // one pattern: the piano roll, sheet music (read-only), and the step row -
+  // one note per step (click to toggle, scroll to pitch it), which names a
+  // step's chord and marks its aftertouch, and shows a tie on the steps a
+  // note holds through.
   import { DRUM_CHANNELS, drumChannelName, instrumentDef } from '../lib/instruments.ts'
   import { BAR_CHOICES, type Track, type NoteStep } from '../lib/track.svelte.ts'
+  import PianoRoll from './PianoRoll.svelte'
+  import ScoreView from './ScoreView.svelte'
 
   interface Props {
     track: Track | null
     currentStep: number
     playing: boolean
     onchange: () => void
+    /** How a melodic pattern is shown. */
+    view?: 'roll' | 'score' | 'steps'
+    /** The song's key signature, for the score (sharps > 0, flats < 0). */
+    fifths?: number
+    /** Audition a note from the piano roll. */
+    onnote?: (note: number, down: boolean) => void
   }
-  let { track, currentStep, playing, onchange }: Props = $props()
+  let { track, currentStep, playing, onchange, view = 'steps', fifths = 0, onnote }: Props = $props()
 
   // The lane wears its instrument's colour — six sound-worlds, six identities.
   const accent = $derived(track ? instrumentDef(track.kind).accent : 'var(--accent)')
@@ -131,6 +140,14 @@
       </div>
     {/each}
     {/each}
+  </div>
+{:else if view === 'roll'}
+  <div style="--accent:{accent}">
+    <PianoRoll {track} {playhead} {playing} {onchange} {onnote} />
+  </div>
+{:else if view === 'score'}
+  <div style="--accent:{accent}">
+    <ScoreView {track} {fifths} {playhead} {playing} />
   </div>
 {:else}
   <div class="note-row" style="--accent:{accent}">

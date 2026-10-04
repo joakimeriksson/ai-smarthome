@@ -21,6 +21,27 @@ const DEFAULT_KIT = [
 ];
 let kit = DEFAULT_KIT.map(c => ({ ...c }));
 
+// TONE means a different thing per voice (a pitch in Hz for the drums, a
+// ratio to the metal bank for hats and cymbal, a filter offset for clap and
+// maraca), so one 20..800 slider fits none of them: the claves presets tune
+// to 2423 Hz, which that slider could not even show — touching it dropped the
+// claves 1.6 octaves. [min, max, default] per voice type; the defaults are the
+// processor's own tunings.
+const TONE_RANGE = [
+  [30, 120, 55],     // Kick
+  [100, 400, 172],   // Snare
+  [150, 600, 300],   // CH Hat (300 = the 808's own metal bank)
+  [150, 600, 300],   // OH Hat
+  [20, 800, 200],    // Clap
+  [40, 400, 110],    // Tom
+  [200, 1200, 436],  // Rim
+  [270, 1080, 540],  // Cowbell
+  [150, 600, 300],   // Cymbal
+  [20, 800, 300],    // Maraca
+  [120, 700, 281],   // Conga
+  [1200, 4000, 2423],// Claves
+];
+
 /** Row label follows the channel's current voice, not its default role. */
 function rowLabel(ch) { return TYPE_NAMES[kit[ch].type] || CHANNEL_NAMES[ch]; }
 
@@ -109,11 +130,19 @@ function renderChannelEditor() {
   const typeSel = document.getElementById('ch-type');
   typeSel.value = String(kit[ch].type);
   typeSel.onchange = (e) => {
-    setKit(ch, 'type', parseInt(e.target.value));
+    const type = parseInt(e.target.value);
+    setKit(ch, 'type', type);
+    // A kick's 55 Hz is a near-silent claves and a sub-audio hi-hat: when the
+    // old tuning is outside the new voice's range, start from its default.
+    const [lo, hi, def] = TONE_RANGE[type] || [20, 800, 200];
+    if (!(kit[ch].tone >= lo && kit[ch].tone <= hi)) setKit(ch, 'tone', def);
     renderGrid();               // row label follows the voice
     renderChannelEditor();      // panel title too
     triggerDrum(ch);            // audition the new voice
   };
+  const toneEl = document.getElementById('ch-tone');
+  const [tLo, tHi] = TONE_RANGE[kit[ch].type] || [20, 800];
+  toneEl.min = tLo; toneEl.max = tHi;
   bind('ch-tone', 'tone'); bind('ch-decay', 'decay'); bind('ch-color', 'color'); bind('ch-blend', 'blend');
   bind('ch-level', 'level'); bind('ch-pan', 'pan');
 }
@@ -400,10 +429,19 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Keyboard triggers (number keys 1-8 trigger drums)
+  // Only text fields swallow these: a focused fader or menu (whatever was
+  // last touched) must not disable the pads.
+  const isTextEntry = (el) => el.isContentEditable || el.tagName === 'TEXTAREA' ||
+    (el.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button'].includes(el.type));
   document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.metaKey || e.ctrlKey || e.altKey || isTextEntry(e.target)) return;
     const num = parseInt(e.key);
-    if (num >= 1 && num <= 8) triggerDrum(num - 1);
-    if (e.key === ' ') { e.preventDefault(); document.getElementById('play-btn').click(); }
+    if (num >= 1 && num <= 8) { e.preventDefault(); triggerDrum(num - 1); }
+    if (e.key === ' ') { e.preventDefault(); if (!e.repeat) document.getElementById('play-btn').click(); }
+  });
+  // A focused button activates on Space *keyup* — which would press Clear or
+  // toggle Play a second time on top of the transport toggle above.
+  document.addEventListener('keyup', (e) => {
+    if (e.key === ' ' && !isTextEntry(e.target)) e.preventDefault();
   });
 });

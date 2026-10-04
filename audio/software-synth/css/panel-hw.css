@@ -1,0 +1,563 @@
+/* ===========================================================================
+   panel-hw.css — the hardware front panel, shared by the six synths.
+   ===========================================================================
+
+   Loaded LAST, after css/synth-base.css and the synth's own stylesheet, and
+   paired with js/panel-hw.js, which builds the knobs, faders and banks this
+   file styles. The look is modelled on the Synthex page: an instrument
+   standing on a dark desk, with end cheeks, outlined sections with
+   centred legends, knobs with printed scales, and a keybed under a
+   nameplate.
+
+   Everything is driven by each synth's existing palette (--bg, --panel-bg,
+   --accent, --led, --display-*, --chassis), so the six machines keep their
+   own identity. Optional per-synth tokens, all with fallbacks here:
+
+     --hw-control     knob | fader   widget for a row's range (set on a panel)
+     --knob-size      rotary diameter
+     --knob-cap       knob face colour
+     --knob-pointer   pointer line colour
+     --scale-ink      unlit scale marks
+     --cheek          end-cheek background (a colour or a gradient)
+     --cheek-w        end-cheek width
+     --legend         section-title and label ink
+   --case-ink       ink printed on the case itself (header, key-map hint),
+                    for machines whose case and panels differ in tone
+   --logo           logotype colour
+   ======================================================================== */
+
+/* --- The instrument on a desk ------------------------------------------ */
+
+html.hw-panel body {
+  background: #161616 radial-gradient(ellipse at 50% 0%, #262626, #121212 70%) fixed;
+  padding: 28px 16px 40px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+html.hw-panel .synth-container {
+  --cw: var(--cheek-w, 18px);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 90px),
+    var(--bg);
+  border-radius: 6px;
+  padding: 14px calc(var(--cw) + 16px) 18px;
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.9),
+    0 2px 0 rgba(255, 255, 255, 0.06) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Wood for the machines that had it; a synth opts in with
+   `--cheek: var(--wood)`. Defined on html so :root tokens can refer to it. */
+html.hw-panel {
+  --wood:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 2px, rgba(255, 255, 255, 0.04) 2px 5px),
+    repeating-linear-gradient(180deg, transparent 0 37px, rgba(0, 0, 0, 0.12) 37px 39px),
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--chassis) 65%, #000),
+      color-mix(in srgb, var(--chassis) 90%, #fff 10%) 40%,
+      color-mix(in srgb, var(--chassis) 60%, #000));
+}
+/* The page-edge strips some synths drew before the instrument had cheeks. */
+html.hw-panel body::before,
+html.hw-panel body::after { content: none !important; }
+
+/* End cheeks: wood on the machines that had it, case plastic otherwise. */
+html.hw-panel .synth-container::before,
+html.hw-panel .synth-container::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: var(--cw);
+  background: var(--cheek,
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--chassis) 70%, #000),
+      var(--chassis) 30%,
+      color-mix(in srgb, var(--chassis) 80%, #000)));
+  box-shadow: inset 0 0 0 1px var(--chassis-edge);
+  pointer-events: none;
+}
+html.hw-panel .synth-container::before { left: 0; border-radius: 6px 0 0 6px; }
+html.hw-panel .synth-container::after  { right: 0; border-radius: 0 6px 6px 0; }
+
+/* --- Header: logotype, badge, program display ------------------------- */
+
+html.hw-panel .synth-header {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--case-ink, var(--text-dim)) 35%, transparent) !important;
+  border-radius: 0 !important;
+  padding: 6px 2px 14px !important;
+  margin-bottom: 14px !important;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+html.hw-panel .synth-header > div:first-child,
+html.hw-panel .synth-header h1 { min-width: 0; }
+html.hw-panel .synth-header h1 {
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: 5px !important;
+  line-height: 1;
+  color: var(--logo, var(--accent)) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45) !important;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+html.hw-panel .synth-header .subtitle {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 10px !important;
+  letter-spacing: 2.5px !important;
+  text-transform: uppercase;
+  color: var(--case-ink, var(--text-dim)) !important;
+}
+/* The small solid badge in front of the model line, as on the Synthex. */
+html.hw-panel .synth-header .subtitle::before {
+  content: '';
+  display: inline-block;
+  width: 26px; height: 9px;
+  margin-right: 9px;
+  vertical-align: -1px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+html.hw-panel .home-link {
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--case-ink, var(--text-dim));
+  text-decoration: none;
+  text-shadow: none;
+  line-height: 1;
+  padding: 0 2px 3px;
+  opacity: 0.7;
+}
+html.hw-panel .home-link:hover { color: var(--accent); opacity: 1; }
+
+html.hw-panel .header-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Program window: the preset menu, drawn as a lit display. */
+.hw-display {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+.hw-display-caption {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--case-ink, var(--text-dim));
+}
+html.hw-panel .hw-display select {
+  min-width: 190px;
+  height: 30px;
+  font-family: 'Share Tech Mono', 'Courier New', monospace !important;
+  font-size: 13px !important;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--display-ink) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--display-ink) 60%, transparent);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--display-ink) 50%) calc(100% - 13px) calc(50% - 1px) / 5px 5px no-repeat,
+    linear-gradient(135deg, var(--display-ink) 50%, transparent 50%) calc(100% - 8px) calc(50% - 1px) / 5px 5px no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%),
+    var(--display-bg) !important;
+  border: 1px solid #000 !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  padding: 4px 26px 4px 10px !important;
+}
+html.hw-panel .hw-display select option { color: var(--text); background: var(--panel-bg); text-shadow: none; }
+
+/* Header buttons: small panel keys rather than web buttons. */
+html.hw-panel .header-controls .btn {
+  height: 30px;
+  padding: 0 12px !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  letter-spacing: 1.6px !important;
+  text-transform: uppercase;
+  color: var(--key-ink, #2a2622) !important;
+  text-shadow: none;
+  background: linear-gradient(180deg, var(--key-hi, #f1ebdd), var(--key-lo, #cfc6b3)) !important;
+  border: 1px solid rgba(0, 0, 0, 0.55) !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 2px 3px rgba(0, 0, 0, 0.45);
+}
+html.hw-panel .header-controls .btn-danger { color: #a3261b !important; }
+html.hw-panel #start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+html.hw-panel #start-btn:disabled { filter: none; opacity: 1; cursor: default; }
+.hw-led {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #6b2b25, #3a1411);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+#start-btn:disabled .hw-led {
+  background: radial-gradient(circle at 40% 35%, #ffb3a8, var(--led) 60%);
+  box-shadow: 0 0 6px var(--led), 0 0 12px color-mix(in srgb, var(--led) 60%, transparent);
+}
+
+/* --- Sections: outlined, legend centred between two rules ------------- */
+
+html.hw-panel .panel {
+  background: color-mix(in srgb, var(--panel-bg) 96%, #fff 4%) !important;
+  border: 1px solid color-mix(in srgb, var(--legend, var(--text-dim)) 40%, transparent) !important;
+  border-radius: 2px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.03) !important;
+  padding: 10px 12px 12px !important;
+  /* Sections in a row share its height, and their controls spread to fill
+     it — as on a real panel, where no box ends halfway down. synth-base.css
+     shrink-wraps panels instead, which left dark holes beside tall
+     neighbours. */
+  align-self: stretch !important;
+  display: flex;
+  flex-direction: column;
+}
+html.hw-panel .panel > .hw-bank {
+  flex: 1 1 auto;
+  align-content: space-evenly;
+  align-items: center;
+}
+html.hw-panel .panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  text-align: center;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 2.6px !important;
+  text-transform: uppercase;
+  color: var(--legend, var(--text)) !important;
+  padding: 0 !important;
+  margin: 0 0 10px !important;
+  border: 0 !important;
+  background: none !important;
+}
+html.hw-panel .panel-title::before,
+html.hw-panel .panel-title::after {
+  content: '' !important;
+  position: static !important;
+  display: block !important;
+  flex: 1;
+  height: 1px !important;
+  width: auto !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--band, color-mix(in srgb, var(--legend, var(--text-dim)) 45%, transparent)) !important;
+  box-shadow: none !important;
+}
+/* A title that shares its line with an on/off switch. */
+html.hw-panel .fx-header { align-items: center; gap: 10px; margin-bottom: 10px; }
+html.hw-panel .fx-header .panel-title { flex: 1; margin: 0 !important; }
+
+/* --- Banks and cells --------------------------------------------------- */
+
+.hw-bank {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  align-items: flex-end;
+  gap: 12px 8px;
+  padding: 2px 0 4px;
+}
+/* The paired-column envelope layouts become one row of faders. */
+html.hw-panel .adsr-group,
+html.hw-panel .sid-adsr { --hw-control: fader; }
+
+.hw-cell {
+  display: grid !important;
+  grid-template-areas: "top" "ctl" "lab";
+  grid-template-rows: auto auto auto;
+  justify-items: center;
+  align-items: end;
+  row-gap: 5px;
+  margin: 0 !important;
+  min-width: 46px;
+  width: auto !important;
+}
+.hw-cell > select { grid-area: top; max-width: 118px; }
+.hw-cell > .hw-knob,
+.hw-cell > .hw-fader,
+.hw-cell > input[type="checkbox"] { grid-area: ctl; }
+.hw-choice > select { grid-area: ctl; }
+.hw-cell > label,
+.hw-cell > .val {
+  grid-area: lab;
+  width: auto !important;
+  max-width: 90px;
+  margin: 0 !important;
+  text-align: center !important;
+  line-height: 1.25;
+  overflow: hidden;
+  transition: opacity 90ms ease;
+}
+/* Labels wrap rather than truncate ("Ring Mod (Osc 3)"); values never do. */
+.hw-cell > .val { white-space: nowrap; }
+.hw-cell > label {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.4px !important;
+  text-transform: uppercase;
+  color: var(--legend, var(--text)) !important;
+  cursor: default;
+}
+/* The value read-out lives under the label and takes its place while the
+   control is touched — the numbers stay one hover away without the panel
+   turning into a spreadsheet. */
+.hw-cell > .val {
+  opacity: 0;
+  pointer-events: none;
+  background: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+  color: var(--readout-ink, var(--accent)) !important;
+}
+.hw-knob-cell:hover > .val, .hw-fader-cell:hover > .val,
+.hw-cell.hw-active > .val, .hw-cell:focus-within > .val { opacity: 1; }
+.hw-knob-cell:hover > label, .hw-fader-cell:hover > label,
+.hw-cell.hw-active > label, .hw-cell:focus-within > label { opacity: 0; }
+
+.hw-native { display: none !important; }
+
+/* --- Rotary knob -------------------------------------------------------- */
+
+.hw-knob {
+  --size: var(--knob-size, 44px);
+  --angle: calc((var(--n, 0) - 0.5) * 270deg);
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  cursor: ns-resize;
+  touch-action: none;
+  border-radius: 50%;
+  outline: none;
+}
+.hw-scale {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+}
+.hw-scale line {
+  stroke: var(--scale-ink, color-mix(in srgb, var(--legend, var(--text-dim)) 55%, transparent));
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.hw-scale line.major { stroke-width: 2; }
+.hw-scale line.lit {
+  stroke: var(--scale-lit, var(--accent));
+  filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--scale-lit, var(--accent)) 70%, transparent));
+}
+/* Skirt and face. The shading does not rotate; only the pointer does. */
+.hw-cap {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.22), transparent 55%),
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--knob-cap, #2c2c30) 100%, #fff 6%) 0 58%,
+      color-mix(in srgb, var(--knob-cap, #2c2c30) 70%, #000) 60%,
+      color-mix(in srgb, var(--knob-cap, #2c2c30) 85%, #fff 8%) 64%,
+      color-mix(in srgb, var(--knob-cap, #2c2c30) 60%, #000) 100%);
+  box-shadow:
+    0 3px 5px rgba(0, 0, 0, 0.55),
+    0 1px 1px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.hw-pointer {
+  position: absolute;
+  inset: 18%;
+  transform: rotate(var(--angle));
+  pointer-events: none;
+}
+.hw-pointer::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 5%;
+  width: 2.5px; height: 36%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--knob-pointer, #f3efe6);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+}
+.hw-knob:hover .hw-cap { filter: brightness(1.12); }
+.hw-knob:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent); }
+
+/* --- Vertical fader ----------------------------------------------------- */
+
+.hw-fader {
+  --h: var(--fader-h, 62px);
+  --cap-h2: 16px;
+  position: relative;
+  width: 30px;
+  height: var(--h);
+  cursor: ns-resize;
+  touch-action: none;
+  outline: none;
+}
+.hw-fader-scale {
+  position: absolute;
+  top: calc(var(--cap-h2) / 2); bottom: calc(var(--cap-h2) / 2);
+  left: 0; right: 0;
+  background:
+    repeating-linear-gradient(180deg,
+      var(--scale-ink, color-mix(in srgb, var(--legend, var(--text-dim)) 55%, transparent)) 0 1px,
+      transparent 1px calc((100% - 1px) / 10)) left / 6px 100% no-repeat,
+    repeating-linear-gradient(180deg,
+      var(--scale-ink, color-mix(in srgb, var(--legend, var(--text-dim)) 55%, transparent)) 0 1px,
+      transparent 1px calc((100% - 1px) / 10)) right / 6px 100% no-repeat;
+}
+.hw-fader-slot {
+  position: absolute;
+  top: calc(var(--cap-h2) / 2); bottom: calc(var(--cap-h2) / 2);
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: #050505;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.hw-fader-cap {
+  position: absolute;
+  left: 50%;
+  width: 18px;
+  height: var(--cap-h2);
+  top: calc((1 - var(--n, 0)) * (var(--h) - var(--cap-h2)));
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, transparent 46%, rgba(0, 0, 0, 0.55) 46% 54%, transparent 54%),
+    linear-gradient(180deg,
+      var(--cap) 0%,
+      color-mix(in srgb, var(--cap) 80%, #000) 45%,
+      color-mix(in srgb, var(--cap) 70%, #000) 55%,
+      color-mix(in srgb, var(--cap) 85%, #000) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 3px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+}
+.hw-fader:focus-visible .hw-fader-cap,
+.hw-fader:hover .hw-fader-cap { filter: brightness(1.12); }
+.hw-fader:focus-visible .hw-fader-cap { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent); }
+
+/* --- Switches and choices inside banks ------------------------------ */
+
+.hw-switch { cursor: pointer; }
+.hw-switch > label { cursor: pointer; }
+.hw-choice > select { max-width: 118px; }
+
+/* --- Keybed ------------------------------------------------------------ */
+
+.hw-nameplate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 34px;
+  margin: 18px 0 0;
+  padding: 0 16px;
+  background: linear-gradient(180deg, #0b0b0b, #171717);
+  border: 1px solid #000;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.hw-nameplate-sub {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #5d5d5d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hw-nameplate-logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #f2f2f2, #9a9a9a 55%, #d6d6d6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html.hw-panel .panel.hw-keybed {
+  background: #0c0c0c !important;
+  border: 1px solid #000 !important;
+  border-radius: 0 0 3px 3px !important;
+  padding: 10px 10px 12px !important;
+  box-shadow: inset 0 8px 14px -8px rgba(0, 0, 0, 0.9) !important;
+  overflow-x: auto;
+}
+html.hw-panel #piano-keyboard {
+  background: #050505;
+  box-shadow: none;
+}
+html.hw-panel .white-key {
+  background: linear-gradient(180deg, #e9e2d0 0%, #fbf7ec 12%, #f4eee0 88%, #ddd4bf 100%) !important;
+  border: 1px solid #2a2724 !important;
+  border-top: 0 !important;
+  border-radius: 0 0 3px 3px !important;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.12), inset -1px 0 0 rgba(0, 0, 0, 0.06) !important;
+}
+html.hw-panel .white-key.active {
+  background: linear-gradient(180deg, #d6ceba 0%, #ece5d4 20%, #e8e0cc 100%) !important;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.25) !important;
+}
+html.hw-panel .white-key span,
+html.hw-panel .white-key .key-label { color: #8a8272 !important; }
+html.hw-panel .black-key {
+  background: linear-gradient(180deg, #2d2d2d 0%, #0e0e0e 70%, #1c1c1c 88%, #060606 100%) !important;
+  border: 1px solid #000 !important;
+  border-top: 0 !important;
+  border-radius: 0 0 3px 3px !important;
+  box-shadow: inset 0 -5px 0 rgba(255, 255, 255, 0.07), inset 1px 0 0 rgba(255, 255, 255, 0.08), 0 3px 4px rgba(0, 0, 0, 0.6) !important;
+}
+html.hw-panel .black-key.active {
+  background: linear-gradient(180deg, #1a1a1a, #0a0a0a) !important;
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* The key-map hint under every keyboard. */
+html.hw-panel .hw-keybed + div,
+html.hw-panel .keyboard-hint {
+  color: var(--case-ink, color-mix(in srgb, var(--text-dim) 80%, transparent)) !important;
+  letter-spacing: 1px;
+}
+
+/* --- Narrow screens ----------------------------------------------------- */
+
+@media (max-width: 720px) {
+  html.hw-panel body { padding: 0; }
+  html.hw-panel .synth-container { --cw: 8px; border-radius: 0; padding-inline: 16px; }
+  html.hw-panel .synth-header h1 { font-size: 24px !important; letter-spacing: 3px !important; }
+  .hw-display select { min-width: 150px; }
+}

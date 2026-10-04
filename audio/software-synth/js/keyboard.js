@@ -14,7 +14,7 @@ class SynthKeyboard {
   constructor(containerId, callbacks) {
     this.callbacks = callbacks;
     this.octaveShift = 0;
-    this.activeKeys = new Set(); // computer keyboard keys currently held
+    this.activeKeys = new Map(); // computer keyboard key -> the note it started
     this.isMouseDown = false;
 
     // Computer keyboard → note offset mapping (C3 base = MIDI 48)
@@ -138,7 +138,10 @@ class SynthKeyboard {
   _bindComputerKeyboard() {
     document.addEventListener('keydown', (e) => {
       if (e.repeat) return;
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      // Cmd/Ctrl shortcuts (Cmd+R, Ctrl+W...) are not notes — and on macOS
+      // the keyup never arrives while Cmd is held, so the note would stick.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (SynthKeyboard.isTextEntry(e.target)) return;
 
       if (e.key === '[') {
         this.octaveShift = Math.max(-3, this.octaveShift - 1);
@@ -153,20 +156,40 @@ class SynthKeyboard {
 
       const k = e.key.toLowerCase();
       if (k in this.keyMap && !this.activeKeys.has(k)) {
-        this.activeKeys.add(k);
+        e.preventDefault();   // no type-ahead in a focused <select>
         const note = 48 + this.octaveShift * 12 + this.keyMap[k];
+        this.activeKeys.set(k, note);
         this.callbacks.noteOn(note, 100);
       }
     });
 
+    // Release the note the key started, not the one it maps to now: an
+    // octave shift while a key is held would otherwise leave it stuck.
     document.addEventListener('keyup', (e) => {
       const k = e.key.toLowerCase();
-      if (k in this.keyMap && this.activeKeys.has(k)) {
+      if (this.activeKeys.has(k)) {
+        this.callbacks.noteOff(this.activeKeys.get(k));
         this.activeKeys.delete(k);
-        const note = 48 + this.octaveShift * 12 + this.keyMap[k];
-        this.callbacks.noteOff(note);
       }
     });
+
+    // Keyups that happen while another window has focus never arrive.
+    window.addEventListener('blur', () => {
+      for (const note of this.activeKeys.values()) this.callbacks.noteOff(note);
+      this.activeKeys.clear();
+    });
+  }
+
+  /**
+   * True for fields the user types text into. Only those swallow the playing
+   * keys: a focused fader, toggle or menu — i.e. whatever was last touched —
+   * must not silence the computer keyboard.
+   */
+  static isTextEntry(el) {
+    if (!el || !el.tagName) return false;
+    if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
+    return el.tagName === 'INPUT' &&
+      !['range', 'checkbox', 'radio', 'button', 'submit', 'color'].includes(el.type);
   }
 
   _updateOctaveDisplay() {
@@ -208,6 +231,12 @@ class SynthKeyboard {
         } else if (cmd === 0xE0) {
           const bend = ((d2 << 7) | d1) / 8192 - 1;
           if (this.callbacks.pitchBend) this.callbacks.pitchBend(bend);
+        } else if (cmd === 0xD0) {
+          // Channel pressure (aftertouch): 0..1 for every held note.
+          if (this.callbacks.pressure) this.callbacks.pressure(d1 / 127, null);
+        } else if (cmd === 0xA0) {
+          // Polyphonic key pressure, CS-80 style: 0..1 for one note.
+          if (this.callbacks.pressure) this.callbacks.pressure(d2 / 127, d1);
         }
       };
 

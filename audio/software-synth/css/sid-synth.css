@@ -6,6 +6,8 @@
      the page background is the case and each panel is a screen inside it. */
   --chassis: #a9a08e;
   --chassis-edge: rgba(45, 40, 34, 0.55);
+  --case-ink: #5b5345;         /* print on the beige case (panel-hw.css) */
+  --logo: #3a33b8;             /* the case badge is screen blue on beige */
   --bg: #b3aa98;              /* breadbin beige case */
   --panel-bg: #4038c8;        /* C64 screen blue */
   --panel-border: #7d76e0;
@@ -53,7 +55,7 @@ body {
 .synth-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .synth-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .effects-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
-.bottom-row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; margin-bottom: 8px; }
+.bottom-row { display: grid; grid-template-columns: 340px 1fr; gap: 8px; margin-bottom: 8px; }
 
 .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 6px; padding: 10px; }
 .panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-border); }

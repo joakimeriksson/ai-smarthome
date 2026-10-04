@@ -75,8 +75,10 @@ function describeWTBL(left, right) {
   if (left & 0x01) s += ' gate';
   if (left & 0x02) s += ' sync';
   if (left & 0x04) s += ' ring';
+  // GT2 note column: 00-5F up, 60-7F down (-32..-1), 80 none, 81-DF absolute
   if (right === 0x80) s += ' (no note)';
-  else if (right < 0x80) s += ` +${right}st`;
+  else if (right <= 0x5F) s += ` +${right}st`;
+  else if (right < 0x80) s += ` ${right - 0x80}st`;
   else s += ` abs ${right & 0x7F}`;
   return s;
 }
@@ -276,6 +278,12 @@ function initUI() {
     format: v => Math.round(parseFloat(v) * 100) + '%'
   });
 
+  // Delayed vibrato: the note starts on pitch and the vibrato cuts in
+  // after the delay (see vibDepth in sid-processor.js).
+  bindSlider('vib-depth', 'vibDepth', { map: v => parseFloat(v), format: v => (+v ? '±' + Math.round(v) + '¢' : 'off') });
+  bindSlider('vib-rate', 'vibRate', { map: v => parseFloat(v), format: v => parseFloat(v).toFixed(1) + 'Hz' });
+  bindSlider('vib-delay', 'vibDelay', { map: v => parseFloat(v), format: v => Math.round(parseFloat(v) * 1000) + 'ms' });
+
   // ADSR — pack into SID register bytes (ad = attack<<4|decay, sr = sustain<<4|release)
   function updateADSR() {
     const a = parseInt(document.getElementById('attack').value) || 0;
@@ -330,6 +338,12 @@ function initUI() {
 
   // Master volume (0-15, SID register)
   bindSlider('master-vol', 'masterVolume', { map: v => Math.round(parseFloat(v) * 15), format: v => Math.round(parseFloat(v) * 15) });
+
+  // Performance: frame-stepped portamento and pitch-bend range (these
+  // controls were on the panel but never wired to anything).
+  bindCheckbox('portamento-on', 'portamento');
+  bindSlider('portamento-time', 'portamentoTime', { format: v => Math.round(parseFloat(v) * 1000) + 'ms' });
+  bindSelect('pitch-bend-range', 'pitchBendRange', { map: v => parseInt(v) });
 }
 
 // ─── Scope ──────────────────────────────────────────────────────────────────
@@ -409,9 +423,12 @@ const FACTORY_PRESETS = [
       fltAd: 0x00, fltSr: 0x00, masterVolume: 0x0F },
     tables: { wavePtr: 0, pulsePtr: 0, filterPtr: 1,
       wtbl: null, ptbl: null,
-      // One-shot resonant sweep down to 0x20 per note — not to zero, so the
-      // sustain keeps speaking.
-      ftbl: mkTable([[0x90,0xE0],[0x10,0xF4],[0xFF,0x00]]) },
+      // One-shot resonant sweep 0xE0 -> 0x20 per note — not to zero, so the
+      // sustain keeps speaking. The explicit set-cutoff row is what makes it
+      // per note: without it each sweep started where the last one ended
+      // (the 2nd note swept 0x3F -> 0, the 3rd sat at 0), and the stop row
+      // then snapped the cutoff back to the panel's 0x60.
+      ftbl: mkTable([[0x90,0xE0],[0x00,0xE0],[0x10,0xF4],[0xFF,0x00]]) },
   },
   {
     name: 'Hubbard Arp',
@@ -591,6 +608,51 @@ const FACTORY_PRESETS = [
       filterOn: true, filterMode: 0x20, filterCutoff: 0x40, filterReso: 14, filterEnvAmt: 0,
       fltAd: 0x00, fltSr: 0x00, masterVolume: 0x0F },
   },
+
+  // Martin Galway's late-80s toolkit, from measuring his Wizball high-score
+  // tune (HVSC subtune 7; register dump, 4x-speed player). Techniques only:
+  // the tables and values here are our own.
+  {
+    // Each chord hit is one short sawtooth note whose pitch sweeps up two
+    // octaves and back down through the fifth and major third, one row per
+    // frame: root, +12, +24, +12, +7, +4, root — the shape measured from the
+    // Wizball strums. A strum, not an arpeggio loop. Play the chord's root.
+    name: 'Galway Strum',
+    params: { waveform: 0x21, pulseWidth: 0x800, ad: 0x18, sr: 0x6A,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF0, masterVolume: 0x0F },
+    tables: { wavePtr: 1, pulsePtr: 0, filterPtr: 0,
+      wtbl: mkTable([[0x21,0x00],[0x21,0x0C],[0x21,0x18],[0x21,0x0C],[0x21,0x07],[0x21,0x04],[0x21,0x00],[0xFF,0x00]]),
+      ptbl: null, ftbl: null },
+  },
+  {
+    // Square wave through the low-pass at full resonance; a fast filter
+    // envelope opens each note from ~cutoff 40 towards ~110 (Galway's bass
+    // cutoff moves over 40-111 of 255) so the line talks.
+    name: 'Galway Filter Bass',
+    params: { waveform: 0x41, pulseWidth: 0x800, ad: 0x18, sr: 0x68,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: true, filterMode: 0x10, filterCutoff: 40, filterReso: 15, filterEnvAmt: 0.3,
+      fltAd: 0x06, fltSr: 0x30, masterVolume: 0x0F },
+  },
+  {
+    // Plain square, no PWM, and the delayed vibrato: on pitch for 240 ms,
+    // then +-31 cents at 5.7 Hz.
+    name: 'Galway Vibrato Lead',
+    params: { waveform: 0x41, pulseWidth: 0x800, ad: 0x19, sr: 0x89,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF0, masterVolume: 0x0F, vibDepth: 31, vibRate: 5.7, vibDelay: 0.24 },
+  },
+  {
+    // A 20-30 ms triangle tick high up: sparkle between the melody notes.
+    name: 'Triangle Sparkle',
+    params: { waveform: 0x11, pulseWidth: 0x800, ad: 0x00, sr: 0xF2,
+      osc2On: false, ringMod: false, hardSync: false, osc2Detune: 0, osc2Waveform: 0x11, osc2EnvAmt: 0,
+      filterOn: false, filterMode: 0x10, filterCutoff: 0xFF, filterReso: 0, filterEnvAmt: 0,
+      fltAd: 0x00, fltSr: 0xF0, masterVolume: 0x0F },
+  },
 ];
 
 const presets = new SynthShell.PresetStore({
@@ -603,6 +665,7 @@ function populatePresetSelect() { presets.populateSelect(); }
 
 function applyPreset(preset) {
   if (!workletNode) return;
+  lastPreset = preset;
   workletNode.port.postMessage({ type: 'preset', params: preset.params, fx: preset.fx || {} });
   updateUIFromPreset(preset);
 
@@ -636,6 +699,7 @@ function updateUIFromPreset(preset) {
   if (mainWaveCtrl) mainWaveCtrl.set((p.waveform || 0x41) & 0xF0); // extract waveform bits only
   if (modWaveCtrl) modWaveCtrl.set((p.osc2Waveform || 0x11) & 0xF0);
   set('pulse-width', (p.pulseWidth || 0x800) / 4095);
+  set('vib-depth', p.vibDepth || 0); set('vib-rate', p.vibRate ?? 5.5); set('vib-delay', p.vibDelay ?? 0.24);
   // Unpack SID ADSR bytes
   const ad = p.ad || 0;
   const sr = p.sr || 0;
@@ -650,35 +714,50 @@ function updateUIFromPreset(preset) {
   const fad = p.fltAd || 0, fsr = p.fltSr || 0;
   set('flt-attack', (fad >> 4) & 0xF); set('flt-decay', fad & 0xF);
   set('flt-sustain', (fsr >> 4) & 0xF); set('flt-release', fsr & 0xF);
+  const mv = document.getElementById('master-vol');
+  if (mv) { mv.value = ((p.masterVolume ?? 15) & 0xF) / 15; const e = document.getElementById('master-vol-val'); if (e) e.textContent = p.masterVolume ?? 15; }
 }
 
+// The preset that was loaded last: supplies what the panel can't show
+// (layer oscillator, GT2 tables) when the current sound is saved.
+let lastPreset = null;
+
 function capturePreset() {
+  // Saves in the same shape the factory presets use. The old version saved
+  // field names the processor never reads (attack/decay instead of the packed
+  // ad/sr bytes, cutoff scaled to 2047 instead of 255) and then threw on a
+  // control this page doesn't have, so Save Preset never worked.
   const rv = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) : 0; };
   const rc = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
-  return {
-    params: {
-      waveform: mainWaveCtrl ? mainWaveCtrl.get() : 0x40,
+  const ri = (id) => Math.round(rv(id)) & 0xF;
+  const hidden = {};
+  if (lastPreset && lastPreset.params) {
+    for (const [k, v] of Object.entries(lastPreset.params)) if (k.startsWith('layer')) hidden[k] = v;
+  }
+  const out = {
+    params: Object.assign(hidden, {
+      waveform: (mainWaveCtrl ? mainWaveCtrl.get() : 0x40) | 0x01,
       pulseWidth: Math.round(rv('pulse-width') * 4095),
-      attack: Math.round(rv('attack')), decay: Math.round(rv('decay')),
-      sustain: Math.round(rv('sustain')), release: Math.round(rv('release')),
-      osc2On: rc('osc2-on'), osc2Waveform: modWaveCtrl ? modWaveCtrl.get() : 0x10,
-      osc2Detune: rv('osc2-detune'), osc2EnvAmt: rv('osc2-env-amt'), ringMod: rc('ring-mod'), hardSync: rc('hard-sync'),
+      vibDepth: rv('vib-depth'), vibRate: rv('vib-rate'), vibDelay: rv('vib-delay'),
+      ad: (ri('attack') << 4) | ri('decay'),
+      sr: (ri('sustain') << 4) | ri('release'),
+      osc2On: rc('osc2-on'), osc2Waveform: (modWaveCtrl ? modWaveCtrl.get() : 0x10) | 0x01,
+      osc2Detune: rv('osc2-detune'), osc2EnvAmt: rv('osc2-env-amt'), osc2SweepSpeed: Math.round(rv('osc2-sweep-speed')),
+      ringMod: rc('ring-mod'), hardSync: rc('hard-sync'),
       filterOn: rc('filter-on'), filterMode: parseInt(document.getElementById('filter-mode').value),
-      filterCutoff: Math.round(rv('filter-cutoff') * 2047), filterReso: Math.round(rv('filter-reso')),
-      filterEnvAmt: rv('filter-env-amt'), filterKeyTrack: rv('filter-keytrack'),
-      fltAttack: Math.round(rv('flt-attack')), fltDecay: Math.round(rv('flt-decay')),
-      fltSustain: Math.round(rv('flt-sustain')), fltRelease: Math.round(rv('flt-release')),
-      lfoRate: rv('lfo-rate'), lfoWaveform: parseInt(document.getElementById('lfo-wave').value),
-      lfoPWMDepth: rv('lfo-pwm'), lfoFilterDepth: rv('lfo-filter'),
-      portamento: rc('portamento-on'), portamentoTime: rv('portamento-time'),
-      masterVolume: rv('master-vol'),
-    },
-    fx: {
-      chorus: { enabled: rc('fx-chorus-on') },
-      delay: { enabled: rc('fx-delay-on') },
-      reverb: { enabled: rc('fx-reverb-on') }
-    }
+      filterCutoff: Math.round(rv('filter-cutoff') * 255), filterReso: Math.round(rv('filter-reso')),
+      filterEnvAmt: rv('filter-env-amt'),
+      fltAd: (ri('flt-attack') << 4) | ri('flt-decay'),
+      fltSr: (ri('flt-sustain') << 4) | ri('flt-release'),
+      masterVolume: Math.round(rv('master-vol') * 15),
+    }),
   };
+  if (tableEnabled) {
+    const tb = (i) => ({ lt: [...tables.ltable[i]], rt: [...tables.rtable[i]] });
+    out.tables = { wavePtr: tableStartPtrs.wave, pulsePtr: tableStartPtrs.pulse, filterPtr: tableStartPtrs.filter,
+      wtbl: tb(0), ptbl: tb(1), ftbl: tb(2) };
+  }
+  return out;
 }
 
 function initPresets() { presets.init(); }

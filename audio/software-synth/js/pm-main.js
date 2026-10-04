@@ -31,7 +31,10 @@ function initUI() {
   bindSelect('exciter', 'exciter');
   bindSlider('color', 'color');
   bindSlider('brightness', 'brightness');
-  bindSlider('decay', 'decay');
+  // Both read out in seconds: Decay is the held note's T60, Release the ring
+  // after key-up (see _t60 in pm-processor.js).
+  bindSlider('decay', 'decay', { format: v => (0.1 + parseFloat(v) * 8).toFixed(1) + 's' });
+  bindSlider('release', 'release', { format: v => (0.05 + parseFloat(v) * 3).toFixed(2) + 's' });
   bindSlider('damping', 'damping');
   bindSlider('pickup', 'pickup');
   bindSlider('inharm', 'inharm');
@@ -65,29 +68,29 @@ function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool)
 // ─── Presets ────────────────────────────────────────────────────────────────
 
 const FACTORY_PRESETS = [
-  { name: 'Acoustic Guitar', params: { exciter: 0, color: 0.5, brightness: 0.45, decay: 0.5, damping: 0.1, pickup: 0.13, inharm: 0, bodyAmount: 0.3, bodySize: 0.5, stereoWidth: 0.2, masterVolume: 0.8 },
+  { name: 'Acoustic Guitar', params: { exciter: 0, color: 0.5, brightness: 0.45, decay: 0.45, release: 0.15, damping: 0.1, pickup: 0.13, inharm: 0, bodyAmount: 0.3, bodySize: 0.5, stereoWidth: 0.2, masterVolume: 0.8 },
     fx: { reverb: { enabled: true, roomSize: 0.5, damping: 0.5, mix: 0.15 } } },
-  { name: 'Electric Guitar', params: { exciter: 0, color: 0.65, brightness: 0.6, decay: 0.6, damping: 0.05, pickup: 0.17, inharm: 0.03, bodyAmount: 0.0, bodySize: 0.5, stereoWidth: 0.15, masterVolume: 0.8 },
+  { name: 'Electric Guitar', params: { exciter: 0, color: 0.65, brightness: 0.6, decay: 0.6, release: 0.12, damping: 0.05, pickup: 0.17, inharm: 0.03, bodyAmount: 0.0, bodySize: 0.5, stereoWidth: 0.15, masterVolume: 0.8 },
     fx: { chorus: { enabled: true, rate: 0.2, depth: 0.003, mix: 0.2 } } },
-  { name: 'Nylon Guitar', params: { exciter: 0, color: 0.3, brightness: 0.3, decay: 0.4, damping: 0.15, pickup: 0.2, inharm: 0, bodyAmount: 0.4, bodySize: 0.6, stereoWidth: 0.25, masterVolume: 0.8 },
+  { name: 'Nylon Guitar', params: { exciter: 0, color: 0.3, brightness: 0.3, decay: 0.4, release: 0.15, damping: 0.15, pickup: 0.2, inharm: 0, bodyAmount: 0.4, bodySize: 0.6, stereoWidth: 0.25, masterVolume: 0.8 },
     fx: { reverb: { enabled: true, roomSize: 0.6, damping: 0.6, mix: 0.2 } } },
-  { name: 'Harp', params: { exciter: 0, color: 0.55, brightness: 0.5, decay: 0.85, damping: 0.15, pickup: 0.1, inharm: 0, bodyAmount: 0.2, bodySize: 0.4, stereoWidth: 0.4, masterVolume: 0.75 },
+  { name: 'Harp', params: { exciter: 0, color: 0.55, brightness: 0.5, decay: 0.8, release: 0.6, damping: 0.15, pickup: 0.1, inharm: 0, bodyAmount: 0.2, bodySize: 0.4, stereoWidth: 0.4, masterVolume: 0.75 },
     fx: { reverb: { enabled: true, roomSize: 0.8, damping: 0.4, mix: 0.3 } } },
-  { name: 'Kalimba', params: { exciter: 1, color: 0.7, brightness: 0.6, decay: 0.7, damping: 0.25, pickup: 0.05, inharm: 0.15, bodyAmount: 0.5, bodySize: 0.3, stereoWidth: 0.3, masterVolume: 0.8 },
+  { name: 'Kalimba', params: { exciter: 1, color: 0.7, brightness: 0.6, decay: 0.35, release: 0.5, damping: 0.2, pickup: 0.05, inharm: 0.55, bodyAmount: 0.5, bodySize: 0.3, stereoWidth: 0.3, masterVolume: 0.8 },
     fx: { reverb: { enabled: true, roomSize: 0.7, damping: 0.5, mix: 0.25 } } },
-  { name: 'Marimba', params: { exciter: 3, color: 0.35, brightness: 0.35, decay: 0.5, damping: 0.5, pickup: 0.25, inharm: 0.1, bodyAmount: 0.6, bodySize: 0.7, stereoWidth: 0.35, masterVolume: 0.8 },
+  { name: 'Marimba', params: { exciter: 3, color: 0.35, brightness: 0.35, decay: 0.12, release: 0.2, damping: 0.45, pickup: 0.25, inharm: 0.5, bodyAmount: 0.6, bodySize: 0.7, stereoWidth: 0.35, masterVolume: 0.8 },
     fx: { reverb: { enabled: true, roomSize: 0.5, damping: 0.6, mix: 0.2 } } },
-  { name: 'Koto', params: { exciter: 0, color: 0.7, brightness: 0.65, decay: 0.6, damping: 0.3, pickup: 0.08, inharm: 0, bodyAmount: 0.15, bodySize: 0.4, stereoWidth: 0.2, masterVolume: 0.8 },
+  { name: 'Koto', params: { exciter: 0, color: 0.7, brightness: 0.65, decay: 0.55, release: 0.3, damping: 0.3, pickup: 0.08, inharm: 0, bodyAmount: 0.15, bodySize: 0.4, stereoWidth: 0.2, masterVolume: 0.8 },
     fx: { reverb: { enabled: true, roomSize: 0.6, damping: 0.4, mix: 0.2 } } },
-  { name: 'Clavinet', params: { exciter: 1, color: 0.8, brightness: 0.75, decay: 0.55, damping: 0.15, pickup: 0.05, inharm: 0.08, bodyAmount: 0.0, bodySize: 0.5, stereoWidth: 0.1, masterVolume: 0.8 },
+  { name: 'Clavinet', params: { exciter: 1, color: 0.8, brightness: 0.75, decay: 0.5, release: 0.02, damping: 0.15, pickup: 0.05, inharm: 0.08, bodyAmount: 0.0, bodySize: 0.5, stereoWidth: 0.1, masterVolume: 0.8 },
     fx: { chorus: { enabled: true, rate: 0.8, depth: 0.002, mix: 0.15 } } },
-  { name: 'Bowed String', params: { exciter: 2, color: 0.4, brightness: 0.5, decay: 0.8, damping: 0.05, pickup: 0.15, inharm: 0, bodyAmount: 0.2, bodySize: 0.5, stereoWidth: 0.2, masterVolume: 0.7 },
+  { name: 'Bowed String', params: { exciter: 2, color: 0.4, brightness: 0.5, decay: 0.8, release: 0.25, damping: 0.05, pickup: 0.15, inharm: 0, bodyAmount: 0.2, bodySize: 0.5, stereoWidth: 0.2, masterVolume: 0.7 },
     fx: { reverb: { enabled: true, roomSize: 0.7, damping: 0.5, mix: 0.25 } } },
-  { name: 'Steel Drum', params: { exciter: 3, color: 0.6, brightness: 0.55, decay: 0.65, damping: 0.3, pickup: 0.3, inharm: 0.25, bodyAmount: 0.4, bodySize: 0.35, stereoWidth: 0.35, masterVolume: 0.75 },
+  { name: 'Steel Drum', params: { exciter: 3, color: 0.6, brightness: 0.55, decay: 0.25, release: 0.4, damping: 0.3, pickup: 0.3, inharm: 0.7, bodyAmount: 0.4, bodySize: 0.35, stereoWidth: 0.35, masterVolume: 0.75 },
     fx: { reverb: { enabled: true, roomSize: 0.6, damping: 0.4, mix: 0.25 } } },
-  { name: 'Bell Chime', params: { exciter: 1, color: 0.75, brightness: 0.7, decay: 0.9, damping: 0.1, pickup: 0.12, inharm: 0.3, bodyAmount: 0.2, bodySize: 0.3, stereoWidth: 0.4, masterVolume: 0.7 },
+  { name: 'Bell Chime', params: { exciter: 1, color: 0.75, brightness: 0.7, decay: 0.9, release: 0.9, damping: 0.15, pickup: 0.12, inharm: 0.85, bodyAmount: 0.2, bodySize: 0.3, stereoWidth: 0.4, masterVolume: 0.7 },
     fx: { reverb: { enabled: true, roomSize: 0.9, damping: 0.3, mix: 0.4 } } },
-  { name: 'Sitar', params: { exciter: 0, color: 0.5, brightness: 0.5, decay: 0.75, damping: 0.25, pickup: 0.04, inharm: 0.2, bodyAmount: 0.5, bodySize: 0.6, stereoWidth: 0.15, masterVolume: 0.75 },
+  { name: 'Sitar', params: { exciter: 0, color: 0.5, brightness: 0.5, decay: 0.7, release: 0.4, damping: 0.25, pickup: 0.04, inharm: 0.1, bodyAmount: 0.5, bodySize: 0.6, stereoWidth: 0.15, masterVolume: 0.75 },
     fx: { reverb: { enabled: true, roomSize: 0.6, damping: 0.5, mix: 0.2 } } },
 ];
 
@@ -105,7 +108,7 @@ function applyPreset(preset) {
   const { setControl: set, setSelectValue: setSelect, setChecked: setCheck } = SynthShell;
   setSelect('exciter', p.exciter || 0);
   set('color', p.color); set('brightness', p.brightness);
-  set('decay', p.decay); set('damping', p.damping);
+  set('decay', p.decay); set('release', p.release ?? 0.3); set('damping', p.damping);
   set('pickup', p.pickup); set('inharm', p.inharm);
   set('body-amount', p.bodyAmount); set('body-size', p.bodySize);
   set('stereo-width', p.stereoWidth); set('master-vol', p.masterVolume);
@@ -119,7 +122,7 @@ function capturePreset() {
   const rv = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) : 0; };
   return { params: {
     exciter: parseInt(document.getElementById('exciter').value, 10),
-    color: rv('color'), brightness: rv('brightness'), decay: rv('decay'), damping: rv('damping'),
+    color: rv('color'), brightness: rv('brightness'), decay: rv('decay'), release: rv('release'), damping: rv('damping'),
     pickup: rv('pickup'), inharm: rv('inharm'), bodyAmount: rv('body-amount'), bodySize: rv('body-size'),
     stereoWidth: rv('stereo-width'), masterVolume: rv('master-vol'),
   } };

@@ -66,7 +66,8 @@ function knobsFor(p: FmPreset): Knob[] {
       name: `op${i}.attack`,
       get: q => q.ops[i]!.attack,
       set: (q, v) => { q.ops[i]!.attack = v },
-      candidates: v => (v <= 0.002 ? [0.001, 0.01, 0.03] : scale([0.5, 0.7, 1.4, 2])(v)),
+      // Real seconds to the peak (x3.04 the old time constants: 0.001/0.01/0.03).
+      candidates: v => (v <= 0.006 ? [0.003, 0.03, 0.09] : scale([0.5, 0.7, 1.4, 2])(v)),
     })
     out.push({
       name: `op${i}.fine`,

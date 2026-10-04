@@ -37,6 +37,15 @@ const METAL_FREQS = [205.3, 304.4, 369.6, 522.7, 540.0, 800.0];
  */
 const METAL_DUTY = [0.478, 0.512, 0.463, 0.529, 0.494, 0.451];
 
+/**
+ * The cymbal's own output stage; see the note at the end of its voice.
+ * DRIVE is the gain the fit harness applied between the voice and the bus
+ * saturation (masterVolume 0.02 x 0.62 x centre pan 0.5), so the fitted
+ * timbre is reproduced exactly; OUT sets its level against the rest of the kit.
+ */
+const CYMBAL_DRIVE = 0.02 * 0.62 * 0.5;
+const CYMBAL_OUT = 5.5;
+
 // ─── Building blocks ────────────────────────────────────────────────────────
 
 /**
@@ -474,8 +483,20 @@ class DrumVoice {
         // the real cymbal measures nearly flat between them. The hardware's
         // filter network supplies that lift; these numbers were fitted against
         // the kit rather than guessed (npm run drum-fit CY).
-        out = (this.svf3.band() * (strikeEnv * 180 + washEnv * 12)
+        //
+        //
+        // Those gains leave the band sum ~25 dB hotter than any other voice
+        // (+28.7 dB peak into the output stage at level 1). The fit was run at
+        // masterVolume 0.02, where the output tanh rounded the strike's peaks
+        // just enough — and that rounding is part of the fitted sound: render
+        // the same voice linearly and it drifts from 6.6 to 9.4 dB off the
+        // machine. In the app, though, it was crushed ~30 dB harder into a
+        // fuzz (Warehouse, cymbal at level 0.35, hit the rail 256 times in two
+        // bars). So the cymbal gets its own saturator at exactly the drive the
+        // fit heard, then an output gain that sits it with the other voices.
+        const raw = (this.svf3.band() * (strikeEnv * 180 + washEnv * 12)
              + this.svf2.band() * washEnv * 3.2) * accent;
+        out = fastTanh(raw * CYMBAL_DRIVE) * CYMBAL_OUT;
         break;
       }
 
@@ -533,7 +554,10 @@ class DrumVoice {
     // a few tens of milliseconds no matter what the decay knob said.
     const a = Math.abs(out);
     this.env = a > this.env ? a : this.env + (a - this.env) * 0.0008;
-    if (t > 6 || (t > 0.05 && this.env < 0.00002)) this.active = false;
+    if (t > 0.05 && this.env < 0.00002) this.active = false;
+    // The 6 s ceiling fades like a choke instead of cutting: a long cymbal
+    // is still ringing there, and stopping it dead was a click.
+    else if (t > 6) this.choking = true;
 
     return out * this.velocity;
   }
@@ -549,6 +573,13 @@ class DrumMachineProcessor extends AudioWorkletProcessor {
     // Drum voices
     this.drumVoices = [];
     for (let i = 0; i < NUM_CHANNELS; i++) this.drumVoices.push(new DrumVoice(this.sr));
+    // One spare voice per channel. A retrigger used to reset the ringing
+    // voice in place, so whatever it was doing stopped dead: a tom re-hit
+    // 60 ms in jumped by 0.95 of its peak in one sample, ten times the
+    // largest step in a clean hit. Now the ringing voice becomes the tail and
+    // fades over the choke's ~4 ms while the new hit starts on the other.
+    this.tails = [];
+    for (let i = 0; i < NUM_CHANNELS; i++) this.tails.push(new DrumVoice(this.sr));
 
     // Channel params
     this.channels = [
@@ -576,12 +607,32 @@ class DrumMachineProcessor extends AudioWorkletProcessor {
 
     this.masterVolume = 0.8;
 
+    // Equal-power pan gains, cached per channel (recomputed when pan moves).
+    this.panOf = new Float64Array(NUM_CHANNELS).fill(NaN);
+    this.panL = new Float64Array(NUM_CHANNELS);
+    this.panR = new Float64Array(NUM_CHANNELS);
+
     this.port.onmessage = (e) => this._handleMessage(e.data);
   }
 
   _calcTiming() {
-    // 16th notes: 4 steps per beat
-    this.samplesPerStep = Math.round(this.sr * 60 / (this.bpm * 4));
+    // 16th notes: 4 steps per beat. Kept fractional — the countdown below
+    // carries the remainder, so the grid never drifts. Rounding it here lost
+    // up to half a sample per step (118 BPM: 15 samples late by bar 4).
+    this.samplesPerStep = this.sr * 60 / (this.bpm * 4);
+  }
+
+  /**
+   * Equal-power pan, scaled so the centre is 0.5 per side as before — centred
+   * voices keep their level. The old linear law put the centre 3 dB (power)
+   * below the edges, so panning a voice made it louder.
+   */
+  _pan(ch, pan) {
+    const p = Math.min(1, Math.max(-1, +pan || 0));
+    const th = (p + 1) * Math.PI / 4;
+    this.panOf[ch] = pan;
+    this.panL[ch] = Math.cos(th) * Math.SQRT1_2;
+    this.panR[ch] = Math.sin(th) * Math.SQRT1_2;
   }
 
   /**
@@ -592,8 +643,20 @@ class DrumMachineProcessor extends AudioWorkletProcessor {
   _choke(ch) {
     if (this.channels[ch].type !== 2) return;
     for (let i = 0; i < NUM_CHANNELS; i++) {
-      if (i !== ch && this.channels[i].type === 3) this.drumVoices[i].choke();
+      if (i !== ch && this.channels[i].type === 3) { this.drumVoices[i].choke(); this.tails[i].choke(); }
     }
+  }
+
+  /** Strike a channel: hand a still-ringing voice to the tail, then trigger. */
+  _hit(ch, velocity) {
+    const live = this.drumVoices[ch];
+    if (live.active) {
+      this.drumVoices[ch] = this.tails[ch];
+      this.tails[ch] = live;
+      live.choke();
+    }
+    this.drumVoices[ch].trigger(velocity);
+    this._choke(ch);
   }
 
   _handleMessage(msg) {
@@ -601,8 +664,7 @@ class DrumMachineProcessor extends AudioWorkletProcessor {
       case 'trigger': {
         const ch = msg.channel;
         if (ch >= 0 && ch < NUM_CHANNELS) {
-          this.drumVoices[ch].trigger(msg.velocity || 1.0);
-          this._choke(ch);
+          this._hit(ch, msg.velocity || 1.0);
         }
         break;
       }
@@ -665,20 +727,27 @@ class DrumMachineProcessor extends AudioWorkletProcessor {
     for (let s = 0; s < blockSize; s++) {
       // Sequencer tick
       if (this.playing) {
-        if (this.sampleCounter <= 0) {
+        // The epsilon absorbs float residue from summing fractional steps, so
+        // a step that lands exactly on a sample fires on it, not one late.
+        if (this.sampleCounter <= 1e-6) {
           // Trigger step
           for (let ch = 0; ch < NUM_CHANNELS; ch++) {
             if (this.pattern[ch][this.currentStep]) {
-              this.drumVoices[ch].trigger(this.pattern[ch][this.currentStep] / 127);
-              this._choke(ch);
+              this._hit(ch, this.pattern[ch][this.currentStep] / 127);
             }
           }
           this.port.postMessage({ type: 'step', step: this.currentStep });
 
-          // Advance step with swing
-          const isOdd = this.currentStep % 2 === 1;
-          const swingOffset = isOdd ? Math.round(this.samplesPerStep * this.swing * 0.5) : 0;
-          this.sampleCounter = this.samplesPerStep + swingOffset;
+          // Swing delays the off-beat 16ths (odd steps) and leaves the
+          // on-beats on the grid: even->odd is long, odd->even short by the
+          // same amount, so every pair still spans two steps. The old code
+          // lengthened only the odd->even interval — which delayed the
+          // DOWNBEATS, played the off-beat early, and slowed the tempo (at
+          // swing 0.5 each bar ran 12.5% long). swing 0..0.5 spans straight
+          // to 75%, the MPC range.
+          const d = Math.min(0.5, Math.max(0, this.swing)) * this.samplesPerStep;
+          const even = this.currentStep % 2 === 0;
+          this.sampleCounter += this.samplesPerStep + (even ? d : -d);
           this.currentStep = (this.currentStep + 1) % NUM_STEPS;
         }
         this.sampleCounter--;
@@ -687,11 +756,11 @@ class DrumMachineProcessor extends AudioWorkletProcessor {
       // Mix all drum voices
       let L = 0, R = 0;
       for (let ch = 0; ch < NUM_CHANNELS; ch++) {
-        const sample = this.drumVoices[ch].process(this.channels[ch].type, this.channels[ch]);
-        const level = this.channels[ch].level;
-        const pan = this.channels[ch].pan;
-        L += sample * level * (0.5 - pan * 0.5);
-        R += sample * level * (0.5 + pan * 0.5);
+        const c = this.channels[ch];
+        const sample = this.drumVoices[ch].process(c.type, c) + this.tails[ch].process(c.type, c);
+        if (c.pan !== this.panOf[ch]) this._pan(ch, c.pan);
+        L += sample * c.level * this.panL[ch];
+        R += sample * c.level * this.panR[ch];
       }
 
       // The 808's output stage rounds peaks rather than squaring them off, and

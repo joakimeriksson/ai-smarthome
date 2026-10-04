@@ -8,10 +8,15 @@
     type Project,
   } from './lib/project.ts'
   import { demoProject } from './lib/demo.ts'
+  import { DEMOS } from './lib/demos.ts'
   import { SCALE_LABELS, NOTE_NAMES, type ScaleName } from './lib/generate.ts'
   import MixerStrip from './components/MixerStrip.svelte'
+  import BusStrip from './components/BusStrip.svelte'
+  import FxEditor from './components/FxEditor.svelte'
   import StepGrid from './components/StepGrid.svelte'
-import InstrumentEditor from './components/InstrumentEditor.svelte'
+  import InstrumentEditor from './components/InstrumentEditor.svelte'
+  import type { FxChain } from './lib/mixer.svelte.ts'
+  import { FX_DEFS, FX_FAMILIES, SCATTER_PADS, type FxKind } from './lib/fx.ts'
 
   const studio = new Studio()
 
@@ -21,6 +26,7 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
   const pagesUrl = import.meta.env['VITE_PAGES_URL']
     ?? (import.meta.env.DEV ? 'http://localhost:8123/' : '../')
   let meters = $state<Record<number, number>>({})
+  let busMeters = $state<Record<string, number>>({})
   let masterMeter = $state(0)
   let octave = $state(4)
   let projectName = $state('Untitled')
@@ -34,7 +40,27 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
     noteOff: (n) => studio.noteOff(n),
     onOctave: (o) => octave = o,
     onTransport: () => studio.toggle(),
+    onPad: (pad, down) => padKey(pad, down),
   })
+
+  // Scatter pads: hold one and its pattern takes over the whole mix; with
+  // LATCH a press toggles instead. Shift+1-8 plays them from the keyboard.
+  let latch = $state(false)
+  function padDown(name: string) {
+    if (latch && studio.scatterHeld === name) studio.scatterOff()
+    else studio.scatterOn(name)
+  }
+  function padUp() { if (!latch) studio.scatterOff() }
+  function padKey(pad: number, down: boolean) {
+    const name = SCATTER_PADS[pad]
+    if (!name) return
+    if (down) padDown(name); else if (studio.scatterHeld === name) padUp()
+  }
+  /** Open the pads' Scatter (on the master bus) in the effect editor. */
+  function editScatter() {
+    const slot = studio.masterScatter()
+    if (slot && studio.master) openFx(studio.master.chain, slot.id, 'Master')
+  }
 
   onMount(() => {
     void boot()
@@ -43,6 +69,9 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
       const next: Record<number, number> = {}
       for (const t of studio.tracks) next[t.id] = t.meter()
       meters = next
+      const buses: Record<string, number> = {}
+      for (const b of studio.buses) buses[b.id] = b.meter()
+      busMeters = buses
       masterMeter = studio.masterMeter()
       raf = requestAnimationFrame(tick)
     }
@@ -54,9 +83,30 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
     await studio.init()
     // Load the demo song so the studio makes music immediately — an empty
     // grid asks the player for work before it has earned any interest.
-    await restore(studio, demoProject())
-    projectName = 'Demo — Six Worlds'
+    const demo = demoProject()
+    await restore(studio, demo)
+    projectName = demo.name
     savedProjects = await listProjects()
+  }
+
+  // The effect open in the effect editor: its chain, slot, and a label for
+  // where it sits.
+  let fxSel = $state<{ chain: FxChain; slotId: string; where: string } | null>(null)
+  // Close it when its chain goes away (track removed, project loaded).
+  const fxOpen = $derived(fxSel && fxSel.chain.slots.some(s => s.id === fxSel!.slotId) ? fxSel : null)
+  const selectedIn = (chain: FxChain) => (fxOpen?.chain === chain ? fxOpen.slotId : null)
+  function openFx(chain: FxChain, slotId: string, owner: string) {
+    const n = chain.slots.findIndex(s => s.id === slotId) + 1
+    fxSel = { chain, slotId, where: `${owner} · slot ${n}` }
+  }
+
+  function addReturn(e: Event) {
+    const el = e.target as HTMLSelectElement
+    const kind = el.value as FxKind
+    el.value = ''
+    if (!kind) return
+    const bus = studio.addReturn(kind)
+    if (bus?.chain.slots[0]) openFx(bus.chain, bus.chain.slots[0].id, `Return ${bus.id}`)
   }
 
   // Which track's sound editor is open, if any.
@@ -98,7 +148,8 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
   }
 
   async function doLoad(name: string) {
-    const p = await loadProject(name)
+    const demo = name.startsWith('demo:') ? DEMOS.find(d => 'demo:' + d.id === name) : null
+    const p = demo ? demo.build() : await loadProject(name)
     if (!p) return
     await restore(studio, p as Project)
     projectName = p.name
@@ -140,8 +191,11 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
       <div class="steps">
         {#each Array(16) as _, i (i)}
           <span class="dot" class:beat={i % 4 === 0}
-            class:on={studio.playing && i === studio.step}></span>
+            class:on={studio.playing && i === studio.step % 16}></span>
         {/each}
+        {#if studio.songLength() > 16}
+          <span class="bar-count">{Math.floor(studio.step / 16) + 1}/{studio.songLength() / 16}</span>
+        {/if}
       </div>
 
       <button class="roll" class:rolling={rollingAll} onclick={rollAll}
@@ -169,13 +223,35 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
       <button onclick={() => exportJson(snapshot(studio, projectName))}>EXPORT</button>
       <select onchange={(e) => { const v = (e.target as HTMLSelectElement).value; if (v) void doLoad(v) }}>
         <option value="">— open —</option>
-        {#each savedProjects as name (name)}<option value={name}>{name}</option>{/each}
+        <optgroup label="Demos">
+          {#each DEMOS as d (d.id)}<option value={'demo:' + d.id}>{d.build().name.replace(/^Demo — /, '')}</option>{/each}
+        </optgroup>
+        {#if savedProjects.length}
+          <optgroup label="Saved">
+            {#each savedProjects as name (name)}<option value={name}>{name}</option>{/each}
+          </optgroup>
+        {/if}
       </select>
       {#if savedProjects.includes(projectName)}
         <button class="del" onclick={() => doDelete(projectName)}>DEL</button>
       {/if}
     </div>
   </header>
+
+  <section class="scatter" aria-label="Scatter pads">
+    <span class="sc-title">SCATTER</span>
+    {#each SCATTER_PADS as name, i (name)}
+      <button class="pad" class:on={studio.scatterHeld === name}
+        title="Hold to scatter the mix: {name} (Shift+{i + 1})"
+        onpointerdown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); padDown(name) }}
+        onpointerup={padUp} onpointercancel={padUp}>
+        <small>{i + 1}</small>{name}
+      </button>
+    {/each}
+    <button class="sc-tool" class:on={latch} onclick={() => { latch = !latch; if (!latch) studio.scatterOff() }}
+      title="Latch: a press switches a pad on until it is pressed again">LATCH</button>
+    <button class="sc-tool" onclick={editScatter} title="Edit the pads' Scatter (on the master bus)">EDIT</button>
+  </section>
 
   {#if studio.error}
     <p class="error">{studio.error}</p>
@@ -198,6 +274,9 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
           onswap={(kind: InstrumentKind) => studio.swapInstrument(track.id, kind)}
           onedit={() => toggleEdit(track.id)}
           editing={editingId === track.id}
+          buses={studio.buses}
+          selectedFx={selectedIn(track.chain)}
+          onfx={(slotId: string) => openFx(track.chain, slotId, track.name)}
         />
       {/each}
 
@@ -210,22 +289,51 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
             {inst.name}<small>{inst.subtitle}</small>
           </button>
         {/each}
+        <span class="add-title return-title">RETURN</span>
+        <select class="add-return" value="" aria-label="Add a return bus" onchange={addReturn}>
+          <option value="">+ return bus…</option>
+          {#each FX_FAMILIES as f (f.family)}
+            <optgroup label={f.label}>
+              {#each FX_DEFS.filter(d => d.family === f.family) as d (d.kind)}<option value={d.kind}>{d.name}</option>{/each}
+            </optgroup>
+          {/each}
+        </select>
       </div>
 
       <!-- Blank rack panel: honest furniture for the unused bay space. -->
       <div class="blank" aria-hidden="true"></div>
 
-      <div class="strip master">
-        <span class="name">MASTER</span>
-        <div class="meter-row">
-          <div class="meter"><div class="fill" style="height:{Math.round(masterMeter * 100)}%"></div></div>
-          <input class="fader" type="range" min="0" max="1" step="0.01" value={studio.masterLevel}
-            oninput={(e) => { studio.masterLevel = Number((e.target as HTMLInputElement).value); studio.applyMix() }} />
-        </div>
-      </div>
+      <!-- Returns: one reverb or echo shared by every track that sends to it. -->
+      {#each studio.buses as bus (bus.id)}
+        <BusStrip
+          bus={bus}
+          meter={busMeters[bus.id] ?? 0}
+          selectedFx={selectedIn(bus.chain)}
+          onfx={(slotId: string) => openFx(bus.chain, slotId, `Return ${bus.id}`)}
+          onchange={() => studio.applyMix()}
+          onremove={() => studio.removeReturn(bus.id)}
+        />
+      {/each}
+
+      {#if studio.master}
+        <BusStrip
+          bus={studio.master}
+          meter={masterMeter}
+          selectedFx={selectedIn(studio.master.chain)}
+          onfx={(slotId: string) => openFx(studio.master!.chain, slotId, 'Master')}
+          onchange={() => studio.applyMix()}
+        />
+      {/if}
 
     </div>
   </section>
+
+  {#if fxOpen}
+    <section class="editor-bay">
+      <FxEditor chain={fxOpen.chain} slotId={fxOpen.slotId} where={fxOpen.where} onclose={() => (fxSel = null)}
+        step={studio.stepIndex} playing={studio.playing} />
+    </section>
+  {/if}
 
   {#if editingTrack}
     <section class="editor-bay">
@@ -330,10 +438,14 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
     color: var(--ink); padding: 0.2rem 0.35rem; border-radius: 2px;
     font-family: 'Share Tech Mono', monospace;
   }
-  .steps { display: flex; gap: 3px; }
+  .steps { display: flex; gap: 3px; align-items: center; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: #26262e; }
   .dot.beat { background: #34343f; }
   .dot.on { background: var(--lamp); box-shadow: 0 0 7px var(--lamp); }
+  .bar-count {
+    margin-left: 6px; font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+    color: var(--ink); opacity: 0.7; min-width: 2.2em;
+  }
 
   .roll {
     background: #1c1c22;
@@ -433,15 +545,70 @@ import InstrumentEditor from './components/InstrumentEditor.svelte'
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
-  .strip.master {
-    display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem;
-    background: #131318; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; min-width: 82px;
+  /* The scatter pads: a groovebox's row of rubber pads, lit while held. */
+  .scatter {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin: 0.55rem 11px 0;
   }
-  .strip.master .name { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; color: var(--ink); }
-  .meter-row { display: flex; gap: 0.4rem; height: 88px; }
-  .meter { width: 8px; background: #0a0a0c; border-radius: 2px; display: flex; flex-direction: column-reverse; overflow: hidden; }
-  .fill { background: linear-gradient(180deg, #ff5a3c 0%, #ffcc33 22%, #cfe8d4 45%); transition: height 60ms linear; }
-  .fader { writing-mode: vertical-lr; direction: rtl; width: 20px; accent-color: var(--lamp); }
+  .sc-title { font-size: 0.56rem; letter-spacing: 0.24em; color: var(--dim); margin-right: 0.3rem; }
+  .pad {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.36rem 0.6rem 0.34rem;
+    background: linear-gradient(180deg, #2a282d, #1d1b1f);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    border-bottom-width: 3px;
+    border-radius: 3px;
+    color: #cfc8cb;
+    font-family: inherit;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+  }
+  .pad small { font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; color: #ff4d5e; }
+  .pad:hover { color: #fff; border-color: rgba(255, 77, 94, 0.5); }
+  .pad.on {
+    background: #ff4d5e;
+    border-color: #ff4d5e;
+    border-bottom-width: 1px;
+    margin-top: 2px;
+    color: #14090b;
+    box-shadow: 0 0 14px -2px #ff4d5e;
+  }
+  .pad.on small { color: #14090b; }
+  .sc-tool {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 2px;
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 0.54rem;
+    letter-spacing: 0.16em;
+    padding: 0.25rem 0.45rem;
+    cursor: pointer;
+  }
+  .sc-tool:hover { color: var(--ink); }
+  .sc-tool.on { background: #ff4d5e; border-color: #ff4d5e; color: #14090b; }
+
+  .return-title { margin-top: 0.4rem; }
+  .add-return {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px dashed rgba(255, 255, 255, 0.16);
+    border-radius: 2px;
+    color: #8b8b96;
+    font-family: inherit;
+    font-size: 0.56rem;
+    padding: 0.2rem;
+    cursor: pointer;
+  }
+  .add-return:hover { color: var(--ink); border-color: rgba(255, 255, 255, 0.32); }
 
   /* Adding a track is choosing a machine, so the buttons are miniature
      faceplates in each instrument's own material — the same swatch you will

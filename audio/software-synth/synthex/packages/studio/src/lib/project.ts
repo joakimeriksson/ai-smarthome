@@ -3,13 +3,18 @@
 // Stored in IndexedDB (same choice as synthex; localStorage is where the
 // standalone synths keep their own presets and we leave those untouched).
 // Also exportable as plain JSON so projects can be shared as files.
+//
+// Version 2 added the mixer: per-track insert effects and sends, return
+// buses, and master inserts. A version 1 file has none of them and loads
+// with the default returns and every send at zero, so it sounds as it did.
 
 import { openDB, type IDBPDatabase } from 'idb'
 import { preloadInstruments, type InstrumentKind } from './instruments.ts'
 import type { NoteStep } from './track.svelte.ts'
 import type { Studio } from './studio.svelte.ts'
 import { emptyDrumGrid, emptyNoteSteps } from './track.svelte.ts'
-import { loadSynthData } from './synth-data.ts'
+import { loadSynthData, applyPresetEntry } from './synth-data.ts'
+import { defaultReturns, sendOf, type FxSlotSpec, type ProjectBus, type SendSpec } from './fx.ts'
 
 export interface ProjectTrack {
   kind: InstrumentKind
@@ -25,15 +30,23 @@ export interface ProjectTrack {
   /** Sound: the preset the track was loaded with, plus edits on top of it. */
   presetName?: string | null
   params?: Record<string, number | string | boolean>
+  /** Insert effects, in order (v2). */
+  inserts?: FxSlotSpec[]
+  /** Sends by return-bus id (v2); a bare number is a post-fader level. */
+  sends?: Record<string, SendSpec | number>
 }
 
 export interface Project {
-  version: 1
+  version: 1 | 2
   name: string
   bpm: number
   swing: number
   masterLevel: number
   tracks: ProjectTrack[]
+  /** Return buses (v2). Missing: the default returns. */
+  buses?: ProjectBus[]
+  /** The master bus's insert effects (v2). */
+  masterInserts?: FxSlotSpec[]
 }
 
 const DB_NAME = 'synthex-studio'
@@ -53,7 +66,7 @@ const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
 export function snapshot(studio: Studio, name: string): Project {
   return {
-    version: 1,
+    version: 2,
     name,
     bpm: studio.bpm,
     swing: studio.swing,
@@ -71,7 +84,11 @@ export function snapshot(studio: Studio, name: string): Project {
       drumGrid: clone(t.drumGrid),
       presetName: t.presetName,
       params: clone(t.params),
+      inserts: clone(t.chain.specs()),
+      sends: clone(t.sends),
     })),
+    buses: clone(studio.buses.map(b => b.spec())),
+    masterInserts: clone(studio.master?.chain.specs() ?? []),
   }
 }
 
@@ -81,6 +98,8 @@ export async function restore(studio: Studio, p: Project): Promise<void> {
   studio.setBpm(p.bpm)
   studio.setSwing(p.swing)
   studio.masterLevel = p.masterLevel
+  studio.setReturns(p.buses ?? defaultReturns())
+  studio.master?.chain.load(p.masterInserts ?? [])
   // Fetch every processor up front so the tracks below appear together
   // instead of trickling in one module-load at a time.
   if (studio.ctx) await preloadInstruments(studio.ctx, p.tracks.map(t => t.kind))
@@ -102,12 +121,15 @@ export async function restore(studio: Studio, p: Project): Promise<void> {
     if (pt.presetName) {
       const data = await loadSynthData(pt.kind)
       const preset = data.presets.find(x => x.name === pt.presetName)
-      if (preset?.params) track.loadPreset(preset.name, preset.params, preset.fx ?? {})
+      if (preset) applyPresetEntry(track, preset)
     }
     if (pt.params) {
       track.params = { ...pt.params }
       track.reapply()
     }
+    track.chain.load(pt.inserts)
+    track.sends = Object.fromEntries(Object.entries(pt.sends ?? {}).map(([id, v]) => [id, sendOf(v)]))
+    track.connectSends(studio.buses)
   }
   studio.applyMix()
 }

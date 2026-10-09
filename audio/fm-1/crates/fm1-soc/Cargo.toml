@@ -1,0 +1,9 @@
+[package]
+name = "fm1-soc"
+description = "FM-1 SoC: memory map and peripherals, implements the fm1-core Bus trait"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fm1-core = { path = "../fm1-core" }

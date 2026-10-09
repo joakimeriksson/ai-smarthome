@@ -1,0 +1,1068 @@
+call_i_l4                      SOLVED   1/1 slots,  6946 encodings  call -#i
+r_mov_i                        SOLVED   2/2 slots,  4440 encodings  R = #i
+call_i                         SOLVED   1/1 slots,  3636 encodings  call #i
+call_i_l6                      SOLVED   1/1 slots,  3393 encodings  call -#i
+r_mov_r_i_3                    SOLVED   3/3 slots,  3207 encodings  R = R + #i
+r_mov_i_l4                     SOLVED   2/2 slots,  1836 encodings  R = #i
+r_mov_r_i_4                    SOLVED   3/3 slots,  1407 encodings  R = [R+#i]
+if_r_eq_i_goto_i_l4            SOLVED   3/3 slots,  1228 encodings  if (R == #i) goto #i
+r_mov_i_l2                     partial  1/2 slots,  1077 encodings  R = #i
+if_r_ne_i_goto_i_l4            SOLVED   3/3 slots,  1077 encodings  if (R != #i) goto #i
+r_mov_b_r_i_u_l4               SOLVED   3/3 slots,  1073 encodings  R = b[R+#i] (u)
+r_mov_r_h_l4                   partial  2/3 slots,  1017 encodings  R = R & #h
+b_r_i_mov_r_l4                 SOLVED   3/3 slots,   939 encodings  b[R+#i] = R
+r_mov_r_i_5                    SOLVED   3/3 slots,   883 encodings  R = R + #i #
+r_i_mov_r_l4                   SOLVED   3/3 slots,   787 encodings  [R+#i] = R
+r_mov_r_i                      SOLVED   3/3 slots,   765 encodings  R = [R+#i]
+if_r_eq_i_goto_i               SOLVED   3/3 slots,   760 encodings  if (R == #i) goto #i
+r_mov_r_i_l2                   SOLVED   3/3 slots,   746 encodings  R = R + #i
+r_mov_b_r_i_u                  SOLVED   3/3 slots,   721 encodings  R = b[R+#i] (u)
+r_mov_r_lsr_i                  SOLVED   3/3 slots,   698 encodings  R = R >> #i
+r_mov_r_lsl_i                  SOLVED   3/3 slots,   674 encodings  R = R << #i
+r_i_mov_r                      SOLVED   3/3 slots,   638 encodings  [R+#i] = R
+r_mov_h_r_i_u                  SOLVED   3/3 slots,   573 encodings  R = h[R+#i] (u)
+b_r_i_mov_r                    SOLVED   3/3 slots,   545 encodings  b[R+#i] = R
+goto_i                         SOLVED   1/1 slots,   544 encodings  goto #i
+r_mov_h_r_i_u_l4               SOLVED   3/3 slots,   540 encodings  R = h[R+#i] (u)
+r_mov_r_i_l4                   SOLVED   3/3 slots,   532 encodings  R = R + -#i
+r_mov_sp_i_l2                  SOLVED   2/2 slots,   508 encodings  R = [sp+#i]
+if_r_gt_i_goto_i               SOLVED   3/3 slots,   493 encodings  if (R > #i) goto #i
+r_mov_r_asr_i                  SOLVED   3/3 slots,   481 encodings  R = R >>> #i
+if_r_ne_i_goto_i_l2            SOLVED   3/3 slots,   476 encodings  if (R != #i) goto #i
+r_i_and_h                      partial  2/3 slots,   473 encodings  [R+#i] &= #h
+r_i_or_h                       SOLVED   3/3 slots,   472 encodings  [R+#i] |= #h
+goto_i_l2                      SOLVED   1/1 slots,   468 encodings  goto -#i
+if_r_eq_i_goto_i_6             partial  2/3 slots,   467 encodings  if (R == #i) goto #i
+if_r_eq_r_goto_i               SOLVED   3/3 slots,   458 encodings  if (R == R) goto #i
+h_r_i_mov_r                    SOLVED   3/3 slots,   456 encodings  h[R+#i] = R
+r_mov_uextra_r_p_i_l_i         SOLVED   4/4 slots,   455 encodings  R = uextra(R, p:#i, l:#i)
+r_le_insert_r_p_i_l_i_l4       SOLVED   4/4 slots,   450 encodings  R <= insert(R, p:#i, l:#i)
+r_mov_r_r_4                    SOLVED   3/3 slots,   430 encodings  R = R + R
+if_r_eq_i_goto_i_l2            SOLVED   3/3 slots,   421 encodings  if (R == #i) goto -#i
+h_r_i_mov_r_l4                 SOLVED   3/3 slots,   419 encodings  h[R+#i] = R
+r_add_i                        SOLVED   2/2 slots,   399 encodings  R += #i
+sp_i_mov_r                     SOLVED   2/2 slots,   390 encodings  [sp+#i] = R
+r_mov_i_3                      SOLVED   2/2 slots,   389 encodings  R = #i #
+if_r_ne_i_goto_i_3             SOLVED   3/3 slots,   381 encodings  if (R != #i) goto -#i
+r_mov_r_rlsl_i                 SOLVED   4/4 slots,   381 encodings  R = [R+R<<#i]
+r_mov_sp_i                     SOLVED   2/2 slots,   373 encodings  R = sp + #i
+if_r_ne_r_goto_i               SOLVED   3/3 slots,   354 encodings  if (R != R) goto #i
+if_r_ne_i_goto_i_l6            partial  2/3 slots,   348 encodings  if (R != #i) goto #i
+r_mov_b_r_r_u                  SOLVED   3/3 slots,   333 encodings  R = b[R+R] (u)
+if_r_ne_i_goto_i               SOLVED   3/3 slots,   329 encodings  if (R != #i) goto -#i
+r_mov_r_lsllt_i                SOLVED   3/3 slots,   322 encodings  R = R <<< #i
+r_i_mov_h                      SOLVED   3/3 slots,   316 encodings  [R+#i] = #h
+if_r_i_ne_i_goto_i_l4          SOLVED   4/4 slots,   305 encodings  if ((R & #i) != #i) goto #i
+r_mov_r_r_l2                   SOLVED   3/3 slots,   303 encodings  R = R - R
+r_add_i_l2                     SOLVED   2/2 slots,   299 encodings  R += -#i
+call_i_3                       SOLVED   1/1 slots,   299 encodings  call #i
+h_sp_i_mov_r                   SOLVED   2/2 slots,   298 encodings  h[sp+#i] = R
+r_mov_r_addr                   SOLVED   3/3 slots,   293 encodings  R = [R++=R]
+if_r_i_eq_i_goto_i             SOLVED   4/4 slots,   290 encodings  if ((R & #i) == #i) goto #i
+r_mov_sp_i_3                   SOLVED   2/2 slots,   289 encodings  R = sp + #i
+r_mov_b_r_i_u_l2               SOLVED   3/3 slots,   289 encodings  R = b[R+-#i] (u)
+r_mov_r_i_8                    SOLVED   3/3 slots,   281 encodings  R = [R+-#i]
+r_mov_r_h_3                    SOLVED   3/3 slots,   278 encodings  R = R | #h
+r_mov_r_r_3                    SOLVED   3/3 slots,   277 encodings  R = R + R
+r_mov_h_r_addr_u               SOLVED   3/3 slots,   267 encodings  R = h[R++=R] (u)
+b_r_r_mov_r                    SOLVED   3/3 slots,   261 encodings  b[R+R] = R
+r_addr_mov_r                   SOLVED   3/3 slots,   257 encodings  [R++=R] = R
+r_rlsl_i_mov_r                 SOLVED   4/4 slots,   254 encodings  [R+R<<#i] = R
+if_r_ne_r_goto_i_l4            SOLVED   3/3 slots,   253 encodings  if (R != R) goto -#i
+b_sp_i_mov_r                   SOLVED   2/2 slots,   250 encodings  b[sp+#i] = R
+r_mov_r_r_8                    SOLVED   3/3 slots,   244 encodings  R = R - R
+ifs_r_lt_i_goto_i              SOLVED   3/3 slots,   240 encodings  ifs (R < #i) goto #i
+r_mov_r                        SOLVED   2/2 slots,   237 encodings  R = R
+r_mov_h_r_i_s                  SOLVED   3/3 slots,   229 encodings  R = h[R+#i] (s)
+if_r_lt_i_goto_i               SOLVED   3/3 slots,   223 encodings  if (R < #i) goto #i
+h_r_addr_mov_r                 SOLVED   3/3 slots,   221 encodings  h[R++=R] = R
+r_mov_h_sp_i_u                 SOLVED   2/2 slots,   217 encodings  R = h[sp+#i] (u)
+if_r_lt_r_goto_i               SOLVED   3/3 slots,   214 encodings  if (R < R) goto -#i
+r_mov_h_r                      SOLVED   3/3 slots,   209 encodings  R = #h - R
+rep_i_r                        partial  2/3 slots,   205 encodings  rep #i R {
+b_r_i_mov_r_l2                 SOLVED   3/3 slots,   202 encodings  b[R+-#i] = R
+if_r_ne_i                      partial  1/3 slots,   199 encodings  if (R != #i) {
+r_mov_r_h_8                    SOLVED   3/3 slots,   198 encodings  R = R + #h
+r_mov_r_l2                     SOLVED   2/2 slots,   195 encodings  R = R #
+r_mov_h_r_i_u_l2               SOLVED   3/3 slots,   190 encodings  R = h[R+-#i] (u)
+r_mov_r_h_4                    SOLVED   3/3 slots,   188 encodings  R = R * #h
+r_mov_sp_i_l4                  SOLVED   2/2 slots,   185 encodings  R = [sp+#i]
+if_r_h_eq_i_goto_i             SOLVED   4/4 slots,   182 encodings  if ((R & #h) == #i) goto #i
+r_add_r                        SOLVED   2/2 slots,   180 encodings  R += R
+if_r_ge_r_goto_i               SOLVED   3/3 slots,   176 encodings  if (R >= R) goto #i
+r_mov_r_r                      SOLVED   3/3 slots,   174 encodings  R = R | R
+r_mov_r_r_6                    SOLVED   3/3 slots,   174 encodings  R = R - R #
+r_mov_b_r_addr_u               SOLVED   3/3 slots,   174 encodings  R = b[R++=R] (u)
+ifs_r_gt_i_goto_i              SOLVED   3/3 slots,   167 encodings  ifs (R > #i) goto #i
+rep_i_i                        partial  2/3 slots,   167 encodings  rep #i #i {
+r_or_i                         SOLVED   2/2 slots,   165 encodings  R |= #i
+r_mov_r_h_5                    partial  2/3 slots,   163 encodings  R = R & #h #
+r_mov_h                        SOLVED   2/2 slots,   151 encodings  R = #h
+r_mov_h_r_rlsl_i_u             SOLVED   4/4 slots,   147 encodings  R = h[R+R<<#i] (u)
+r_i_mov_r_l2                   SOLVED   3/3 slots,   144 encodings  [R+-#i] = R
+if_r_eq_i                      partial  1/3 slots,   143 encodings  if (R == #i) {
+r_mov_i_4                      SOLVED   2/2 slots,   142 encodings  R = -#i
+h_r_i_mov_r_l2                 SOLVED   3/3 slots,   141 encodings  h[R+-#i] = R
+sp_i_mov_r_l4                  SOLVED   2/2 slots,   140 encodings  [sp+#i] = R
+r_mov_rmov_i                   SOLVED   3/3 slots,   138 encodings  R = [++R=#i]
+r_mov_r_r_9                    SOLVED   3/3 slots,   138 encodings  R = R * R
+if_r_lt_r_goto_i_l4            SOLVED   3/3 slots,   137 encodings  if (R < R) goto #i
+if_r_r_eq_i_goto_i             SOLVED   4/4 slots,   135 encodings  if ((R & R) == #i) goto #i
+if_r_h_ne_i                    partial  3/4 slots,   134 encodings  if ((R & #h) != #i) {
+if_r_h_ne_i_goto_i             SOLVED   4/4 slots,   133 encodings  if ((R & #h) != #i) goto #i
+r_mov_r_r_5                    SOLVED   3/3 slots,   132 encodings  R = R & R
+r_mov_b_sp_i_u                 SOLVED   2/2 slots,   132 encodings  R = b[sp+#i] (u)
+if_r_eq_i_goto_i_4             SOLVED   3/3 slots,   130 encodings  if (R == #i) goto -#i
+ifs_r_lt_r_goto_i              SOLVED   3/3 slots,   129 encodings  ifs (R < R) goto -#i
+b_r_addr_mov_r                 SOLVED   3/3 slots,   127 encodings  b[R++=R] = R
+r_mul_r                        SOLVED   2/2 slots,   126 encodings  R *= R
+r_and_i                        SOLVED   2/2 slots,   124 encodings  R &= #i
+if_r_r_ne_i_goto_i_l4          SOLVED   4/4 slots,   123 encodings  if ((R & R) != #i) goto #i
+call_i_l2                      SOLVED   1/1 slots,   122 encodings  call -#i
+r_mov_r_r_13                   SOLVED   3/3 slots,   120 encodings  R = R + R #
+r_mov_i_5                      SOLVED   2/2 slots,   118 encodings  R = -#i
+r_mov_r_r_u                    SOLVED   3/3 slots,   117 encodings  R = R / R (u)
+if_r_ge_i                      partial  1/3 slots,   117 encodings  if (R >= #i) {
+r_mov_b_r_i_s                  SOLVED   3/3 slots,   113 encodings  R = b[R+#i] (s)
+if_r_le_i                      partial  1/3 slots,   113 encodings  if (R <= #i) {
+r_add_r_l2                     SOLVED   2/2 slots,   105 encodings  R += R #
+r_mov_uextra_r_p_i_l_i_l4      SOLVED   4/4 slots,   101 encodings  R = uextra(R, p:#i, l:#i) #
+r_mov_r_lsl_i_l4               SOLVED   3/3 slots,   100 encodings  R = R << #i
+if_r_le_r_goto_i               SOLVED   3/3 slots,   100 encodings  if (R <= R) goto #i
+if_r_ge_i_goto_i               SOLVED   3/3 slots,    99 encodings  if (R >= #i) goto #i
+r_mov_r_i_6                    SOLVED   3/3 slots,    97 encodings  R = R + -#i #
+h_r_rlsl_i_mov_r               SOLVED   4/4 slots,    96 encodings  h[R+R<<#i] = R
+if_r_gt_r_goto_i               SOLVED   3/3 slots,    94 encodings  if (R > R) goto #i
+ifs_r_ge_i_goto_i              SOLVED   3/3 slots,    93 encodings  ifs (R >= #i) goto #i
+r_le_insert_r_p_i_l_i          SOLVED   4/4 slots,    92 encodings  R <= insert(R, p:#i, l:#i) #
+r_mov_r_lsl_r                  SOLVED   3/3 slots,    92 encodings  R = R << R
+r_mov_r_h_9                    SOLVED   3/3 slots,    92 encodings  R = R ^ #h
+r_mov_r_r_l4                   SOLVED   3/3 slots,    91 encodings  R = R + R #
+r_mov_sextra_r_p_i_l_i         SOLVED   4/4 slots,    89 encodings  R = sextra(R, p:#i, l:#i)
+r_xor_i                        SOLVED   2/2 slots,    89 encodings  R ^= #i
+ifs_r_le_i_goto_i              SOLVED   3/3 slots,    88 encodings  ifs (R <= -#i) goto #i
+if_r_gt_i_goto_i_l6            partial  2/3 slots,    86 encodings  if (R > #i) goto #i
+r_mov_r_r_s                    SOLVED   3/3 slots,    86 encodings  R = R / R (s)
+ifs_r_ge_i_goto_i_l4           SOLVED   3/3 slots,    86 encodings  ifs (R >= #i) goto -#i
+if_r_le_i_goto_i               SOLVED   3/3 slots,    85 encodings  if (R <= #i) goto -#i
+if_r_le_i_goto_i_l4            SOLVED   3/3 slots,    85 encodings  if (R <= #i) goto #i
+goto_i_3                       SOLVED   1/1 slots,    83 encodings  goto -#i
+if_r_lt_i_goto_i_l4            SOLVED   3/3 slots,    80 encodings  if (R < #i) goto -#i
+if_r_ne_i_goto_i_5             SOLVED   3/3 slots,    79 encodings  if (--R != #i) goto -#i
+ifs_r_ge_r_goto_i              SOLVED   3/3 slots,    78 encodings  ifs (R >= R) goto #i
+if_r_ne_i_goto_i_6             partial  1/3 slots,    78 encodings  if (R != #i) goto -#i
+sp_add_i_l2                    SOLVED   1/1 slots,    76 encodings  sp += #i
+if_r_gt_i_goto_i_l4            SOLVED   3/3 slots,    76 encodings  if (R > #i) goto -#i
+if_r_eq_i_goto_i_7             partial  2/3 slots,    74 encodings  if (R == #i) goto -#i
+sp_add_i                       SOLVED   1/1 slots,    72 encodings  sp += -#i
+if_r_r_eq_i_goto_i_l4          SOLVED   4/4 slots,    71 encodings  if ((R & R) == #i) goto -#i
+r_mov_h_sp_i_s                 SOLVED   2/2 slots,    69 encodings  R = h[sp+#i] (s)
+if_r_eq_i_goto_i_5             SOLVED   3/3 slots,    67 encodings  if (R == -#i) goto #i
+if_r_lt_i_goto_i_l6            partial  2/3 slots,    67 encodings  if (R < #i) goto #i
+r_mov_b_rmov_i_u               SOLVED   3/3 slots,    65 encodings  R = b[++R=#i] (u)
+r_mov_r_b0_u                   SOLVED   3/3 slots,    64 encodings  R = R.b0 (u)
+if_r_h_eq_i                    partial  3/4 slots,    64 encodings  if ((R & #h) == #i) {
+r_mov_r_lsr_i_l4               SOLVED   3/3 slots,    63 encodings  R = R >> #i
+r_mov_r_r_11                   SOLVED   3/3 slots,    63 encodings  R = R & ~R
+r_mov_r_l_s                    SOLVED   2/2 slots,    62 encodings  R = R.l (s)
+if_r_ne_r                      partial  2/3 slots,    61 encodings  if (R != R) {
+ifs_r_lt_r_goto_i_l4           SOLVED   3/3 slots,    61 encodings  ifs (R < R) goto #i
+ifs_r_ge_i                     partial  1/3 slots,    61 encodings  ifs (R >= #i) {
+r_mov_r_r_12                   SOLVED   3/3 slots,    61 encodings  R = [R+R]
+r_mov_b_r_add_i_u              SOLVED   3/3 slots,    59 encodings  R = b[R++=#i] (u)
+b_r_add_i_mov_r_l2             SOLVED   3/3 slots,    59 encodings  b[R++=#i] = R
+r_mov_r_h_7                    SOLVED   3/3 slots,    59 encodings  R = R | #h #
+if_r_ge_r                      partial  2/3 slots,    59 encodings  if (R >= R) {
+r_add_i_mov_r                  SOLVED   3/3 slots,    57 encodings  [R++=#i] = R
+r_mov_r_l_u_l2                 SOLVED   2/2 slots,    57 encodings  R = R.l (u)
+ifs_r_le_i_l4                  partial  2/3 slots,    57 encodings  ifs (R <= #i) {
+r_mov_h_r_add_i_u              SOLVED   3/3 slots,    57 encodings  R = h[R++=#i] (u)
+ifs_r_gt_i_goto_i_5            SOLVED   3/3 slots,    57 encodings  ifs (R > #i) goto -#i
+r_mov_r_add_i                  SOLVED   3/3 slots,    56 encodings  R = [R++=#i]
+goto_i_l4                      SOLVED   1/1 slots,    56 encodings  goto #i
+r_mov_h_l4                     SOLVED   2/2 slots,    55 encodings  R = #h #
+r_or_r                         SOLVED   2/2 slots,    54 encodings  R |= R
+r_mov_r_i_lsl_r                SOLVED   4/4 slots,    54 encodings  R = R & (#i << R)
+ifs_r_gt_r_goto_i              SOLVED   3/3 slots,    54 encodings  ifs (R > R) goto #i
+ifs_r_lt_i_goto_i_5            SOLVED   3/3 slots,    52 encodings  ifs (R < -#i) goto #i
+if_r_r_ne_i_goto_i             SOLVED   4/4 slots,    51 encodings  if ((R & R) != #i) goto -#i
+ifs_r_lt_i_goto_i_l6           partial  2/3 slots,    51 encodings  ifs (R < #i) goto #i
+if_r_i_ne_i_goto_i             SOLVED   4/4 slots,    50 encodings  if ((R & #i) != #i) goto -#i
+if_r_eq_r                      partial  2/3 slots,    50 encodings  if (R == R) {
+r_mov_r_r_10                   SOLVED   3/3 slots,    50 encodings  R = R ^ R
+r_i_add_r                      SOLVED   3/3 slots,    50 encodings  [R+#i] += R
+r_mov_h_r_add_i_u_l2           SOLVED   3/3 slots,    50 encodings  R = h[R++=-#i] (u)
+ifs_r_le_i_goto_i_5            SOLVED   3/3 slots,    50 encodings  ifs (R <= -#i) goto -#i
+if_r_i_goto_i_4                partial  2/3 slots,    50 encodings  if (R ?? #i) goto -#i
+r_mov_r_lsr_r                  SOLVED   3/3 slots,    49 encodings  R = R >> R
+r_i_and_h_l4                   partial  2/3 slots,    49 encodings  [R+-#i] &= #h
+ifs_r_gt_i_goto_i_l4           partial  2/3 slots,    48 encodings  ifs (R > -#i) goto #i
+if_r_i_eq_i_goto_i_l4          SOLVED   4/4 slots,    48 encodings  if ((R & #i) == #i) goto -#i
+r_mov_b_r_r_s                  SOLVED   3/3 slots,    47 encodings  R = b[R+R] (s)
+h_r_add_i_mov_r                SOLVED   3/3 slots,    47 encodings  h[R++=#i] = R
+ifs_r_le_r_goto_i_l4           SOLVED   3/3 slots,    47 encodings  ifs (R <= R) goto #i
+ifs_r_ge_r                     partial  2/3 slots,    47 encodings  ifs (R >= R) {
+r_mov_h_r_l4                   SOLVED   3/3 slots,    47 encodings  R = #h - R #
+if_r_i_goto_i_3                SOLVED   3/3 slots,    47 encodings  if (R ?? -#i) goto #i
+r_mov_r_add_i_l2               SOLVED   3/3 slots,    46 encodings  R = [R++=-#i]
+r_mul_r_l2                     SOLVED   2/2 slots,    46 encodings  R *= R #
+r_and_r                        SOLVED   2/2 slots,    45 encodings  R &= R
+r_mov_r_r_7                    SOLVED   3/3 slots,    45 encodings  R = R - R #
+r_mov_r_r_c_l4                 SOLVED   3/3 slots,    45 encodings  R = R + R + c
+if_r_h_ne_i_goto_i_l6          SOLVED   4/4 slots,    45 encodings  if ((R & #h) != #i) goto -#i
+b_r_add_i_mov_r_3              SOLVED   3/3 slots,    45 encodings  b[R++=-#i] = R
+r_mov_r_h_6                    SOLVED   3/3 slots,    44 encodings  R = R * #h #
+if_r_gt_r                      partial  2/3 slots,    44 encodings  if (R > R) {
+r_l_mov_i_l4                   SOLVED   2/2 slots,    44 encodings  R.l = #i #
+r_mov_r_b0_u_l2                SOLVED   3/3 slots,    43 encodings  R = R.b0 (u) #
+r_mov_umin_r_r_l4              SOLVED   3/3 slots,    43 encodings  R = umin(R, R)
+if_r_i_goto_i                  partial  2/3 slots,    43 encodings  if (R ?? #i) goto #i
+r_mov_smin_r_r_l4              SOLVED   3/3 slots,    42 encodings  R = smin(R, R)
+if_r_le_r                      partial  2/3 slots,    42 encodings  if (R <= R) {
+r_mov_b_r_add_i_u_l2           SOLVED   3/3 slots,    42 encodings  R = b[R++=-#i] (u)
+r_i_add_i                      SOLVED   3/3 slots,    40 encodings  [R+#i] += #i
+r1_r0_mov_d_r_i                SOLVED   4/4 slots,    40 encodings  r1_r0 = d[R+#i]
+ifs_r_lt_i_goto_i_l4           SOLVED   3/3 slots,    40 encodings  ifs (R < #i) goto -#i
+ifs_r_le_r                     partial  2/3 slots,    40 encodings  ifs (R <= R) {
+ifs_r_le_i_goto_i_3            SOLVED   3/3 slots,    40 encodings  ifs (R <= #i) goto -#i
+r_mov_r_h                      SOLVED   3/3 slots,    39 encodings  R = R - #h
+r_mov_r_h_10                   SOLVED   3/3 slots,    39 encodings  R = R + #h #
+r_i_or_r                       SOLVED   3/3 slots,    38 encodings  [R+#i] |= R
+r_mov_r_l_u                    SOLVED   2/2 slots,    38 encodings  R = R.l (u) #
+r_ltle_r                       SOLVED   2/2 slots,    38 encodings  R <<= R
+r_mov_r_r_c                    SOLVED   3/3 slots,    38 encodings  R = R - R - !c
+r_mov_r_b0_s                   SOLVED   3/3 slots,    38 encodings  R = R.b0 (s)
+if_r_eq_r_goto_i_l4            SOLVED   3/3 slots,    38 encodings  if (R == R) goto -#i
+r_mov_r_l_s_l2                 SOLVED   2/2 slots,    37 encodings  R = R.l (s) #
+if_r_ne_r_goto_i_l6            SOLVED   3/3 slots,    37 encodings  if (R != R) goto #i
+r_mov_i_7                      SOLVED   2/2 slots,    37 encodings  R = -#i #
+r_add_i_mov_r_l2               SOLVED   3/3 slots,    37 encodings  [R++=-#i] = R
+rmov_i_mov_r                   SOLVED   3/3 slots,    36 encodings  [++R=#i] = R
+r_xor_r                        SOLVED   2/2 slots,    36 encodings  R ^= R
+ifs_r_le_i_goto_i_l4           SOLVED   3/3 slots,    36 encodings  ifs (R <= #i) goto #i
+r_mov_r_add_i_l4               SOLVED   3/3 slots,    35 encodings  R = [R++=#i]
+ifs_r_le_r_goto_i              SOLVED   3/3 slots,    35 encodings  ifs (R <= R) goto -#i
+if_r_ge_i_goto_i_l6            partial  2/3 slots,    35 encodings  if (R >= #i) goto #i
+h_r_add_i_mov_r_l2             SOLVED   3/3 slots,    35 encodings  h[R++=-#i] = R
+if_r_lt_r                      partial  2/3 slots,    34 encodings  if (R < R) {
+if_r_eq_r_goto_i_l6            SOLVED   3/3 slots,    33 encodings  if (R == R) goto #i
+if_r_ge_i_goto_i_l4            SOLVED   3/3 slots,    33 encodings  if (R >= #i) goto -#i
+ifs_r_gt_i_goto_i_l6           partial  2/3 slots,    32 encodings  ifs (R > #i) goto #i
+b_r_add_i_mov_r                SOLVED   3/3 slots,    31 encodings  b[R++=#i] = R
+if_r_le_i_goto_i_l6            partial  2/3 slots,    31 encodings  if (R <= #i) goto #i
+if_r_eq_i_goto_i_l6            SOLVED   3/3 slots,    30 encodings  if (R == -#i) goto #i
+r_mov_b_r_add_i_u_l4           SOLVED   3/3 slots,    30 encodings  R = b[R++=#i] (u)
+r_mov_sextra_r_p_i_l_i_l4      SOLVED   4/4 slots,    28 encodings  R = sextra(R, p:#i, l:#i) #
+r_l_mov_i                      SOLVED   2/2 slots,    28 encodings  R.l = #i
+d_r_i_mov_r3_r2                SOLVED   4/4 slots,    27 encodings  d[R+#i] = r3_r2
+if_r_ne_i_goto_i_4             SOLVED   3/3 slots,    27 encodings  if (R != -#i) goto #i
+d_r_i_mov_r1_r0                SOLVED   4/4 slots,    27 encodings  d[R+#i] = r1_r0
+r_mov_r_lsl_r_l4               SOLVED   3/3 slots,    27 encodings  R = R << R #
+r_mov_r_lsl_i_3                SOLVED   3/3 slots,    26 encodings  R = R << #i #
+d_sp_i_mov_r1_r0               SOLVED   3/3 slots,    26 encodings  d[sp+#i] = r1_r0
+ifs_r_lt_i_goto_i_6            SOLVED   3/3 slots,    26 encodings  ifs (R < -#i) goto -#i
+r_2_mov_r                      partial  1/2 slots,    25 encodings  {R*2} = [R+]
+r_mov_h_rmov_i_u               SOLVED   3/3 slots,    25 encodings  R = h[++R=#i] (u)
+r_mov_r_3                      SOLVED   2/2 slots,    24 encodings  R = ~R
+b_rmov_i_mov_r                 SOLVED   3/3 slots,    24 encodings  b[++R=#i] = R
+r_mov_smax_r_r_l4              SOLVED   3/3 slots,    24 encodings  R = smax(R, R)
+r_mov_h_r_r_u                  SOLVED   3/3 slots,    24 encodings  R = h[R+R] (u)
+ifs_r_lt_i_goto_i_4            partial  1/3 slots,    24 encodings  ifs (R < #i) goto -#i
+if_r_i_goto_i_l6               partial  1/3 slots,    24 encodings  if (R ?? -#i) goto -#i
+r_mov_r_i_lsl_r_3              SOLVED   4/4 slots,    22 encodings  R = R | (#i << R)
+r_i_or_i_lsl_r                 SOLVED   4/4 slots,    22 encodings  [R+#i] |= #i << R
+if_r_r_ne_i                    partial  3/4 slots,    22 encodings  if ((R & R) != #i) {
+r_mov_r_r_15                   SOLVED   3/3 slots,    22 encodings  R = R * R #
+gotoss_i                       UNSOLVED 0/1 slots,    22 encodings  gotoss -#i
+r_gtge_r                       SOLVED   2/2 slots,    21 encodings  R >>= R
+r_mov_r_2                      partial  1/2 slots,    21 encodings  [R+] = {R*2}
+r_mov_r_i_lsl_r_l4             SOLVED   4/4 slots,    21 encodings  R = R & ~(#i << R)
+if_r_r_eq_i                    partial  3/4 slots,    21 encodings  if ((R & R) == #i) {
+ifs_r_gt_i_goto_i_3            SOLVED   3/3 slots,    20 encodings  ifs (R > -#i) goto -#i
+r_mov_r_r_s_l4                 SOLVED   3/3 slots,    20 encodings  R = R / R (s) #
+r_and_r_l2                     SOLVED   2/2 slots,    20 encodings  R &= R #
+call_i_4                       SOLVED   1/1 slots,    20 encodings  call #i
+if_r_lt_i_goto_i_3             partial  1/3 slots,    20 encodings  if (R < #i) goto -#i
+ifs_r_le_i                     partial  2/3 slots,    19 encodings  ifs (R <= -#i) {
+r_r_mov_r                      SOLVED   3/3 slots,    19 encodings  [R+R] = R
+r_mov_r_asr_i_3                SOLVED   3/3 slots,    19 encodings  R = R >>> #i
+r_mov_b_rmovr_u                SOLVED   3/3 slots,    19 encodings  R = b[++R=R] (u)
+r_i_and_r                      SOLVED   3/3 slots,    18 encodings  [R+#i] &= R
+r_i_and_r_l4                   SOLVED   3/3 slots,    18 encodings  [R+#i] &= ~R
+r_i_and_i_lsl_r                SOLVED   4/4 slots,    18 encodings  [R+#i] &= ~(#i << R)
+if_r_le_r_goto_i_l4            SOLVED   3/3 slots,    18 encodings  if (R <= R) goto -#i
+if_r_ne_i_goto_i_7             partial  1/3 slots,    18 encodings  if (R != -#i) goto -#i
+if_r_ne_r_goto_i_3             partial  2/3 slots,    18 encodings  if (R != R) goto -#i
+pc_mov_i                       UNSOLVED 0/1 slots,    18 encodings  pc = #i
+r_i_or_h_l4                    partial  2/3 slots,    18 encodings  [R+-#i] |= #h
+r_or_r_l2                      SOLVED   2/2 slots,    17 encodings  R |= R #
+r_mov_r_h_12                   SOLVED   3/3 slots,    17 encodings  R = R - #h #
+goto_r                         SOLVED   1/1 slots,    16 encodings  goto R
+tbb_r                          SOLVED   1/1 slots,    16 encodings  tbb [R]
+tbh_r                          SOLVED   1/1 slots,    16 encodings  tbh [R]
+r_mov_r_r_u_l4                 SOLVED   3/3 slots,    16 encodings  R = R / R (u) #
+call_r                         SOLVED   1/1 slots,    16 encodings  call R
+cli_r                          SOLVED   1/1 slots,    16 encodings  cli R
+sti_r                          SOLVED   1/1 slots,    16 encodings  sti R
+swi_i                          SOLVED   1/1 slots,    16 encodings  swi #i
+testset_b_r                    SOLVED   1/1 slots,    16 encodings  testset b[R]
+callns_r                       SOLVED   1/1 slots,    16 encodings  callns R
+pfetch_r                       SOLVED   1/1 slots,    16 encodings  pfetch [R]
+if_r_h_eq_i_goto_i_l6          partial  3/4 slots,    16 encodings  if ((R & #h) == #i) goto -#i
+r_mov_r_4                      SOLVED   2/2 slots,    16 encodings  R = ~R #
+r_add_i_mov_r_l4               partial  2/3 slots,    16 encodings  [R++=#i] = R
+r_mov_h_r_add_i_u_l4           SOLVED   3/3 slots,    16 encodings  R = h[R++=#i] (u)
+if_r_gt_i_goto_i_3             partial  1/3 slots,    16 encodings  if (R > #i) goto -#i
+if_r_eq_i_goto_i_3             partial  1/3 slots,    15 encodings  if (R == -#i) goto -#i
+ifs_r_lt_i                     partial  1/3 slots,    15 encodings  ifs (R < #i) {
+r_mov_h_r_rlsl_i_s             SOLVED   4/4 slots,    15 encodings  R = h[R+R<<#i] (s)
+flush_r                        SOLVED   1/1 slots,    15 encodings  flush [R]
+if_r_ne_i_goto_i_8             partial  1/3 slots,    15 encodings  if (R != -#i) goto #i
+sp_mov_i                       UNSOLVED 0/1 slots,    14 encodings  sp = #i
+r3_r2_mov_d_r_i                SOLVED   4/4 slots,    14 encodings  r3_r2 = d[R+#i]
+pc_r_2_mov_sp                  UNSOLVED 0/1 slots,    14 encodings  {pc, R*2} = [sp++]
+r_mov_sp_l2                    SOLVED   1/1 slots,    14 encodings  R = [sp]
+d_sp_i_mov_r3_r2               SOLVED   3/3 slots,    14 encodings  d[sp+#i] = r3_r2
+ifs_r_gt_r                     partial  2/3 slots,    14 encodings  ifs (R > R) {
+r1_r0_gtge_i                   SOLVED   3/3 slots,    14 encodings  r1_r0 >>= #i
+r_mov_umax_r_r                 SOLVED   3/3 slots,    14 encodings  R = umax(R, R)
+if_r_le_i_goto_i_3             partial  1/3 slots,    14 encodings  if (R <= #i) goto -#i
+r_i_add_i_l4                   partial  2/3 slots,    14 encodings  [R+#i] += -#i
+if_r_ge_r_goto_i_l6            SOLVED   3/3 slots,    14 encodings  if (R >= R) goto #i
+if_r_lt_i                      partial  1/3 slots,    14 encodings  if (R < #i) {
+r_mov_r_lsr_i_3                SOLVED   3/3 slots,    14 encodings  R = R >> #i #
+iflush_r                       SOLVED   1/1 slots,    14 encodings  iflush [R]
+r_mov_b_r_add_i_s              SOLVED   3/3 slots,    14 encodings  R = b[R++=#i] (s)
+flushinv_r                     SOLVED   1/1 slots,    14 encodings  flushinv [R]
+sp_mov_rets_r_2                UNSOLVED 0/1 slots,    13 encodings  [--sp] = {rets, R*2}
+r_mov_rmovr                    SOLVED   3/3 slots,    13 encodings  R = [++R=R]
+r3_r2_gtge_i                   SOLVED   3/3 slots,    13 encodings  r3_r2 >>= #i
+r_mov_r_r_14                   SOLVED   3/3 slots,    13 encodings  R = R & R #
+ifs_r_lt_r                     partial  2/3 slots,    13 encodings  ifs (R < R) {
+r_i_xor_h                      partial  2/3 slots,    13 encodings  [R+-#i] ^= #h
+ifs_r_ge_i_goto_i_4            partial  1/3 slots,    13 encodings  ifs (R >= -#i) goto -#i
+if_r_ge_r_goto_i_l4            partial  2/3 slots,    12 encodings  if (R >= R) goto -#i
+b_rmovr_mov_r                  SOLVED   3/3 slots,    12 encodings  b[++R=R] = R
+r_ltle_r_l2                    SOLVED   2/2 slots,    12 encodings  R <<= R #
+r_lsrge_r                      SOLVED   2/2 slots,    12 encodings  R >>>= R
+r_i_xor_h_l4                   SOLVED   3/3 slots,    12 encodings  [R+#i] ^= #h
+sp_mov_r                       SOLVED   1/1 slots,    11 encodings  [sp] = R
+ifs_r_gt_r_goto_i_l4           partial  2/3 slots,    11 encodings  ifs (R > R) goto -#i
+r5_r4_gtge_i                   SOLVED   3/3 slots,    11 encodings  r5_r4 >>= #i
+r1_r0_mov_d_sp_i               SOLVED   3/3 slots,    11 encodings  r1_r0 = d[sp+#i]
+ifs_r_ge_r_goto_i_l4           partial  2/3 slots,    11 encodings  ifs (R >= R) goto -#i
+r_2_mov_sp_l2                  UNSOLVED 0/1 slots,    11 encodings  {R*2} = [sp++]
+r_mov_r_h_11                   partial  2/3 slots,    11 encodings  R = R ^ #h #
+ifs_r_gt_i                     partial  1/3 slots,    11 encodings  ifs (R > #i) {
+rets_r_2_mov_sp                UNSOLVED 0/1 slots,    11 encodings  {rets, R*2} = [sp++]
+ifs_r_ge_i_goto_i_3            partial  2/3 slots,    11 encodings  ifs (R >= -#i) goto #i
+h_r_i_mov_r_3                  UNSOLVED 0/3 slots,    11 encodings  h[R+-#i] = R
+if_r_eq_i_goto_i_8             UNSOLVED 0/3 slots,    11 encodings  if (R == -#i) goto -#i
+if_r_ne_i_l4                   partial  1/3 slots,    10 encodings  if (R != -#i) {
+r7_r6_mov_r_r_u                SOLVED   4/4 slots,    10 encodings  r7_r6 = R * R (u)
+if_r_gt_r_goto_i_l4            partial  2/3 slots,    10 encodings  if (R > R) goto -#i
+d_r_i_mov_r7_r6                SOLVED   4/4 slots,    10 encodings  d[R+#i] = r7_r6
+sp_mov_r_2_l2                  UNSOLVED 0/1 slots,    10 encodings  [--sp] = {R*2}
+r_mov_r_b0_s_l2                SOLVED   3/3 slots,    10 encodings  R = R.b0 (s) #
+r_mov_b_r_i_s_l4               partial  2/3 slots,    10 encodings  R = b[R+-#i] (s)
+r_mov_r_ltgt_i                 SOLVED   3/3 slots,    10 encodings  R = R <> #i
+if_r_ge_i_goto_i_3             partial  2/3 slots,    10 encodings  if (R >= #i) goto -#i
+r_i_add_i_3                    partial  2/3 slots,    10 encodings  [R+-#i] += #i
+ssp_mov_i                      UNSOLVED 0/1 slots,     9 encodings  ssp = #i
+sp_mov_r_2                     UNSOLVED 0/1 slots,     9 encodings  [--sp] = {R*2}
+r_2_mov_sp                     UNSOLVED 0/1 slots,     9 encodings  {R*2} = [sp++]
+r_mov_rev8_r                   SOLVED   3/3 slots,     9 encodings  R = rev8(R)
+ifs_r_le_i_goto_i_l6           partial  1/3 slots,     9 encodings  ifs (R <= #i) goto #i
+ifs_r_gt_r_goto_i_3            SOLVED   3/3 slots,     9 encodings  ifs (R > R) goto #i
+r_mov_r_r_16                   SOLVED   3/3 slots,     9 encodings  R = R & ~R #
+d_r_i_mov_r5_r4                SOLVED   4/4 slots,     9 encodings  d[R+#i] = r5_r4
+h_r_r_mov_r                    SOLVED   3/3 slots,     9 encodings  h[R+R] = R
+r_i_sub_r                      SOLVED   3/3 slots,     9 encodings  [R+#i] -= R
+if_r_gt_r_goto_i_l6            SOLVED   3/3 slots,     9 encodings  if (R > R) goto #i
+if_r_ne_i_goto_i_9             SOLVED   3/3 slots,     9 encodings  if (--R != #i) goto #i
+r_mov_r_add_i_3                partial  2/3 slots,     9 encodings  R = [R++=-#i]
+rmovr_mov_r                    SOLVED   3/3 slots,     8 encodings  [++R=R] = R
+sp_mov_r_l4                    SOLVED   1/1 slots,     8 encodings  [sp] = R
+r3_r2_mov_d_sp_i               SOLVED   3/3 slots,     8 encodings  r3_r2 = d[sp+#i]
+r_mov_sp_l4                    SOLVED   1/1 slots,     8 encodings  R = [sp]
+ssync                          SOLVED   0/0 slots,     8 encodings  ssync
+r_mov_i_6                      SOLVED   2/2 slots,     8 encodings  R = #i #
+h_rmov_i_mov_r                 SOLVED   3/3 slots,     8 encodings  h[++R=#i] = R
+r_mov_h_rmovr_u                SOLVED   3/3 slots,     8 encodings  R = h[++R=R] (u)
+r_mov_r_i_7                    partial  2/3 slots,     8 encodings  R = [R+-#i]
+h_rmovr_mov_r                  SOLVED   3/3 slots,     8 encodings  h[++R=R] = R
+r_mov_abs_r                    SOLVED   2/2 slots,     8 encodings  R = abs(R)
+btbclr                         SOLVED   0/0 slots,     8 encodings  btbclr
+r_mov_r_r_17                   SOLVED   3/3 slots,     8 encodings  R = R | R #
+d_sp_i_mov_r13_r12             SOLVED   3/3 slots,     8 encodings  d[sp+#i] = r13_r12
+r_mov_r_asr_r                  SOLVED   3/3 slots,     8 encodings  R = R >>> R
+if_r_le_r_goto_i_l6            SOLVED   3/3 slots,     8 encodings  if (R <= R) goto #i
+r_lsrge_r_l2                   SOLVED   2/2 slots,     8 encodings  R >>>= R #
+r_xor_r_l2                     SOLVED   2/2 slots,     8 encodings  R ^= R #
+r_l_mov_r_l_r_l                SOLVED   3/3 slots,     8 encodings  R.l = R.l + R.l #
+r_i_mov_h_l4                   partial  2/3 slots,     8 encodings  [R+-#i] = #h
+r_mov_cnum                     SOLVED   1/1 slots,     7 encodings  R = cnum
+r5_r4_mov_r_r_u                SOLVED   4/4 slots,     7 encodings  r5_r4 = R * R (u)
+r3_r2_mov_r_r_u                SOLVED   4/4 slots,     7 encodings  r3_r2 = R * R (u)
+r_mov_psr                      SOLVED   1/1 slots,     7 encodings  R = psr
+d_sp_i_mov_r15_r14             SOLVED   3/3 slots,     7 encodings  d[sp+#i] = r15_r14
+d_r_i_mov_r13_r12              partial  3/4 slots,     7 encodings  d[R+#i] = r13_r12
+b_sp_mov_r                     SOLVED   1/1 slots,     7 encodings  b[sp] = R
+if_r_gt_i                      partial  1/3 slots,     7 encodings  if (R > #i) {
+r_mov_npc_i_l6                 UNSOLVED 0/2 slots,     7 encodings  R = [npc + #i]
+reti_mov_i                     UNSOLVED 0/1 slots,     6 encodings  reti = #i
+ifs_r_lt_r_goto_i_l6           partial  2/3 slots,     6 encodings  ifs (R < R) goto -#i
+r5_r4_mov_d_sp_i               SOLVED   3/3 slots,     6 encodings  r5_r4 = d[sp+#i]
+d_sp_i_mov_r7_r6               SOLVED   3/3 slots,     6 encodings  d[sp+#i] = r7_r6
+d_r_i_mov_r11_r10              partial  3/4 slots,     6 encodings  d[R+#i] = r11_r10
+d_sp_i_mov_r9_r8               SOLVED   3/3 slots,     6 encodings  d[sp+#i] = r9_r8
+r13_r12_mov_d_sp_i             SOLVED   3/3 slots,     6 encodings  r13_r12 = d[sp+#i]
+r3_r2_ltle_i                   SOLVED   3/3 slots,     6 encodings  r3_r2 <<= #i
+r_mov_b_r_i_u_3                partial  2/3 slots,     6 encodings  R = b[R+-#i] (u)
+h_sp_mov_r                     SOLVED   1/1 slots,     6 encodings  h[sp] = R
+r_mov_abs_r_l4                 SOLVED   2/2 slots,     6 encodings  R = abs(R) #
+ifs_r_lt_i_goto_i_3            partial  1/3 slots,     6 encodings  ifs (R < -#i) goto #i
+r_mov_r_asr_i_l4               partial  1/3 slots,     6 encodings  R = R >>> #i #
+ifs_r_ge_r_goto_i_3            SOLVED   3/3 slots,     6 encodings  ifs (R >= R) goto #i
+r5_r4_mov_d_r_i                SOLVED   4/4 slots,     6 encodings  r5_r4 = d[R+#i]
+ifs_r_lt_r_goto_i_3            partial  2/3 slots,     6 encodings  ifs (R < R) goto #i
+r_gtge_r_l2                    SOLVED   2/2 slots,     6 encodings  R >>= R #
+r_lslle_r                      SOLVED   2/2 slots,     6 encodings  R <<<= R
+r_mov_b_rmov_i_u_l4            partial  2/3 slots,     6 encodings  R = b[++R=-#i] (u)
+r11_r10_gtge_i                 SOLVED   3/3 slots,     6 encodings  r11_r10 >>= #i
+r_mov_clz_r                    SOLVED   2/2 slots,     6 encodings  R = clz(R)
+r1_r0_ltle_i                   SOLVED   3/3 slots,     6 encodings  r1_r0 <<= #i
+if_r_ne_i_goto_i_10            partial  1/3 slots,     6 encodings  if (R != -#i) goto -#i
+ifs_r_ge_i_goto_i_6            partial  1/3 slots,     6 encodings  ifs (R >= #i) goto -#i
+r_mov_r_l_r_l_r_h_r_h_rnd_savg SOLVED   5/5 slots,     6 encodings  R = R.l,R.l +|+ R.h,R.h (rnd,savg) #
+r_lslle_r_l2                   SOLVED   2/2 slots,     6 encodings  R <<<= R #
+r_mov_umin_r_r                 partial  2/3 slots,     5 encodings  R = umin(R, R) #
+if_r_eq_i_l4                   partial  1/3 slots,     5 encodings  if (R == -#i) {
+r7_r6_gtge_i                   SOLVED   3/3 slots,     5 encodings  r7_r6 >>= #i
+r9_r8_mov_r_r_u                SOLVED   4/4 slots,     5 encodings  r9_r8 = R * R (u)
+r7_r6_mov_d_sp_i               SOLVED   3/3 slots,     5 encodings  r7_r6 = d[sp+#i]
+r5_r4_ltle_i                   SOLVED   3/3 slots,     5 encodings  r5_r4 <<= #i
+r_mov_h_sp_u                   SOLVED   1/1 slots,     5 encodings  R = h[sp] (u)
+h_r_add_i_mov_r_l4             partial  1/3 slots,     5 encodings  h[R++=#i] = R
+r_mov_h_rmov_i_u_l4            partial  1/3 slots,     5 encodings  R = h[++R=-#i] (u)
+ifs_r_ge_i_l4                  partial  1/3 slots,     5 encodings  ifs (R >= -#i) {
+b_r_i_mov_r_3                  partial  2/3 slots,     5 encodings  b[R+-#i] = R
+r13_r12_gtge_i                 SOLVED   3/3 slots,     5 encodings  r13_r12 >>= #i
+r9_r8_gtge_i                   SOLVED   3/3 slots,     5 encodings  r9_r8 >>= #i
+d_sp_i_mov_r5_r4               SOLVED   3/3 slots,     5 encodings  d[sp+#i] = r5_r4
+ifs_r_lt_i_goto_i_7            partial  1/3 slots,     5 encodings  ifs (R < -#i) goto -#i
+r_mov_r_l_r_l_i_ssat           UNSOLVED 0/4 slots,     5 encodings  R = R.l,R.l +|+ #i (ssat) #
+r_mov_r_h_r_h_i_ssat_l4        partial  3/4 slots,     5 encodings  R = R.h,R.h -|- #i (ssat) #
+r1_r0_mov_mts0_r_r             SOLVED   5/5 slots,     5 encodings  r1_r0 = mts0(R, R) #
+ifs_r_gt_i_goto_i_7            partial  1/3 slots,     5 encodings  ifs (R > #i) goto -#i
+r_i_add_i_4                    partial  1/3 slots,     5 encodings  [R+-#i] += -#i
+r_mov_h_r_i_u_3                partial  1/3 slots,     5 encodings  R = h[R+-#i] (u)
+r_i_add_h_l4                   partial  2/3 slots,     5 encodings  [R+#i] += #h
+r_mov_sp                       SOLVED   1/1 slots,     4 encodings  R = sp
+r_mov_smin_r_r                 SOLVED   3/3 slots,     4 encodings  R = smin(R, R) #
+r_mov_icfg                     SOLVED   1/1 slots,     4 encodings  R = icfg
+r_i_gtge_i                     partial  1/3 slots,     4 encodings  [R+#i] >>= #i
+r_mov_b_sp_u                   SOLVED   1/1 slots,     4 encodings  R = b[sp] (u)
+ifs_r_le_r_goto_i_l6           partial  2/3 slots,     4 encodings  ifs (R <= R) goto -#i
+ifs_r_gt_r_goto_i_l6           partial  2/3 slots,     4 encodings  ifs (R > R) goto -#i
+b_rmov_i_mov_r_l4              partial  2/3 slots,     4 encodings  b[++R=-#i] = R
+r1_r0_mov_d_r_i_l4             partial  3/4 slots,     4 encodings  r1_r0 = d[R+-#i]
+b_r_addr_mov_r_l4              SOLVED   3/3 slots,     4 encodings  b[R++=R] = R
+d_rmov_i_mov_r1_r0             partial  3/4 slots,     4 encodings  d[++R=#i] = r1_r0
+d_rmov_i_mov_r3_r2             partial  3/4 slots,     4 encodings  d[++R=#i] = r3_r2
+r1_r0_mov_r_r_s                SOLVED   4/4 slots,     4 encodings  r1_r0 = R * R (s)
+r_i_xor_r                      SOLVED   3/3 slots,     4 encodings  [R+#i] ^= R
+ifs_r_ge_i_goto_i_l6           partial  1/3 slots,     4 encodings  ifs (R >= #i) goto #i
+r9_r8_ltle_r                   SOLVED   3/3 slots,     4 encodings  r9_r8 <<= R
+r11_r10_mov_r_r_u              partial  3/4 slots,     4 encodings  r11_r10 = R * R (u)
+r_h_mov_i                      partial  1/2 slots,     4 encodings  R.h = #i #
+r_l_mov_r_l_i                  partial  1/3 slots,     4 encodings  R.l = R.l + #i #
+r_mov_npc_i                    partial  1/2 slots,     4 encodings  R = [npc + -#i]
+r15_r14_mov_r_r_r_r_ssat_l4    partial  2/6 slots,     4 encodings  r15_r14 = R,R -|- R,R (ssat) #
+ifs_r_ge_i_goto_i_5            UNSOLVED 0/3 slots,     4 encodings  ifs (R >= -#i) goto #i
+r1_r0_mov_r_l_r_l_i_ssat       SOLVED   5/5 slots,     4 encodings  r1_r0 = R.l,R.l *|* -#i (ssat) #
+r_mov_r_h_r_h_r_h_r_h_ssat_x2  SOLVED   6/6 slots,     4 encodings  R = R.h,R.h -|- R.h,R.h (ssat,x2) #
+r5_r4_mov_r_r_s                SOLVED   4/4 slots,     4 encodings  r5_r4 = R * R (s)
+usp_mov_i                      UNSOLVED 0/1 slots,     3 encodings  usp = #i
+r_mov_smax_r_r                 partial  2/3 slots,     3 encodings  R = smax(R, R) #
+r1_r0_mov_r_r_u                SOLVED   4/4 slots,     3 encodings  r1_r0 = R * R (u)
+r_mov_rets                     SOLVED   1/1 slots,     3 encodings  R = rets
+r11_r10_mov_d_sp_i             SOLVED   3/3 slots,     3 encodings  r11_r10 = d[sp+#i]
+r13_r12_ltle_i                 SOLVED   3/3 slots,     3 encodings  r13_r12 <<= #i
+r15_r14_mov_d_sp_i             SOLVED   3/3 slots,     3 encodings  r15_r14 = d[sp+#i]
+ifs_r_ge_r_goto_i_l6           UNSOLVED 0/3 slots,     3 encodings  ifs (R >= R) goto -#i
+r_mov_r_i_lsl_r_4              partial  3/4 slots,     3 encodings  R = R ^ (#i << R)
+ifs_r_gt_i_l4                  UNSOLVED 0/3 slots,     3 encodings  ifs (R > -#i) {
+sp_add_i_l4                    UNSOLVED 0/1 slots,     3 encodings  sp += -#i
+sp_add_i_3                     UNSOLVED 0/1 slots,     3 encodings  sp += #i
+r_mov_h_rmov_i_s               partial  2/3 slots,     3 encodings  R = h[++R=#i] (s)
+r_mov_h_r_add_i_s              partial  1/3 slots,     3 encodings  R = h[R++=#i] (s)
+sp_mov_rets_r_4                UNSOLVED 0/1 slots,     3 encodings  [--sp] = {rets, R*4}
+pc_r_4_mov_sp                  UNSOLVED 0/1 slots,     3 encodings  {pc, R*4} = [sp++]
+d_sp_i_mov_r11_r10             SOLVED   3/3 slots,     3 encodings  d[sp+#i] = r11_r10
+if_r_lt_r_goto_i_l6            partial  1/3 slots,     3 encodings  if (R < R) goto -#i
+ifs_r_le_i_goto_i_4            partial  2/3 slots,     3 encodings  ifs (R <= -#i) goto #i
+r_mov_r_lsr_r_l4               partial  1/3 slots,     3 encodings  R = R >> R #
+r5_r4_ltle_r                   SOLVED   3/3 slots,     3 encodings  r5_r4 <<= R
+if_r_lt_r_goto_i_3             partial  2/3 slots,     3 encodings  if (R < R) goto #i
+d_r_i_mov_r15_r14              SOLVED   4/4 slots,     3 encodings  d[R+#i] = r15_r14
+r_mov_r_i_lsl_r_5              partial  3/4 slots,     3 encodings  R = R & (#i << R) #
+sp_mov_r_3                     SOLVED   1/1 slots,     3 encodings  sp = R
+r7_r6_mov_d_r_i_l4             partial  2/4 slots,     3 encodings  r7_r6 = d[R+#i]
+r1_r0_mov_r_r_r_r_ssat         partial  4/6 slots,     3 encodings  r1_r0 = R,R +|+ R,R (ssat) #
+r_6_mov_r                      partial  1/2 slots,     3 encodings  {R*6} = [R++]
+r1_r0_mov_unpackb_r_u          SOLVED   3/3 slots,     3 encodings  r1_r0 = unpackb(R) (u) #
+r_mov_align8_r_r               partial  3/4 slots,     3 encodings  R = align8(R, R) #
+r_l_mov_r_l_r_l_savg           partial  2/3 slots,     3 encodings  R.l = R.l + R.l (savg) #
+r_mov_r_gtlt_r_v               SOLVED   3/3 slots,     3 encodings  R = R >< R (v) #
+r15_r14_add_r_add_i_r_add_i_s_l4 partial  4/6 slots,     3 encodings  r15_r14 += [R ++= -#i]*[R ++= -#i] (s)
+retx_mov_i                     UNSOLVED 0/1 slots,     3 encodings  retx = #i
+r_mov_align16_r_r              partial  2/4 slots,     3 encodings  R = align16(R, R)
+r_mov_r_l_r_l_i_usat_l4        partial  1/4 slots,     3 encodings  R = R.l,R.l +|- #i (usat) #
+r_7_mov_r                      partial  1/2 slots,     3 encodings  {R*7} = [-R]
+r_i_lsrge_i                    SOLVED   3/3 slots,     3 encodings  [R+#i] >>>= #i
+r13_r12_mov_r_r_s              partial  3/4 slots,     3 encodings  r13_r12 = R * R (s)
+r_mov_r_h_r_h_i_usat_5         SOLVED   4/4 slots,     3 encodings  R = R.h,R.h +|- #i (usat)
+sp_mov_r_1                     UNSOLVED 0/1 slots,     2 encodings  [--sp] = {R*1}
+r_1_mov_sp                     UNSOLVED 0/1 slots,     2 encodings  {R*1} = [sp++]
+sp_mov_rets_r_1                SOLVED   1/1 slots,     2 encodings  [--sp] = {rets, R*1}
+r_mov_b_rmov_i_s               partial  2/3 slots,     2 encodings  R = b[++R=#i] (s)
+r5_r4_add_r_r_u                SOLVED   4/4 slots,     2 encodings  r5_r4 += R * R (u)
+r9_r8_mov_d_sp_i               SOLVED   3/3 slots,     2 encodings  r9_r8 = d[sp+#i]
+r_mov_r_r_c_3                  UNSOLVED 0/3 slots,     2 encodings  R = R + R + c #
+r3_r2_gtge_r                   partial  2/3 slots,     2 encodings  r3_r2 >>= R
+r3_r2_lsrge_i                  SOLVED   3/3 slots,     2 encodings  r3_r2 >>>= #i
+sp_mov_r_1_l2                  SOLVED   1/1 slots,     2 encodings  [--sp] = {R*1}
+d_r_i_mov_r9_r8                SOLVED   4/4 slots,     2 encodings  d[R+#i] = r9_r8
+h_r_addr_mov_r_l4              partial  2/3 slots,     2 encodings  h[R++=R] = R
+ifs_r_gt_i_goto_i_4            partial  2/3 slots,     2 encodings  ifs (R > -#i) goto #i
+cc_mov_i                       SOLVED   1/1 slots,     2 encodings  cc = #i
+r_mov_sat16_r_s                SOLVED   3/3 slots,     2 encodings  R = sat16(R) (s)
+if_r_ge_r_goto_i_3             partial  2/3 slots,     2 encodings  if (R >= R) goto -#i
+r1_r0_ltle_r                   SOLVED   3/3 slots,     2 encodings  r1_r0 <<= R
+r13_r12_mov_r_r_u              partial  3/4 slots,     2 encodings  r13_r12 = R * R (u)
+r3_r2_gtge_i_l4                SOLVED   3/3 slots,     2 encodings  r3_r2 >>= #i #
+r_mov_r_ltgt_i_l4              partial  1/3 slots,     2 encodings  R = R <> #i #
+r1_r0_mov_r3_r2_r_u            SOLVED   5/5 slots,     2 encodings  r1_r0 = r3_r2 / R (u)
+h_r_add_i_mov_r_3              partial  2/3 slots,     2 encodings  h[R++=-#i] = R
+r_mov_rmov_i_l4                partial  1/3 slots,     2 encodings  R = [++R=-#i]
+r9_r8_mov_r_r_s                partial  3/4 slots,     2 encodings  r9_r8 = R * R (s)
+r7_r6_add_r_r_s                partial  3/4 slots,     2 encodings  r7_r6 += R * R (s) #
+r7_r6_add_r_r_s_l4             partial  3/4 slots,     2 encodings  r7_r6 += R * R (s)
+r7_r6_ltle_i                   SOLVED   3/3 slots,     2 encodings  r7_r6 <<= #i
+r7_r6_ltle_r                   SOLVED   3/3 slots,     2 encodings  r7_r6 <<= R
+r9_r8_gtge_r                   SOLVED   3/3 slots,     2 encodings  r9_r8 >>= R
+r3_r2_ltle_r                   SOLVED   3/3 slots,     2 encodings  r3_r2 <<= R
+r15_r14_gtge_i                 SOLVED   3/3 slots,     2 encodings  r15_r14 >>= #i
+r1_r0_add_r_r_u                partial  3/4 slots,     2 encodings  r1_r0 += R * R (u)
+r11_r10_ltle_i                 SOLVED   3/3 slots,     2 encodings  r11_r10 <<= #i
+uspn_mov_i                     UNSOLVED 0/1 slots,     2 encodings  uspn = #i
+sspn_mov_i                     UNSOLVED 0/1 slots,     2 encodings  sspn = #i
+ifs_r_gt_i_goto_i_6            partial  1/3 slots,     2 encodings  ifs (R > -#i) goto -#i
+r_h_mov_r_h_r_h                partial  2/3 slots,     2 encodings  R.h = R.h + R.h #
+r_l_sub_r_l_r_l_usat           SOLVED   3/3 slots,     2 encodings  R.l -= R.l * R.l (usat) #
+r_mov_r_l_r_l_i_ssat_l4        SOLVED   4/4 slots,     2 encodings  R = R.l,R.l +|- #i (ssat) #
+r_3_mov_r                      partial  1/2 slots,     2 encodings  {R*3} = [R+]
+r1_r0_mov_h_r_add_i_r_add_i_u  SOLVED   6/6 slots,     2 encodings  r1_r0 = h[R ++= #i]*[R ++= -#i] (u)
+r1_r0_mov_r_h_r_l_i_ssat       SOLVED   5/5 slots,     2 encodings  r1_r0 = R.h,R.l *|* -#i (ssat) #
+r_h_mov_i_l4                   partial  1/2 slots,     2 encodings  R.h = #i
+r_mov_r_l_r_l_i_ssat_4         partial  2/4 slots,     2 encodings  R = R.l,R.l -|+ #i (ssat) #
+r_h_mov_r_h_r_h_savg           partial  1/3 slots,     2 encodings  R.h = R.h - R.h (savg) #
+r_sub_r_h_r_h_ssat_x2          partial  3/4 slots,     2 encodings  R -= R.h * R.h (ssat,x2) #
+r_mov_umin_r_r_v               SOLVED   3/3 slots,     2 encodings  R = umin(R, R) (v) #
+r_mov_smin_r_r_v               partial  2/3 slots,     2 encodings  R = smin(R, R) (v) #
+r_mov_r_r_ssat_l4              partial  2/3 slots,     2 encodings  R = R + R (ssat) #
+r15_r14_sub_r_h_r_h_i_ssat     SOLVED   5/5 slots,     2 encodings  r15_r14 -= R.h,R.h *|* -#i (ssat) #
+r_h_mov_r_h_r_h_rnd_savg       partial  2/3 slots,     2 encodings  R.h = R.h - R.h (rnd,savg) #
+r_mov_r_h_r_h_r_h_r_h_rnd_savg SOLVED   5/5 slots,     2 encodings  R = R.h,R.h -|- R.h,R.h (rnd,savg) #
+r_i_add_h                      partial  2/3 slots,     2 encodings  [R+-#i] += #h
+r_l_sub_r_l_r_l_ssat_x2        SOLVED   4/4 slots,     2 encodings  R.l -= R.l * R.l (ssat,x2) #
+cnum_mov_i                     UNSOLVED 0/1 slots,     2 encodings  cnum = #i
+r_5_mov_r                      partial  1/2 slots,     2 encodings  {R*5} = [R+]
+r_l_mov_r_l_i_l4               partial  2/3 slots,     2 encodings  R.l = R.l - #i
+icfgn_mov_i                    UNSOLVED 0/1 slots,     2 encodings  icfgn = #i
+r1_r0_mov_r_r_r_r_usat         partial  4/6 slots,     2 encodings  r1_r0 = R,R +|+ R,R (usat) #
+if_r_r                         partial  1/3 slots,     2 encodings  if (R ?? R) {
+r3_r2_add_r_h_r_h_i_usat       partial  4/5 slots,     2 encodings  r3_r2 += R.h,R.h *|* #i (usat) #
+if_r_eq_r_goto_i_3             partial  1/3 slots,     2 encodings  if (R == R) goto -#i
+r_i_mov_r_3                    partial  1/3 slots,     2 encodings  [R+-#i] = R
+r_1_mov_sp_l2                  SOLVED   1/1 slots,     2 encodings  {R*1} = [sp++]
+r_2_mov_r_l4                   partial  1/2 slots,     2 encodings  {R*2} = [R++]
+r1_r0_add_r_add_i_r_add_i_u    SOLVED   6/6 slots,     2 encodings  r1_r0 += [R ++= #i]*[R ++= -#i] (u)
+r_l_mov_r_h_r_h_l4             SOLVED   3/3 slots,     2 encodings  R.l = R.h - R.h
+r_mov_rete                     SOLVED   1/1 slots,     2 encodings  R = rete
+rts                            SOLVED   0/0 slots,     1 encodings  rts
+rti                            SOLVED   0/0 slots,     1 encodings  rti
+trigger                        SOLVED   0/0 slots,     1 encodings  trigger
+sp_mov_sp_ssp_usp_icfg_psr_rets_retx_rete_reti UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sp, ssp, usp, icfg, psr, rets, retx, rete, reti}
+sp_mov_rets                    SOLVED   0/0 slots,     1 encodings  [--sp] = rets
+pc_mov_sp                      SOLVED   0/0 slots,     1 encodings  pc = [sp++]
+r3_r2_mov_i                    SOLVED   3/3 slots,     1 encodings  r3_r2 = #i
+sp_mov_reti                    UNSOLVED 0/1 slots,     1 encodings  [--sp] = {reti}
+reti_mov_sp                    UNSOLVED 0/1 slots,     1 encodings  {reti} = [sp++]
+csync                          SOLVED   0/0 slots,     1 encodings  csync
+cli                            SOLVED   0/0 slots,     1 encodings  cli
+lockset                        SOLVED   0/0 slots,     1 encodings  lockset
+lockclr                        SOLVED   0/0 slots,     1 encodings  lockclr
+sti                            SOLVED   0/0 slots,     1 encodings  sti
+pc_r_1_mov_sp                  UNSOLVED 0/1 slots,     1 encodings  {pc, R*1} = [sp++]
+icfg_mov_r                     SOLVED   1/1 slots,     1 encodings  icfg = R
+r1_r0_mov_r5_r4                SOLVED   4/4 slots,     1 encodings  r1_r0 = r5_r4
+nop                            SOLVED   0/0 slots,     1 encodings  nop
+r3_r2_mov_r1_r0_r_u            SOLVED   5/5 slots,     1 encodings  r3_r2 = r1_r0 / R (u)
+r1_r0_mov_r7_r6                SOLVED   4/4 slots,     1 encodings  r1_r0 = r7_r6
+r1_r0_mov_i                    SOLVED   3/3 slots,     1 encodings  r1_r0 = #i
+r7_r6_mov_r3_r2_r_u            SOLVED   5/5 slots,     1 encodings  r7_r6 = r3_r2 / R (u)
+r3_r2_mov_r13_r12              SOLVED   4/4 slots,     1 encodings  r3_r2 = r13_r12
+r5_r4_mov_r13_r12              SOLVED   4/4 slots,     1 encodings  r5_r4 = r13_r12
+r7_r6_mov_r13_r12              SOLVED   4/4 slots,     1 encodings  r7_r6 = r13_r12
+r5_r4_mov_r3_r2                SOLVED   4/4 slots,     1 encodings  r5_r4 = r3_r2
+syscall                        SOLVED   0/0 slots,     1 encodings  syscall
+rthw                           SOLVED   0/0 slots,     1 encodings  rthw
+r1_r0_mov_r15_r14              SOLVED   4/4 slots,     1 encodings  r1_r0 = r15_r14
+rets_mov_sp                    UNSOLVED 0/1 slots,     1 encodings  {rets} = [sp++]
+d_sp_mov_r1_r0                 SOLVED   2/2 slots,     1 encodings  d[sp] = r1_r0
+ifeq_goto_i                    SOLVED   1/1 slots,     1 encodings  ifeq goto -#i
+r5_r4_mov_r1_r0                SOLVED   4/4 slots,     1 encodings  r5_r4 = r1_r0
+sp_mov_psr_rets_reti           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rets, reti}
+psr_rets_reti_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {psr, rets, reti} = [sp++]
+r_mov_h_sp_s                   SOLVED   1/1 slots,     1 encodings  R = h[sp] (s)
+r9_r8_mov_d_r_i                SOLVED   4/4 slots,     1 encodings  r9_r8 = d[R+#i]
+r9_r8_mov_d_rmovr              SOLVED   4/4 slots,     1 encodings  r9_r8 = d[++R=R]
+d_r_i_mov_r9_r8_l4             SOLVED   4/4 slots,     1 encodings  d[R+-#i] = r9_r8
+r7_r6_mov_d_r_i                SOLVED   4/4 slots,     1 encodings  r7_r6 = d[R+-#i]
+r7_r6_mov_r3_r2                SOLVED   4/4 slots,     1 encodings  r7_r6 = r3_r2 #
+r3_r2_mov_r7_r6                SOLVED   4/4 slots,     1 encodings  r3_r2 = r7_r6 #
+r9_r8_mov_i                    SOLVED   3/3 slots,     1 encodings  r9_r8 = #i
+r13_r12_mov_i                  SOLVED   3/3 slots,     1 encodings  r13_r12 = #i
+r7_r6_mov_r1_r0                SOLVED   4/4 slots,     1 encodings  r7_r6 = r1_r0
+sevl                           SOLVED   0/0 slots,     1 encodings  sevl
+r9_r8_mov_r1_r0                SOLVED   4/4 slots,     1 encodings  r9_r8 = r1_r0
+r1_r0_mov_r9_r8                SOLVED   4/4 slots,     1 encodings  r1_r0 = r9_r8
+r5_r4_mov_i                    SOLVED   3/3 slots,     1 encodings  r5_r4 = #i
+r11_r10_mov_i                  SOLVED   3/3 slots,     1 encodings  r11_r10 = #i
+r7_r6_mov_i                    SOLVED   3/3 slots,     1 encodings  r7_r6 = #i
+r1_r0_mov_i_l2                 SOLVED   3/3 slots,     1 encodings  r1_r0 = #i #
+r7_r6_mov_r3_r2_l2             SOLVED   4/4 slots,     1 encodings  r7_r6 = r3_r2
+r1_r0_mov_d_sp                 SOLVED   2/2 slots,     1 encodings  r1_r0 = d[sp]
+r3_r2_mov_i_l2                 SOLVED   3/3 slots,     1 encodings  r3_r2 = #i #
+ifs_r_le_r_goto_i_3            SOLVED   3/3 slots,     1 encodings  ifs (R <= R) goto #i
+r13_r12_mov_d_r_i              SOLVED   4/4 slots,     1 encodings  r13_r12 = d[R+-#i]
+r7_r6_mov_r11_r10              SOLVED   4/4 slots,     1 encodings  r7_r6 = r11_r10
+r11_r10_mov_r7_r6_r_u          SOLVED   5/5 slots,     1 encodings  r11_r10 = r7_r6 / R (u)
+r15_r14_mov_r_r_u              SOLVED   4/4 slots,     1 encodings  r15_r14 = R * R (u)
+r7_r6_mov_r11_r10_l2           SOLVED   4/4 slots,     1 encodings  r7_r6 = r11_r10 #
+r1_r0_mov_r7_r6_l2             SOLVED   4/4 slots,     1 encodings  r1_r0 = r7_r6 #
+r11_r10_mov_r1_r0              SOLVED   4/4 slots,     1 encodings  r11_r10 = r1_r0
+r11_r10_mov_r9_r8              SOLVED   4/4 slots,     1 encodings  r11_r10 = r9_r8
+r1_r0_mov_r11_r10              SOLVED   4/4 slots,     1 encodings  r1_r0 = r11_r10
+r1_r0_mov_r9_r8_l2             SOLVED   4/4 slots,     1 encodings  r1_r0 = r9_r8 #
+r3_r2_mov_r5_r4                SOLVED   4/4 slots,     1 encodings  r3_r2 = r5_r4
+sevg                           SOLVED   0/0 slots,     1 encodings  sevg
+bkpt                           SOLVED   0/0 slots,     1 encodings  bkpt
+r_mov_r_h_r_h_i_ssat           SOLVED   4/4 slots,     1 encodings  R = R.h,R.h +|+ #i (ssat) #
+sp_mov_usp                     SOLVED   0/0 slots,     1 encodings  sp = usp
+r_mov_r_3_l4                   partial  1/2 slots,     1 encodings  [R+] = {R*3}
+psr_sr4_reti_mov_sp            UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, reti} = [sp++]
+r9_r8_mov_r3_r2                SOLVED   4/4 slots,     1 encodings  r9_r8 = r3_r2 #
+r13_r12_mov_r1_r0              SOLVED   4/4 slots,     1 encodings  r13_r12 = r1_r0
+r1_r0_mov_r13_r12              SOLVED   4/4 slots,     1 encodings  r1_r0 = r13_r12
+r9_r8_mov_r1_r0_r_u            SOLVED   5/5 slots,     1 encodings  r9_r8 = r1_r0 / R (u)
+r1_r0_mov_r13_r12_l2           SOLVED   4/4 slots,     1 encodings  r1_r0 = r13_r12 #
+r13_r12_mov_d_r_i_l4           SOLVED   4/4 slots,     1 encodings  r13_r12 = d[R+#i]
+r1_r0_lsrge_i                  SOLVED   3/3 slots,     1 encodings  r1_r0 >>>= #i
+r15_r14_mov_r9_r8_r_u          SOLVED   5/5 slots,     1 encodings  r15_r14 = r9_r8 / R (u)
+r9_r8_mov_r15_r14              SOLVED   4/4 slots,     1 encodings  r9_r8 = r15_r14
+r9_r8_mov_r13_r12              SOLVED   4/4 slots,     1 encodings  r9_r8 = r13_r12
+r13_r12_mov_r9_r8              SOLVED   4/4 slots,     1 encodings  r13_r12 = r9_r8
+wfe                            SOLVED   0/0 slots,     1 encodings  wfe
+rtss                           SOLVED   0/0 slots,     1 encodings  rtss
+r11_r10_mov_d_r_i              SOLVED   4/4 slots,     1 encodings  r11_r10 = d[R+-#i]
+rtx                            SOLVED   0/0 slots,     1 encodings  rtx
+d_sp_mov_r7_r6                 SOLVED   2/2 slots,     1 encodings  d[sp] = r7_r6
+r7_r6_mov_d_sp                 SOLVED   2/2 slots,     1 encodings  r7_r6 = d[sp]
+r5_r4_mov_r3_r2_l2             SOLVED   4/4 slots,     1 encodings  r5_r4 = r3_r2 #
+r7_r6_mov_i_l2                 SOLVED   3/3 slots,     1 encodings  r7_r6 = #i #
+r3_r2_mov_r1_r0                SOLVED   4/4 slots,     1 encodings  r3_r2 = r1_r0
+r1_r0_mov_r5_r4_l2             SOLVED   4/4 slots,     1 encodings  r1_r0 = r5_r4 #
+r1_r0_mov_r5_r4_r_u            SOLVED   5/5 slots,     1 encodings  r1_r0 = r5_r4 / R (u)
+r_mov_reti                     SOLVED   1/1 slots,     1 encodings  R = reti
+r_mov_usp                      SOLVED   1/1 slots,     1 encodings  R = usp
+r_mov_ssp                      SOLVED   1/1 slots,     1 encodings  R = ssp
+r7_r6_mov_r1_r0_r_u            SOLVED   5/5 slots,     1 encodings  r7_r6 = r1_r0 / R (u)
+d_sp_mov_r3_r2                 SOLVED   2/2 slots,     1 encodings  d[sp] = r3_r2
+r5_r4_mov_r1_r0_l2             SOLVED   4/4 slots,     1 encodings  r5_r4 = r1_r0 #
+r3_r2_mov_r9_r8                SOLVED   4/4 slots,     1 encodings  r3_r2 = r9_r8
+sr4_rets_retx_rete_reti_mov_sp UNSOLVED 0/1 slots,     1 encodings  {sr4, rets, retx, rete, reti} = [sp++]
+r_mov_h_rmovr_s                SOLVED   3/3 slots,     1 encodings  R = h[++R=R] (s)
+r_mov_h_r_r_s                  SOLVED   3/3 slots,     1 encodings  R = h[R+R] (s)
+r_add_i_mov_r_3                SOLVED   3/3 slots,     1 encodings  [R++=-#i] = R
+r_mov_h_r_i_s_l4               SOLVED   3/3 slots,     1 encodings  R = h[R+-#i] (s)
+r_mov_h_r_addr_u_l4            SOLVED   3/3 slots,     1 encodings  R = h[R++=R] (u)
+usp_mov_sp                     SOLVED   0/0 slots,     1 encodings  usp = sp
+sp_mov_ssp                     SOLVED   0/0 slots,     1 encodings  sp = ssp
+sp_mov_rets_l2                 UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets}
+pc_mov_sp_l4                   UNSOLVED 0/1 slots,     1 encodings  {pc} = [sp++]
+r11_r10_mov_r_r_s              SOLVED   4/4 slots,     1 encodings  r11_r10 = R * R (s) #
+r11_r10_add_r_r_s              SOLVED   4/4 slots,     1 encodings  r11_r10 += R * R (s) #
+r_mov_r_r_ssat                 SOLVED   3/3 slots,     1 encodings  R = R + R (ssat)
+r11_r10_mov_r_r_s_l4           SOLVED   4/4 slots,     1 encodings  r11_r10 = R * R (s)
+r7_r6_mov_r_r_s                SOLVED   4/4 slots,     1 encodings  r7_r6 = R * R (s) #
+rmov_i_mov_r_l4                SOLVED   3/3 slots,     1 encodings  [++R=-#i] = R
+rets_r_1_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {rets, R*1} = [sp++]
+sp_mov_rets_r_3                UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets, R*3}
+pc_r_3_mov_sp                  UNSOLVED 0/1 slots,     1 encodings  {pc, R*3} = [sp++]
+r1_r0_mov_r3_r2                SOLVED   4/4 slots,     1 encodings  r1_r0 = r3_r2
+r9_r8_mov_r11_r10              SOLVED   4/4 slots,     1 encodings  r9_r8 = r11_r10
+r3_r2_mov_r11_r10              SOLVED   4/4 slots,     1 encodings  r3_r2 = r11_r10
+r5_r4_mov_d_sp                 SOLVED   2/2 slots,     1 encodings  r5_r4 = d[sp]
+r13_r12_gtge_r                 SOLVED   3/3 slots,     1 encodings  r13_r12 >>= R
+r13_r12_mov_d_sp               SOLVED   2/2 slots,     1 encodings  r13_r12 = d[sp]
+r7_r6_mov_r9_r8                SOLVED   4/4 slots,     1 encodings  r7_r6 = r9_r8
+idle                           SOLVED   0/0 slots,     1 encodings  idle
+hbkpt                          SOLVED   0/0 slots,     1 encodings  hbkpt
+d_sp_mov_r11_r10               SOLVED   2/2 slots,     1 encodings  d[sp] = r11_r10
+r15_r14_mov_r9_r8              SOLVED   4/4 slots,     1 encodings  r15_r14 = r9_r8
+r11_r10_add_r_r_u              SOLVED   4/4 slots,     1 encodings  r11_r10 += R * R (u)
+r15_r14_add_r_r_u              SOLVED   4/4 slots,     1 encodings  r15_r14 += R * R (u)
+r11_r10_mov_d_sp               SOLVED   2/2 slots,     1 encodings  r11_r10 = d[sp]
+r11_r10_mov_r3_r2              SOLVED   4/4 slots,     1 encodings  r11_r10 = r3_r2
+r5_r4_gtge_r                   SOLVED   3/3 slots,     1 encodings  r5_r4 >>= R
+d_sp_mov_r9_r8                 SOLVED   2/2 slots,     1 encodings  d[sp] = r9_r8
+r9_r8_ltle_i                   SOLVED   3/3 slots,     1 encodings  r9_r8 <<= #i
+r9_r8_mov_d_sp                 SOLVED   2/2 slots,     1 encodings  r9_r8 = d[sp]
+r9_r8_mov_r3_r2_l2             SOLVED   4/4 slots,     1 encodings  r9_r8 = r3_r2
+r11_r10_mov_r7_r6              SOLVED   4/4 slots,     1 encodings  r11_r10 = r7_r6
+r11_r10_ltle_r                 SOLVED   3/3 slots,     1 encodings  r11_r10 <<= R
+r7_r6_gtge_r                   SOLVED   3/3 slots,     1 encodings  r7_r6 >>= R
+r7_r6_mov_r_h_r_l_i_ssat       SOLVED   5/5 slots,     1 encodings  r7_r6 = R.h,R.l *|* #i (ssat)
+r15_r14_add_r_add_i_r_add_i_u  SOLVED   6/6 slots,     1 encodings  r15_r14 += [R ++= -#i]*[R ++= -#i] (u)
+r15_r14_sub_h_r_add_i_r_add_i_u SOLVED   6/6 slots,     1 encodings  r15_r14 -= h[R ++= -#i]*[R ++= -#i] (u)
+rtns                           SOLVED   0/0 slots,     1 encodings  rtns
+r_mov_rev8_r_l4                SOLVED   3/3 slots,     1 encodings  R = rev8(R) #
+r_add_r_brev                   SOLVED   2/2 slots,     1 encodings  R += R (brev) #
+cc_mov_i_l2                    SOLVED   1/1 slots,     1 encodings  cc = #i #
+r15_r14_mov_r_r_r_r_ssat       SOLVED   6/6 slots,     1 encodings  r15_r14 = R,R +|+ R,R (ssat) #
+r13_r12_mov_r11_r10            SOLVED   4/4 slots,     1 encodings  r13_r12 = r11_r10 #
+sr4_mov_sp                     UNSOLVED 0/1 slots,     1 encodings  {sr4} = [sp++]
+b_r_add_i_mov_r_l4             SOLVED   3/3 slots,     1 encodings  b[R++=-#i] = R
+r_mov_r_6                      partial  1/2 slots,     1 encodings  [R+] = {R*6}
+sp_mov_psr_retx_rete_reti      UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, retx, rete, reti}
+r15_r14_add_r_h_r_l_i_ssat     SOLVED   5/5 slots,     1 encodings  r15_r14 += R.h,R.l *|* -#i (ssat) #
+ifs_r_le_i_goto_i_6            SOLVED   3/3 slots,     1 encodings  ifs (R <= -#i) goto -#i
+r_mov_r_l_r_h_r_h_r_h_ssat     SOLVED   5/5 slots,     1 encodings  R = R.l,R.h +|+ R.h,R.h (ssat) #
+r_l_mov_r_l_r_l_ssat           SOLVED   3/3 slots,     1 encodings  R.l = R.l + R.l (ssat) #
+r_mov_r_l_r_l_r_h_r_h_usat_x2  SOLVED   6/6 slots,     1 encodings  R = R.l,R.l -|+ R.h,R.h (usat,x2) #
+r_mov_r_h_r_h_r_h_r_h_savg     SOLVED   5/5 slots,     1 encodings  R = R.h,R.h -|- R.h,R.h (savg) #
+rte                            SOLVED   0/0 slots,     1 encodings  rte
+r1_r0_mov_mts1_r_r             SOLVED   5/5 slots,     1 encodings  r1_r0 = mts1(R, R) #
+r_l_mov_r_h_r_l                SOLVED   3/3 slots,     1 encodings  R.l = R.h - R.l #
+r_mov_r_l_r_l_r_h_r_h_ssat_x2  SOLVED   6/6 slots,     1 encodings  R = R.l,R.l *|* R.h,R.h (ssat,x2) #
+r_mov_r_l_r_l_i_usat           SOLVED   4/4 slots,     1 encodings  R = R.l,R.l +|+ #i (usat) #
+r_l_mov_r_h_r_l_l4             SOLVED   3/3 slots,     1 encodings  R.l = R.h + R.l #
+r_mov_r_h_i_ssat               SOLVED   3/3 slots,     1 encodings  R = R.h * -#i (ssat)
+r7_r6_sub_r_l_r_h_i_ssat       SOLVED   5/5 slots,     1 encodings  r7_r6 -= R.l,R.h *|* -#i (ssat)
+rete_reti_mov_sp               UNSOLVED 0/1 slots,     1 encodings  {rete, reti} = [sp++]
+sr4_rets_retx_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {sr4, rets, retx} = [sp++]
+sp_mov_sr4_rets_rete_reti      UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, rets, rete, reti}
+sp_mov_psr                     UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr}
+sp_mov_psr_rets_retx_rete_reti UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rets, retx, rete, reti}
+sp_mov_psr_rets_rete_reti      UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rets, rete, reti}
+r1_r0_mov_r1_r0                SOLVED   4/4 slots,     1 encodings  r1_r0 = r1_r0
+r_mov_r_r_18                   SOLVED   3/3 slots,     1 encodings  R = R ^ R #
+r_l_mov_r_l_i_usat             SOLVED   3/3 slots,     1 encodings  R.l = R.l + #i (usat) #
+sp_mov                         UNSOLVED 0/1 slots,     1 encodings  [--sp] = {}
+r_h_mov_r_h_r_l                SOLVED   3/3 slots,     1 encodings  R.h = R.h + R.l #
+r_4_mov_r                      partial  1/2 slots,     1 encodings  {R*4} = [R+]
+psr_mov_sp                     UNSOLVED 0/1 slots,     1 encodings  {psr} = [sp++]
+r_mov_packb_r15_r14_usat       SOLVED   3/3 slots,     1 encodings  R = packb(r15_r14) (usat) #
+r_mov_packb_r1_r0_usat         SOLVED   3/3 slots,     1 encodings  R = packb(r1_r0) (usat) #
+psr_mov_i                      SOLVED   1/1 slots,     1 encodings  psr = #i
+r11_r10_sub_r_add_i_r_add_i_s  SOLVED   6/6 slots,     1 encodings  r11_r10 -= [R ++= -#i]*[R ++= #i] (s)
+r_mov_packb_r11_r10_usat       SOLVED   3/3 slots,     1 encodings  R = packb(r11_r10) (usat) #
+r_h_mov_r_h_i                  SOLVED   3/3 slots,     1 encodings  R.h = R.h + #i #
+r_mov_r_h_r_l_i_usat           SOLVED   4/4 slots,     1 encodings  R = R.h,R.l +|- #i (usat) #
+r5_r4_mov_r_r_r_r_usat         SOLVED   6/6 slots,     1 encodings  r5_r4 = R,R +|+ R,R (usat) #
+r_mov_pack_r_l_r_l             SOLVED   3/3 slots,     1 encodings  R = pack(R.l, R.l) #
+r_mov_r_l_r_l_i_ssat_3         SOLVED   4/4 slots,     1 encodings  R = R.l,R.l -|- #i (ssat) #
+r3_r2_add_r_r_u                SOLVED   4/4 slots,     1 encodings  r3_r2 += R *|*|*|* R (u) #
+mov_sp                         UNSOLVED 0/1 slots,     1 encodings  {} = [sp++]
+sr4_rets_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {sr4, rets} = [sp++]
+r_l_mov_r_l_r_h_rnd_uavg       SOLVED   3/3 slots,     1 encodings  R.l = R.l - R.h (rnd,uavg) #
+r15_r14_mov_mts0_r_r           SOLVED   5/5 slots,     1 encodings  r15_r14 = mts0(R, R) #
+r_mov_r_l_i_usat               SOLVED   3/3 slots,     1 encodings  R = R.l * #i (usat) #
+r_l_sub_r_l_r_l_usat_x2        SOLVED   4/4 slots,     1 encodings  R.l -= R.l * R.l (usat,x2) #
+sp_mov_psr_sr4_rete_reti       UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rete, reti}
+r_h_mov_r_h_r_h_ssat_x2        SOLVED   4/4 slots,     1 encodings  R.h = R.h + R.h (ssat,x2) #
+r3_r2_mov_unpackb_r_u          SOLVED   3/3 slots,     1 encodings  r3_r2 = unpackb(R) (u) #
+r3_r2_mov_r_l_r_l_i_usat       SOLVED   5/5 slots,     1 encodings  r3_r2 = R.l,R.l *|* #i (usat) #
+r_mov_r_gtlt_r_v_l4            SOLVED   3/3 slots,     1 encodings  R = R >< R (v)
+r_l_mov_r_l_r_l_rnd_uavg       SOLVED   3/3 slots,     1 encodings  R.l = R.l + R.l (rnd,uavg) #
+r_mov_r_l_r_h_r_h_r_h_ssat_x2  SOLVED   6/6 slots,     1 encodings  R = R.l,R.h -|- R.h,R.h (ssat,x2) #
+r13_r12_sub_r_h_r_h_i_ssat     SOLVED   5/5 slots,     1 encodings  r13_r12 -= R.h,R.h *|* -#i (ssat) #
+r9_r8_mov_r_r_r_r_ssat         SOLVED   6/6 slots,     1 encodings  r9_r8 = R,R -|- R,R (ssat) #
+sp_mov_psr_sr4_rete            UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rete}
+r_l_mov_r_l_r_l_usat_x2        SOLVED   4/4 slots,     1 encodings  R.l = R.l + R.l (usat,x2) #
+sp_mov_psr_retx_reti           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, retx, reti}
+sp_mov_psr_sr4                 UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4}
+r15_r14_mov_r3_r2              SOLVED   4/4 slots,     1 encodings  r15_r14 = r3_r2
+r7_r6_mov_r15_r14              SOLVED   4/4 slots,     1 encodings  r7_r6 = r15_r14
+r15_r14_mov_r_r_r_r_usat       SOLVED   6/6 slots,     1 encodings  r15_r14 = R,R -|+ R,R (usat) #
+r15_r14_sub_r_l_r_h_i_ssat     SOLVED   5/5 slots,     1 encodings  r15_r14 -= R.l,R.h *|* #i (ssat) #
+r3_r2_mov_r_r_r_r_usat         SOLVED   6/6 slots,     1 encodings  r3_r2 = R,R -|- R,R (usat) #
+r11_r10_sub_h_r_add_i_r_u      SOLVED   5/5 slots,     1 encodings  r11_r10 -= h[R ++= #i]*R (u)
+r13_r12_mov_r_r_r_r_ssat       SOLVED   6/6 slots,     1 encodings  r13_r12 = R,R -|- R,R (ssat) #
+r_mov_r1_r0_lsr_r_u            SOLVED   4/4 slots,     1 encodings  R = r1_r0 >> R (u) #
+r_l_mov_r_l_r_l_uavg           SOLVED   3/3 slots,     1 encodings  R.l = R.l + R.l (uavg) #
+sp_mov_psr_sr4_rets_rete       UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rets, rete}
+sp_mov_psr_sr4_rets_rete_reti  UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rets, rete, reti}
+sp_mov_psr_sr4_rets_retx_reti  UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rets, retx, reti}
+sp_mov_psr_sr4_retx_rete       UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, retx, rete}
+r15_r14_sub_r_h_r_l_i_ssat     SOLVED   5/5 slots,     1 encodings  r15_r14 -= R.h,R.l *|* -#i (ssat) #
+r15_r14_add_r_add_i_r_add_i_s  SOLVED   6/6 slots,     1 encodings  r15_r14 += [R ++= #i]*[R ++= -#i] (s)
+sp_mov_psr_sr4_rets            UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rets}
+sp_mov_psr_rete                UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rete}
+sp_mov_psr_sr4_retx            UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, retx}
+r3_r2_mov_mts1_r_r             SOLVED   5/5 slots,     1 encodings  r3_r2 = mts1(R, R) #
+sp_mov_psr_sr4_rets_reti       UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rets, reti}
+r_l_mov_r_l_r_l_rnd_savg       SOLVED   3/3 slots,     1 encodings  R.l = R.l + R.l (rnd,savg) #
+r15_r14_sub_h_r_add_i_r_s      SOLVED   5/5 slots,     1 encodings  r15_r14 -= h[R ++= -#i]*R (s)
+sp_mov_sr4                     UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4}
+sr4_rets_reti_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {sr4, rets, reti} = [sp++]
+r13_r12_mov_r11_r10_l2         SOLVED   4/4 slots,     1 encodings  r13_r12 = r11_r10
+r_mov_r_gtlt_r_sat_v           SOLVED   3/3 slots,     1 encodings  R = R >< R (sat,v) #
+sp_mov_psr_sr4_rets_retx_rete  UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, sr4, rets, retx, rete}
+r_mov_r_h_r_l_i_ssat           SOLVED   4/4 slots,     1 encodings  R = R.h,R.l -|- #i (ssat) #
+sp_mov_psr_rete_reti           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rete, reti}
+r_h_sub_r_h_r_h_ssat_x2        SOLVED   4/4 slots,     1 encodings  R.h -= R.h * R.h (ssat,x2) #
+rets_mov_i                     SOLVED   1/1 slots,     1 encodings  rets = #i
+ifs_r_le_i_goto_i_7            SOLVED   3/3 slots,     1 encodings  ifs (R <= #i) goto -#i
+r_mov_r_l_r_l_r_h_r_h_ssat_x2_l4 SOLVED   6/6 slots,     1 encodings  R = R.l,R.l -|+ R.h,R.h (ssat,x2) #
+r_mov_r_h_r_h_r_h_r_h_rnd_savg_l4 SOLVED   5/5 slots,     1 encodings  R = R.h,R.h +|- R.h,R.h (rnd,savg) #
+r_mov_r_r_ssat_3               SOLVED   3/3 slots,     1 encodings  R = R - R (ssat) #
+r_sub_r_h_r_h_r_h_r_h_ssat_x2  SOLVED   6/6 slots,     1 encodings  R -= R.h,R.h *|* R.h,R.h (ssat,x2) #
+r_sub_r_l_r_l_ssat_x2          SOLVED   4/4 slots,     1 encodings  R -= R.l * R.l (ssat,x2) #
+r5_r4_mov_r_r_r_r_usat_l4      SOLVED   6/6 slots,     1 encodings  r5_r4 = R,R -|- R,R (usat) #
+sp_mov_rete                    UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rete}
+r13_r12_sub_r_add_i_r_add_i_u  SOLVED   6/6 slots,     1 encodings  r13_r12 -= [R ++= -#i]*[R ++= #i] (u)
+r1_r0_sub_h_r_add_i_r_add_i_u  SOLVED   6/6 slots,     1 encodings  r1_r0 -= h[R ++= #i]*[R ++= -#i] (u)
+r_mov_r_h_r_h_r_h_r_h_rnd_savg_3 SOLVED   5/5 slots,     1 encodings  R = R.h,R.h -|- R.h,R.h (rnd,savg)
+ssp_mov_sp                     SOLVED   0/0 slots,     1 encodings  ssp = sp #
+r3_r2_sub_r_add_r_h_r_add_r_l_s SOLVED   6/6 slots,     1 encodings  r3_r2 -= [R ++= R.h]*[R ++= R.l] (s)
+sr4_retx_rete_reti_mov_sp      UNSOLVED 0/1 slots,     1 encodings  {sr4, retx, rete, reti} = [sp++]
+r3_r2_mov_r_r_r_r_ssat         SOLVED   6/6 slots,     1 encodings  r3_r2 = R,R +|+ R,R (ssat)
+r_l_mov_r_h_r_l_3              SOLVED   3/3 slots,     1 encodings  R.l = R.h + R.l
+r3_r2_mov_r_r_r_r_usat_l4      SOLVED   6/6 slots,     1 encodings  r3_r2 = R,R -|- R,R (usat)
+r_l_mov_negs_r_h               SOLVED   2/2 slots,     1 encodings  R.l = negs(R.h)
+r_mov_r_h_r_h_i_usat           SOLVED   4/4 slots,     1 encodings  R = R.h,R.h +|+ #i (usat)
+ifhi_goto_i                    SOLVED   1/1 slots,     1 encodings  ifhi goto #i
+r1_r0_mov_h_r_add_i_r_u        SOLVED   5/5 slots,     1 encodings  r1_r0 = h[R ++= #i]*R (u)
+r1_r0_sub_h_r_add_i_r_add_i_u_l4 SOLVED   6/6 slots,     1 encodings  r1_r0 -= h[R ++= -#i]*[R ++= -#i] (u)
+r15_r14_sub_r_add_r_h_r_add_r_l_u SOLVED   6/6 slots,     1 encodings  r15_r14 -= [R ++= R.h]*[R ++= R.l] (u)
+retx_rete_mov_sp               UNSOLVED 0/1 slots,     1 encodings  {retx, rete} = [sp++]
+sr4_retx_reti_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {sr4, retx, reti} = [sp++]
+psr_retx_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {psr, retx} = [sp++]
+psr_sr4_rete_reti_mov_sp       UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, rete, reti} = [sp++]
+sp_mov_rets_retx_rete          UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets, retx, rete}
+sp_mov_psr_rets                UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rets}
+r_mov_align24_r_r              SOLVED   4/4 slots,     1 encodings  R = align24(R, R) #
+sp_mov_sr4_retx_rete           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, retx, rete}
+rets_rete_mov_sp               UNSOLVED 0/1 slots,     1 encodings  {rets, rete} = [sp++]
+sp_mov_rets_retx_rete_reti     UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets, retx, rete, reti}
+r_h_mov_r_l_i_usat             SOLVED   3/3 slots,     1 encodings  R.h = R.l - #i (usat) #
+r15_r14_mov_r_l_r_l_i_ssat     SOLVED   5/5 slots,     1 encodings  r15_r14 = R.l,R.l *|* -#i (ssat)
+r_mov_r_5                      partial  1/2 slots,     1 encodings  [--R] = {R*5}
+r_h_mov_r_h_i_l4               SOLVED   3/3 slots,     1 encodings  R.h = R.h - #i #
+r9_r8_mov_r_add_i_r_add_i_s    SOLVED   6/6 slots,     1 encodings  r9_r8 = [R ++= #i]*[R ++= #i] (s)
+r_mov_r_l_r_h_i_ssat           SOLVED   4/4 slots,     1 encodings  R = R.l,R.h -|- #i (ssat)
+r_mov_r_h_r_h_i_usat_l4        SOLVED   4/4 slots,     1 encodings  R = R.h,R.h +|- #i (usat) #
+r_mov_r_h_r_h_i_ssat_3         SOLVED   4/4 slots,     1 encodings  R = R.h,R.h +|+ #i (ssat)
+sspn_mov_sp                    SOLVED   0/0 slots,     1 encodings  sspn = sp #
+r_h_mov_r_h_i_ssat             SOLVED   3/3 slots,     1 encodings  R.h = R.h - #i (ssat)
+r_l_mov_r_h_r_h_rnd_savg       SOLVED   3/3 slots,     1 encodings  R.l = R.h + R.h (rnd,savg) #
+usp_icfgn_uspn_psr_sr4_retx_rete_reti_mov_sp UNSOLVED 0/1 slots,     1 encodings  {usp, icfgn, uspn, psr, sr4, retx, rete, reti} = [sp++]
+r_mov_r_h_r_l_i_ssat_l4        SOLVED   4/4 slots,     1 encodings  R = R.h,R.l +|- #i (ssat) #
+r5_r4_mov_r_add_i_r_add_i_u    SOLVED   6/6 slots,     1 encodings  r5_r4 = [R ++= -#i]*[R ++= -#i] (u)
+r15_r14_mov_mts1_r_r           SOLVED   5/5 slots,     1 encodings  r15_r14 = mts1(R, R)
+r11_r10_sub_r_add_i_r_add_i_u  SOLVED   6/6 slots,     1 encodings  r11_r10 -= [R ++= -#i]*[R ++= #i] (u)
+r_6_mov_r_l4                   partial  1/2 slots,     1 encodings  {R*6} = [R+]
+r1_r0_mov_r3_r2_l2             SOLVED   4/4 slots,     1 encodings  r1_r0 = r3_r2 #
+r_l_mov_r_l_r_l_usat           SOLVED   3/3 slots,     1 encodings  R.l = R.l * R.l (usat)
+r_l_mov_r_h_i                  SOLVED   3/3 slots,     1 encodings  R.l = R.h + #i #
+r1_r0_mov_r_i_m                SOLVED   4/4 slots,     1 encodings  r1_r0 = R *|*|*|* -#i (m) #
+r_5_mov_r_l4                   partial  1/2 slots,     1 encodings  {R*5} = [-R]
+r1_r0_sub_r_h_r_h_r_l_r_l_ssat_x2 SOLVED   7/7 slots,     1 encodings  r1_r0 -= R.h,R.h *|* R.l,R.l (ssat,x2) #
+sspn_mov_sp_l2                 SOLVED   0/0 slots,     1 encodings  sspn = sp
+r1_r0_mov_r15_r14_r1_r0_ssat   SOLVED   6/6 slots,     1 encodings  r1_r0 = r15_r14 -|+|-|- r1_r0 (ssat) #
+r_mov_r_1                      partial  1/2 slots,     1 encodings  [R++] = {R*1}
+r_mov_negs_r_v                 SOLVED   2/2 slots,     1 encodings  R = negs(R) (v)
+r_sub_r_h_r_h_usat_x2          SOLVED   4/4 slots,     1 encodings  R -= R.h * R.h (usat,x2)
+r1_r0_sub_r_h_r_h_i_usat       SOLVED   5/5 slots,     1 encodings  r1_r0 -= R.h,R.h *|* #i (usat) #
+r_h_mov_r_h_i_usat             SOLVED   3/3 slots,     1 encodings  R.h = R.h + #i (usat) #
+r_l_mov_r_l_r_h                SOLVED   3/3 slots,     1 encodings  R.l = R.l + R.h #
+r_mov_r_l_r_h_i_ssat_l4        SOLVED   4/4 slots,     1 encodings  R = R.l,R.h +|+ #i (ssat) #
+ifle_goto_i                    SOLVED   1/1 slots,     1 encodings  ifle goto #i
+psr_rete_reti_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {psr, rete, reti} = [sp++]
+r_mov_umax_r_r_v               SOLVED   3/3 slots,     1 encodings  R = umax(R, R) (v) #
+r3_r2_mov_r9_r8_r15_r14_usat_x2 SOLVED   7/7 slots,     1 encodings  r3_r2 = r9_r8 -|-|-|+ r15_r14 (usat,x2) #
+r_add_r_h_i_ssat               SOLVED   3/3 slots,     1 encodings  R += R.h * #i (ssat)
+r_h_mov_r_h_i_usat_l4          SOLVED   3/3 slots,     1 encodings  R.h = R.h - #i (usat)
+r11_r10_mov_r15_r14            SOLVED   4/4 slots,     1 encodings  r11_r10 = r15_r14
+retx_mov_sp                    UNSOLVED 0/1 slots,     1 encodings  {retx} = [sp++]
+r7_r6_mov_r1_r0_l2             SOLVED   4/4 slots,     1 encodings  r7_r6 = r1_r0 #
+r_mov_r_h_r_h_r_h_r_l_ssat_x2  SOLVED   6/6 slots,     1 encodings  R = R.h,R.h -|+ R.h,R.l (ssat,x2) #
+r_sub_r_l_i_ssat               SOLVED   3/3 slots,     1 encodings  R -= R.l * #i (ssat) #
+r13_r12_mov_r13_r12            SOLVED   4/4 slots,     1 encodings  r13_r12 = r13_r12
+r3_r2_mov_r_r_u_l4             SOLVED   4/4 slots,     1 encodings  r3_r2 = R *|*|*|* R (u)
+r3_r2_mov_h_r_add_i_r_add_i_s  SOLVED   6/6 slots,     1 encodings  r3_r2 = h[R ++= #i]*[R ++= #i] (s)
+r3_r2_mov_r_i_m                SOLVED   4/4 slots,     1 encodings  r3_r2 = R *|*|*|* -#i (m)
+r1_r0_mov_r1_r0_l2             SOLVED   4/4 slots,     1 encodings  r1_r0 = r1_r0 #
+r_mov_align16_r_r_l4           SOLVED   4/4 slots,     1 encodings  R = align16(R, R) #
+r_l_mov_r_l_i_3                SOLVED   3/3 slots,     1 encodings  R.l = R.l + #i
+r11_r10_add_r_h_r_h_i_usat     SOLVED   5/5 slots,     1 encodings  r11_r10 += R.h,R.h *|* #i (usat) #
+r11_r10_mov_r_i_m              SOLVED   4/4 slots,     1 encodings  r11_r10 = R *|*|*|* -#i (m)
+r_l_mov_r_l_r_l_l4             SOLVED   3/3 slots,     1 encodings  R.l = R.l + R.l
+r_l_mov_r_h_r_h                SOLVED   3/3 slots,     1 encodings  R.l = R.h + R.h #
+r11_r10_mov_r_i_m_l4           SOLVED   4/4 slots,     1 encodings  r11_r10 = R *|*|*|* #i (m) #
+r_mov_r_lsl_i_v                SOLVED   3/3 slots,     1 encodings  R = R << #i (v) #
+r5_r4_mov_r_add_i_r_add_i_u_l4 SOLVED   6/6 slots,     1 encodings  r5_r4 = [R ++= #i]*[R ++= #i] (u)
+r_mov_r_5_l4                   partial  1/2 slots,     1 encodings  [R+] = {R*5}
+r_sub_r_h_r_l_ssat             SOLVED   3/3 slots,     1 encodings  R -= R.h * R.l (ssat) #
+r13_r12_mov_r_r_r_r_usat       SOLVED   6/6 slots,     1 encodings  r13_r12 = R,R +|- R,R (usat) #
+r_mov_r_5_3                    partial  1/2 slots,     1 encodings  [-R] = {R*5}
+r13_r12_mov_r_r_r_r_usat_l4    SOLVED   6/6 slots,     1 encodings  r13_r12 = R,R +|+ R,R (usat) #
+r13_r12_mov_r_l_r_h_r_h_r_l_usat_x2 SOLVED   7/7 slots,     1 encodings  r13_r12 = R.l,R.h *|* R.h,R.l (usat,x2) #
+r3_r2_mov_r_i_m_l4             SOLVED   4/4 slots,     1 encodings  r3_r2 = R *|*|*|* -#i (m) #
+r_6_mov_r_3                    partial  1/2 slots,     1 encodings  {R*6} = [-R]
+r3_r2_sub_r_h_r_h_r_l_r_l_ssat_x2 SOLVED   7/7 slots,     1 encodings  r3_r2 -= R.h,R.h *|* R.l,R.l (ssat,x2) #
+r11_r10_mov_r_i_m_3            SOLVED   4/4 slots,     1 encodings  r11_r10 = R *|*|*|* -#i (m) #
+r11_r10_sub_r_h_r_h_r_l_r_l_ssat_x2 SOLVED   7/7 slots,     1 encodings  r11_r10 -= R.h,R.h *|* R.l,R.l (ssat,x2) #
+r7_r6_mov_r7_r6                SOLVED   4/4 slots,     1 encodings  r7_r6 = r7_r6 #
+r3_r2_mov_r_r_r_r_ssat_l4      SOLVED   6/6 slots,     1 encodings  r3_r2 = R,R -|- R,R (ssat)
+r3_r2_add_r_add_i_r_add_i_s    SOLVED   6/6 slots,     1 encodings  r3_r2 += [R ++= -#i]*[R ++= #i] (s)
+r_mov_r_4_l4                   partial  1/2 slots,     1 encodings  [R++] = {R*4}
+r_mov_negs_r_v_l4              SOLVED   2/2 slots,     1 encodings  R = negs(R) (v) #
+r_mov_r_h_r_h_i_usat_3         SOLVED   4/4 slots,     1 encodings  R = R.h,R.h -|- #i (usat) #
+r3_r2_mov_any_r7_r6_r15_r14_v  SOLVED   6/6 slots,     1 encodings  r3_r2 = any(r7_r6 ?? r15_r14) (v)
+r3_r2_add_r_r_m                SOLVED   4/4 slots,     1 encodings  r3_r2 += R *|*|*|* R (m) #
+r3_r2_sub_r_h_r_h_i_ssat       SOLVED   5/5 slots,     1 encodings  r3_r2 -= R.h,R.h *|* -#i (ssat) #
+if_r_r_goto_i                  SOLVED   3/3 slots,     1 encodings  if (R ?? R) goto -#i
+sr4_mov_i                      SOLVED   2/2 slots,     1 encodings  sr4 = #i
+icfgs_mov_i                    SOLVED   1/1 slots,     1 encodings  icfgs = #i
+if_r_gt_r_goto_i_3             SOLVED   3/3 slots,     1 encodings  if (R > R) goto -#i
+r3_r2_mov_r11_r10_l2           SOLVED   4/4 slots,     1 encodings  r3_r2 = r11_r10 #
+psr_rets_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {psr, rets} = [sp++]
+rets_mov_r                     SOLVED   1/1 slots,     1 encodings  rets = R
+r3_r2_mov_r_r_u_3              SOLVED   4/4 slots,     1 encodings  r3_r2 = R * R (u) #
+r3_r2_mov_r3_r2_r_u            SOLVED   5/5 slots,     1 encodings  r3_r2 = r3_r2 / R (u)
+r7_r6_mov_r9_r8_r_u            SOLVED   5/5 slots,     1 encodings  r7_r6 = r9_r8 / R (u) #
+r15_r14_mov_r1_r0              SOLVED   4/4 slots,     1 encodings  r15_r14 = r1_r0
+sp_mov_r_4                     SOLVED   1/1 slots,     1 encodings  sp = R #
+rets_retx_rete_reti_mov_sp     UNSOLVED 0/1 slots,     1 encodings  {rets, retx, rete, reti} = [sp++]
+psr_retx_reti_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {psr, retx, reti} = [sp++]
+psr_sr4_retx_rete_mov_sp       UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, retx, rete} = [sp++]
+r7_r6_sub_h_r_add_i_r_add_i_u  SOLVED   6/6 slots,     1 encodings  r7_r6 -= h[R ++= #i]*[R ++= #i] (u)
+r7_r6_mov_r_i_m                SOLVED   4/4 slots,     1 encodings  r7_r6 = R *|*|*|* #i (m)
+r_mov_r_h_r_h_r_l_r_l_rnd_uavg SOLVED   5/5 slots,     1 encodings  R = R.h,R.h +|- R.l,R.l (rnd,uavg) #
+r_h_mov_r_l_i                  SOLVED   3/3 slots,     1 encodings  R.h = R.l - #i
+r11_r10_mov_h_r_add_i_r_add_i_s SOLVED   6/6 slots,     1 encodings  r11_r10 = h[R ++= #i]*[R ++= -#i] (s)
+r1_r0_mov_r_l_r_h_i_usat       SOLVED   5/5 slots,     1 encodings  r1_r0 = R.l,R.h *|* #i (usat) #
+r_8_mov_r                      partial  1/2 slots,     1 encodings  {R*8} = [R++]
+r9_r8_add_r_add_i_r_add_i_s    SOLVED   6/6 slots,     1 encodings  r9_r8 += [R ++= -#i]*[R ++= -#i] (s)
+r1_r0_mov_r_add_i_r_add_i_s    SOLVED   6/6 slots,     1 encodings  r1_r0 = [R ++= -#i]*[R ++= #i] (s)
+r_l_mov_r_h_i_ssat             SOLVED   3/3 slots,     1 encodings  R.l = R.h - #i (ssat) #
+r_mov_r_h_r_l_r_l_r_l_uavg     SOLVED   5/5 slots,     1 encodings  R = R.h,R.l +|- R.l,R.l (uavg)
+r3_r2_mov_r5_r4_l2             SOLVED   4/4 slots,     1 encodings  r3_r2 = r5_r4 #
+d_r_i_mov_r5_r4_l4             SOLVED   4/4 slots,     1 encodings  d[R+-#i] = r5_r4
+r7_r6_gtge_i_l4                SOLVED   3/3 slots,     1 encodings  r7_r6 >>= #i #
+d_sp_mov_r5_r4                 SOLVED   2/2 slots,     1 encodings  d[sp] = r5_r4
+r13_r12_mov_i_l2               SOLVED   3/3 slots,     1 encodings  r13_r12 = #i #
+r11_r10_mov_r1_r0_l2           SOLVED   4/4 slots,     1 encodings  r11_r10 = r1_r0 #
+r1_r0_gtge_i_l4                SOLVED   3/3 slots,     1 encodings  r1_r0 >>= #i #
+r15_r14_mov_i                  SOLVED   3/3 slots,     1 encodings  r15_r14 = #i
+r13_r12_mov_r3_r2              SOLVED   4/4 slots,     1 encodings  r13_r12 = r3_r2
+r3_r2_mov_r7_r6_l2             SOLVED   4/4 slots,     1 encodings  r3_r2 = r7_r6
+r5_r4_mov_r9_r8                SOLVED   4/4 slots,     1 encodings  r5_r4 = r9_r8
+r3_r2_mov_r1_r0_l2             SOLVED   4/4 slots,     1 encodings  r3_r2 = r1_r0 #
+r9_r8_mov_r1_r0_l2             SOLVED   4/4 slots,     1 encodings  r9_r8 = r1_r0 #
+r_i_ltle_i                     SOLVED   3/3 slots,     1 encodings  [R+#i] <<= #i
+r11_r10_mov_mts0_r_r           SOLVED   5/5 slots,     1 encodings  r11_r10 = mts0(R, R) #
+r5_r4_mov_r7_r6                SOLVED   4/4 slots,     1 encodings  r5_r4 = r7_r6
+r3_r2_mov_r15_r14              SOLVED   4/4 slots,     1 encodings  r3_r2 = r15_r14
+r_i_or_r_l4                    SOLVED   3/3 slots,     1 encodings  [R+-#i] |= R
+r1_r0_mov_r_i_m_l4             SOLVED   4/4 slots,     1 encodings  r1_r0 = R *|*|*|* -#i (m)
+r_add_r_l_i_usat               SOLVED   3/3 slots,     1 encodings  R += R.l * #i (usat) #
+r_l_mov_r_h_i_l4               SOLVED   3/3 slots,     1 encodings  R.l = R.h + #i
+r7_r6_lsrge_i                  SOLVED   3/3 slots,     1 encodings  r7_r6 >>>= #i
+r9_r8_mov_r_r_s_l4             SOLVED   4/4 slots,     1 encodings  r9_r8 = R * R (s) #
+r3_r2_mov_r_r_s                SOLVED   4/4 slots,     1 encodings  r3_r2 = R * R (s)
+r_mov_r_asr_r_l4               SOLVED   3/3 slots,     1 encodings  R = R >>> R #
+sp_mov_psr_reti                UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, reti}
+psr_reti_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {psr, reti} = [sp++]
+r5_r4_mov_r3_r2_r_u            SOLVED   5/5 slots,     1 encodings  r5_r4 = r3_r2 / R (u) #
+r11_r10_mov_r3_r2_r_u          SOLVED   5/5 slots,     1 encodings  r11_r10 = r3_r2 / R (u)
+retx_rete_reti_mov_sp          UNSOLVED 0/1 slots,     1 encodings  {retx, rete, reti} = [sp++]
+rets_retx_rete_mov_sp          UNSOLVED 0/1 slots,     1 encodings  {rets, retx, rete} = [sp++]
+sr4_reti_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {sr4, reti} = [sp++]
+psr_retx_rete_reti_mov_sp      UNSOLVED 0/1 slots,     1 encodings  {psr, retx, rete, reti} = [sp++]
+psr_rets_rete_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {psr, rets, rete} = [sp++]
+psr_rets_retx_rete_mov_sp      UNSOLVED 0/1 slots,     1 encodings  {psr, rets, retx, rete} = [sp++]
+psr_sr4_retx_reti_mov_sp       UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, retx, reti} = [sp++]
+psr_sr4_rets_reti_mov_sp       UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, rets, reti} = [sp++]
+psr_sr4_rets_retx_mov_sp       UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, rets, retx} = [sp++]
+sp_mov_rete_reti               UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rete, reti}
+sp_mov_retx_rete_reti          UNSOLVED 0/1 slots,     1 encodings  [--sp] = {retx, rete, reti}
+sp_mov_rets_rete_reti          UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets, rete, reti}
+sp_mov_sr4_rete                UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, rete}
+sp_mov_sr4_retx_reti           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, retx, reti}
+sp_mov_sr4_rets_reti           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, rets, reti}
+sp_mov_sr4_rets_retx_reti      UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, rets, retx, reti}
+sp_mov_psr_retx                UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, retx}
+sp_mov_psr_rets_retx_rete      UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rets, retx, rete}
+sp_mov_psr_rets_rete           UNSOLVED 0/1 slots,     1 encodings  [--sp] = {psr, rets, rete}
+sp_mov_sr4_retx_rete_reti      UNSOLVED 0/1 slots,     1 encodings  [--sp] = {sr4, retx, rete, reti}
+sp_mov_rets_retx_reti          UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets, retx, reti}
+sp_mov_retx                    UNSOLVED 0/1 slots,     1 encodings  [--sp] = {retx}
+psr_sr4_rets_retx_rete_reti_mov_sp UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, rets, retx, rete, reti} = [sp++]
+psr_sr4_rets_rete_reti_mov_sp  UNSOLVED 0/1 slots,     1 encodings  {psr, sr4, rets, rete, reti} = [sp++]
+psr_rets_retx_reti_mov_sp      UNSOLVED 0/1 slots,     1 encodings  {psr, rets, retx, reti} = [sp++]
+sr4_rets_rete_reti_mov_sp      UNSOLVED 0/1 slots,     1 encodings  {sr4, rets, rete, reti} = [sp++]
+sr4_retx_rete_mov_sp           UNSOLVED 0/1 slots,     1 encodings  {sr4, retx, rete} = [sp++]
+sr4_rete_mov_sp                UNSOLVED 0/1 slots,     1 encodings  {sr4, rete} = [sp++]
+rets_retx_reti_mov_sp          UNSOLVED 0/1 slots,     1 encodings  {rets, retx, reti} = [sp++]
+rets_reti_mov_sp               UNSOLVED 0/1 slots,     1 encodings  {rets, reti} = [sp++]
+rete_mov_i                     SOLVED   1/1 slots,     1 encodings  rete = #i
+r15_r14_mov_r11_r10            SOLVED   4/4 slots,     1 encodings  r15_r14 = r11_r10
+r11_r10_mov_r3_r2_l2           SOLVED   4/4 slots,     1 encodings  r11_r10 = r3_r2 #
+r11_r10_mov_r9_r8_l2           SOLVED   4/4 slots,     1 encodings  r11_r10 = r9_r8 #
+r_mov_r_2_l4                   partial  1/2 slots,     1 encodings  [R++] = {R*2}
+r_h_mov_r_h_r_h_usat_x2        SOLVED   4/4 slots,     1 encodings  R.h = R.h * R.h (usat,x2) #
+r_mov_r_r_usat                 SOLVED   3/3 slots,     1 encodings  R = R - R (usat) #
+r1_r0_add_r_r_m                SOLVED   4/4 slots,     1 encodings  r1_r0 += R *|*|*|* R (m) #
+r1_r0_mov_r_r_r_r_usat_l4      SOLVED   6/6 slots,     1 encodings  r1_r0 = R,R +|- R,R (usat)
+r_l_sub_r_h_r_l_usat           SOLVED   3/3 slots,     1 encodings  R.l -= R.h * R.l (usat) #
+r_mov_r_3_3                    partial  1/2 slots,     1 encodings  [-R] = {R*3}
+r_mov_r_h_r_h_i_usat_4         SOLVED   4/4 slots,     1 encodings  R = R.h,R.h +|+ #i (usat) #
+r1_r0_add_r_add_i_r_add_i_u_l4 SOLVED   6/6 slots,     1 encodings  r1_r0 += [R ++= #i]*[R ++= #i] (u)
+r_l_mov_r_h_r_l_uavg           SOLVED   3/3 slots,     1 encodings  R.l = R.h + R.l (uavg)
+r_mov_r_l_r_l_r_h_r_h_usat     SOLVED   5/5 slots,     1 encodings  R = R.l,R.l +|- R.h,R.h (usat)
+r_mov_r_l_r_l_i_usat_3         SOLVED   4/4 slots,     1 encodings  R = R.l,R.l +|- #i (usat)
+r_mov_r_l_r_l_r_h_r_h_uavg     SOLVED   5/5 slots,     1 encodings  R = R.l,R.l +|- R.h,R.h (uavg)
+r_mov_r_h_r_l_usat             SOLVED   3/3 slots,     1 encodings  R = R.h * R.l (usat)
+r_mov_r_2_3                    partial  1/2 slots,     1 encodings  [-R] = {R*2}
+r_mov_r_l_r_h_i_usat           SOLVED   4/4 slots,     1 encodings  R = R.l,R.h +|+ #i (usat) #
+r_l_mov_r_h_r_l_usat_x2        SOLVED   4/4 slots,     1 encodings  R.l = R.h * R.l (usat,x2) #
+r_l_mov_r_h_r_h_usat           SOLVED   3/3 slots,     1 encodings  R.l = R.h - R.h (usat)
+r_l_mov_r_l_i_usat_l4          SOLVED   3/3 slots,     1 encodings  R.l = R.l + #i (usat)
+r_add_r_l_i_usat_l4            SOLVED   3/3 slots,     1 encodings  R += R.l * #i (usat)
+ifcs_goto_i                    SOLVED   1/1 slots,     1 encodings  ifcs goto #i
+r5_r4_lsrge_i                  SOLVED   3/3 slots,     1 encodings  r5_r4 >>>= #i
+r_mov_umax_r_r_l4              SOLVED   3/3 slots,     1 encodings  R = umax(R, R) #
+rete_mov_r                     SOLVED   1/1 slots,     1 encodings  rete = R
+reti_mov_r                     SOLVED   1/1 slots,     1 encodings  reti = R
+r5_r4_mov_i_l2                 SOLVED   3/3 slots,     1 encodings  r5_r4 = #i #
+r_mov_pack_r_h_r_l             SOLVED   3/3 slots,     1 encodings  R = pack(R.h, R.l) #
+sp_mov_ssp_usp_icfg_psr_rets_retx_rete_reti UNSOLVED 0/1 slots,     1 encodings  [--sp] = {ssp, usp, icfg, psr, rets, retx, rete, reti}
+sp_mov_rets_reti               UNSOLVED 0/1 slots,     1 encodings  [--sp] = {rets, reti}
+r15_r14_mov_r11_r10_l2         SOLVED   4/4 slots,     1 encodings  r15_r14 = r11_r10 #
+solved 764 partial 177 unsolved 126 -> work/slots.json

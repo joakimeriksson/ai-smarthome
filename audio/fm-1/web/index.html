@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FM-1 Emulator</title>
+<style>
+  :root { --room: #18191b; --ink: #e9e6de; --dim: #8c8a85; --amber: #f2a33a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--room); color: var(--ink); font: 14px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { max-width: 1280px; margin: 0 auto; padding-block: 16px 24px; padding-inline: 16px; display: grid; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  #status { color: var(--dim); font-variant-numeric: tabular-nums; }
+  .stage { position: relative; }
+  canvas { display: block; width: 100%; height: auto; touch-action: none; user-select: none; }
+  #start { position: absolute; inset: 0; margin: auto; width: 220px; height: 56px; border: 0; border-radius: 28px;
+           background: var(--amber); color: #2a1a03; font-size: 17px; font-weight: 600; cursor: pointer; }
+  #start:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  #start[disabled] { opacity: .7; cursor: wait; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  .bar label { display: flex; gap: 8px; align-items: center; color: var(--dim); }
+  select { font: inherit; color: var(--ink); background: #232427; border: 1px solid #3a3b3f; border-radius: 6px;
+           padding: 5px 8px; max-width: 100%; }
+  select:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+  #about { color: var(--dim); flex: 1 1 320px; min-width: 0; }
+  #about b { color: var(--ink); font-weight: 600; }
+  .help { color: var(--dim); font-size: 13px; max-width: 90ch; }
+  .help b { color: var(--ink); font-weight: 600; }
+  a { color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">M-VAVE FM-1 (emulated)</h1>
+    <span id="status">click Start to boot</span>
+  </header>
+  <div class="bar">
+    <label>Firmware <select id="fw" aria-label="Firmware"></select></label>
+    <label>Clock <select id="mhz" aria-label="Emulated clock"></select></label>
+    <span id="about"></span>
+  </div>
+  <div class="stage">
+    <canvas id="panel" aria-label="FM-1 front panel"></canvas>
+    <button id="start">Start</button>
+  </div>
+  <p class="help">
+    <b>Mouse</b>: click or drag across the keys, click buttons, drag a knob up / down or scroll over it; MASTER is the volume.
+    <b>Keyboard</b>: A W S E D F T G Y H U J K O L P ; ' = C4..F5 · Z / X = OCT− / OCT+ · Space = PLAY · R = REC ·
+    1..0 = FX SCL ENV LFO EDIT GLO HOME SAVE ARP SEQ · ← → SELECT · ↑ ↓ PRESETS · , . ALGORITHM.
+    The pi32v2 CPU, its peripherals and the LCD run in WebAssembly in the audio thread. The real FM-1 runs at 240 MHz;
+    a lower clock keeps the emulation real-time on slower machines. Changing the firmware or the clock reboots the synth.
+    The firmwares are the community's own builds, unchanged; the list is from
+    <a href="https://fm1-editor.com/firmware/">fm1-editor.com/firmware</a>.
+  </p>
+</main>
+<script type="module" src="main.js"></script>
+</body>
+</html>

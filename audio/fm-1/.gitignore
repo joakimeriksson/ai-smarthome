@@ -20,3 +20,6 @@ work/probe/
 work/probe_*.bin
 work/*.ppm
 work/session.html
+
+# the browser build (web/build.sh)
+web/dist/

@@ -77,6 +77,96 @@ fn main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
+    // `--list IMAGE START END`: a linear listing with the emulator's own decoder (it knows the
+    // FPU and the float compares objdump cannot print): address, bytes, syntax, slot values,
+    // and the micro-op the core runs
+    if let Some(i) = std::env::args().position(|a| a == "--list") {
+        let a: Vec<String> = std::env::args().skip(i + 1).take(3).collect();
+        let num = |s: &str| u32::from_str_radix(s.trim_start_matches("0x"), 16).ok();
+        let (Some(image), Some(start), Some(end)) = (a.first().and_then(|p| std::fs::read(p).ok()),
+            a.get(1).and_then(|s| num(s)), a.get(2).and_then(|s| num(s))) else {
+            eprintln!("usage: fm1-emu --list IMAGE START END (hex)");
+            return ExitCode::FAILURE;
+        };
+        let mut pc = start;
+        while pc < end {
+            let o = (pc - XIP_BASE) as usize;
+            let mut win = 0u64;
+            for k in 0..6 {
+                win |= (*image.get(o + k).unwrap_or(&0) as u64) << (8 * k);
+            }
+            match fm1_isa::decode_win(win, pc) {
+                Ok(insn) => {
+                    let n = insn.entry.len as usize;
+                    let bytes: Vec<String> = (0..n).map(|k| format!("{:02x}", (win >> (8 * k)) & 0xff)).collect();
+                    let vals: Vec<String> = insn.entry.slots.iter().map(|sl| sl.value(win).to_string()).collect();
+                    let d = fm1_core::describe(win, pc).unwrap_or_default();
+                    println!("{pc:08x}  {:<18} {:<34} [{}]  {d}", bytes.join(" "), insn.entry.syntax, vals.join(", "));
+                    pc += n as u32;
+                }
+                Err(_) => {
+                    println!("{pc:08x}  {:02x} {:02x}               ?", win & 0xff, (win >> 8) & 0xff);
+                    pc += 2;
+                }
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+    // `--exec-check OBJDUMP IMAGE`: execute every instruction the listing shows once, on a sandbox
+    // CPU (registers pointing into RAM) over IMAGE mapped at XIP, and report the classes the core
+    // cannot execute (Unsupported / MissingSlot), grouped by class, with an example each
+    if let Some(i) = std::env::args().position(|a| a == "--exec-check") {
+        let path = std::env::args().nth(i + 1).unwrap_or_default();
+        let bin = std::env::args().nth(i + 2).unwrap_or_default();
+        let (Ok(text), Ok(image)) = (std::fs::read_to_string(&path), std::fs::read(&bin)) else {
+            eprintln!("usage: fm1-emu --exec-check OBJDUMP IMAGE");
+            return ExitCode::FAILURE;
+        };
+        let mut soc = Soc::new(1 << 20, image);
+        let mut cpu = Cpu::new(0);
+        let mut bad: Vec<(&'static str, u32, String, u32)> = Vec::new();
+        let (mut tried, mut panics) = (0u32, 0u32);
+        for line in text.lines() {
+            let Some((addr, rest)) = line.trim_start().split_once(':') else { continue };
+            let Ok(pc) = u32::from_str_radix(addr.trim(), 16) else { continue };
+            let mut parts = rest.split('\t').filter(|p| !p.trim().is_empty());
+            let bytes = parts.next().unwrap_or("");
+            let asm = parts.next().unwrap_or("").trim().to_string();
+            if bytes.split_whitespace().count() == 0 || asm.contains("unknown") {
+                continue;
+            }
+            tried += 1;
+            cpu.pc = pc;
+            cpu.regs = [0x01c4_0000; 16];
+            cpu.sp = 0x01c8_0000;
+            cpu.rets = 0x01c4_0000;
+            cpu.rep_reg = None;
+            cpu.rep_count = 0;
+            cpu.pred_skips.clear();
+            cpu.pair_pending = None;
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cpu.step(&mut soc)));
+            match r {
+                Ok(Err(CoreError::Unsupported { name, .. })) | Ok(Err(CoreError::MissingSlot { name, .. })) => {
+                    match bad.iter_mut().find(|b| b.0 == name) {
+                        Some(b) => b.3 += 1,
+                        None => bad.push((name, pc, asm, 1)),
+                    }
+                }
+                Err(_) => {
+                    panics += 1;
+                    cpu = Cpu::new(0);
+                }
+                _ => {}
+            }
+        }
+        bad.sort_by_key(|b| std::cmp::Reverse(b.3));
+        for (name, pc, asm, n) in &bad {
+            println!("{n:6}  {name:32} {pc:#010x}  {asm}");
+        }
+        println!("{tried} instructions executed, {} classes unsupported ({} instructions), {panics} panics",
+            bad.len(), bad.iter().map(|b| b.3).sum::<u32>());
+        return ExitCode::SUCCESS;
+    }
     let mut args = match parse_args() {
         Some(a) => a,
         None => {

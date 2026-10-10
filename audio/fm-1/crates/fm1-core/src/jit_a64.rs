@@ -74,6 +74,17 @@ impl Asm {
         self.movz_x(rd, (imm & 0xffff) as u32, 0);
         for sh in [16u32, 32, 48] { let part = ((imm >> sh) & 0xffff) as u32; if part != 0 { self.movk_x(rd, part, sh); } }
     }
+    // single-precision FP (s registers = the low 32 bits of v0..v31)
+    pub fn fmov_s_w(&mut self, sd: Reg, wn: Reg) { self.e(0x1e27_0000 | wn << 5 | sd); }
+    pub fn fmov_w_s(&mut self, wd: Reg, sn: Reg) { self.e(0x1e26_0000 | sn << 5 | wd); }
+    /// fadd 0x1e202800, fsub 0x1e203800, fmul 0x1e200800, fdiv 0x1e201800,
+    /// fminnm 0x1e207800, fmaxnm 0x1e206800
+    pub fn fop(&mut self, opc: u32, sd: Reg, sn: Reg, sm: Reg) { self.e(opc | sm << 16 | sn << 5 | sd); }
+    pub fn fcmp(&mut self, sn: Reg, sm: Reg) { self.e(0x1e20_2000 | sm << 16 | sn << 5); }
+    pub fn fcvtzs(&mut self, wd: Reg, sn: Reg) { self.e(0x1e38_0000 | sn << 5 | wd); }
+    pub fn fcvtzu(&mut self, wd: Reg, sn: Reg) { self.e(0x1e39_0000 | sn << 5 | wd); }
+    pub fn scvtf(&mut self, sd: Reg, wn: Reg) { self.e(0x1e22_0000 | wn << 5 | sd); }
+    pub fn ucvtf(&mut self, sd: Reg, wn: Reg) { self.e(0x1e23_0000 | wn << 5 | sd); }
     pub fn mov(&mut self, rd: Reg, rm: Reg) { self.e(0x2a00_03e0 | rm << 16 | rd); }
     pub fn mov_x(&mut self, rd: Reg, rm: Reg) { self.e(0xaa00_03e0 | rm << 16 | rd); }
 

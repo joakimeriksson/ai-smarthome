@@ -7,7 +7,9 @@
 //! count); an entry whose recorded corpus samples contain the observed
 //! bytes wins ties against sibling masks.
 
+mod fpu;
 mod generated_isa;
+pub use fpu::FPU;
 pub use generated_isa::ISA;
 
 /// One instruction class in the mask/decode table (mirrors a YAML entry).
@@ -201,6 +203,13 @@ pub enum DecodeError {
 
 /// Decode from a zero-extended little-endian window of up to 6 bytes.
 pub fn decode_win(win: u64, addr: u32) -> Result<Instruction, DecodeError> {
+    // the FPU first: its encodings never appear in the objdump corpora, and the float
+    // compares are the integer ones plus a flag bit the corpus masks may not pin down
+    for e in fpu::FPU {
+        if (win & e.mask) == e.match_ {
+            return Ok(Instruction { addr, raw: win, entry: e });
+        }
+    }
     let mut best: Option<&'static IsaEntry> = None;
     for e in generated_isa::ISA {
         if (win & e.mask) == e.match_ {

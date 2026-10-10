@@ -307,10 +307,31 @@ fn acond(c: Cond) -> AC {
         Cond::GtS => AC::Gt,
         Cond::LeS => AC::Le,
         Cond::GeS => AC::Ge,
+        // after fcmp: less N, equal ZC, greater C, unordered CV
+        Cond::FEq => AC::Eq,
+        Cond::FUne => AC::Ne,
+        Cond::FLt => AC::Mi,
+        Cond::FUge => AC::Pl,
+        Cond::FLe => AC::Ls,
+        Cond::FUgt => AC::Hi,
+        Cond::FGe => AC::Ge,
+        Cond::FUlt => AC::Lt,
+        Cond::FGt => AC::Gt,
+        Cond::FUle => AC::Le,
     }
 }
 
 impl Gen<'_> {
+    /// flags for a compare of w(x) with w(y): integer, or as two floats
+    fn cmp(&mut self, float: bool, x: Reg, y: Reg) {
+        if float {
+            self.a.fmov_s_w(0, x);
+            self.a.fmov_s_w(1, y);
+            self.a.fcmp(0, 1);
+        } else {
+            self.a.cmp(x, y);
+        }
+    }
     fn ld_reg(&mut self, w: Reg, r: u8) {
         self.a.ldr(w, CPU, off_reg(r));
     }
@@ -626,7 +647,7 @@ fn compile<B: Bus>(ops: &[crate::BOp], pc0: u32, mem: &JitMem) -> Option<(Vec<u3
                 let t = g.a.label();
                 g.ld_reg(0, a);
                 g.ld_reg(1, b);
-                g.a.cmp(0, 1);
+                g.cmp(cond.is_float(), 0, 1);
                 g.a.b_cond(acond(cond), t);
                 g.chain(next_pc, count);
                 g.a.bind(t);
@@ -669,13 +690,35 @@ fn compile<B: Bus>(ops: &[crate::BOp], pc0: u32, mem: &JitMem) -> Option<(Vec<u3
                     g.a.tst(0, 1);
                     if alt { AC::Ne } else { AC::Eq }
                 } else {
-                    g.a.cmp(0, 1);
+                    g.cmp(fam >= 8, 0, 1);
                     acond(crate::cond_of_fam(fam as u64, alt))
                 };
                 g.a.b_cond(c, taken);
                 g.chain(next_pc.wrapping_add(then_d as u32), count);
                 g.a.bind(taken);
                 g.chain(next_pc, count);
+            }
+            Fast::FOp { d, a, b, op } => {
+                g.ld_reg(0, a);
+                match op {
+                    0x1f | 0x5f => {
+                        g.a.fmov_s_w(0, 0);
+                        if op == 0x1f { g.a.fcvtzs(0, 0) } else { g.a.fcvtzu(0, 0) }
+                    }
+                    0x8f | 0x9f => {
+                        if op == 0x8f { g.a.scvtf(0, 0) } else { g.a.ucvtf(0, 0) }
+                        g.a.fmov_w_s(0, 0);
+                    }
+                    _ => {
+                        g.ld_reg(1, b);
+                        g.a.fmov_s_w(0, 0);
+                        g.a.fmov_s_w(1, 1);
+                        let opc = match op { 0 => 0x1e20_2800, 1 => 0x1e20_3800, 2 => 0x1e20_0800, 3 => 0x1e20_1800, 5 => 0x1e20_7800, _ => 0x1e20_6800 };
+                        g.a.fop(opc, 0, 0, 1);
+                        g.a.fmov_w_s(0, 0);
+                    }
+                }
+                g.st_reg(0, d);
             }
             Fast::Rts => {
                 g.a.ldr(9, CPU, off_rets());
@@ -837,6 +880,10 @@ fn compile<B: Bus>(ops: &[crate::BOp], pc0: u32, mem: &JitMem) -> Option<(Vec<u3
                 g.exit_reg(0, count);
                 g.a.bind(fall);
                 bus_used = true;
+                if other.may_jump() {
+                    // a branch through the interpreter (the float compares) that fell through
+                    g.chain(next_pc, count);
+                }
             }
         }
         if bus_used && !op.fast.may_jump() {

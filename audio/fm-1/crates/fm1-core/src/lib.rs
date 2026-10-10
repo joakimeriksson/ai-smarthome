@@ -560,6 +560,9 @@ impl Cpu {
         match f {
             Fast::Mov { d, s } => self.regs[(d & 15) as usize] = self.regs[(s & 15) as usize],
             Fast::MovI { d, v } => self.regs[(d & 15) as usize] = v,
+            Fast::FOp { d, a, b, op } => {
+                self.regs[(d & 15) as usize] = fpu(op, self.regs[(a & 15) as usize], self.regs[(b & 15) as usize])
+            }
             Fast::Alu3 { d, a, b, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(a & 15) as usize], self.regs[(b & 15) as usize]),
             Fast::Alu3I { d, a, v, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(a & 15) as usize], v),
             Fast::Alu2 { d, b, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(d & 15) as usize], self.regs[(b & 15) as usize]),
@@ -1741,28 +1744,18 @@ impl Cpu {
             }
             16 =>
             {
-                // 64-bit register-pair loads/stores `rH_rL = d[...]` /
-                // `d[...] = rH_rL` (fitted on all 264 V13 corpus samples):
-                //   pair = bits(29,31) -> (r2p+1, r2p); bit16 = store
-                //   `5x ec`: base = bits(20,23),
-                //            off = 4*(bits(18,19) | bits(24,28)<<2 | bit0<<6 | bit1<<7)
-                //   `d0 e9`: sp-relative, off = bits(17,27)<<1 (all 810 corpus
-                //            samples; the earlier bits(17,23)<<1 | bit24<<8 fit only
-                //            offsets below 512 and sent Felucca's `d[sp+1056] = r11_r10`
-                //            to sp+32: its LED arrays kept the last frame's keys lit)
-                // The low register sits at the lower address.
-                let raw = insn.raw;
-                let p = ((raw >> 29) & 7) as usize;
-                let (hi, lo) = (2 * p + 1, 2 * p);
-                let store = (raw >> 16) & 1 != 0;
-                let addr = if (raw >> 8) & 0xff == 0xec {
-                    let off = 4 * (((raw >> 18) & 3) | (((raw >> 24) & 0x1f) << 2) | ((raw & 1) << 6) | (((raw >> 1) & 1) << 7));
-                    self.regs[((raw >> 20) & 0xf) as usize].wrapping_add(off as u32)
-                } else {
-                    let off = ((raw >> 17) & 0x7ff) << 1;
-                    self.sp.wrapping_add(off as u32)
-                };
-                if store {
+                // 64-bit register-pair loads/stores `rH_rL = d[...]` / `d[...] = rH_rL`
+                // (see `decode_pair_mem`); the low register sits at the lower address
+                let m = decode_pair_mem(insn.raw);
+                let (hi, lo) = (2 * m.pair + 1, 2 * m.pair);
+                let base = match m.base { Some(b) => self.regs[b], None => self.sp };
+                let step = match m.index { Some(i) => self.regs[i], None => m.off as u32 };
+                let addr = if m.post { base } else { base.wrapping_add(step) };
+                // the base update reads the index before a load can overwrite it
+                if let Some(b) = m.base.filter(|_| m.pre || m.post) {
+                    self.regs[b] = base.wrapping_add(step);
+                }
+                if m.store {
                     bus.write32(addr, self.regs[lo]);
                     bus.write32(addr.wrapping_add(4), self.regs[hi]);
                 } else {
@@ -2089,6 +2082,10 @@ impl Cpu {
                 }
             }
 
+            ROUTE_FPU => {
+                let (op, d, a, b) = decode_fpu(insn.raw);
+                self.regs[d as usize] = fpu(op, self.regs[a as usize], self.regs[b as usize]);
+            }
             ROUTE_SYNTAX => match self.exec_syntax(bus, insn, next_pc) {
                 Ok(Some(j)) => jumped = j,
                 Ok(None) | Err(CoreError::MissingSlot { .. }) => {
@@ -2181,6 +2178,9 @@ enum Rhs { Reg(usize), Imm(u32), Bit(usize) }
 /// family code of the 2-byte-immediate (f8/f9/fc/fd/fe) and 6-byte (4x ff)
 /// forms; `alt` (bit7 / bit0) flips to !=, <, <=.
 fn cmp_cond(fam: u64, alt: bool, a: u32, b: u32) -> bool {
+    if fam >= 8 {
+        return fcond(cond_of_fam(fam, alt), a, b);
+    }
     let base = match fam {
         0 => a == b,
         1 => a >= b,
@@ -2202,16 +2202,53 @@ fn decode_cmp_rr_branch(raw: u64, len: u8) -> Option<(u64, bool, usize, usize, i
         (4, 0xe8 | 0xe9 | 0xec | 0xed | 0xee) if b0 & 0x70 == 0 => {
             let f = (((raw >> 16) & 0xff) | (((raw >> 24) & 1) << 8)) as i64;
             let off = 2 * if f & 0x100 != 0 { f - 0x200 } else { f };
-            Some((b1 & 7, b0 & 0x80 != 0, ((raw >> 28) & 0xf) as usize, (raw & 0xf) as usize, off))
+            // bit 27: the float compare `iff` (families 8..)
+            let fam = (b1 & 7) | ((raw >> 27) & 1) << 3;
+            Some((fam, b0 & 0x80 != 0, ((raw >> 28) & 0xf) as usize, (raw & 0xf) as usize, off))
         }
         (6, 0xff) if b0 >> 4 == 4 => Some((
-            (b0 >> 1) & 7,
+            // bit 23: the float compare `iff` (families 8..)
+            (b0 >> 1) & 7 | ((raw >> 23) & 1) << 3,
             b0 & 1 != 0,
             ((raw >> 28) & 0xf) as usize,
             ((raw >> 24) & 0xf) as usize,
             2 * ((raw >> 32) as u16 as i16 as i64),
         )),
         _ => None,
+    }
+}
+
+/// A 64-bit register-pair access `rH_rL = d[...]` / `d[...] = rH_rL`.
+#[derive(Clone, Copy, Debug)]
+struct PairMem { pair: usize, store: bool, base: Option<usize>, off: i32, index: Option<usize>, pre: bool, post: bool }
+
+/// `5x ec`: pair = bits(29,31) (rH_rL = r2p+1, r2p), store = bit16, base = bits(20,23),
+/// off = 4*sext9(bits(18,19) | bits(24,27)<<2 | bit0<<6 | bit1<<7 | bit2<<8); the mode:
+///   50..57, bit17 clear `d[R+#]` (1531 corpus samples), set `d[++R=#]` (pre-increment, 44);
+///   58..5f, bit17 clear `d[R++=#]` (post-increment, 29); set: the index register
+///   bits(24,27), `58` `d[R+R]`, `5c` `d[++R=R]` (8 + 3 samples).
+/// `d0 e9`: sp-relative, off = bits(17,27)<<1 (all 810 corpus samples; the earlier
+/// bits(17,23)<<1 | bit24<<8 fit only offsets below 512 and sent Felucca's
+/// `d[sp+1056] = r11_r10` to sp+32: its LED arrays kept the last frame's keys lit).
+/// (Before 2026-10-10 the `5x ec` arm knew only `d[R+#]` with off >= 0: X0X's
+/// `d[++r1=r0] = r5_r4` in drum909_init wrote the default voice over the BD's panel.)
+fn decode_pair_mem(raw: u64) -> PairMem {
+    let pair = ((raw >> 29) & 7) as usize;
+    let store = (raw >> 16) & 1 != 0;
+    if (raw >> 8) & 0xff != 0xec {
+        return PairMem { pair, store, base: None, off: (((raw >> 17) & 0x7ff) << 1) as i32, index: None, pre: false, post: false };
+    }
+    let base = Some(((raw >> 20) & 0xf) as usize);
+    let f = (((raw >> 18) & 3) | (((raw >> 24) & 0xf) << 2) | ((raw & 1) << 6) | (((raw >> 1) & 1) << 7) | (((raw >> 2) & 1) << 8)) as i32;
+    let off = 4 * if f & 0x100 != 0 { f - 0x200 } else { f };
+    let bit17 = (raw >> 17) & 1 != 0;
+    if raw & 8 == 0 {
+        PairMem { pair, store, base, off, index: None, pre: bit17, post: false }
+    } else if !bit17 {
+        PairMem { pair, store, base, off, index: None, pre: false, post: true }
+    } else {
+        let index = Some(((raw >> 24) & 0xf) as usize);
+        PairMem { pair, store, base, off: 0, index, pre: raw & 4 != 0, post: false }
     }
 }
 
@@ -2252,6 +2289,8 @@ fn decode_if_block(raw: u64) -> Option<IfBlock> {
         }
         _ => return None,
     };
+    // bit 23 of the register form (not the bit-test family): the float compare `iff`
+    let fam = if fam != 2 && h & 7 == 1 && (raw >> 23) & 1 != 0 { fam | 8 } else { fam };
     Some(IfBlock {
         fam,
         alt,
@@ -2297,7 +2336,10 @@ fn decode_alu4(raw: u64) -> Option<Alu4> {
     let reg_dst = |op: Op, rhs: Rhs| Some(Alu4 { dst: Dst::Reg(d_lo), src: s_hi, op, rhs });
     match b1 {
         // (`fX e0` is `R = R - #h`, handled below: only `f0 e1` multiplies)
-        0xe0 | 0xe1 if matches!(b0, 0xb4 | 0x90 | 0xc8 | 0x94) || (b0 == 0xf0 && b1 == 0xe1) => {
+        // (`b4` only with e0: `b4 e1` is the bitfield extract `R = u/sextra(R, p:#, l:#)`, 294
+        // corpus samples, which this arm used to run as `R = R + R`: X0X's fm_log2f got an
+        // address for its exponent)
+        0xe0 | 0xe1 if (b0 == 0xb4 && b1 == 0xe0) || (matches!(b0, 0x90 | 0xc8 | 0x94 | 0xf0) && b1 == 0xe1) => {
             // three-register forms; c8 = shifts by register, 94 = `R op (1 << R)`
             let sub = ((raw >> 16) & 0xf) as u32;
             let op = match (b0, sub) {
@@ -2353,6 +2395,22 @@ fn decode_alu4(raw: u64) -> Option<Alu4> {
                 src: s_hi,
                 op,
                 rhs: Rhs::Imm(((raw >> 24) & 0xf) as u32),
+            })
+        }
+        0xe8 if b0 == 0x66 => {
+            // `[R+#i] op= 1 << R` (66 e8, 273 corpus samples): the 64 e8 layout with a bit
+            // operand; op bits 16-17 {0 |, 1 ^, 2 &, 3 &~}
+            let op = match (raw >> 16) & 3 {
+                0 => Op::Or,
+                1 => Op::Xor,
+                2 => Op::And,
+                _ => Op::AndNot,
+            };
+            Some(Alu4 {
+                dst: Dst::Mem(sext6x4(raw >> 18)),
+                src: s_hi,
+                op,
+                rhs: Rhs::Bit(((raw >> 24) & 0xf) as usize),
             })
         }
         0xe8 if matches!(b0, 0x64 | 0x68) => {
@@ -2752,6 +2810,72 @@ mod tests {
     }
 
     #[test]
+    fn pair_access_modes() {
+        // the `5x ec` register-pair modes (decode_pair_mem): pre-increment by a register,
+        // a negative offset, post-increment, an index register
+        let mut mem = vec![0u8; 0x400];
+        mem[..16].copy_from_slice(&[
+            0x5c, 0xec, 0x13, 0x40, // d[++r1=r0] = r5_r4
+            0x57, 0xec, 0x19, 0x8f, // d[r1+-8] = r9_r8
+            0x58, 0xec, 0x09, 0x20, // d[r0++=8] = r3_r2
+            0x58, 0xec, 0x13, 0x82, // d[r1+r2] = r9_r8
+        ]);
+        let mut ram = FlatRam::new(mem);
+        let mut cpu = Cpu::new(0);
+        cpu.regs[0] = 0x40;
+        cpu.regs[1] = 0x100;
+        (cpu.regs[4], cpu.regs[5]) = (0x11, 0x22);
+        (cpu.regs[8], cpu.regs[9]) = (0x33, 0x44);
+        (cpu.regs[2], cpu.regs[3]) = (0x55, 0x66);
+        cpu.step(&mut ram).unwrap();
+        assert_eq!((cpu.regs[1], ram.read32(0x140), ram.read32(0x144)), (0x140, 0x11, 0x22));
+        cpu.step(&mut ram).unwrap();
+        assert_eq!((ram.read32(0x138), ram.read32(0x13c)), (0x33, 0x44));
+        cpu.step(&mut ram).unwrap();
+        assert_eq!((cpu.regs[0], ram.read32(0x40), ram.read32(0x44)), (0x48, 0x55, 0x66));
+        cpu.regs[2] = 0x80;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!((ram.read32(0x1c0), ram.read32(0x1c4)), (0x33, 0x44));
+    }
+
+    #[test]
+    fn bitfield_extract_is_not_an_add() {
+        // `b4 e1 a0 4b` r4 = uextra(r4, p:23, l:8): a float's exponent (X0X fm_log2f)
+        let mut mem = vec![0u8; 0x100];
+        mem[..4].copy_from_slice(&[0xb4, 0xe1, 0xa0, 0x4b]);
+        let mut ram = FlatRam::new(mem);
+        let mut cpu = Cpu::new(0);
+        cpu.regs[4] = 1e-5f32.to_bits();
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(cpu.regs[4], 0x6e);
+    }
+
+    #[test]
+    fn fpu_ops_and_float_compare() {
+        // `3f e5 30 57` r5 = r3 + r7 (f), `3f e5 1f 65` r6 = ftoi(r5), `3f e5 8f 26` r2 = itof(r6),
+        // `12 e9 80 01` iff (r2 u>= r1) { `40 20` r0 = 0 }
+        let mut mem = vec![0u8; 0x100];
+        mem[..18].copy_from_slice(&[
+            0x3f, 0xe5, 0x30, 0x57, 0x3f, 0xe5, 0x1f, 0x65, 0x3f, 0xe5, 0x8f, 0x26,
+            0x12, 0xe9, 0x80, 0x01, 0x40, 0x20,
+        ]);
+        let mut ram = FlatRam::new(mem);
+        let mut cpu = Cpu::new(0);
+        cpu.regs[3] = 2.5f32.to_bits();
+        cpu.regs[7] = (-7.75f32).to_bits();
+        cpu.regs[1] = 0.0f32.to_bits();
+        cpu.regs[0] = 1;
+        for _ in 0..4 {
+            cpu.step(&mut ram).unwrap();
+        }
+        assert_eq!(f32::from_bits(cpu.regs[5]), -5.25);
+        assert_eq!(cpu.regs[6] as i32, -5);
+        assert_eq!(f32::from_bits(cpu.regs[2]), -5.0);
+        // -5.0 u>= 0.0 is false: the block is skipped, r0 stays 1
+        assert_eq!((cpu.pc, cpu.regs[0]), (18, 1));
+    }
+
+    #[test]
     fn short_shift_by_32() {
         // `df a0` r7 = r5 >>> 32, `32 a0` r2 = r3 << 32 (count field 0 = 32)
         let mut mem = vec![0u8; 0x100];
@@ -2991,7 +3115,7 @@ fn route_of(insn: &Instruction, alu4: &Option<Alu4>, bittest: &Option<BitTest>) 
             _ if insn.entry.len == 4 && (insn.raw & 0xf8) == 0x50
                 && matches!((insn.raw >> 8) & 0xff, 0xec | 0xed | 0xee)
                 && has(insn.entry.syntax, "[R+") && !has(insn.entry.syntax, "[R+R") => 17,
-            _ if insn.entry.len == 4 && has(insn.entry.syntax, "[++R=#i]")
+            _ if insn.entry.len == 4 && (has(insn.entry.syntax, "[++R=#i]") || has(insn.entry.syntax, "[++R=-#i]"))
                 && matches!((insn.raw >> 8) & 0xff, 0xec | 0xed | 0xee)
                 && ((insn.raw & 0xf8) == 0x58 || (insn.raw & 0xff) == 0xd0) => 18,
             _ if insn.entry.len == 4 && (insn.raw & 0xf0) == 0xd0
@@ -3012,6 +3136,7 @@ fn route_of(insn: &Instruction, alu4: &Option<Alu4>, bittest: &Option<BitTest>) 
             "pc_r_1_mov_sp" | "pc_r_2_mov_sp" | "pc_r_3_mov_sp"
             | "pc_r_4_mov_sp" | "pc_r_mov_sp" => 28,
             "rep_i_r" | "rep_i_i" => 29,
+            n if n.starts_with("fpu_") => ROUTE_FPU,
             _ => ROUTE_SYNTAX,
     }
 }
@@ -3038,12 +3163,26 @@ fn st_w<B: Bus>(bus: &mut B, w: u8, a: u32, v: u32) {
 
 /// The route of the generic, syntax-keyed executor (`exec_syntax`).
 const ROUTE_SYNTAX: u16 = 30;
+const ROUTE_FPU: u16 = 31;
 
 #[derive(Clone, Copy, Debug)]
 enum Base { Reg(u8), Sp }
 
 #[derive(Clone, Copy, Debug)]
-enum Cond { Eq, Ne, LtU, GtU, LeU, GeU, LtS, GtS, LeS, GeS }
+enum Cond {
+    Eq, Ne, LtU, GtU, LeU, GeU, LtS, GtS, LeS, GeS,
+    /// float compares (`iff`): ordered ==, <, <=, >=, > and their unordered negations
+    FEq, FUne, FLt, FUge, FLe, FUgt, FGe, FUlt, FGt, FUle,
+}
+
+impl Cond {
+    /// (only the AArch64 JIT asks)
+    #[cfg_attr(not(target_arch = "aarch64"), allow(dead_code))]
+    fn is_float(self) -> bool {
+        matches!(self, Cond::FEq | Cond::FUne | Cond::FLt | Cond::FUge | Cond::FLe | Cond::FUgt
+            | Cond::FGe | Cond::FUlt | Cond::FGt | Cond::FUle)
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 enum Fast {
@@ -3057,6 +3196,8 @@ enum Fast {
     St { s: u8, b: Base, off: u32, w: u8 },
     BrI { a: u8, v: u32, cond: Cond, target: u32 },
     BrR { a: u8, b: u8, cond: Cond, target: u32 },
+    /// an FPU op (see `fpu`)
+    FOp { d: u8, a: u8, b: u8, op: u8 },
     Goto { target: u32 },
     Call { target: u32 },
     Rts,
@@ -3139,6 +3280,16 @@ fn cond_of_fam(fam: u64, alt: bool) -> Cond {
         (4, true) => Cond::LeU,
         (5, false) => Cond::GeS,
         (5, true) => Cond::LtS,
+        (8, false) => Cond::FEq,
+        (8, true) => Cond::FUne,
+        (9, false) => Cond::FUge,
+        (9, true) => Cond::FLt,
+        (12, false) => Cond::FUgt,
+        (12, true) => Cond::FLe,
+        (13, false) => Cond::FGe,
+        (13, true) => Cond::FUlt,
+        (14, false) => Cond::FGt,
+        (14, true) => Cond::FUle,
         (_, false) => Cond::GtS,
         (_, true) => Cond::LeS,
     }
@@ -3243,6 +3394,10 @@ fn fast_raw(route: u16, insn: &Instruction, alu4: &Option<Alu4>, bittest: &Optio
             let off = 2 * ((raw >> 32) as u16 as i16 as i64);
             Some(Fast::BrI { a: ((raw >> 28) & 0xf) as u8, v: imm, cond: cond_of_fam(fam, b0 & 1 != 0), target: (next_pc as i64 + off) as u32 })
         }
+        ROUTE_FPU => {
+            let (op, d, a, b) = decode_fpu(raw);
+            Some(Fast::FOp { d, a, b, op })
+        }
         13 => {
             let (fam, alt, a, b, off) = decode_cmp_rr_branch(raw, insn.entry.len)?;
             Some(Fast::BrR { a: a as u8, b: b as u8, cond: cond_of_fam(fam, alt), target: (next_pc as i64 + off) as u32 })
@@ -3302,6 +3457,54 @@ fn cond_true(c: Cond, l: u32, r: u32) -> bool {
         Cond::GtS => (l as i32) > (r as i32),
         Cond::LeS => (l as i32) <= (r as i32),
         Cond::GeS => (l as i32) >= (r as i32),
+        _ => fcond(c, l, r),
+    }
+}
+
+/// A float compare on the raw register bits (NaN: ordered compares false, unordered true).
+#[cold]
+fn fcond(c: Cond, l: u32, r: u32) -> bool {
+    let (x, y) = (f32::from_bits(l), f32::from_bits(r));
+    match c {
+        Cond::FEq => x == y,
+        Cond::FUne => !(x == y),
+        Cond::FLt => x < y,
+        Cond::FUge => !(x < y),
+        Cond::FLe => x <= y,
+        Cond::FUgt => !(x <= y),
+        Cond::FGe => x >= y,
+        Cond::FUlt => !(x >= y),
+        Cond::FGt => x > y,
+        _ => !(x > y),
+    }
+}
+
+/// The FPU ops (`3f e5`, see fm1-isa's fpu.rs): binary op 0 +, 1 -, 2 *, 3 /, 5 fmin, 6 fmax on
+/// (a, b); unary 0x1f ftoi, 0x5f ftou (both truncating), 0x8f itof, 0x9f utof on a.
+fn fpu(op: u8, a: u32, b: u32) -> u32 {
+    let (x, y) = (f32::from_bits(a), f32::from_bits(b));
+    match op {
+        0 => (x + y).to_bits(),
+        1 => (x - y).to_bits(),
+        2 => (x * y).to_bits(),
+        3 => (x / y).to_bits(),
+        5 => x.min(y).to_bits(),
+        6 => x.max(y).to_bits(),
+        0x1f => x as i32 as u32,
+        0x5f => x as u32,
+        0x8f => (a as i32 as f32).to_bits(),
+        _ => (a as f32).to_bits(),
+    }
+}
+
+/// (op, d, a, b) of an FPU instruction word.
+fn decode_fpu(raw: u64) -> (u8, u8, u8, u8) {
+    let b2 = ((raw >> 16) & 0xff) as u8;
+    let b3 = ((raw >> 24) & 0xff) as u8;
+    if b2 & 0xf == 0xf {
+        (b2, b3 >> 4, b3 & 0xf, 0)
+    } else {
+        (b2 & 0xf, b3 >> 4, b2 >> 4, b3 & 0xf)
     }
 }
 
@@ -3459,17 +3662,12 @@ pub fn describe(win: u64, pc: u32) -> Option<String> {
     let route = route_of(&insn, &alu4, &bittest);
     let syntax = canon_syntax(insn.entry);
     if route == 16 {
-        // register-pair load / store (arm 16): `P rH_rL base off ld|st`
-        let raw = insn.raw;
-        let p = ((raw >> 29) & 7) as u32;
-        let store = (raw >> 16) & 1 != 0;
-        let (base, off) = if (raw >> 8) & 0xff == 0xec {
-            let off = 4 * (((raw >> 18) & 3) | (((raw >> 24) & 0x1f) << 2) | ((raw & 1) << 6) | (((raw >> 1) & 1) << 7));
-            (format!("r{}", (raw >> 20) & 0xf), off)
-        } else {
-            ("sp".to_string(), ((raw >> 17) & 0x7ff) << 1)
-        };
-        return Some(format!("P r{}_r{} {} {} {}", 2 * p + 1, 2 * p, base, off, if store { "st" } else { "ld" }));
+        // register-pair load / store (arm 16): `P rH_rL [++]base[++] off|+rI ld|st`
+        let m = decode_pair_mem(insn.raw);
+        let b = m.base.map_or("sp".to_string(), |b| format!("r{}", b));
+        let base = if m.pre { format!("++{}", b) } else if m.post { format!("{}++", b) } else { b };
+        let off = m.index.map_or(format!("{}", m.off), |i| format!("+r{}", i));
+        return Some(format!("P r{}_r{} {} {} {}", 2 * m.pair + 1, 2 * m.pair, base, off, if m.store { "st" } else { "ld" }));
     }
     if route == 14 {
         // predicated block (arm 14): `C [s] rA op rhs then_units else_units`
@@ -3482,6 +3680,9 @@ pub fn describe(win: u64, pc: u32) -> Option<String> {
                 Cond::Eq => ("", "=="), Cond::Ne => ("", "!="),
                 Cond::LtU => ("", "<"), Cond::GtU => ("", ">"), Cond::LeU => ("", "<="), Cond::GeU => ("", ">="),
                 Cond::LtS => ("s", "<"), Cond::GtS => ("s", ">"), Cond::LeS => ("s", "<="), Cond::GeS => ("s", ">="),
+                Cond::FEq => ("f", "=="), Cond::FUne => ("f", "u!="), Cond::FLt => ("f", "<"), Cond::FUge => ("f", "u>="),
+                Cond::FLe => ("f", "<="), Cond::FUgt => ("f", "u>"), Cond::FGe => ("f", ">="), Cond::FUlt => ("f", "u<"),
+                Cond::FGt => ("f", ">"), Cond::FUle => ("f", "u<="),
             }
         };
         return Some(format!("C{} r{} {} {} {} {}", sign, b.reg, op, rhs, b.then_units, b.else_units));

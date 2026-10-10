@@ -31,8 +31,18 @@ ANDN = re.compile(r"^r(\d+) = r(\d+) & ~r(\d+)$")
 RSUB = re.compile(rf"^r(\d+) = ({NUM}) - r(\d+)$")
 BIT = re.compile(rf"^r(\d+) = r(\d+) ({OPS}) \(1 << r(\d+)\)$")
 MOV = re.compile(r"^r(\d+) = r(\d+)$")
-PAIR_LD = re.compile(r"^r(\d+)_r(\d+) = d\[(r\d+|sp)(?:\+(\d+))?\]$")
-PAIR_ST = re.compile(r"^d\[(r\d+|sp)(?:\+(\d+))?\] = r(\d+)_r(\d+)$")
+# pair accesses: d[R+#] d[++R=#] d[R++=#] d[R+R] d[++R=R] (and sp)
+PAIR_MEM = r"d\[(\+\+)?(r\d+|sp)(\+\+)?(?:(?:\+|=)(-?\d+|r\d+))?\]"
+PAIR_LD = re.compile(rf"^r(\d+)_r(\d+) = {PAIR_MEM}$")
+PAIR_ST = re.compile(rf"^{PAIR_MEM} = r(\d+)_r(\d+)$")
+
+
+def pair_text(pre, base, post, x):
+    b = ("++" if pre else "") + base + ("++" if post else "")
+    if x and x.startswith("r"):
+        return f"{b} +{x}"
+    return f"{b} {int(x or 0)}"
+
 
 LDX = re.compile(r"^r(\d+) = ([bh]?)\[r(\d+)\+r(\d+)(?:<<(\d+))?\](?: \(([us])\))?$")
 STX = re.compile(r"^([bh]?)\[r(\d+)\+r(\d+)(?:<<(\d+))?\] = r(\d+)$")
@@ -104,10 +114,10 @@ def theirs(text):
         return "E r%s r%s %s %s" % (m[1], m[2], m[3], m[4])
     m = PAIR_LD.match(t)
     if m:
-        return "P r%s_r%s %s %d ld" % (m[1], m[2], m[3], int(m[4] or 0))
+        return "P r%s_r%s %s ld" % (m[1], m[2], pair_text(m[3], m[4], m[5], m[6]))
     m = PAIR_ST.match(t)
     if m:
-        return "P r%s_r%s %s %d st" % (m[3], m[4], m[1], int(m[2] or 0))
+        return "P r%s_r%s %s st" % (m[5], m[6], pair_text(m[1], m[2], m[3], m[4]))
     m = ANDN.match(t)
     if m:
         return "A r%s r%s &~ r%s" % (m[1], m[2], m[3])

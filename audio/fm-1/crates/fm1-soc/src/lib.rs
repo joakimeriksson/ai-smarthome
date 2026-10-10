@@ -155,8 +155,9 @@ impl Soc {
             is_write,
             value,
         });
-        if self.unknown_log.len() > 8192 {
-            self.unknown_log.remove(0);
+        // keep the last 8192..16384 (dropping one at a time shifted the whole log per access)
+        if self.unknown_log.len() >= 16384 {
+            self.unknown_log.drain(..8192);
         }
     }
 

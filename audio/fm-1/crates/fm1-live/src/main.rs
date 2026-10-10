@@ -42,15 +42,54 @@ struct Opts {
     bench: Option<u64>,
     /// Headless: run this many ms with a chord held, save the panel image.
     shot: Option<u64>,
+    /// What runs, for the window title.
+    name: String,
+}
+
+/// The firmware catalog web/firmwares.json as (id, name, version, image path): each image is
+/// reference/firmwares/<package stem>.xip.bin (tools/fetch_firmwares.py). A small scan for the
+/// four string fields, enough for this file; no JSON dependency.
+fn catalog() -> Vec<(String, String, String, String)> {
+    let Ok(text) = std::fs::read_to_string("web/firmwares.json") else { return Vec::new() };
+    let field = |obj: &str, key: &str| -> Option<String> {
+        let at = obj.find(&format!("\"{key}\": \""))? + key.len() + 5;
+        Some(obj[at..at + obj[at..].find('"')?].to_string())
+    };
+    text.split("{ \"id\"").skip(1).filter_map(|chunk| {
+        let obj = format!("{{ \"id\"{chunk}");
+        let pkg = field(&obj, "package")?;
+        let stem = pkg.rsplit('/').next()?.trim_end_matches(".fwsc").to_string();
+        Some((field(&obj, "id")?, field(&obj, "name")?, field(&obj, "version")?,
+              format!("reference/firmwares/{stem}.xip.bin")))
+    }).collect()
 }
 
 fn parse() -> Option<Opts> {
     let a: Vec<String> = std::env::args().collect();
-    let mut o = Opts { bin: "work/felucca_xip.bin".into(), entry: 0x0200_0120, mhz: 240, bench: None, shot: None };
+    let mut o = Opts { bin: "work/felucca_xip.bin".into(), entry: 0x0200_0120, mhz: 240, bench: None, shot: None,
+                       name: "Felucca".into() };
     let mut i = 1;
     while i < a.len() {
         match a[i].as_str() {
-            "--bin" => o.bin = a.get(i + 1)?.clone(),
+            "--bin" => {
+                o.bin = a.get(i + 1)?.clone();
+                o.name = o.bin.rsplit('/').next().unwrap_or("").trim_end_matches(".bin").trim_end_matches(".xip").to_string();
+            }
+            "--fw" => {
+                // a firmware from web/firmwares.json by id (`--fw list` lists them)
+                let want = a.get(i + 1)?;
+                let cat = catalog();
+                if want == "list" {
+                    for (id, name, ver, path) in &cat {
+                        let have = if std::path::Path::new(path).exists() { "" } else { "  (missing: tools/fetch_firmwares.py)" };
+                        println!("{id:14} {name} {ver}{have}");
+                    }
+                    std::process::exit(0);
+                }
+                let (_, name, ver, path) = cat.into_iter().find(|f| &f.0 == want)?;
+                o.bin = path;
+                o.name = format!("{name} {ver}");
+            }
             "--entry" => o.entry = u32::from_str_radix(a.get(i + 1)?.trim_start_matches("0x"), 16).ok()?,
             "--mhz" => o.mhz = a.get(i + 1)?.parse().ok()?,
             "--bench" => o.bench = Some(a.get(i + 1)?.parse().ok()?),
@@ -190,6 +229,7 @@ fn bench(o: &Opts, ms: u64) {
     };
     if std::env::var("FM1_BENCH_NOKEYS").is_ok() {
         m.soc.periph.script.clear();
+    } else if script_keys(&mut m) {
     } else {
     m.soc.periph.script.push_back((m.soc.periph.cycle_of_ms(800), Action::Key { id: 21, down: true }));
     m.soc.periph.script.push_back((m.soc.periph.cycle_of_ms(900), Action::Key { id: 25, down: true }));
@@ -316,6 +356,32 @@ fn start_audio(ring: Arc<AudioRing>) -> Result<cpal::Stream, String> {
 
 /// Headless panel picture: C4-E4-G4 held from 0.8 s, PLAY pressed at 1.2 s,
 /// the panel drawn at `ms` into work/panel.ppm.
+/// FM1_BENCH_KEYS=ms:id[,ms:id^,ms:eN:clicks...]: queue key presses (`^`: release) and
+/// encoder turns. False when the variable is unset.
+fn script_keys(m: &mut Machine) -> bool {
+    let Ok(keys) = std::env::var("FM1_BENCH_KEYS") else { return false };
+    for k in keys.split(',') {
+        if let Some((t, rest)) = k.split_once(':') {
+            // `ms:eN:clicks` turns matrix encoder N
+            if let Some((e, c)) = rest.strip_prefix('e').and_then(|r| r.split_once(':')) {
+                if let (Ok(t), Ok(enc), Ok(clicks)) = (t.trim().parse::<u64>(), e.parse::<u8>(), c.parse::<i32>()) {
+                    let at = m.soc.periph.cycle_of_ms(t);
+                    m.soc.periph.script.push_back((at, Action::Enc { enc, clicks }));
+                }
+                continue;
+            }
+            let id = rest;
+            let (id, down) = match id.trim().strip_suffix('^') { Some(i) => (i, false), None => (id.trim(), true) };
+            if let (Ok(t), Ok(id)) = (t.trim().parse::<u64>(), id.parse::<u8>()) {
+                let at = m.soc.periph.cycle_of_ms(t);
+                m.soc.periph.script.push_back((at, Action::Key { id, down }));
+            }
+        }
+    }
+    m.soc.periph.script.make_contiguous().sort_by_key(|(c, _)| *c);
+    true
+}
+
 fn shot(o: &Opts, ms: u64) {
     let mut m = match Machine::new(o) {
         Ok(m) => m,
@@ -324,10 +390,11 @@ fn shot(o: &Opts, ms: u64) {
     if std::env::var("FM1_NO_SKIP").is_ok() {
         m.soc.periph.skip_idle = false;
     }
-    let held = [21u8, 25, 28];
+    let scripted = script_keys(&mut m);
+    let held: &[u8] = if scripted { &[] } else { &[21u8, 25, 28] };
     let key_at: u64 = std::env::var("FM1_KEY_AT").ok().and_then(|v| v.parse().ok()).unwrap_or(800);
     let key_up: Option<u64> = std::env::var("FM1_KEY_UP").ok().and_then(|v| v.parse().ok());
-    for id in held {
+    for &id in held {
         let at = m.soc.periph.cycle_of_ms(key_at);
         m.soc.periph.script.push_back((at, Action::Key { id, down: true }));
         if let Some(up) = key_up {
@@ -336,7 +403,7 @@ fn shot(o: &Opts, ms: u64) {
         }
     }
     m.soc.periph.script.make_contiguous().sort_by_key(|(c, _)| *c);
-    if std::env::var("FM1_NO_PLAY").is_err() {
+    if std::env::var("FM1_NO_PLAY").is_err() && !scripted {
         let at = m.soc.periph.cycle_of_ms(1200);
         m.soc.periph.script.push_back((at, Action::Key { id: 12, down: true }));
         let at = m.soc.periph.cycle_of_ms(1350);
@@ -381,7 +448,7 @@ fn shot(o: &Opts, ms: u64) {
     }
     let mut down = [false; 41];
     if key_up.is_none() {
-        for id in held {
+        for &id in held {
             down[id as usize] = true;
         }
     }
@@ -448,7 +515,7 @@ const DRAG_PER_CLICK: f32 = 12.0;
 
 fn main() {
     let Some(o) = parse() else {
-        eprintln!("usage: fm1-live [--bin work/felucca_xip.bin] [--entry 0x02000120] [--mhz 240] [--bench MS]");
+        eprintln!("usage: fm1-live [--fw ID | --fw list | --bin work/felucca_xip.bin] [--entry 0x02000120] [--mhz 240] [--bench MS]");
         std::process::exit(2);
     };
     if let Some(ms) = o.shot {
@@ -552,7 +619,7 @@ fn main() {
         })
     };
 
-    let mut win = match Window::new("FM-1 · Felucca (emulated)", W, H, WindowOptions::default()) {
+    let mut win = match Window::new(&format!("FM-1 · {} (emulated)", o.name), W, H, WindowOptions::default()) {
         Ok(w) => w,
         Err(e) => {
             eprintln!("window: {e}");
@@ -696,7 +763,7 @@ fn main() {
             break;
         }
         if last_title.elapsed() >= Duration::from_millis(500) {
-            win.set_title(&format!("FM-1 · Felucca — {}", status.lock().unwrap()));
+            win.set_title(&format!("FM-1 · {} — {}", o.name, status.lock().unwrap()));
             last_title = Instant::now();
         }
     }

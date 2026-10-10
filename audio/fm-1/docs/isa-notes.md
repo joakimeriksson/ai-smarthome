@@ -334,6 +334,37 @@ Felucca's I2S words hold a 24-bit sample in the **low** bits (Q15 << 7,
 - Interrupt nesting follows the Blackfin rule: an ISR can be interrupted only while its
   `reti` is saved on the stack.
 
+### The FPU and the community firmwares (2026-10-10)
+
+Fifteen community firmwares (web/firmwares.json, `tools/fetch_firmwares.py`) were added as
+corpora: the ISA is mined from 21 listings now (`isa/corpora.txt`; the app listings come from
+`tools/disasm_app.sh`, which wraps a raw app in an ELF for JieLi's objdump). 2765 classes;
+`tools/isa_stable_names.py` keeps the previous class names (the core keys some decoders on
+them); `tools/gen_isa.py` lets a class the solver could not finish borrow a twin's slot only
+when it reproduces every (raw, value) example the solver kept for it.
+
+- **FPU** (`-mcpu=r3`; objdump prints `<unknown instruction>`): `3f e5 b2 b3` on the ordinary
+  registers. Binary `R = R op R (f)`: op = b2 & 15 (0 +, 1 -, 2 *, 3 /, 5 fmin, 6 fmax),
+  a = b2 >> 4, d = b3 >> 4, b = b3 & 15. Unary: b2 = 1f ftoi (trunc), 5f ftou (trunc),
+  8f itof, 9f utof; d = b3 >> 4, s = b3 & 15. `3f f5` is the same op as a dual-issue pair
+  head (bit 12, as e0/e1 vs f0/f1; `-mfprev1` makes the compiler pair them). The stock app
+  also has ops 7 and 8 (14 each), still unknown. Encodings from the vendor assembler
+  (`work/probe/fpu_ops.S`, `fcmp_*.S`); `probes/fpu.c` checks 1464 cases against LLVM's folding.
+- **Float compares** `iff`: the integer `if (R op R) goto` (4-byte: flag bit 27; 6-byte
+  `4x ff`: bit 23) and `if (R op R) {` (bit 23) with a float flag. Families: e8 ordered ==,
+  e9 u>=, ec u>, ed >=, ee >; the alt bit gives !=(unordered), <, <=, u<, u<=.
+- **Pair accesses `5x ec`** had only `d[R+#]` with off >= 0. All modes now
+  (`decode_pair_mem`): off = 4*sext9(bits18-19 | bits24-27<<2 | bit0<<6 | bit1<<7 | bit2<<8);
+  50..57 bit17 = pre-increment; 58..5f bit17 clear = post-increment, set = index register
+  bits 24-27 (`58` [R+R], `5c` [++R=R]). X0X's `d[++r1=r0] = r5_r4` had overwritten the
+  909 BD's settings with another voice's. The audit compares all five modes now.
+- **`b4 e1` is the bitfield extract** `R = u/sextra(R, p:#, l:#)` (294 samples); the 3-register
+  ALU arm also took it as `R = R + R` (X0X's fm_log2f got an address as exponent). `b4` is
+  add/sub only with e0.
+- **`66 e8`** `[R+#i] op= 1 << R` (273 samples): the 64 e8 layout, ops {|, ^, &, &~}.
+- Both pair and extract bugs were found with `probes/x0x/d909.c`: X0X's own 909 code built
+  for the device (its flags) and natively, compared word for word (`reference/fm1-x0x`).
+
 ### Remaining exec gaps (known, traced)
 
 - goto/if branch-offset fields: printed = word offset (delta = 2*printed)

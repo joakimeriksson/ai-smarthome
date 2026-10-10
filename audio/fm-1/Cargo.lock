@@ -294,6 +294,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fm1-web"
+version = "0.0.0"
+dependencies = [
+ "fm1-core",
+ "fm1-soc",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"

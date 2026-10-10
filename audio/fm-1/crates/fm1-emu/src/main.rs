@@ -32,13 +32,26 @@ struct Args {
     ram: usize,
     /// print every change of this RAM word (pc, old -> new)
     watch: Option<u32>,
+    /// print the registers each time execution reaches this pc (first 8 hits)
+    break_pc: Option<u32>,
+    /// dump `n` words of memory at `addr` when the run ends
+    dump: Option<(u32, u32)>,
+    /// run for this many emulated milliseconds (240 MHz, 1 insn/cycle)
+    ms: Option<u64>,
+    /// write the I2S output (44.1 kHz stereo 16-bit) here
+    wav: Option<String>,
+    /// front-panel script: `t[-t2]:PLAY`, `t:n7`, `t:k12`, `t:enc0:+3`,
+    /// `t:SELECT:-1`, `t:pot:512` (times in ms; a key without t2 is held 150 ms)
+    keys: Vec<String>,
+    /// save the LCD at these times (ms) as work/lcd_<ms>.bmp
+    snap: Vec<u64>,
 }
 
 fn main() -> ExitCode {
     if std::env::args().any(|a| a == "--coverage") {
         return coverage_report();
     }
-    let args = match parse_args() {
+    let mut args = match parse_args() {
         Some(a) => a,
         None => {
             eprintln!(
@@ -49,6 +62,7 @@ fn main() -> ExitCode {
         }
     };
 
+    let mut flash_image: Option<Vec<u8>> = None;
     let mut image = match std::fs::read(&args.bin) {
         Ok(b) => b,
         Err(e) => {
@@ -60,6 +74,7 @@ fn main() -> ExitCode {
         match std::fs::read(flash) {
             Ok(f) if f.len() > APP_FLASH_OFFSET && f[APP_FLASH_OFFSET..].starts_with(&image) => {
                 image = f[APP_FLASH_OFFSET..].to_vec();
+                flash_image = Some(f);
             }
             Ok(_) => {
                 eprintln!("error: {flash} does not contain {} at {APP_FLASH_OFFSET:#x}", args.bin);
@@ -75,6 +90,9 @@ fn main() -> ExitCode {
     image.resize(image.len().max(1) , 0);
 
     let mut soc = Soc::new(args.ram, image);
+    if let Some(f) = &flash_image {
+        soc.flash.load(f);
+    }
     let mut cpu = Cpu::new(args.entry);
     // The SPL enters the app with r0 -> its boot-parameter struct, whose
     // first word points at a chip-info block (boot_hwinfo_save at
@@ -83,6 +101,27 @@ fn main() -> ExitCode {
     let params = RAM_BASE + 0x7fc00;
     soc.write32(params, params + 0x40);
     cpu.regs[0] = params;
+    if let Some(ms) = args.ms {
+        args.steps = ms * (fm1_soc::CPU_HZ / 1000);
+    }
+    for k in &args.keys {
+        match parse_key_script(k) {
+            Some(evs) => {
+                for (ms, a) in evs {
+                    soc.periph.script.push_back((fm1_soc::Periph::cycle_of_ms(ms), a));
+                }
+            }
+            None => {
+                eprintln!("error: bad --keys item {k:?}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+    soc.periph.script.make_contiguous().sort_by_key(|(c, _)| *c);
+    let mut snaps: Vec<u64> = args.snap.clone();
+    snaps.sort_unstable();
+    let mut irq_count: u64 = 0;
+    let irq_trace = std::env::var("FM1_IRQ_TRACE").is_ok();
     // cpu1 (core id 1) is held until cpu0 releases it with `0x10008 |= 8`
     // in cpu1_boot_start; it then boots from the vector at 0x02000098.
     let mut cpus: Vec<Cpu> = vec![cpu];
@@ -100,9 +139,12 @@ fn main() -> ExitCode {
 
     let mut hist: HashMap<&'static str, u64> = HashMap::new();
     let mut pchist: HashMap<u32, u64> = HashMap::new();
+    // per-halfword counters for code in XIP (the HashMap above keeps RAM pcs)
+    let mut xip_hist: Vec<u64> = vec![0; soc.xip.len() / 2 + 1];
     let mut halt: Option<CoreError> = None;
     let mut nop_run = 0u32;
     let mut watch_val = args.watch.map(|a| soc.read32(a));
+    let mut break_hits = 0u32;
     let mut last_pc = cpus[0].pc;
     let mut total_steps: u64 = 0;
     let mut ring: Vec<u32> = Vec::new();
@@ -132,6 +174,10 @@ fn main() -> ExitCode {
         for ci in 0..cpus.len() {
             let cpu = &mut cpus[ci];
             total_steps += 1;
+            if Some(cpu.pc) == args.break_pc && break_hits < 8 {
+                break_hits += 1;
+                println!("break c{} pc={:#010x} [{}] sp={:#010x} rets={:#010x} r0-11={:x?}", cpu.core_id, cpu.pc, total_steps, cpu.sp, cpu.rets, &cpu.regs[..12]);
+            }
             if total_steps > 0 && total_steps % dump_every == 0 {
                 let _ = fm1_soc::write_bmp("work/lcd.bmp", &soc.lcd.fb, soc.lcd.inverted);
             }
@@ -150,6 +196,25 @@ fn main() -> ExitCode {
                 stop = true;
                 break;
             }
+            if ci == 0 {
+                soc.advance(1);
+                if let Some(&at) = snaps.first() {
+                    if soc.periph.ms() >= at {
+                        snaps.remove(0);
+                        let _ = fm1_soc::write_bmp(&format!("work/lcd_{at}.bmp"), &soc.lcd.fb, soc.lcd.inverted);
+                    }
+                }
+                if let Some((n, prio)) = soc.pending_irq() {
+                    if cpu.irq_ready(prio) {
+                        let handler = soc.read32(fm1_soc::VEC_BASE + 4 * n as u32);
+                        if irq_trace {
+                            println!("irq {n} prio {prio} -> {handler:#010x} at {} ms (pc {:#010x}, depth {})", soc.periph.ms(), cpu.pc, cpu.irq_levels.len());
+                        }
+                        cpu.interrupt(handler, prio);
+                        irq_count += 1;
+                    }
+                }
+            }
             match cpu.step(&mut soc) {
                 Ok(()) => {
                     if let (Some(a), Some(old)) = (args.watch, watch_val) {
@@ -159,14 +224,16 @@ fn main() -> ExitCode {
                             watch_val = Some(now);
                         }
                     }
-                    if let Some(e) = soc_instruction_name(&soc, &cpu, last_pc) {
-                        *hist.entry(e).or_insert(0) += 1;
+                    *hist.entry(tail_name).or_insert(0) += 1;
+                    if last_pc >= XIP_BASE && ((last_pc - XIP_BASE) as usize) < xip_hist.len() * 2 {
+                        xip_hist[((last_pc - XIP_BASE) / 2) as usize] += 1;
+                    } else {
+                        *pchist.entry(last_pc).or_insert(0) += 1;
                     }
-                    *pchist.entry(last_pc).or_insert(0) += 1;
-                    ring.push(last_pc);
-                    if ring.len() > 12 {
+                    if ring.len() >= 12 {
                         ring.remove(0);
                     }
+                    ring.push(last_pc);
                     if let Some(k) = args.trace {
                         if cpu.insn_count <= k && !args.quiet {
                             println!(
@@ -216,6 +283,7 @@ fn main() -> ExitCode {
             let _ = total;
         }
         let mut pcs: Vec<(u32, u64)> = pchist.into_iter().collect();
+        pcs.extend(xip_hist.iter().enumerate().filter(|(_, &n)| n > 0).map(|(i, &n)| (XIP_BASE + 2 * i as u32, n)));
         pcs.sort_by_key(|(_, c)| std::cmp::Reverse(*c));
         println!("last executed pcs:");
         for (i, pc) in ring.iter().enumerate() {
@@ -228,6 +296,19 @@ fn main() -> ExitCode {
         }
         {
             let _ = fm1_soc::write_bmp("work/lcd.bmp", &soc.lcd.fb, soc.lcd.inverted);
+            println!(
+                "time {} ms, {} interrupts, {} audio halves ({} samples)",
+                soc.periph.ms(),
+                irq_count,
+                soc.periph.audio_halves,
+                soc.periph.audio.len() / 2
+            );
+            if let Some(w) = &args.wav {
+                match write_wav(w, &soc.periph.audio) {
+                    Ok(()) => println!("wav: {w} ({:.2} s)", soc.periph.audio.len() as f64 / 2.0 / 44100.0),
+                    Err(e) => println!("wav: cannot write {w}: {e}"),
+                }
+            }
             let con = soc.console_string();
             if !con.is_empty() {
                 println!("console ({} bytes):", con.len());
@@ -274,6 +355,13 @@ fn main() -> ExitCode {
         }
         let _ = stopped;
     }
+    if let Some((addr, n)) = args.dump {
+        println!("dump {addr:#010x} ({n} words):");
+        for row in (0..n).step_by(8) {
+            let words: Vec<String> = (row..(row + 8).min(n)).map(|k| format!("{:08x}", soc.read32(addr + 4 * k))).collect();
+            println!("  {:#010x}: {}", addr + 4 * row, words.join(" "));
+        }
+    }
     ExitCode::SUCCESS
 }
 
@@ -282,7 +370,7 @@ fn main() -> ExitCode {
 /// tracing).
 fn soc_instruction_name(_soc: &Soc, cpu: &Cpu, pc: u32) -> Option<&'static str> {
     if let Ok(win) = fetch_window(_soc, pc) {
-        if let Ok(insn) = fm1_isa::decode_win(win, pc) {
+        if let Ok(insn) = fm1_isa::decode_win_cached(win, pc) {
             let _ = cpu;
             return Some(insn.entry.name);
         }
@@ -373,6 +461,12 @@ fn parse_args() -> Option<Args> {
         quiet: false,
         ram: DEFAULT_RAM,
         watch: None,
+        break_pc: None,
+        dump: None,
+        ms: None,
+        wav: None,
+        keys: Vec::new(),
+        snap: Vec::new(),
     };
     let mut have_bin = false;
     while i < a.len() {
@@ -402,6 +496,16 @@ fn parse_args() -> Option<Args> {
                 args.ram = a.get(i + 1)?.parse().ok()?;
                 i += 2;
             }
+            "--dump" => {
+                let addr = parse_hex(a.get(i + 1)?)?;
+                let n: u32 = a.get(i + 2)?.parse().ok()?;
+                args.dump = Some((addr, n));
+                i += 3;
+            }
+            "--break-pc" => {
+                args.break_pc = Some(parse_hex(a.get(i + 1)?)?);
+                i += 2;
+            }
             "--watch" => {
                 args.watch = Some(parse_hex(a.get(i + 1)?)?);
                 i += 2;
@@ -409,6 +513,24 @@ fn parse_args() -> Option<Args> {
             "--quiet" => {
                 args.quiet = true;
                 i += 1;
+            }
+            "--ms" => {
+                args.ms = Some(a.get(i + 1)?.parse().ok()?);
+                i += 2;
+            }
+            "--wav" => {
+                args.wav = Some(a.get(i + 1)?.clone());
+                i += 2;
+            }
+            "--keys" => {
+                args.keys.extend(a.get(i + 1)?.split(',').map(|k| k.trim().to_string()).filter(|k| !k.is_empty()));
+                i += 2;
+            }
+            "--snap" => {
+                for t in a.get(i + 1)?.split(',') {
+                    args.snap.push(t.trim().parse().ok()?);
+                }
+                i += 2;
             }
             _ => return None,
         }
@@ -422,4 +544,55 @@ fn parse_args() -> Option<Args> {
 
 fn parse_hex(s: &str) -> Option<u32> {
     u32::from_str_radix(s.trim_start_matches("0x"), 16).ok()
+}
+
+/// One `--keys` item -> timed front-panel actions.
+///   `1000:PLAY`        press PLAY at 1.0 s for 150 ms
+///   `1000-1600:n7`     hold note key 7 (C4) from 1.0 to 1.6 s
+///   `2000:k12`         matrix key id 12
+///   `2000:enc0:+3`     3 clockwise clicks on encoder 0; names SELECT/ALGO/PRESET/K1..K4
+///   `2500:pot:512`     the MASTER pot (SARADC ch 4)
+fn parse_key_script(item: &str) -> Option<Vec<(u64, fm1_soc::Action)>> {
+    use fm1_soc::Action;
+    let mut parts = item.splitn(3, ':');
+    let when = parts.next()?;
+    let what = parts.next()?;
+    let arg = parts.next();
+    let (t0, t1) = match when.split_once('-') {
+        Some((a, b)) => (a.parse::<u64>().ok()?, Some(b.parse::<u64>().ok()?)),
+        None => (when.parse::<u64>().ok()?, None),
+    };
+    if what.eq_ignore_ascii_case("pot") {
+        let v: u16 = arg?.parse().ok()?;
+        return Some(vec![(t0, Action::Adc { ch: 4, value: v })]);
+    }
+    if let Some(enc) = fm1_soc::periph::enc_id(what) {
+        let clicks: i32 = arg?.trim_start_matches('+').parse().ok()?;
+        return Some(vec![(t0, Action::Enc { enc, clicks })]);
+    }
+    let id = fm1_soc::periph::key_id(what)?;
+    let up = t1.unwrap_or(t0 + 150);
+    Some(vec![(t0, Action::Key { id, down: true }), (up, Action::Key { id, down: false })])
+}
+
+fn write_wav(path: &str, samples: &[i16]) -> std::io::Result<()> {
+    use std::io::Write;
+    let data_len = (samples.len() * 2) as u32;
+    let mut f = std::io::BufWriter::new(std::fs::File::create(path)?);
+    f.write_all(b"RIFF")?;
+    f.write_all(&(36 + data_len).to_le_bytes())?;
+    f.write_all(b"WAVEfmt ")?;
+    f.write_all(&16u32.to_le_bytes())?;
+    f.write_all(&1u16.to_le_bytes())?; // PCM
+    f.write_all(&2u16.to_le_bytes())?; // stereo
+    f.write_all(&44100u32.to_le_bytes())?;
+    f.write_all(&(44100u32 * 4).to_le_bytes())?;
+    f.write_all(&4u16.to_le_bytes())?;
+    f.write_all(&16u16.to_le_bytes())?;
+    f.write_all(b"data")?;
+    f.write_all(&data_len.to_le_bytes())?;
+    for s in samples {
+        f.write_all(&s.to_le_bytes())?;
+    }
+    Ok(())
 }

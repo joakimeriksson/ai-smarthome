@@ -26,6 +26,8 @@ pub struct Lcd {
     pixel_hi: Option<u8>,
     pub frames: u64,
     pub inverted: bool,
+    /// pixels received since the last RAMWR (trace aid)
+    pub pixels_in_window: u64,
     pub display_on: bool,
 }
 
@@ -48,6 +50,7 @@ impl Lcd {
             pixel_hi: None,
             frames: 0,
             inverted: false,
+            pixels_in_window: 0,
             display_on: false,
         }
     }
@@ -84,6 +87,10 @@ impl Lcd {
             0x2A | 0x2B => self.phase = Phase::Arg { need: 4 },
             0x36 | 0x3A => self.phase = Phase::Arg { need: 1 },
             0x2C => {
+                if lcd_trace_on() {
+                    eprintln!("lcd: RAMWR window {:?} (previous window received {} pixels)", self.window, self.pixels_in_window);
+                }
+                self.pixels_in_window = 0;
                 self.cursor = (self.window.0, self.window.1);
                 self.phase = Phase::Pixel;
                 self.pixel_hi = None;
@@ -103,6 +110,9 @@ impl Lcd {
     }
 
     fn take_args(&mut self) {
+        if lcd_trace_on() {
+            eprintln!("lcd: cmd {:#04x} args {:02x?} (got {})", self.cmd, &self.arg, self.arg_next);
+        }
         match self.cmd {
             0x2A => {
                 self.window.0 = u16::from_be_bytes([self.arg[0], self.arg[1]]);
@@ -123,6 +133,7 @@ impl Lcd {
         if x0 > x1 || y0 > y1 {
             return;
         }
+        self.pixels_in_window += 1;
         let (x, y) = (self.cursor.0 as usize, self.cursor.1 as usize);
         if x < W && y < H {
             self.fb[y * W + x] = px;
@@ -180,16 +191,23 @@ pub fn write_bmp(path: &str, fb: &[u16], inverted: bool) -> std::io::Result<()> 
     let padlen = (W * 3) % 4;
     for y in (0..H).rev() {
         for x in 0..W {
-            let mut rgb565 = fb[y * W + x];
-            if inverted {
-                rgb565 = !rgb565;
-            }
+            // INVON is the IPS panel's native mode (Felucca sends it in its
+            // init sequence, the stock app too): the pixel data as written is
+            // what the viewer sees, so no inversion is applied here.
+            let _ = inverted;
+            let rgb565 = fb[y * W + x];
             let r = ((((rgb565 >> 11) & 0x1f) as u32) * 255 / 31) as u8;
             let g = ((((rgb565 >> 5) & 0x3f) as u32) * 255 / 63) as u8;
             let b = (((rgb565 & 0x1f) as u32) * 255 / 31) as u8;
             f.write_all(&[b, g, r])?;
         }
-        f.write_all(&pad[..(3 - padlen)])?;
+        // rows are padded to a multiple of 4 bytes: 720 needs none
+        f.write_all(&pad[..(4 - padlen) % 4])?;
     }
     Ok(())
+}
+
+fn lcd_trace_on() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("FM1_LCD_TRACE").is_ok())
 }

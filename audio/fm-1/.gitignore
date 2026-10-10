@@ -7,3 +7,14 @@ work/wrap.o
 work/*.txt
 tools/__pycache__/
 probes/*.o
+# runner/probe outputs and local builds
+work/lcd_*.bmp
+work/*.wav
+work/*.png
+work/demo_run.log
+work/felucca_xip.bin
+work/felucca_objdump.err
+work/fm1_new.yaml
+work/isa_stats_new.json
+work/probe/
+work/probe_*.bin

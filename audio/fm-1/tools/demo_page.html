@@ -1,0 +1,221 @@
+<title>FM-1 Emulator Session</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* layout: a hardware panel (screen + encoders, knobs, button row, keyboard) above a transport strip and the event log; one dark look, set explicitly */
+:root {
+  --room: #121315;
+  --body: #26282c;
+  --body-edge: #34373c;
+  --well: #1a1b1e;
+  --ink: #e9e6de;
+  --silk: #a7a49b;
+  --dim: #6f6d67;
+  --cap: #3a3d43;
+  --cap-top: #4a4e55;
+  --lit: #f2a33a;
+  --lit-glow: rgba(242, 163, 58, .45);
+  --key-white: #ece9e1;
+  --key-black: #1d1e21;
+  --font-silk: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--room); color: var(--ink); font: 15px/1.5 var(--font-body); margin: 0; padding-block: 28px 40px; padding-inline: 16px; }
+main { max-width: 780px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 4px; }
+h1 { font: 600 24px/1.2 var(--font-silk); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.stats { font: 13px var(--font-mono); color: var(--silk); }
+.lede { color: var(--silk); max-width: 64ch; margin: 0; }
+
+/* the instrument */
+.panel { background: linear-gradient(180deg, var(--body-edge), var(--body) 14px); border-radius: 18px; padding: 18px; display: grid; gap: 16px; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 18px 40px rgba(0,0,0,.45); }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: start; }
+.screen { background: #000; border-radius: 6px; padding: 8px; border: 1px solid #000; box-shadow: 0 0 0 3px var(--well); }
+.screen img { display: block; width: 100%; height: auto; image-rendering: pixelated; aspect-ratio: 1 / 1; max-width: 100%; }
+.encoders { display: grid; gap: 14px; justify-items: center; padding-top: 4px; }
+.knobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; justify-items: center; }
+.ctl { display: grid; justify-items: center; gap: 5px; }
+.label { font: 600 11px var(--font-silk); letter-spacing: .12em; text-transform: uppercase; color: var(--silk); white-space: nowrap; }
+.knob { --a: 0deg; width: 54px; height: 54px; border-radius: 50%; position: relative; background: radial-gradient(circle at 50% 38%, #4b4f56, #2a2c30 70%); box-shadow: 0 2px 0 #0d0d0e, 0 0 0 4px var(--well); transition: box-shadow .15s; }
+.knob.small { width: 42px; height: 42px; }
+.knob .rot { position: absolute; inset: 0; transform: rotate(var(--a)); transition: transform .08s linear; }
+.knob .rot::before { content: ""; position: absolute; left: 50%; top: 5px; width: 3px; height: 13px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); }
+.knob.turning { box-shadow: 0 2px 0 #0d0d0e, 0 0 0 4px var(--lit-glow); }
+.buttons { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; }
+.btn { display: grid; justify-items: center; gap: 4px; }
+.cap { width: 100%; max-width: 44px; height: 22px; border-radius: 5px; background: linear-gradient(var(--cap-top), var(--cap)); box-shadow: 0 2px 0 #111214; position: relative; }
+.cap::after { content: ""; position: absolute; left: 50%; top: 7px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #2b2d31; }
+.btn.down .cap { transform: translateY(2px); box-shadow: 0 0 0 #111214; }
+.btn.down .cap::after { background: var(--lit); box-shadow: 0 0 8px var(--lit-glow); }
+.btn .label { font-size: 10px; letter-spacing: .08em; }
+.kbd-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: end; }
+.oct { display: grid; gap: 8px; }
+.oct .btn { width: 44px; }
+.keys { position: relative; height: 110px; display: flex; background: var(--well); padding: 4px; border-radius: 6px; }
+.white { flex: 1 1 0; margin: 0 1px; background: var(--key-white); border-radius: 0 0 4px 4px; position: relative; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font: 500 9px var(--font-silk); color: #8d8a82; transition: background .05s; }
+.black { position: absolute; top: 4px; height: 62%; background: var(--key-black); border-radius: 0 0 3px 3px; box-shadow: 0 2px 0 #000; z-index: 1; transition: background .05s; }
+.white.down { background: var(--lit); color: #4a2c05; }
+.black.down { background: var(--lit); }
+
+/* transport */
+.transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--body); border-radius: 12px; padding: 12px 14px; }
+.play { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--lit); color: #2a1a03; font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+.play:focus-visible, .chip:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+input[type=range] { width: 100%; accent-color: var(--lit); }
+.clock { font: 500 14px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; min-width: 9ch; text-align: right; }
+
+.log h2 { font: 600 12px var(--font-silk); letter-spacing: .14em; text-transform: uppercase; color: var(--silk); margin: 0 0 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 12px var(--font-mono); color: var(--silk); background: var(--body); border: 1px solid var(--body-edge); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip b { color: var(--ink); font-weight: 500; }
+.chip.now { border-color: var(--lit); color: var(--ink); }
+.notes { color: var(--silk); font-size: 13.5px; display: grid; gap: 6px; max-width: 70ch; }
+.notes p { margin: 0; }
+code { font: 12.5px var(--font-mono); color: var(--ink); }
+
+@media (max-width: 560px) {
+  .top { grid-template-columns: minmax(0, 1fr); }
+  .encoders { grid-template-columns: repeat(3, 1fr); padding-top: 0; }
+  .buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .knob { width: 46px; height: 46px; }
+  .kbd-row { grid-template-columns: minmax(0, 1fr); }
+  .oct { grid-auto-flow: column; justify-content: start; }
+  .keys { height: 86px; }
+}
+@media (prefers-reduced-motion: reduce) { .knob .rot, .white, .black { transition: none; } }
+</style>
+
+<main>
+  <header>
+    <h1>Felucca firmware, played on the FM-1 emulator</h1>
+    <div class="stats">__STATS__</div>
+    <p class="lede">The firmware runs unmodified in the Rust pi32v2 emulator. A script presses keys and turns knob 1 through the modelled key matrix and encoders. The screen frames and the sound below come straight out of the emulated LCD and the I2S DMA. Press play.</p>
+  </header>
+
+  <section class="panel" aria-label="FM-1 front panel (schematic)">
+    <div class="top">
+      <div class="screen"><img id="lcd" alt="Emulated 240×240 LCD"></div>
+      <div class="encoders">
+        <div class="ctl"><div class="knob small" data-enc="SELECT"><div class="rot"></div></div><span class="label">Select</span></div>
+        <div class="ctl"><div class="knob small" data-enc="ALGO"><div class="rot"></div></div><span class="label">Algorithm</span></div>
+        <div class="ctl"><div class="knob small" data-enc="PRESET"><div class="rot"></div></div><span class="label">Presets</span></div>
+      </div>
+    </div>
+    <div class="knobs">
+      <div class="ctl"><div class="knob" data-enc="K1"><div class="rot"></div></div><span class="label">K1 · Cut</span></div>
+      <div class="ctl"><div class="knob" data-enc="K2"><div class="rot"></div></div><span class="label">K2 · Res</span></div>
+      <div class="ctl"><div class="knob" data-enc="K3"><div class="rot"></div></div><span class="label">K3 · Atk</span></div>
+      <div class="ctl"><div class="knob" data-enc="K4"><div class="rot"></div></div><span class="label">K4 · Rel</span></div>
+    </div>
+    <div class="buttons" id="buttons"></div>
+    <div class="kbd-row">
+      <div class="oct">
+        <div class="btn" data-btn="OCTDN"><div class="cap"></div><span class="label">Oct −</span></div>
+        <div class="btn" data-btn="OCTUP"><div class="cap"></div><span class="label">Oct +</span></div>
+      </div>
+      <div class="keys" id="keys" aria-label="27 keys, F3 to G5"></div>
+    </div>
+  </section>
+
+  <section class="transport" aria-label="Playback">
+    <button class="play" id="play" aria-label="Play">▶</button>
+    <input type="range" id="scrub" min="0" max="1000" step="10" value="0" aria-label="Session time">
+    <span class="clock" id="clock">0.00 s</span>
+  </section>
+
+  <section class="log">
+    <h2>Front-panel script</h2>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="notes">
+    <p>The layout is schematic: the controls are Felucca's (<code>panel.c</code>), but their positions are not measured from the faceplate. The screen updates in 100 ms snapshots. The sound is the firmware's own render at 44.1 kHz, converted from 24-bit to 16-bit.</p>
+    <p>Command: <code>fm1-emu --bin work/felucca_xip.bin --entry 0x02000120 --ms 7000 --wav work/demo.wav --keys "…" --snap 400,500,…</code></p>
+  </section>
+</main>
+
+<audio id="audio" preload="auto" src="__WAV__"></audio>
+<script>
+const D = __DATA__;
+const $ = (s) => document.querySelector(s);
+const audio = $("#audio"), img = $("#lcd"), scrub = $("#scrub"), clock = $("#clock"), playBtn = $("#play");
+const t0 = D.frames[0][0], tEnd = D.runMs;
+scrub.min = t0; scrub.max = tEnd; scrub.value = t0;
+
+// buttons (panel.c order, OCT-/OCT+ sit by the keys)
+const BTNS = ["FX", "SCL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC"];
+$("#buttons").innerHTML = BTNS.map(b => `<div class="btn" data-btn="${b}"><div class="cap"></div><span class="label">${b}</span></div>`).join("");
+
+// keys F3..G5: n0 = F3
+const NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const keysEl = $("#keys"), whites = [], blacks = [];
+for (let n = 0; n < 27; n++) {
+  const midi = 53 + n, name = NAMES[midi % 12], oct = Math.floor(midi / 12) - 1;
+  if (name.includes("#")) blacks.push({ n, after: whites.length });
+  else whites.push({ n, label: name === "C" ? "C" + oct : "" });
+}
+keysEl.innerHTML = whites.map(w => `<div class="white" data-note="${w.n}">${w.label}</div>`).join("");
+blacks.forEach(b => {
+  const el = document.createElement("div");
+  el.className = "black"; el.dataset.note = b.n;
+  // the padding box is the containing block: keys span 100% - 8px
+  const nw = whites.length;
+  el.style.left = `calc(4px + (100% - 8px) * ${(b.after - 0.32) / nw})`;
+  el.style.width = `calc((100% - 8px) * ${0.64 / nw})`;
+  keysEl.appendChild(el);
+});
+
+// event chips
+const label = (e) => e.kind === "note" ? `${NAMES[(53 + e.id) % 12]}${Math.floor((53 + e.id) / 12) - 1}`
+  : e.kind === "enc" ? `${e.id} ${e.clicks > 0 ? "+" : ""}${e.clicks}` : e.id;
+$("#chips").innerHTML = D.events.map((e, i) => `<button class="chip" data-i="${i}">${(e.t / 1000).toFixed(2)} s <b>${label(e)}</b></button>`).join("");
+const chips = [...document.querySelectorAll(".chip")];
+chips.forEach(c => c.addEventListener("click", () => seek(D.events[+c.dataset.i].t - 50)));
+
+const DEG_PER_CLICK = 18;
+function render(t) {
+  // screen: the latest snapshot at or before t
+  let lo = 0, hi = D.frames.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (D.frames[m][0] <= t) lo = m; else hi = m - 1; }
+  if (img.dataset.f !== String(lo)) { img.src = D.frames[lo][1]; img.dataset.f = lo; }
+  // keys and buttons held now
+  const down = new Set(D.events.filter(e => e.kind !== "enc" && e.t <= t && t < e.end).map(e => e.kind + ":" + e.id));
+  document.querySelectorAll("[data-note]").forEach(k => k.classList.toggle("down", down.has("note:" + k.dataset.note)));
+  document.querySelectorAll("[data-btn]").forEach(b => b.classList.toggle("down", down.has("btn:" + b.dataset.btn)));
+  // encoders: accumulated detents, a glow while turning
+  document.querySelectorAll("[data-enc]").forEach(k => {
+    const ev = D.events.filter(e => e.kind === "enc" && e.id === k.dataset.enc && e.t <= t);
+    const clicks = ev.reduce((s, e) => s + e.clicks, 0);
+    k.style.setProperty("--a", clicks * DEG_PER_CLICK + "deg");
+    k.classList.toggle("turning", ev.some(e => t - e.t < 160));
+  });
+  let cur = -1;
+  D.events.forEach((e, i) => { if (e.t <= t) cur = i; });
+  chips.forEach((c, i) => c.classList.toggle("now", i === cur));
+  clock.textContent = (t / 1000).toFixed(2) + " s";
+  if (document.activeElement !== scrub) scrub.value = t;
+}
+
+function now() { return D.audioT0 + audio.currentTime * 1000; }
+function seek(t) {
+  t = Math.max(t0, Math.min(tEnd, t));
+  audio.currentTime = Math.max(0, (t - D.audioT0) / 1000);
+  render(t);
+}
+function loop() { render(now()); if (!audio.paused) requestAnimationFrame(loop); }
+playBtn.addEventListener("click", () => {
+  if (audio.paused) {
+    if (audio.ended || now() >= tEnd - 20) seek(t0);
+    audio.play().then(() => requestAnimationFrame(loop)).catch(() => {});
+  } else audio.pause();
+});
+audio.addEventListener("play", () => { playBtn.textContent = "❚❚"; playBtn.setAttribute("aria-label", "Pause"); });
+audio.addEventListener("pause", () => { playBtn.textContent = "▶"; playBtn.setAttribute("aria-label", "Play"); });
+scrub.addEventListener("input", () => seek(+scrub.value));
+// the most telling still for the page at rest: the filter sweep in progress
+render(Math.min(tEnd, 3700));
+</script>

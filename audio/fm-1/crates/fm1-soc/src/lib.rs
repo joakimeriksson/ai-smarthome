@@ -7,6 +7,7 @@
 //!   0x5100_|     IOMAP
 //!   0x1000_-0x1002  clock
 //!   0x1080_0/0x1090_0  TIMER4/TIMER5 (CNT reads = synthetic progress)
+//!   0x11c0_0-    SPI0 = external NOR flash (model in spiflash.rs; CS = PD0)
 //!   0x11d0_0-    SPI1 = LCD (ST7789-class 240×240, model in lcd.rs)
 //!   0x1180_0-    USB
 //!   0x1210_0-    UART1 (MIDI IN)
@@ -25,10 +26,14 @@
 use fm1_core::Bus;
 
 mod lcd;
+pub mod periph;
 mod ram;
+mod spiflash;
 
 pub use lcd::{write_bmp, Lcd};
+pub use periph::{Action, Periph, CPU_HZ, VEC_BASE};
 pub use ram::Ram;
+pub use spiflash::SpiFlash;
 
 pub const XIP_BASE: u32 = 0x0200_0000;
 pub const RAM_BASE: u32 = 0x01c0_0000;
@@ -51,12 +56,17 @@ enum Region {
     Iomap,
     Clk,
     Timer,
+    Spi0,
     Spi1,
     Usb,
     Uart1,
     Adc,
     Dbg,
     Irqc,
+    /// Interrupt controller enable/priority words and software latch.
+    Irqc2,
+    /// ALNK0 I2S out.
+    Alnk,
     Sram2,
     Unknown,
 }
@@ -66,6 +76,8 @@ pub struct Soc {
     pub xip: Vec<u8>,
     pub ram: Ram,
     pub lcd: Lcd,
+    /// SPI0 + the external NOR flash (1 MiB; `--flash` image loaded at 0).
+    pub flash: SpiFlash,
     /// Console bytes written through DBG_MSG / UART-style debug boxes.
     pub console: Vec<u8>,
     /// Overlay RAM (second bank, 0x04000000), written by the app CRT.
@@ -74,6 +86,8 @@ pub struct Soc {
     pub sram2: Ram,
     /// monotonic "time" for peripheral counters
     pub ticks: u64,
+    /// Timers, audio DMA, ADC, interrupt controller and the front panel.
+    pub periph: Periph,
     sfr: std::collections::HashMap<u32, u32>,
     unknown_log: Vec<UnknownAccess>,
 }
@@ -96,14 +110,36 @@ impl Soc {
             ovl: Ram::new(512 * 1024),
             sram2: Ram::new(256 * 1024),
             lcd: Lcd::new(),
+            flash: SpiFlash::new(),
             console: Vec::new(),
             ticks: 0,
+            periph: Periph::default(),
             sfr: std::collections::HashMap::new(),
             unknown_log: Vec::new(),
         }
     }
 
     /// All unknown accesses so far — the peripheral bring-up TODO list.
+    /// Advance the peripheral clock by `n` CPU cycles, moving any finished
+    /// audio half out of RAM (int32 L/R holding a 24-bit sample in the low
+    /// bits — Felucca writes Q15 << 7, audio.c OUT_SHIFT — so >> 8 to i16).
+    pub fn advance(&mut self, n: u64) {
+        let due = self.periph.advance(n);
+        if let Some((adr, words)) = due.audio_half {
+            for i in 0..words {
+                let w = self.read32(adr.wrapping_add(i * 4)) as i32;
+                self.periph.audio.push((w >> 8).clamp(-32768, 32767) as i16);
+            }
+        }
+    }
+
+    /// The highest-priority enabled pending interrupt: (irq, prio).
+    pub fn pending_irq(&self) -> Option<(u8, u8)> {
+        let sfr = &self.sfr;
+        self.periph
+            .pending_irq(|n| *sfr.get(&(0x1eef100 + 4 * (n as u32 >> 3))).unwrap_or(&0))
+    }
+
     pub fn unknown_accesses(&self) -> &[UnknownAccess] {
         &self.unknown_log
     }
@@ -132,10 +168,13 @@ impl Soc {
             a if a >= OVL_BASE && (a - OVL_BASE) < self.ovl.len() as u32 => Region::Ovl,
             a if a >= SRAM2_BASE && (a - SRAM2_BASE) < self.sram2.len() as u32 => Region::Sram2,
             0x1eee000..=0x1eee0ff => Region::Irqc,
+            0x1eef000..=0x1eef3ff => Region::Irqc2,
+            0x12e00..=0x12e3f => Region::Alnk,
             0x50000..=0x501ff => Region::Gpio,
             0x51000..=0x5103f => Region::Iomap,
             0x10000..=0x1001f => Region::Clk,
             0x10500..=0x1091f => Region::Timer,
+            0x11c00..=0x11c1f => Region::Spi0,
             0x11d00..=0x11d1f => Region::Spi1,
             0x11800..=0x1183f => Region::Usb,
             0x12100..=0x1212f => Region::Uart1,
@@ -174,8 +213,9 @@ impl Soc {
                 let adr = self.sfr_get(0x11d0c);
                 let pc = self.sfr_get(0x50080);
                 let n = value.min(0x40000);
-                for i in 0..n {
-                    let b = self.ram.read8(adr.wrapping_add(i));
+                // the DMA source is a bus address (RAM, SRAM or XIP)
+                let bytes: Vec<u8> = (0..n).map(|i| self.read8(adr.wrapping_add(i))).collect();
+                for b in bytes {
                     self.lcd.feed(b, pc & 0x100 != 0);
                 }
                 self.sfr_set(addr, 0);
@@ -202,12 +242,10 @@ impl Bus for Soc {
     }
 
     fn read16(&mut self, addr: u32) -> u16 {
+        // halfwords sit at offsets 0 and 2 of the word (the old `>> 8` for
+        // offset 2 returned bytes 1-2 and sheared every 16-bit pixel canvas)
         let v = self.read32(addr & !3);
-        if addr & 3 == 0 {
-            v as u16
-        } else {
-            (v >> 8) as u16
-        }
+        (v >> ((addr & 2) * 8)) as u16
     }
 
     fn read32(&mut self, addr: u32) -> u32 {
@@ -225,9 +263,20 @@ impl Bus for Soc {
                 let v = self.sfr_get(addr);
                 if addr == 0x1eee008 { v | 0x4000 } else { v }
             }
-            Region::Gpio | Region::Iomap | Region::Usb | Region::Uart1
-            | Region::Adc | Region::Clk => self.sfr_get(addr),
-            Region::Timer => self.timer_read(addr),
+            Region::Iomap | Region::Usb | Region::Uart1 | Region::Clk => self.sfr_get(addr),
+            Region::Gpio | Region::Adc | Region::Alnk | Region::Irqc2 => {
+                match self.periph.read(addr) {
+                    Some(v) => v,
+                    None => self.sfr_get(addr),
+                }
+            }
+            Region::Timer => {
+                match self.periph.read(addr) {
+                    Some(v) => v,
+                    None => self.timer_read(addr),
+                }
+            }
+            Region::Spi0 => self.flash.read(addr),
             Region::Spi1 => {
                 if addr == 0x11d00 {
                     // CON: always report transfer-done so polls finish
@@ -269,14 +318,34 @@ impl Bus for Soc {
             Region::Ovl => self.ovl.write32(addr - OVL_BASE, value),
             Region::Sram2 => self.sram2.write32(addr - SRAM2_BASE, value),
             Region::Irqc => self.sfr_set(addr, value),
-            Region::Gpio => self.sfr_set(addr, value),
+            Region::Gpio => {
+                // PD0 drives the flash chip select; PA1/PA3/PA4 clock the
+                // key-matrix shift registers
+                if addr == 0x500c0 {
+                    self.flash.set_cs(value & 1 == 0);
+                }
+                self.periph.write(addr, value);
+                self.sfr_set(addr, value)
+            }
+            Region::Alnk | Region::Irqc2 => {
+                if !self.periph.write(addr, value) {
+                    self.sfr_set(addr, value);
+                }
+            }
+            Region::Spi0 => self.flash.write(addr, value),
             Region::Iomap => self.sfr_set(addr, value),
             Region::Clk => self.sfr_set(addr, value),
             Region::Usb => self.sfr_set(addr, value),
             Region::Uart1 => self.sfr_set(addr, value),
-            Region::Adc => self.sfr_set(addr, value),
+            Region::Adc => {
+                if !self.periph.write(addr, value) {
+                    self.sfr_set(addr, value);
+                }
+            }
             Region::Timer => {
-                self.sfr_set(addr, value);
+                if !self.periph.write(addr, value) {
+                    self.sfr_set(addr, value);
+                }
             }
             Region::Spi1 => self.spi1_write(addr, value),
             Region::Dbg => {

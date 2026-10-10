@@ -298,6 +298,30 @@ timer tick model (0x1EEE000 region, vector 0x020000B0,
 the XIP window with the whole flash image (app.bin starts at flash
 0x4120) so the `.data` tail past app.bin reads real bytes.
 
+### Fixed by differential probes (2026-10-10)
+
+Probes are small C programs built with the vendor clang
+(`tools/probe_build.sh`); each check compares a value computed at run time
+from `volatile` inputs with the same expression folded by the compiler, so a
+mismatch is an emulator semantic bug. Found this way:
+
+- `read16` at word offset 2 returned bytes 1–2 (sheared every 16-bit canvas).
+- `R = R.b0 (u) #` parsed its part name at the wrong index.
+- 12-bit compare immediates (6-byte `xx ff` branches and `if (R op #i) {`
+  blocks): sign-extended for `==`/`!=` and the signed families, but
+  **zero-extended for the unsigned families** `>=u` (1) and `>u` (4) —
+  corpus: `if (r2 < 2111)` encodes 0x83F.
+- 4-byte `R = R << #n` / `>> #n` read the operator at the wrong index and
+  all ran as arithmetic right shifts.
+- `[R+#i] <<= #n` (`6c e8`): base bits 28–31, word offset bits 18–23,
+  shift bits 24–27, op bits 16–17 as in the e1 shifts.
+- `fX e0` is `R = R - #h`; only `f0 e1` is the three-register multiply.
+- `R = smin/smax/umin/umax(R, R) #` (`f4`) share the `e4` layout: d bits
+  28–31, a bits 20–23, b bits 24–27.
+
+Felucca's I2S words hold a 24-bit sample in the **low** bits (Q15 << 7,
+`audio.c OUT_SHIFT`), not left-justified as the HAL comment says.
+
 ### Remaining exec gaps (known, traced)
 
 - goto/if branch-offset fields: printed = word offset (delta = 2*printed)

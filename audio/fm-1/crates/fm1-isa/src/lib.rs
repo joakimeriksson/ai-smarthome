@@ -228,6 +228,29 @@ pub fn decode_win(win: u64, addr: u32) -> Result<Instruction, DecodeError> {
     }
 }
 
+thread_local! {
+    static DECODE_CACHE: std::cell::RefCell<std::collections::HashMap<u64, Option<&'static IsaEntry>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// `decode_win` memoised on the 6-byte window: the class only depends on the
+/// bytes, and the scan over every class is the emulator's hot spot.
+pub fn decode_win_cached(win: u64, addr: u32) -> Result<Instruction, DecodeError> {
+    let hit = DECODE_CACHE.with(|c| c.borrow().get(&win).copied());
+    let entry = match hit {
+        Some(e) => e,
+        None => {
+            let e = decode_win(win, addr).ok().map(|i| i.entry);
+            DECODE_CACHE.with(|c| c.borrow_mut().insert(win, e));
+            e
+        }
+    };
+    match entry {
+        Some(entry) => Ok(Instruction { addr, raw: win, entry }),
+        None => Err(DecodeError::UnknownInstruction { raw: win, addr }),
+    }
+}
+
 /// Decode from raw instruction bytes (up to 6).
 pub fn decode_bytes(bytes: &[u8], addr: u32) -> Result<Instruction, DecodeError> {
     let mut win = 0u64;

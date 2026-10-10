@@ -227,6 +227,43 @@ ST7789-style LCD model on SPI1 (`crates/fm1-soc/src/lcd.rs`, frames
 dumped to `work/lcd.bmp`) — nothing in the boot path has reached the LCD
 yet.
 
+## 5.6 Felucca runs: screen, keys, knobs, audio (2026-10-10)
+
+**Felucca (GPL firmware, `reference/Felucca`) runs end to end.** It boots,
+reads its fonts from the SPI-flash model, draws its UI on the LCD, takes
+key presses and encoder turns from the modelled front panel, renders audio
+in its ALNK0 interrupt, and runs its main loop with TIMER5 nesting into the
+audio ISR. A scripted 7 s session (notes, a knob-driven filter sweep, PLAY)
+comes out as `work/lcd_<ms>.bmp` snapshots and a 44.1 kHz WAV:
+
+    fm1-emu --bin work/felucca_xip.bin --entry 0x02000120 --ms 7000 \
+      --keys "800-1500:n7,3300:K1:-2,5200:PLAY" --wav work/demo.wav --snap 400,500,...
+    tools/demo_page.py out.html     # snapshots + WAV + script -> one page
+
+Peripherals added (`crates/fm1-soc/src/periph.rs`, `spiflash.rs`), all from
+Felucca's HAL headers: SPI0 NOR flash, TIMER4 (24 MHz base) and TIMER5
+(10 kHz tick) on a 240 MHz cycle clock, ALNK0 I2S double-buffered DMA,
+SARADC (MASTER pot, battery), the interrupt controller (enable/priority
+nibbles at 0x1EEF100, software latch 0x1EEF1A0/4, RAM vectors 0x01C7FE00,
+nesting by priority), and the 2×74HC595 key matrix with 7 quadrature
+encoders. The core gained interrupt entry, `sti`/`cli` and an `icfg` that
+reports the active ISR levels.
+
+CPU bugs found on the way, each pinned with a differential probe
+(`probes/*.c`, built by `tools/probe_build.sh` with the vendor clang and
+checked against compile-time constants): halfword reads at word offset 2,
+`R = R.b0 (u) #`, 12-bit compare immediates (unsigned families
+zero-extend), 4-byte `R = R << #n` executing as `>>>`, `[R+#i] <<= #n`,
+`fX e0` decoded as a multiply, the flag-setting `smin/smax` forms. Probes
+pass: arith 121/121, huff 139/139 (Felucca's own Huffman font decoder on
+data from its own packer), lcdtest (SPI1/DMA stripes).
+
+Speed: a decode cache plus cheap string matching took the runner from 1 M to
+~17 M instructions/s, so one emulated second takes ~14 s. Live play
+(host keyboard in, speakers out) needs ~1×: next steps are a per-class
+pre-decoded dispatch instead of matching the printed syntax every step, and
+fast-forwarding the clock through known busy-wait loops.
+
 ## 6. Phase 5 — Boot & integration
 
 - Boot stock firmware to a stable idle/main-loop state.

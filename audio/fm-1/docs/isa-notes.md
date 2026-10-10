@@ -336,8 +336,8 @@ Felucca's I2S words hold a 24-bit sample in the **low** bits (Q15 << 7,
 
 ### The FPU and the community firmwares (2026-10-10)
 
-Fifteen community firmwares (web/firmwares.json, `tools/fetch_firmwares.py`) were added as
-corpora: the ISA is mined from 21 listings now (`isa/corpora.txt`; the app listings come from
+Fifteen community firmwares (web/firmwares.json, `tools/fetch_firmwares.mjs`) were added as
+corpora: the ISA is mined from 25 listings now (`isa/corpora.txt`, newest versions included; the app listings come from
 `tools/disasm_app.sh`, which wraps a raw app in an ELF for JieLi's objdump). 2765 classes;
 `tools/isa_stable_names.py` keeps the previous class names (the core keys some decoders on
 them); `tools/gen_isa.py` lets a class the solver could not finish borrow a twin's slot only
@@ -362,6 +362,8 @@ when it reproduces every (raw, value) example the solver kept for it.
   ALU arm also took it as `R = R + R` (X0X's fm_log2f got an address as exponent). `b4` is
   add/sub only with e0.
 - **`66 e8`** `[R+#i] op= 1 << R` (273 samples): the 64 e8 layout, ops {|, ^, &, &~}.
+- `fm1-isa`'s FALLBACK class `pair_mem_any` takes any `5x ec` word no mined class matches
+  (the corpora have few `58..5f` samples; Melodee 1.0.1 and ChoralRoot 0.15 use more).
 - Both pair and extract bugs were found with `probes/x0x/d909.c`: X0X's own 909 code built
   for the device (its flags) and natively, compared word for word (`reference/fm1-x0x`).
 

@@ -291,27 +291,35 @@ LED arrays, keys stayed lit), interrupt nesting (a tick between an ISR's `reti` 
 `rti` made the rti return to itself: now nesting only while reti is on the stack, the Blackfin
 rule), the 4-byte register-mask push/pop, 2-byte shifts by 32, the `{pc, r3-rN}` pop range.
 
-## 5.8 A selection of firmwares (2026-10-10)
+## 5.8 A selection of firmwares, and the public demo (2026-10-10)
 
 All fifteen downloadable community firmwares from fm1-editor.com/firmware run: Felucca and
 its forks, AMB-1, ChoralRoot, FoMni, FuMi-1, GHOULBOX, Hortator, Jangada, Melodee,
-PurpleMonkey, FM1 Quest, SLOOP (+ALG), X0X. `web/firmwares.json` is the catalog;
-`tools/fetch_firmwares.py` downloads the .fwsc packages and extracts each app with Felucca's
-own package code (`tools/fwsc_extract.mjs`, verified byte-equal on Felucca's build).
+PurpleMonkey, FM1 Quest, SLOOP (+ALG), X0X. `web/firmwares.json` is the catalog.
 
-- Browser: a firmware and a clock picker (`?fw=x0x&mhz=120`, remembered); a change reboots
-  the worklet. The worklet now gets the wasm bytes (a compiled Module is a messageerror in
-  the AudioWorklet scope: the page never booted in Chrome before) and reports traps.
-- Native: `fm1-live --fw x0x`, `--fw list`.
+- The page is published with the repo's other demos (scripts/build-pages.mjs, slug `fm-1`;
+  CI builds the wasm and runs `web/smoke.mjs`, which boots Felucca to audio and a screen).
+  It hosts no firmware: it fetches each package from its author's GitHub Pages (all allow
+  cross-origin reads) and unpacks it with `web/fwsc.js` (our own unpacker, byte-equal to
+  Felucca's package code on every package). Authors move on fast: when the catalog's
+  version URL is gone, the page takes the package the author's installer page names now
+  (four had moved the same day). `node web/check_firmwares.mjs` checks the whole list.
+- Native: `node tools/fetch_firmwares.mjs` (same code) -> reference/firmwares/<id>.xip.bin;
+  `fm1-live --fw x0x`, `--fw list`.
+- Picker: firmware and clock (`?fw=x0x&mhz=120`, remembered); a change reboots the
+  worklet. The worklet gets the wasm bytes (a compiled Module is a messageerror in the
+  AudioWorklet scope: the page never booted in Chrome before) and reports traps.
 - What it took: the FPU and float compares, three decoder bugs (pair modes, the extract,
-  `66 e8`), an unknown-access log that shifted 8192 entries per access (FuMi polls P33), a
-  JIT fall-through for branches run through the interpreter, and `[++R=-#i]` routing. The
-  exercise (`FM1_BENCH_KEYS`: every button, every encoder, notes) runs 40 s on all fifteen;
-  JIT == per-step audio on Felucca, X0X (playing a pattern), AMB-1, FoMni, FuMi, Melodee.
-- Speed at 240 MHz native: 0.9x (X0X, GHOULBOX, PurpleMonkey) to 2.5x (Melodee). Web at
-  100 MHz: 1.0x (GHOULBOX) to 2x (Melodee).
+  `66 e8`), a fallback class for the whole `5x ec` pair family, an unknown-access log that
+  shifted 8192 entries per access (FuMi polls P33), a JIT fall-through for branches run
+  through the interpreter, `[++R=-#i]` routing, and the ISA re-mined from 25 listings
+  (the newest versions included). The exercise (`FM1_BENCH_KEYS`: every button, every
+  encoder, notes) runs 40 s on all fifteen; JIT == per-step audio on Felucca, X0X (playing
+  a pattern), AMB-1, FoMni, FuMi, Melodee, ChoralRoot.
+- Speed at 240 MHz native: 0.7x (GHOULBOX) to 2.5x (Melodee). Web at 100 MHz: 1.0x to 2x.
 - Melodee and X0X hand audio work to core 1 when it answers; it does not here (cpu1 is not
-  modelled), and both fall back to core 0.
+  modelled), and both fall back to core 0. The stock M-VAVE firmware still stops early in
+  its RTOS (no interrupts, no LCD): not in the picker.
 
 ## 6. Phase 5 — Boot & integration
 

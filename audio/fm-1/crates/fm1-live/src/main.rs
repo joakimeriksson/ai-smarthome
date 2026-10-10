@@ -47,8 +47,8 @@ struct Opts {
 }
 
 /// The firmware catalog web/firmwares.json as (id, name, version, image path): each image is
-/// reference/firmwares/<package stem>.xip.bin (tools/fetch_firmwares.py). A small scan for the
-/// four string fields, enough for this file; no JSON dependency.
+/// reference/firmwares/<id>.xip.bin (tools/fetch_firmwares.mjs). A small scan for the string
+/// fields, enough for this file; no JSON dependency.
 fn catalog() -> Vec<(String, String, String, String)> {
     let Ok(text) = std::fs::read_to_string("web/firmwares.json") else { return Vec::new() };
     let field = |obj: &str, key: &str| -> Option<String> {
@@ -57,10 +57,9 @@ fn catalog() -> Vec<(String, String, String, String)> {
     };
     text.split("{ \"id\"").skip(1).filter_map(|chunk| {
         let obj = format!("{{ \"id\"{chunk}");
-        let pkg = field(&obj, "package")?;
-        let stem = pkg.rsplit('/').next()?.trim_end_matches(".fwsc").to_string();
-        Some((field(&obj, "id")?, field(&obj, "name")?, field(&obj, "version")?,
-              format!("reference/firmwares/{stem}.xip.bin")))
+        let id = field(&obj, "id")?;
+        let path = format!("reference/firmwares/{id}.xip.bin");
+        Some((id, field(&obj, "name")?, field(&obj, "version")?, path))
     }).collect()
 }
 
@@ -81,7 +80,7 @@ fn parse() -> Option<Opts> {
                 let cat = catalog();
                 if want == "list" {
                     for (id, name, ver, path) in &cat {
-                        let have = if std::path::Path::new(path).exists() { "" } else { "  (missing: tools/fetch_firmwares.py)" };
+                        let have = if std::path::Path::new(path).exists() { "" } else { "  (missing: node tools/fetch_firmwares.mjs)" };
                         println!("{id:14} {name} {ver}{have}");
                     }
                     std::process::exit(0);

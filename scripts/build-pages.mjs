@@ -98,6 +98,19 @@ const DEMOS = [
     // Landing page inside the demo, rather than its bare index.
     entry: 'demo.html',
   },
+  {
+    slug: 'fm-1',
+    title: 'M-VAVE FM-1 Emulator',
+    blurb: 'The FM-1 pocket synth\'s pi32v2 CPU, screen and audio in WebAssembly, ' +
+           'running fifteen community firmwares fetched from their authors\' own sites.',
+    src: 'audio/fm-1',
+    accent: '#f2a33a',            // the emulator page's amber
+    build: (out, base) => {
+      const dist = resolve(ROOT, 'audio/fm-1/web/dist')
+      run('bash', ['web/build.sh', dist], resolve(ROOT, 'audio/fm-1'))
+      return dist
+    },
+  },
   // The tracker outgrew this repository and lives in its own now, deploying
   // itself on every push. It stays on this page because it belongs on it -
   // but as a link, so there is no copy of it here to drift.

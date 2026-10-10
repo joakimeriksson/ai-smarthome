@@ -1,6 +1,8 @@
 // The page: the front panel (drawn by the same Rust code as the native window, in its own wasm
 // instance), the pointer and keyboard input, the firmware and clock pickers, and the audio graph
 // that runs the emulator.
+import { appFromPackage, fetchPackage } from "./fwsc.js";
+
 const ENTRY = 0x02000120;                  // every firmware's app links here (behind 0x120 padding)
 const CLOCKS = [60, 80, 100, 120, 160, 200, 240];
 const params = new URLSearchParams(location.search);
@@ -40,6 +42,22 @@ for (const c of new Set([...CLOCKS, mhz].sort((a, b) => a - b))) mhzSel.add(new 
 fwSel.value = fw.id;
 mhzSel.value = mhz;
 
+// the image of catalog entry f: its package, fetched from its author's site and unpacked here
+// (nothing is hosted with this page), the app behind 0x120 bytes of padding; kept per session
+const images = new Map();
+async function imageOf(f) {
+  if (!images.has(f.id)) {
+    const { bytes, url } = await fetchPackage(f);
+    const app = appFromPackage(bytes);
+    const image = new Uint8Array(0x120 + app.length);
+    image.set(app, 0x120);
+    images.set(f.id, { image, url });
+  }
+  return images.get(f.id);
+}
+
+let loadedUrl = null;                      // the package the running machine came from
+
 function showFirmware() {
   title.textContent = `M-VAVE FM-1 · ${fw.name} (emulated)`;
   const a = document.createElement("a");
@@ -47,7 +65,14 @@ function showFirmware() {
   a.textContent = "source";
   const b = document.createElement("b");
   b.textContent = `${fw.name} ${fw.version}`;
-  about.replaceChildren(b, ` by ${fw.author} · ${fw.license} · `, a, ` · ${fw.about}`);
+  const parts = [b, ` by ${fw.author} · ${fw.license} · `, a, ` · ${fw.about}`];
+  if (loadedUrl) {
+    const p = document.createElement("a");
+    p.href = loadedUrl;
+    p.textContent = loadedUrl.split("/").pop();
+    parts.push(" Running ", p, ".");
+  }
+  about.replaceChildren(...parts);
   const q = new URLSearchParams(location.search);
   q.set("fw", fw.id);
   q.set("mhz", mhz);
@@ -57,6 +82,7 @@ showFirmware();
 
 fwSel.addEventListener("change", () => {
   fw = byId.get(fwSel.value);
+  loadedUrl = null;
   store("fm1.fw", fw.id);
   showFirmware();
   fwSel.blur();                 // back to playing from the keyboard
@@ -196,9 +222,18 @@ let ac = null, last = null, bootSeq = 0;
 async function boot() {
   const seq = ++bootSeq;
   const f = fw;
-  status.textContent = `loading ${f.name}…`;
-  const firmware = await (await fetch(f.file)).arrayBuffer();
+  status.textContent = `downloading ${f.name} from ${new URL(f.package).host}…`;
+  let got;
+  try {
+    got = await imageOf(f);
+  } catch (err) {
+    if (seq === bootSeq) status.textContent = `${f.name}: could not load it (${err.message})`;
+    return;
+  }
   if (seq !== bootSeq) return;                     // another choice came in meanwhile
+  const firmware = got.image.slice().buffer;
+  loadedUrl = got.url;
+  showFirmware();
   down.fill(0);                                    // nothing held across a reboot
   frame = null;
   last = null;

@@ -9,7 +9,7 @@
 
 mod fpu;
 mod generated_isa;
-pub use fpu::FPU;
+pub use fpu::{FALLBACK, FPU};
 pub use generated_isa::ISA;
 
 /// One instruction class in the mask/decode table (mirrors a YAML entry).
@@ -226,6 +226,9 @@ pub fn decode_win(win: u64, addr: u32) -> Result<Instruction, DecodeError> {
                 best = Some(e);
             }
         }
+    }
+    if best.is_none() {
+        best = fpu::FALLBACK.iter().find(|e| (win & e.mask) == e.match_);
     }
     match best {
         Some(e) => Ok(Instruction {

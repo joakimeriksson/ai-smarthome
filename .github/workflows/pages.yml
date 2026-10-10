@@ -14,6 +14,9 @@ on:
     # Only rebuild when something a demo depends on actually changed.
     paths:
       - 'audio/software-synth/**'
+      - 'audio/fm-1/crates/**'
+      - 'audio/fm-1/web/**'
+      - 'audio/fm-1/Cargo.*'
       - 'scripts/build-pages.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -47,6 +50,10 @@ jobs:
         working-directory: audio/software-synth/synthex
         run: npm ci
 
+      # The FM-1 emulator's page is a Rust crate compiled to WebAssembly.
+      - name: Rust wasm target
+        run: rustup target add wasm32-unknown-unknown
+
       # Build BEFORE testing, so the suite runs against the artifact that is
       # about to be deployed. The worklet test can only check a worklet that
       # exists; run it first and it skips, which looks identical to passing.
@@ -59,6 +66,12 @@ jobs:
       - name: Test the built output
         working-directory: audio/software-synth/synthex
         run: npm test
+
+      # The FM-1 page's wasm must boot a real firmware (Felucca, fetched from its author's
+      # site like the page does) to audio and a screen.
+      - name: Test the FM-1 emulator build
+        working-directory: audio/fm-1
+        run: node web/smoke.mjs ../../_site/fm-1
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

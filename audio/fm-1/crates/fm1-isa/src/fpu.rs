@@ -69,3 +69,11 @@ pub static FPU: &[IsaEntry] = &[
     e!("iff_r_ge_r_goto_i_l6", "iff (R >= R) goto #i", 0x0080_fffe, 0x0080_ff4a, 6),
     e!("iff_r_gt_r_goto_i_l6", "iff (R > R) goto #i", 0x0080_fffe, 0x0080_ff4c, 6),
 ];
+
+/// Decoded only when no mined class matches: families whose layout is known in full but whose
+/// corpus samples do not cover every bit pattern. `5x ec` is the 64-bit register-pair access in
+/// all its modes (fm1-core `decode_pair_mem`); the mined classes have few `58..5f` samples, and
+/// Melodee 1.0.1 / ChoralRoot 0.15 use `d[r3+r4] = r1_r0` and `d[r1++=8] = r9_r8` beyond them.
+pub static FALLBACK: &[IsaEntry] = &[
+    e!("pair_mem_any", "d[R] (pair) = R", 0x0000_fff0, 0x0000_ec50),
+];

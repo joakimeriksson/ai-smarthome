@@ -1,0 +1,12 @@
+[package]
+name = "fm1-live"
+description = "Play the emulated FM-1 live: LCD window, computer keyboard as the keys, audio out"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fm1-core = { path = "../fm1-core" }
+fm1-soc = { path = "../fm1-soc" }
+minifb = "0.28"
+cpal = "0.15"

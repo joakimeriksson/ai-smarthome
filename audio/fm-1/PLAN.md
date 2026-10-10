@@ -264,6 +264,30 @@ Speed: a decode cache plus cheap string matching took the runner from 1 M to
 pre-decoded dispatch instead of matching the printed syntax every step, and
 fast-forwarding the clock through known busy-wait loops.
 
+## 5.7 Live play at full speed (2026-10-10)
+
+`cargo run --release -p fm1-live` plays Felucca live: a native window drawn after
+Felucca's controls diagram (LCD, knobs, buttons, the 27 keys, LEDs from the firmware's LED
+lines), mouse and computer keyboard input, audio through cpal, paced by the audio buffer. It
+runs the FM-1's real 240 MHz at ~1.4x real time:
+
+- interpreter: decoded-instruction cache, micro-ops for the common forms (operands and branch
+  targets resolved once), straight-line blocks, interrupt delivery exact at block granularity
+  (blocks stop at due ticks, peripheral writes, and the end of pairs / predicated blocks / rep
+  loops), RAM/XIP fast paths, idle skipping of TIMER4 polling loops (capped at 20 us)
+- JIT (`crates/fm1-core/src/jit.rs`, AArch64 macOS): hot blocks compiled to native code with
+  chaining, guest state in the Cpu, inline RAM/XIP loads and stores, helpers for everything
+  else that sync the clock to the exact instruction; assembler vendored from esp32sim
+- verification: `fm1-live --bench MS --mhz N` with `FM1_BENCH_WAV=out.raw` must give
+  byte-identical audio with the JIT, the block interpreter and `FM1_NO_BLOCKS=1` (per step);
+  `tools/audit_decode.py OBJDUMP` compares every decoded instruction with the vendor
+  disassembly (0 real mismatches: Felucca 92% covered, stock V13/V14 80%)
+
+Bugs found on the way: the `d0 e9` sp pair store offset (>= 512 went to the wrong slot: stale
+LED arrays, keys stayed lit), interrupt nesting (a tick between an ISR's `reti` pop and its
+`rti` made the rti return to itself: now nesting only while reti is on the stack, the Blackfin
+rule), the 4-byte register-mask push/pop, 2-byte shifts by 32, the `{pc, r3-rN}` pop range.
+
 ## 6. Phase 5 — Boot & integration
 
 - Boot stock firmware to a stable idle/main-loop state.

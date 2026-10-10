@@ -51,6 +51,32 @@ fn main() -> ExitCode {
     if std::env::args().any(|a| a == "--coverage") {
         return coverage_report();
     }
+    // `--describe OBJDUMP`: for every instruction listed (address, then its bytes), the micro-op
+    // the emulator decodes it into (fm1_core::describe), as `addr|text` lines
+    if let Some(i) = std::env::args().position(|a| a == "--describe") {
+        let path = std::env::args().nth(i + 1).unwrap_or_default();
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            eprintln!("cannot read {path}");
+            return ExitCode::FAILURE;
+        };
+        for line in text.lines() {
+            let Some((addr, rest)) = line.trim_start().split_once(':') else { continue };
+            let Ok(pc) = u32::from_str_radix(addr.trim(), 16) else { continue };
+            let bytes: Vec<u8> = rest.split('\t').next().unwrap_or("").split_whitespace()
+                .map_while(|b| u8::from_str_radix(b, 16).ok()).collect();
+            if bytes.is_empty() {
+                continue;
+            }
+            let mut win = 0u64;
+            for (k, b) in bytes.iter().take(6).enumerate() {
+                win |= (*b as u64) << (8 * k);
+            }
+            if let Some(d) = fm1_core::describe(win, pc) {
+                println!("{pc:x}|{d}");
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
     let mut args = match parse_args() {
         Some(a) => a,
         None => {
@@ -102,13 +128,14 @@ fn main() -> ExitCode {
     soc.write32(params, params + 0x40);
     cpu.regs[0] = params;
     if let Some(ms) = args.ms {
-        args.steps = ms * (fm1_soc::CPU_HZ / 1000);
+        args.steps = soc.periph.cycle_of_ms(ms);
     }
     for k in &args.keys {
         match parse_key_script(k) {
             Some(evs) => {
                 for (ms, a) in evs {
-                    soc.periph.script.push_back((fm1_soc::Periph::cycle_of_ms(ms), a));
+                    let at = soc.periph.cycle_of_ms(ms);
+                    soc.periph.script.push_back((at, a));
                 }
             }
             None => {
@@ -121,6 +148,8 @@ fn main() -> ExitCode {
     let mut snaps: Vec<u64> = args.snap.clone();
     snaps.sort_unstable();
     let mut irq_count: u64 = 0;
+    // cpu0 instructions outside any ISR, in one ISR level, in a nested level
+    let mut busy = [0u64; 3];
     let irq_trace = std::env::var("FM1_IRQ_TRACE").is_ok();
     // cpu1 (core id 1) is held until cpu0 releases it with `0x10008 |= 8`
     // in cpu1_boot_start; it then boots from the vector at 0x02000098.
@@ -215,6 +244,9 @@ fn main() -> ExitCode {
                     }
                 }
             }
+            if ci == 0 {
+                if cpu.irq_levels.is_empty() { busy[0] += 1 } else { busy[cpu.irq_levels.len().min(2)] += 1 }
+            }
             match cpu.step(&mut soc) {
                 Ok(()) => {
                     if let (Some(a), Some(old)) = (args.watch, watch_val) {
@@ -276,7 +308,8 @@ fn main() -> ExitCode {
             top.len().min(12),
             top.len().min(1) * 0 + top.len().max(1),
         );
-        for (name, n) in top.iter().take(12) {
+        let top_n = std::env::var("FM1_HIST_TOP").ok().and_then(|v| v.parse().ok()).unwrap_or(12);
+        for (name, n) in top.iter().take(top_n) {
             println!("  {name:<28} {n:8} ({:5.1}%)", 100.0 * *n as f64 / total as f64);
         }
         if total > 0 {
@@ -296,6 +329,13 @@ fn main() -> ExitCode {
         }
         {
             let _ = fm1_soc::write_bmp("work/lcd.bmp", &soc.lcd.fb, soc.lcd.inverted);
+            let tot = (busy[0] + busy[1] + busy[2]).max(1) as f64;
+            println!(
+                "cpu0: {:.1}% in an ISR, {:.1}% nested ({:.1} M ISR instructions per emulated s)",
+                100.0 * busy[1] as f64 / tot,
+                100.0 * busy[2] as f64 / tot,
+                (busy[1] + busy[2]) as f64 / (soc.periph.ms().max(1) as f64 / 1000.0) / 1e6
+            );
             println!(
                 "time {} ms, {} interrupts, {} audio halves ({} samples)",
                 soc.periph.ms(),

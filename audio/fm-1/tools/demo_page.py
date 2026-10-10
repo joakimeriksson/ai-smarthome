@@ -30,6 +30,17 @@ insns = int(re.search(r"stopped after (\d+) instructions", log).group(1))
 # the WAV holds every finished half buffer; its first sample left the DMA at:
 audio_t0 = run_ms - wav_ms
 
+def note_index(what):
+    """n7 / C4 / F#3 / Bb4 -> note key 0 (F3) .. 26 (G5), else None"""
+    if re.fullmatch(r"[nN]\d+", what):
+        return int(what[1:])
+    m = re.fullmatch(r"([A-Ga-g])(#|b)?(\d)", what)
+    if not m:
+        return None
+    midi = (int(m[3]) + 1) * 12 + "C D EF G A B".index(m[1].upper()) + {"#": 1, "b": -1}.get(m[2], 0)
+    return midi - 53 if 0 <= midi - 53 < 27 else None
+
+
 # --keys items -> events (same grammar as fm1-emu parse_key_script)
 BTN = ["OCTDN", "OCTUP", "FX", "SCL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC"]
 events = []
@@ -38,8 +49,8 @@ for item in (W / "demo_keys.txt").read_text().strip().split(","):
     t0, t1 = (map(int, when.split("-")) if "-" in when else (int(when), None))
     if what.upper() in ("SELECT", "ALGO", "PRESET", "K1", "K2", "K3", "K4"):
         events.append({"t": t0, "kind": "enc", "id": what.upper(), "clicks": int(arg[0])})
-    elif what.lower().startswith("n"):
-        events.append({"t": t0, "end": t1 or t0 + 150, "kind": "note", "id": int(what[1:])})
+    elif (k := note_index(what)) is not None:
+        events.append({"t": t0, "end": t1 or t0 + 150, "kind": "note", "id": k})
     else:
         events.append({"t": t0, "end": t1 or t0 + 150, "kind": "btn", "id": what.upper()})
 

@@ -1,7 +1,11 @@
 //! Timed peripherals and the front panel, modelled from what Felucca's HAL
 //! (reference/Felucca/firmware/hal/*.h) programs and from the RE docs:
 //!
-//! * a cycle counter (`CPU_HZ`, one instruction per cycle) paces everything;
+//! * a cycle counter (`hz`, one instruction per cycle; 240 MHz like the
+//!   chip, lower for live play) paces everything, and the timers convert
+//!   cycles to real time so the firmware's clock stays right at any `hz`;
+//! * with `skip_idle`, a tight loop polling TIMER4 outside an ISR (a delay)
+//!   jumps the clock to the next timed event instead of spinning;
 //! * TIMER4 `0x10800`: free-running 24 MHz time base (CNT at +4);
 //! * TIMER5 `0x10900`: 10 kHz tick (PRD at 6 MHz), pending CON bit 15,
 //!   acknowledged by writing bit 14, IRQ 63;
@@ -22,14 +26,11 @@
 use std::collections::VecDeque;
 
 pub const CPU_HZ: u64 = 240_000_000;
-/// CPU cycles per TIMER4 tick (24 MHz).
-const T4_DIV: u64 = 10;
-/// CPU cycles per I2S frame: 544 TIMER4 ticks (Felucca audio.c DAC_TICKS).
-const FRAME_CYCLES: u64 = 544 * T4_DIV;
-/// CPU cycles per TIMER5 count (OSC/4 = 6 MHz).
-const T5_DIV: u64 = 40;
-/// Encoder contacts move one quadrature state every 2 ms when turning.
-const ENC_STEP_CYCLES: u64 = CPU_HZ / 500;
+/// TIMER4 counts the 24 MHz crystal; TIMER5 runs from OSC/4.
+const T4_HZ: u64 = 24_000_000;
+const T5_HZ: u64 = 6_000_000;
+/// TIMER4 ticks per I2S frame (Felucca audio.c DAC_TICKS: 44.1 kHz).
+const FRAME_T4: u64 = 544;
 
 pub const IRQ_ALNK0: u8 = 11;
 pub const IRQ_TIMER5: u8 = 63;
@@ -61,6 +62,20 @@ const GRAY: [(u8, u8); 4] = [(0, 0), (1, 0), (1, 1), (0, 1)];
 
 pub struct Periph {
     pub cycles: u64,
+    /// Emulated CPU clock (cycles per second of firmware time).
+    pub hz: u64,
+    /// Jump over TIMER4 polling loops (see the module notes).
+    pub skip_idle: bool,
+    /// Set by the runner while cpu0 is inside an ISR (no skipping there).
+    pub in_isr: bool,
+    last_cnt_read: u64,
+    /// Consecutive close TIMER4 reads outside ISRs (a poll needs 3).
+    cnt_streak: u32,
+    /// Nothing timed happens before this cycle (0 = recompute): `advance`
+    /// returns at once until then.
+    next_due: u64,
+    /// Cycles jumped over by `skip_idle`.
+    pub skipped: u64,
     // TIMER4
     t4_con: u32,
     t4_base: u64,
@@ -86,10 +101,18 @@ pub struct Periph {
     pub adc_value: [u16; 16],
     // interrupt controller
     pub ilat: u32,
+    /// Enable/priority words at 0x1EEF100 (one nibble per source).
+    pub icfg: [u32; 32],
     // key matrix
     sr_shift: u16,
     sr_latched: u16,
     pa_out: u32,
+    ph_out: u32,
+    /// Front-panel LEDs: cycles each key/button LED has been lit, and the
+    /// cycle of the last change of the LED lines or the column latch.
+    led_acc: [u64; 41],
+    led_last: u64,
+    led_since: u64,
     pub keys_down: [bool; 41],
     enc_state: [u8; 7],
     enc_pending: [i32; 7],
@@ -114,6 +137,13 @@ impl Default for Periph {
         adc_value[4] = 900; // MASTER pot
         Self {
             cycles: 0,
+            hz: CPU_HZ,
+            skip_idle: false,
+            in_isr: false,
+            last_cnt_read: 0,
+            cnt_streak: 0,
+            next_due: 0,
+            skipped: 0,
             t4_con: 0,
             t4_base: 0,
             t5_con: 0,
@@ -133,9 +163,14 @@ impl Default for Periph {
             adc_con: 0,
             adc_value,
             ilat: 0,
+            icfg: [0; 32],
             sr_shift: 0xffff,
             sr_latched: 0xffff,
             pa_out: 0,
+            ph_out: 0,
+            led_acc: [0; 41],
+            led_last: 0,
+            led_since: 0,
             keys_down: [false; 41],
             enc_state: [0; 7],
             enc_pending: [0; 7],
@@ -156,20 +191,49 @@ pub struct Due {
 
 impl Periph {
     pub fn ms(&self) -> u64 {
-        self.cycles * 1000 / CPU_HZ
+        self.cycles * 1000 / self.hz
     }
 
-    pub fn cycle_of_ms(ms: u64) -> u64 {
-        ms * (CPU_HZ / 1000)
+    pub fn cycle_of_ms(&self, ms: u64) -> u64 {
+        ms * self.hz / 1000
+    }
+
+    fn t5_period(&self) -> u64 {
+        (self.t5_prd.max(1) as u64 * self.hz / T5_HZ).max(1)
+    }
+
+    fn half_period(&self) -> u64 {
+        (self.alnk_len.max(2) as u64 / 2 * FRAME_T4 * self.hz / T4_HZ).max(1)
+    }
+
+    fn enc_step(&self) -> u64 {
+        self.hz / 500 // contacts move one quadrature state every 2 ms
+    }
+
+    /// The next cycle at which something timed happens.
+    fn next_event(&self) -> u64 {
+        let mut n = self.t5_next.min(self.alnk_next);
+        if let Some((at, _)) = self.script.front() {
+            n = n.min(*at);
+        }
+        for i in 0..7 {
+            if self.enc_pending[i] != 0 {
+                n = n.min(self.enc_next[i]);
+            }
+        }
+        n
     }
 
     /// Advance `n` cycles; returns what came due.
     pub fn advance(&mut self, n: u64) -> Due {
         self.cycles += n;
         let mut due = Due::default();
+        if self.cycles < self.next_due {
+            return due;
+        }
         if self.cycles >= self.t5_next {
             self.t5_pending = true;
-            let period = (self.t5_prd.max(1) as u64) * T5_DIV;
+            let period = self.t5_period();
             self.t5_next += period;
             if self.t5_next <= self.cycles {
                 self.t5_next = self.cycles + period;
@@ -180,7 +244,7 @@ impl Periph {
             due.audio_half = Some((self.alnk_adr.wrapping_add(self.alnk_half * words * 4), words));
             self.alnk_half ^= 1;
             self.alnk_pend |= 0x80;
-            self.alnk_next += (words as u64 / 2) * FRAME_CYCLES;
+            self.alnk_next += self.half_period();
             self.audio_halves += 1;
         }
         for i in 0..7 {
@@ -188,7 +252,7 @@ impl Periph {
                 let s = self.enc_state[i] as i32;
                 self.enc_state[i] = ((s + self.enc_pending[i].signum()) & 3) as u8;
                 self.enc_pending[i] -= self.enc_pending[i].signum();
-                self.enc_next[i] = self.cycles + ENC_STEP_CYCLES;
+                self.enc_next[i] = self.cycles + self.enc_step();
             }
         }
         while let Some((at, _)) = self.script.front() {
@@ -199,10 +263,12 @@ impl Periph {
             self.apply(&a);
             due.actions.push(a);
         }
+        self.next_due = self.next_event();
         due
     }
 
     pub fn apply(&mut self, a: &Action) {
+        self.next_due = 0;
         match *a {
             Action::Key { id, down } => {
                 if (id as usize) < 41 {
@@ -226,8 +292,36 @@ impl Periph {
         }
     }
 
+    /// One cycle; true when something timed is due (call `advance(0)`).
+    #[inline(always)]
+    pub fn tick(&mut self) -> bool {
+        self.cycles += 1;
+        self.cycles >= self.next_due
+    }
+
+    /// Ticks that can pass before one is due (a tick is due once cycles reach next_due).
+    #[inline]
+    pub fn tick_room(&self) -> u64 {
+        self.next_due.saturating_sub(self.cycles + 1)
+    }
+
+    #[inline]
+    pub fn next_tick_due(&self) -> bool {
+        self.cycles + 1 >= self.next_due
+    }
+
+    /// Any interrupt source pending at all (before enables and priorities).
+    #[inline(always)]
+    pub fn any_pending(&self) -> bool {
+        self.t5_pending || self.alnk_pend & 0xf0 != 0 || self.ilat != 0
+    }
+
     /// The highest-priority enabled, pending source: (irq, prio).
-    pub fn pending_irq(&self, icfg: impl Fn(u8) -> u32) -> Option<(u8, u8)> {
+    pub fn pending_irq(&self) -> Option<(u8, u8)> {
+        let icfg = |n: u8| self.icfg[(n >> 3) as usize];
+        if !self.t5_pending && self.alnk_pend & 0xf0 == 0 && self.ilat == 0 {
+            return None;
+        }
         let mut best: Option<(u8, u8)> = None;
         let mut consider = |n: u8| {
             let nib = (icfg(n) >> ((n & 7) * 4)) & 0xf;
@@ -259,17 +353,40 @@ impl Periph {
         Some(match addr {
             0x10800 => self.t4_con,
             0x10804 => {
-                if self.t4_con & 1 != 0 {
-                    ((self.cycles - self.t4_base) / T4_DIV) as u32
-                } else {
-                    0
+                if self.t4_con & 1 == 0 {
+                    return Some(0);
                 }
+                // three reads close together outside ISRs: a polling loop.
+                // (Reads inside an ISR neither count nor trigger: a single
+                // main-loop read right after the tick ISR's own read once
+                // skipped time in ui_input and the notes went silent.)
+                if self.skip_idle && !self.in_isr {
+                    if self.cycles - self.last_cnt_read < 64 {
+                        self.cnt_streak += 1;
+                    } else {
+                        self.cnt_streak = 0;
+                    }
+                    if self.cnt_streak >= 2 {
+                        // never past the next event, and at most 20 us at a
+                        // time: the loop re-checks its own deadline (an
+                        // uncapped jump once crossed a whole boot delay)
+                        let next = self.next_event().min(self.cycles + self.hz / 50_000);
+                        if next > self.cycles + 1 {
+                            self.skipped += next - 1 - self.cycles;
+                            self.cycles = next - 1;
+                            self.next_due = 0;
+                        }
+                    }
+                    self.last_cnt_read = self.cycles;
+                }
+                ((self.cycles - self.t4_base) as u128 * T4_HZ as u128 / self.hz as u128) as u32
             }
             0x10900 => self.t5_con | if self.t5_pending { 0x8000 } else { 0 },
             0x10904 => {
                 if self.t5_con & 1 != 0 && self.t5_next != u64::MAX {
-                    let period = (self.t5_prd.max(1) as u64) * T5_DIV;
-                    (((period - (self.t5_next - self.cycles).min(period)) / T5_DIV) % self.t5_prd.max(1) as u64) as u32
+                    let period = self.t5_period();
+                    let into = period - (self.t5_next - self.cycles).min(period);
+                    ((into * T5_HZ / self.hz) % self.t5_prd.max(1) as u64) as u32
                 } else {
                     0
                 }
@@ -284,6 +401,7 @@ impl Periph {
             0x13100 => self.adc_con | if self.adc_con & 0x40 != 0 { 0x80 } else { 0 },
             0x13104 => self.adc_value[((self.adc_con >> 8) & 0xf) as usize] as u32,
             0x1eef1a0 | 0x1eef1a4 => self.ilat,
+            0x1eef100..=0x1eef17f => self.icfg[((addr - 0x1eef100) / 4) as usize],
             0x50004 => self.pa_in(),
             0x50044 => self.pb_in(),
             _ => return None,
@@ -292,6 +410,7 @@ impl Periph {
 
     /// Writes handled here; returns false for plain SFR storage.
     pub fn write(&mut self, addr: u32, v: u32) -> bool {
+        self.next_due = 0; // a timer or DMA may have been (re)programmed
         match addr {
             0x10800 => {
                 if self.t4_con & 1 == 0 && v & 1 != 0 {
@@ -308,7 +427,7 @@ impl Periph {
                 let was = self.t5_con & 1;
                 self.t5_con = v & !0xc000;
                 if was == 0 && v & 1 != 0 {
-                    self.t5_next = self.cycles + (self.t5_prd.max(1) as u64) * T5_DIV;
+                    self.t5_next = self.cycles + self.t5_period();
                 } else if v & 1 == 0 {
                     self.t5_next = u64::MAX;
                 }
@@ -320,7 +439,7 @@ impl Periph {
                 self.alnk_con0 = v & 0xffff & !0x8000;
                 if was == 0 && v & 0x800 != 0 {
                     self.alnk_half = 0;
-                    self.alnk_next = self.cycles + (self.alnk_len.max(2) as u64 / 2) * FRAME_CYCLES;
+                    self.alnk_next = self.cycles + self.half_period();
                 } else if v & 0x800 == 0 {
                     self.alnk_next = u64::MAX;
                 }
@@ -332,12 +451,63 @@ impl Periph {
             0x12e20 => self.alnk_len = v & 0xffff,
             0x13100 => self.adc_con = v,
             0x13104 => {}
+            0x1eef100..=0x1eef17f => self.icfg[((addr - 0x1eef100) / 4) as usize] = v,
             0x1eef1a0 => self.ilat |= v,
             0x1eef1a4 => self.ilat &= !v,
-            0x50000 => self.pa_write(v),
+            0x50000 => {
+                self.led_credit();
+                self.pa_write(v);
+            }
+            0x501c0 => {
+                self.led_credit();
+                self.ph_out = v;
+            }
             _ => return false,
         }
         true
+    }
+
+    // ---- LEDs ---------------------------------------------------------------
+    // LED lines PA9, PA10, PH6, PH9 light the LED in the latched column on
+    // row bit 1, 2, 3, 4 (hal/fm1_input.h fm1__led_lines); the LED belongs to
+    // the key or button at that (row, column) of the matrix.
+
+    fn led_credit(&mut self) {
+        let dt = self.cycles - self.led_last;
+        self.led_last = self.cycles;
+        if dt == 0 {
+            return;
+        }
+        let lines = ((self.pa_out >> 8) & 2) | ((self.pa_out >> 8) & 4) | ((self.ph_out >> 3) & 8) | ((self.ph_out >> 5) & 16);
+        if lines == 0 {
+            return;
+        }
+        for col in 0..11usize {
+            if self.sr_latched & (1 << col) != 0 {
+                continue;
+            }
+            for row in 1..5usize {
+                if lines & (1 << row) != 0 {
+                    let id = KEYMAP[row][col];
+                    if id >= 0 {
+                        self.led_acc[id as usize] += dt;
+                    }
+                }
+            }
+        }
+    }
+
+    /// The fraction of time each LED was lit since the last call.
+    pub fn led_take(&mut self) -> [f32; 41] {
+        self.led_credit();
+        let span = (self.cycles - self.led_since).max(1) as f32;
+        self.led_since = self.cycles;
+        let mut out = [0f32; 41];
+        for (o, a) in out.iter_mut().zip(self.led_acc.iter_mut()) {
+            *o = *a as f32 / span;
+            *a = 0;
+        }
+        out
     }
 
     // ---- key matrix -----------------------------------------------------
@@ -407,6 +577,9 @@ pub fn key_id(name: &str) -> Option<u8> {
     if let Some(k) = n.strip_prefix('K') {
         return k.parse::<u8>().ok().filter(|&k| k < 41);
     }
+    if let Some(k) = note_name(&n) {
+        return Some(14 + k);
+    }
     if let Some(note) = n.strip_prefix('N') {
         // note keys: n0 = F3 .. n26 = G5
         return note.parse::<u8>().ok().filter(|&k| k < 27).map(|k| 14 + k);
@@ -427,4 +600,22 @@ pub fn enc_id(name: &str) -> Option<u8> {
         "K4" => Some(5),
         _ => n.strip_prefix("ENC").and_then(|e| e.parse::<u8>().ok()).filter(|&e| e < 7),
     }
+}
+
+/// `C4`, `F#3`, `Bb4` -> note-key index (0 = F3 .. 26 = G5).
+fn note_name(n: &str) -> Option<u8> {
+    let b = n.as_bytes();
+    let base = match *b.first()? {
+        b'C' => 0, b'D' => 2, b'E' => 4, b'F' => 5, b'G' => 7, b'A' => 9, b'B' => 11,
+        _ => return None,
+    };
+    let (acc, rest) = match b.get(1) {
+        Some(b'#') => (1, &n[2..]),
+        Some(b'B') if b.len() == 3 => (-1, &n[2..]), // "BB4" after uppercasing = Bb4
+        _ => (0, &n[1..]),
+    };
+    let oct: i32 = rest.parse().ok()?;
+    let midi = (oct + 1) * 12 + base + acc;
+    let k = midi - 53; // F3 = MIDI 53
+    (0..27).contains(&k).then_some(k as u8)
 }

@@ -15,6 +15,11 @@ impl Ram {
         self.data.len()
     }
 
+    /// Host pointer to the bytes (the JIT's inline loads and stores).
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.data.as_mut_ptr()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }

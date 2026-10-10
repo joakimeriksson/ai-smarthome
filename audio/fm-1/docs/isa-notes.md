@@ -322,6 +322,18 @@ mismatch is an emulator semantic bug. Found this way:
 Felucca's I2S words hold a 24-bit sample in the **low** bits (Q15 << 7,
 `audio.c OUT_SHIFT`), not left-justified as the HAL comment says.
 
+### Found by the decoder audit (2026-10-10, `tools/audit_decode.py`)
+
+- `d0 e9` sp-relative pair load/store: off = bits(17,27) << 1 (bit16 = store); all 810
+  corpus samples. The V13-only fit (bits(17,23)<<1 | bit24<<8) broke offsets >= 512.
+- 4-byte push/pop with a register mask (`d9 e8` / `d5 e8`): registers = bits(16,31) as a
+  mask; push rets first, then the registers from the highest down; pop ascending, then pc.
+- 2-byte shift-by-immediate (`xx a0..`): a count field of 0 is a shift by 32.
+- 2-byte `{pc, rN..} = [sp++]`: the range is min(n,4)..max(n,3), as the push's
+  (`50 04` = {pc, r3-r0}).
+- Interrupt nesting follows the Blackfin rule: an ISR can be interrupted only while its
+  `reti` is saved on the stack.
+
 ### Remaining exec gaps (known, traced)
 
 - goto/if branch-offset fields: printed = word offset (delta = 2*printed)

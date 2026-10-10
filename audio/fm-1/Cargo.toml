@@ -6,6 +6,7 @@ members = [
     "crates/fm1-soc",
     "crates/fm1-gdbstub",
     "crates/fm1-emu",
+    "crates/fm1-live",
 ]
 
 [workspace.package]

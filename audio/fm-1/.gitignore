@@ -18,3 +18,5 @@ work/fm1_new.yaml
 work/isa_stats_new.json
 work/probe/
 work/probe_*.bin
+work/*.ppm
+work/session.html

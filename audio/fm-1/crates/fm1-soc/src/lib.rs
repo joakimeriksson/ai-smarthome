@@ -134,10 +134,9 @@ impl Soc {
     }
 
     /// The highest-priority enabled pending interrupt: (irq, prio).
+    #[inline]
     pub fn pending_irq(&self) -> Option<(u8, u8)> {
-        let sfr = &self.sfr;
-        self.periph
-            .pending_irq(|n| *sfr.get(&(0x1eef100 + 4 * (n as u32 >> 3))).unwrap_or(&0))
+        self.periph.pending_irq()
     }
 
     pub fn unknown_accesses(&self) -> &[UnknownAccess] {
@@ -237,10 +236,50 @@ impl Soc {
 }
 
 impl Bus for Soc {
+    #[inline(always)]
+    fn tick(&mut self) -> bool {
+        self.periph.tick()
+    }
+    #[inline(always)]
+    fn irq_pending(&self) -> bool {
+        self.periph.any_pending()
+    }
+    fn jit_mem(&mut self) -> Option<fm1_core::JitMem> {
+        Some(fm1_core::JitMem {
+            ram: self.ram.as_mut_ptr(),
+            ram_base: RAM_BASE,
+            ram_len: self.ram.len() as u32,
+            xip: self.xip.as_ptr(),
+            xip_base: XIP_BASE,
+            xip_len: self.xip.len() as u32,
+        })
+    }
+    #[inline]
+    fn tick_room(&self) -> u64 {
+        self.periph.tick_room()
+    }
+    #[inline]
+    fn add_ticks(&mut self, n: u64) {
+        self.periph.cycles += n;
+    }
+    #[inline]
+    fn next_tick_due(&self) -> bool {
+        self.periph.next_tick_due()
+    }
+
+    // RAM fast paths: same results as the region dispatch below (byte and
+    // halfword accesses select within the aligned word), without walking it
+
+    #[inline(always)]
     fn read8(&mut self, addr: u32) -> u8 {
+        let o = addr.wrapping_sub(RAM_BASE);
+        if (o as usize) < self.ram.len() {
+            return self.ram.read8(o);
+        }
         self.read32(addr & !3).to_le_bytes()[(addr & 3) as usize]
     }
 
+    #[inline(always)]
     fn read16(&mut self, addr: u32) -> u16 {
         // halfwords sit at offsets 0 and 2 of the word (the old `>> 8` for
         // offset 2 returned bytes 1-2 and sheared every 16-bit pixel canvas)
@@ -248,7 +287,51 @@ impl Bus for Soc {
         (v >> ((addr & 2) * 8)) as u16
     }
 
+    #[inline(always)]
     fn read32(&mut self, addr: u32) -> u32 {
+        let o = addr.wrapping_sub(RAM_BASE) as usize;
+        if o + 4 <= self.ram.len() {
+            return self.ram.read32(o as u32);
+        }
+        let x = addr.wrapping_sub(XIP_BASE) as usize;
+        if x + 4 <= self.xip.len() {
+            return u32::from_le_bytes([self.xip[x], self.xip[x + 1], self.xip[x + 2], self.xip[x + 3]]);
+        }
+        self.read32_slow(addr)
+    }
+
+    #[inline(always)]
+    fn write8(&mut self, addr: u32, value: u8) {
+        let o = addr.wrapping_sub(RAM_BASE);
+        if (o as usize) < self.ram.len() {
+            return self.ram.write8(o, value);
+        }
+        self.write8_slow(addr, value)
+    }
+
+    #[inline(always)]
+    fn write16(&mut self, addr: u32, value: u16) {
+        // merged at (addr & 2) within the aligned word, as the slow path does
+        let o = (addr & !1).wrapping_sub(RAM_BASE) as usize;
+        if o + 2 <= self.ram.len() && addr & 1 == 0 {
+            return self.ram.write16(o as u32, value);
+        }
+        self.write16_slow(addr, value)
+    }
+
+    #[inline(always)]
+    fn write32(&mut self, addr: u32, value: u32) {
+        let o = addr.wrapping_sub(RAM_BASE) as usize;
+        if o + 4 <= self.ram.len() {
+            return self.ram.write32(o as u32, value);
+        }
+        self.write32_slow(addr, value)
+    }
+}
+
+impl Soc {
+    #[inline(never)]
+    fn read32_slow(&mut self, addr: u32) -> u32 {
         match self.region(addr) {
             Region::Xip => {
                 let o = (addr - XIP_BASE) as usize;
@@ -295,7 +378,8 @@ impl Bus for Soc {
         }
     }
 
-    fn write8(&mut self, addr: u32, value: u8) {
+    #[inline(never)]
+    fn write8_slow(&mut self, addr: u32, value: u8) {
         let cur = self.read32(addr & !3);
         let shift = (addr & 3) * 8;
         let mask = !(0xffu32 << shift);
@@ -303,7 +387,8 @@ impl Bus for Soc {
         self.write32(addr & !3, merged);
     }
 
-    fn write16(&mut self, addr: u32, value: u16) {
+    #[inline(never)]
+    fn write16_slow(&mut self, addr: u32, value: u16) {
         let cur = self.read32(addr & !3);
         let shift = (addr & 2) * 8;
         let mask = !(0xffffu32 << shift);
@@ -311,7 +396,8 @@ impl Bus for Soc {
         self.write32(addr & !3, merged);
     }
 
-    fn write32(&mut self, addr: u32, value: u32) {
+    #[inline(never)]
+    fn write32_slow(&mut self, addr: u32, value: u32) {
         match self.region(addr) {
             Region::Xip => self.log_unknown(addr, 4, true, value), // flash writes go via the ROM
             Region::Ram => self.ram.write32(addr - RAM_BASE, value),

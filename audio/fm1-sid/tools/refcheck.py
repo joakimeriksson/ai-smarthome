@@ -27,9 +27,10 @@ def align(ref, x):
     er = np.array([np.sqrt(np.mean(ref[i:i + hop] ** 2)) for i in range(0, len(ref) - hop, hop)])
     ex = np.array([np.sqrt(np.mean(x[i:i + hop] ** 2)) for i in range(0, len(x) - hop, hop)])
     m = min(len(ex), len(er)) - 400
-    # sidplayfp starts with ~1.9 s of power-on silence: search 1.5 .. 2.5 s (repetitive music
+    # sidplayfp starts with ~1.9 s of power-on silence plus the tune's own init before its first SID write (1.88 .. 2.49 s seen): search 1.8 .. 2.6 s
+    # (repetitive music
     # correlates at whole-bar offsets too)
-    best = max(range(150, 250), key=lambda L: np.corrcoef(er[L:L + m], ex[:m])[0, 1] if L + m <= len(er) else -1)
+    best = max(range(180, 260), key=lambda L: np.corrcoef(er[L:L + m], ex[:m])[0, 1] if L + m <= len(er) else -1)
     c = best * hop
     seg = x[44100:44100 * 4]
     fine = max(range(c - hop, c + hop), key=lambda L: abs(np.dot(ref[44100 + L:44100 + L + len(seg)], seg)) if L >= -44100 else 0)

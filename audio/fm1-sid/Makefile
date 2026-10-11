@@ -67,9 +67,11 @@ build/sid_record: $(SRC) src/sid.h src/sidsynth.h fm1/workload.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) -DSID_LOG -o $@ $(SRC)
 
-build/sidplay: host/sidplay.c
+# the tune logger: libsidplayfp 2.6.0 (ext/, patched by tools/fetch_ext.sh) runs the whole C64
+LSP = ext/libsidplayfp-2.6.0
+build/sidlogger: host/sidlogger.cpp $(LSP)/src/.libs/libsidplayfp.a
 	@mkdir -p build
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CXX) -O2 -std=c++14 -I$(LSP)/src -I$(LSP) -o $@ $< $(LSP)/src/.libs/libsidplayfp.a -fopenmp -lpthread
 
 compare: build/sid_record build/sid_replay
 	tools/compare.sh

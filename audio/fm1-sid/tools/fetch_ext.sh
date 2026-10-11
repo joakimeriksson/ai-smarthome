@@ -1,7 +1,8 @@
 #!/bin/sh
 # Fetch the reference SID engines into ext/ (GPL-2.0-or-later, not part of this repo) and
 # generate the headers their autoconf builds would make:
-#   reSID 0.16 (Dag Lem), reSID 1.0 (libsidplayfp/resid), reSIDfp (libsidplayfp/libresidfp)
+#   reSID 0.16 (Dag Lem), reSID 1.0 (libsidplayfp/resid), reSIDfp (libsidplayfp/libresidfp),
+#   libsidplayfp 2.6.0 (patched with a SID write hook, for build/sidlogger)
 set -eu
 cd "$(dirname "$0")/.."
 mkdir -p ext && cd ext
@@ -16,4 +17,11 @@ cd ../residfp/src
 sed -e 's/@RESIDFP_BRANCH_HINTS@/1/;s/@HAVE_BUILTIN_EXPECT@/1/;s/@PACKAGE_VERSION@/git/' \
     -e 's/@RESIDFP_INLINING@/1/;s/@RESIDFP_INLINE@/inline/' siddefs-fp.h.in > siddefs-fp.h
 sed -e 's/@LIB_MAJOR@/3/;s/@LIB_MINOR@/0/;s/@LIB_LEVEL@/0/' residfp/sidversion.h.in > residfp/sidversion.h
-echo "ext/: reSID 0.16, reSID 1.0, reSIDfp ready"
+# libsidplayfp 2.6.0 with a write hook (tools/libsidplayfp-2.6.0-sidlog.patch) for build/sidlogger
+cd ../..
+if [ ! -f libsidplayfp-2.6.0/src/.libs/libsidplayfp.a ]; then
+    [ -d libsidplayfp-2.6.0 ] || { curl -sSfL -o lsp.tgz https://github.com/libsidplayfp/libsidplayfp/releases/download/v2.6.0/libsidplayfp-2.6.0.tar.gz && tar xzf lsp.tgz && rm lsp.tgz
+        patch -s -d libsidplayfp-2.6.0 -p1 < ../tools/libsidplayfp-2.6.0-sidlog.patch; }
+    (cd libsidplayfp-2.6.0 && ./configure -q --disable-shared --enable-static --without-exsid --without-usbsid && make -s -j4)
+fi
+echo "ext/: reSID 0.16, reSID 1.0, reSIDfp, libsidplayfp ready"

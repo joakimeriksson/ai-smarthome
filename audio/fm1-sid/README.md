@@ -69,17 +69,16 @@ audible band; to be measured.
 
 ### Real C64 tunes
 
-`host/sidplay.c` is a small PSID player: a 6502 (official opcodes, decimal mode, the common
-undocumented ones), 64 KB RAM with the $01 banking, CIA 1 timer A for CIA-timed tunes and the
-SID registers. It runs a tune's init and play routines and logs every SID write with its
-C64 cycle (sidlog v2); `host/replay.cc` then plays that log on every engine, each clocked to
-the cycle of each write. RSID tunes (which need a whole C64) are refused.
-`tools/tunes.sh` fetches seven tunes from HVSC (Hubbard, Tel, Daglish, Galway, Jammer; the
-tunes and renders stay in `build/`, they are not part of the repo), and renders each with
-`sidplayfp` (full C64 emulation, reSIDfp) as a reference when it is installed.
-`tools/refcheck.py` aligns ours with the reference: the tempo holds (the offset stays within a
-few ms over 30 s) and the log-spectra correlate 0.76-0.86 with our reSIDfp replay; the rest is
-engine settings (filter curve) and the play routine's call time within the frame.
+`host/sidlogger.cpp` runs a tune on libsidplayfp's C64 emulation (PSID and RSID, multi-SID)
+and logs every SID write with its C64 cycle (sidlog v2); `host/replay.cc` then plays that log
+on every engine, each clocked to the cycle of each write. libsidplayfp 2.6.0 is built in
+`ext/` with a 24-line patch (`tools/libsidplayfp-2.6.0-sidlog.patch`) that calls a hook on
+each SID write. `tools/scan_tunes.py` ranks HVSC tunes by how much they use hard sync, ring
+modulation and the filter (from their register streams); `tools/tunes.sh` fetches the chosen
+ones (they and their renders stay in `build/`, not in the repo) and renders each with
+`sidplayfp` as a reference. `tools/refcheck.py` aligns ours with the reference: the tempo holds
+and the log-spectra correlate ~0.8 with our reSIDfp replay; the rest is engine settings
+(filter curve) and where in the frame the player runs.
 
 ### Emulator fixes found on the way (`../fm-1`, PR #31)
 
@@ -137,7 +136,8 @@ tools/fetch_ext.sh        fetch reSID 0.16, reSID 1.0, reSIDfp into ext/ (GPL, n
 tools/compare.sh          record every demo piece, replay on every engine -> build/cmp/
 tools/listen.py,          level-matched MP3s, spectrograms and the A/B page -> build/listen/
   listen.html
-host/sidplay.c            6502 + PSID player: a tune's SID writes, cycle-exact (sidlog v2)
+host/sidlogger.cpp        a tune's SID writes, cycle-exact, from libsidplayfp's C64 (sidlog v2)
+tools/scan_tunes.py       rank HVSC tunes by sync / ring / filter use
 tools/tunes.sh,           HVSC tunes on every engine + sidplayfp reference; alignment check
   refcheck.py
 ```

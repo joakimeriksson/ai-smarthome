@@ -19,7 +19,7 @@ extern "C" {
 #include "engines.h"
 
 struct Ev { uint32_t pos; uint8_t chip, reg, val, pad; };
-// v1 (host/demo.c record): pos = output sample; v2 (host/sidplay.c): pos = C64 cycle
+// v1 (host/demo.c record): pos = output sample; v2 (host/sidlogger.cpp): pos = C64 cycle
 struct Log { uint32_t model, fs, clock, chips, samples, nev, mix; bool cycles; std::vector<Ev> ev; };
 
 static Log load(const char *path)

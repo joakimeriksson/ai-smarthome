@@ -1,0 +1,24 @@
+--- a/src/builders/residfp-builder/residfp-emu.cpp	2026-10-11 08:25:39.604250787 +0000
++++ b/src/builders/residfp-builder/residfp-emu.cpp	2026-10-11 08:25:39.620716564 +0000
+@@ -85,9 +85,21 @@
+     return m_sid.read(addr);
+ }
+ 
++} // namespace libsidplayfp
++
++/* fm1-sid: every SID write with the C64 clock, for the register-stream logger
++ * (audio/fm1-sid/tools/sidlogger.cpp); null in normal use */
++extern "C" void (*fm1sid_write_hook)(const void *chip, unsigned long long clk, unsigned addr, unsigned data);
++void (*fm1sid_write_hook)(const void *chip, unsigned long long clk, unsigned addr, unsigned data) = nullptr;
++
++namespace libsidplayfp
++{
++
+ void ReSIDfp::write(uint_least8_t addr, uint8_t data)
+ {
+     clock();
++    if (fm1sid_write_hook)
++        fm1sid_write_hook(this, (unsigned long long)eventScheduler->getTime(EVENT_CLOCK_PHI1), addr, data);
+     m_sid.write(addr, data);
+ }
+ 

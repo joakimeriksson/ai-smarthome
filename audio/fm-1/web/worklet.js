@@ -10,6 +10,7 @@ class Fm1 extends AudioWorkletProcessor {
     this.port.onmessage = async (e) => {
       const m = e.data;
       if (m.type === "boot") {
+        this.x = null;                    // the old machine stops now, not when the new one is up
         try {
           await this.boot(m);
         } catch (err) {
@@ -26,9 +27,10 @@ class Fm1 extends AudioWorkletProcessor {
 
   async boot(m) {
     // the module arrives as bytes: a compiled WebAssembly.Module does not cross into the
-    // AudioWorklet's scope (Chrome delivers it as a messageerror)
-    const { instance } = await WebAssembly.instantiate(m.wasm, {});
-    const x = instance.exports;
+    // AudioWorklet's scope (Chrome delivers it as a messageerror). Compiled once, here: on a
+    // phone compiling it again on every firmware change takes a noticeable while
+    if (!this.module) this.module = await WebAssembly.compile(m.wasm);
+    const x = (await WebAssembly.instantiate(this.module, {})).exports;
     // the whole update package (.fwsc): the machine unpacks it, gets the flash chip and the
     // boot parameters from it (what M-VAVE's own firmware needs; the others boot the same)
     const copy = (buf) => {
@@ -45,6 +47,7 @@ class Fm1 extends AudioWorkletProcessor {
     this.budget = m.mhz * 1e6 * 0.02;   // at most 20 ms of emulated time per quantum
     this.short = 0;
     this.calls = 0;
+    this.port.postMessage({ type: "booted", seq: m.seq });
   }
 
   process(_inputs, outputs) {

@@ -261,6 +261,9 @@ fn bench(o: &Opts, ms: u64) {
             break;
         }
         insns += 100_000;
+        if let Some(c1) = m.cpu1.as_mut() {
+            c1.profile = m.cpu.profile;
+        }
         if std::env::var_os("FM1_BENCH_TRACE").is_some() {
             // a checkpoint to diff between runs (JIT against the interpreter)
             eprintln!("cp {insns} cyc {} pc {:#010x} sp {:#x} r {:x?}", m.soc.periph.cycles, m.cpu.pc, m.cpu.sp, &m.cpu.regs[..8]);
@@ -294,6 +297,15 @@ fn bench(o: &Opts, ms: u64) {
         v.sort_by(|a, b| b.1.cmp(a.1));
         for (name, n) in v.iter().take(40) {
             println!("slow {name:28} {:5.2}%", 100.0 * **n as f64 / tot as f64);
+        }
+        if let Some(c1) = &m.cpu1 {
+            let t1: u64 = c1.route_hist.iter().sum();
+            let mut v: Vec<_> = c1.slow_hist.iter().collect();
+            v.sort_by(|a, b| b.1.cmp(a.1));
+            println!("cpu1 slow path: {} of {} counted", t1 - c1.route_hist[31], t1);
+            for (name, n) in v.iter().take(25) {
+                println!("cpu1 slow {name:28} {:5.2}%", 100.0 * **n as f64 / t1.max(1) as f64);
+            }
         }
     }
     let p = &m.soc.periph;

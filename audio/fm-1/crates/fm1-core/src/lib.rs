@@ -80,6 +80,18 @@ pub trait Bus {
     fn idle(&mut self, _core: u32) {}
 }
 
+/// The RAM from `pc` to its end, when the bus can show it (its JIT memory map), and pc is in it.
+#[inline]
+fn ram_code<B: Bus>(bus: &mut B, pc: u32) -> Option<&'static [u8]> {
+    let m = bus.jit_mem()?;
+    let off = pc.checked_sub(m.ram_base)?;
+    if off >= m.ram_len {
+        return None;
+    }
+    // SAFETY: the bus's RAM outlives the machine; only read here, between instructions
+    Some(unsafe { std::slice::from_raw_parts(m.ram.add(off as usize), (m.ram_len - off) as usize) })
+}
+
 /// CPU architectural state.
 #[derive(Debug, Default)]
 pub struct Cpu {
@@ -153,6 +165,14 @@ pub struct Cpu {
     bops: Vec<BOp>,
     blocks: Vec<(u32, u32, u32)>,
     bmap: Vec<u32>,
+    /// Per block: for one over RAM code, the bytes it was built from. RAM can change (code
+    /// copied in, overlays), so such a block is checked against memory before every entry
+    /// and rebuilt when they differ; compiled code never chains into one (`jit_body_at`).
+    /// The stock firmware's synth renders on cpu1 from RAM: without blocks it ran a step at
+    /// a time.
+    bbytes: Vec<Option<Box<[u8]>>>,
+    /// FM1_NO_RAM_BLOCKS: RAM code a step at a time (the reference)
+    no_ram_blocks: bool,
     /// Instructions per execute route (index 31 = the micro-op fast path),
     /// and per class name on the slow path — for tuning the dispatcher.
     pub route_hist: [u64; 32],
@@ -181,6 +201,7 @@ impl Cpu {
     pub fn new(entry: u32) -> Self {
         Self {
             pc: entry,
+            no_ram_blocks: std::env::var_os("FM1_NO_RAM_BLOCKS").is_some(),
             ..Default::default()
         }
     }
@@ -282,7 +303,16 @@ impl Cpu {
         let route = route_of(&insn, &alu4, &bittest);
         let syntax = canon_syntax(insn.entry);
         let mut fast = if route == ROUTE_SYNTAX { fast_of(&insn, syntax) } else { fast_raw(route, &insn, &alu4, &bittest) };
-        if route == 14 && (0x0200_0000..0x0400_0000).contains(&pc) {
+        if route == ROUTE_SYNTAX && syntax == "R = cnum" {
+            // the core number is fixed per core, and so is this core's cache
+            if let Some(sl) = insn.entry.slots.first() {
+                fast = Some(Fast::MovI { d: (sl.value(insn.raw) as u8) & 15, v: self.core_id });
+            }
+        }
+        // (in RAM too: the block ends come from the following instructions, and RAM blocks are
+        // checked against memory before each entry; code that rewrote only an if-block's body
+        // in place, keeping its head, would go unnoticed by `step`'s line cache)
+        if route == 14 {
             if let Some(blk) = decode_if_block(insn.raw) {
                 let next_pc = pc + insn.entry.len as u32;
                 let then_end = self.block_end(bus, next_pc, blk.then_units);
@@ -431,14 +461,15 @@ impl Cpu {
     /// XIP or its first instruction needs `step`.
     #[inline]
     fn block_at<B: Bus>(&mut self, bus: &mut B, pc: u32) -> Result<Option<(usize, u32, u32)>, CoreError> {
-        if !(0x0200_0000..0x0400_0000).contains(&pc) {
+        let xip = (0x0200_0000..0x0400_0000).contains(&pc);
+        if !xip && (self.no_ram_blocks || ram_code(bus, pc).is_none()) {
             return Ok(None);
         }
         if !self.bmap.is_empty() {
             let id = self.bmap[(pc >> 1) as usize & (self.bmap.len() - 1)];
             if id != 0 {
                 let (bpc, start, len) = self.blocks[id as usize - 1];
-                if bpc == pc {
+                if bpc == pc && (xip || self.ram_block_current(bus, id as usize - 1)) {
                     return Ok(Some((id as usize - 1, start, len)));
                 }
             }
@@ -446,10 +477,21 @@ impl Cpu {
         self.build_block(bus, pc)
     }
 
+    /// Is RAM block `id` still built from what memory holds now?
+    #[inline]
+    fn ram_block_current<B: Bus>(&self, bus: &mut B, id: usize) -> bool {
+        let (pc, ..) = self.blocks[id];
+        match (self.bbytes.get(id).and_then(|b| b.as_deref()), ram_code(bus, pc)) {
+            (Some(was), Some(now)) => now.len() >= was.len() && &now[..was.len()] == was,
+            _ => false,
+        }
+    }
+
     /// The compiled body of the block starting at pc, if there is one.
     #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
     fn jit_body_at(&self, pc: u32) -> Option<*const u8> {
-        if self.bmap.is_empty() {
+        // RAM blocks are entered only through block_at, which checks their bytes first
+        if self.bmap.is_empty() || !(0x0200_0000..0x0400_0000).contains(&pc) {
             return None;
         }
         let id = self.bmap[(pc >> 1) as usize & (self.bmap.len() - 1)];
@@ -469,6 +511,7 @@ impl Cpu {
             // (cannot happen for one image, but never grow without bound)
             self.bops.clear();
             self.blocks.clear();
+            self.bbytes.clear();
             self.bmap.iter_mut().for_each(|x| *x = 0);
             #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
             if let Some(j) = self.jit.as_mut() {
@@ -476,8 +519,9 @@ impl Cpu {
             }
         }
         let start = self.bops.len() as u32;
+        let xip = (0x0200_0000..0x0400_0000).contains(&pc);
         let mut p = pc;
-        while (self.bops.len() as u32 - start) < 32 && (0x0200_0000..0x0400_0000).contains(&p) {
+        while (self.bops.len() as u32 - start) < 32 && (if xip { (0x0200_0000..0x0400_0000).contains(&p) } else { ram_code(bus, p).is_some() }) {
             let slot = self.fetch_at(bus, p)?;
             let l = self.icache[slot];
             let Some(f) = l.fast else { break };
@@ -492,6 +536,10 @@ impl Cpu {
             return Ok(None);
         }
         self.blocks.push((pc, start, len));
+        // a RAM block keeps its bytes (6 more: an instruction's window reaches past its length)
+        let bytes = if xip { None } else { ram_code(bus, pc).map(|m| m[..((p - pc) as usize + 6).min(m.len())].into()) };
+        self.bbytes.resize(self.blocks.len() - 1, None);
+        self.bbytes.push(bytes);
         let slot = (pc >> 1) as usize & ((1 << BITS) - 1);
         self.bmap[slot] = self.blocks.len() as u32;
         Ok(Some((self.blocks.len() - 1, start, len)))
@@ -749,6 +797,27 @@ impl Cpu {
                 bus.write32(a, alu(op, cur, rhs));
             }
             Fast::Nop => {}
+            Fast::SpAdd { v } => self.sp = self.sp.wrapping_add(v),
+            Fast::SpFromR { s } => self.sp = self.regs[(s & 15) as usize],
+            Fast::RFromSp { d, v } => self.regs[(d & 15) as usize] = self.sp.wrapping_add(v),
+            Fast::BitExt { d, s, p, l, signed } => {
+                let src = self.regs[(s & 15) as usize];
+                let (p, l) = (p as u32 & 31, l as u32 & 31);
+                self.regs[(d & 15) as usize] = if signed {
+                    if l == 0 { src >> p } else { (((src >> p) << (32 - l)) as i32 >> (32 - l)) as u32 }
+                } else {
+                    let mask = if l == 0 { 0xffff_ffffu32 } else { (1u32 << l).wrapping_sub(1) };
+                    (src >> p) & mask
+                };
+            }
+            Fast::BitIns { d, s, p, l } => {
+                let src = self.regs[(s & 15) as usize];
+                let (p, l) = (p as u32 & 31, l as u32 & 31);
+                let mask = if l == 0 { 0xffff_ffffu32 } else { (1u32 << l).wrapping_sub(1) };
+                let d = (d & 15) as usize;
+                self.regs[d] = (self.regs[d] & !(mask << p)) | ((src & mask) << p);
+            }
+            Fast::SetIe { on } => self.ie = on,
             Fast::BrIEq { a, v, target } => {
                 if self.regs[(a & 15) as usize] == v {
                     return Some(target);
@@ -3558,6 +3627,19 @@ enum Fast {
     AddRI { d: u8, s: u8, v: u32 },
     ShlI { d: u8, s: u8, n: u8 },
     SarI { d: u8, s: u8, n: u8 },
+    // stack-pointer moves, bit fields and the global interrupt enable (were slow-path syntax)
+    /// `sp += v`
+    SpAdd { v: u32 },
+    /// `sp = R`
+    SpFromR { s: u8 },
+    /// `R = sp + v`
+    RFromSp { d: u8, v: u32 },
+    /// `R = u/sextra(R, p, l)`
+    BitExt { d: u8, s: u8, p: u8, l: u8, signed: bool },
+    /// `R <= insert(R, p, l)`
+    BitIns { d: u8, s: u8, p: u8, l: u8 },
+    /// `sti` / `cli`
+    SetIe { on: bool },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -3865,6 +3947,28 @@ fn fast_of(insn: &Instruction, s: &'static str) -> Option<Fast> {
             }
             return Some(Fast::DecBr { r: r(0)?, cond: cond_of(op, signed)?, v: v(1)?, target: target(2)? });
         }
+    }
+    match s {
+        "sp += #i" => {
+            // 4-byte `f0 e8 <imm>`: sext13(bits(16,28)), as exec_syntax
+            let imm = if insn.entry.len == 4 && insn.raw & 0xffff == 0xe8f0 {
+                let f = ((insn.raw >> 16) & 0x1fff) as u32;
+                if f & 0x1000 != 0 { f | !0x1fff } else { f }
+            } else {
+                v(0)?
+            };
+            return Some(Fast::SpAdd { v: imm });
+        }
+        "sp = R" => return Some(Fast::SpFromR { s: r(0)? }),
+        "R = sp" => return Some(Fast::RFromSp { d: r(0)?, v: 0 }),
+        "R = sp + #i" => return Some(Fast::RFromSp { d: r(0)?, v: v(1)? }),
+        "R = uextra(R, p:#i, l:#i)" | "R = sextra(R, p:#i, l:#i)" => {
+            return Some(Fast::BitExt { d: r(0)?, s: r(1)?, p: v(2)? as u8 & 31, l: v(3)? as u8 & 31, signed: s.contains("sextra") });
+        }
+        "R <= insert(R, p:#i, l:#i)" => return Some(Fast::BitIns { d: r(0)?, s: r(1)?, p: v(2)? as u8 & 31, l: v(3)? as u8 & 31 }),
+        // (not `sti`: on the slow path the run loop takes a pending interrupt right after it)
+        "cli" => return Some(Fast::SetIe { on: false }),
+        _ => {}
     }
     // sub-word extracts
     let ext = match s {

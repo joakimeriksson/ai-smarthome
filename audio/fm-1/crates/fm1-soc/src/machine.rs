@@ -131,6 +131,9 @@ pub fn run_cpu1(c1: &mut Cpu, soc: &mut Soc, cycles: u64) -> Result<(), String> 
     }
     let probe = (c1.pc, c1.regs, c1.sp);
     let mut left = cycles.min(1 << 20);
+    // first a block at a time, looking for the way back to where it started (a polling loop
+    // goes round in well under this); then, busy, in big stretches
+    let mut probing = 512u64;
     while left > 0 {
         if soc.periph.any_pending() {
             if let Some((irq, prio)) = soc.pending_irq_for(1) {
@@ -140,8 +143,8 @@ pub fn run_cpu1(c1: &mut Cpu, soc: &mut Soc, cycles: u64) -> Result<(), String> 
                 }
             }
         }
-        let chunk = left.min(256);
-        let mut bus = Core1Bus { soc: &mut *soc, budget: chunk + 1 };
+        let chunk = if probing > 0 { 1 } else { left.min(256) };
+        let mut bus = Core1Bus { soc: &mut *soc, budget: chunk.max(64) + 1 };
         let k = match c1.run_fast(&mut bus, chunk as u32) {
             Ok((0, _)) => {
                 if let Err(e) = c1.step(&mut bus) {
@@ -153,6 +156,7 @@ pub fn run_cpu1(c1: &mut Cpu, soc: &mut Soc, cycles: u64) -> Result<(), String> 
             Err(e) => return Err(format!("cpu1: {e:?} at pc {:#010x}", c1.pc)),
         };
         left = left.saturating_sub(k);
+        probing = probing.saturating_sub(k);
         if c1.pc == probe.0 && c1.sp == probe.2 && c1.regs == probe.1 {
             break; // polling with nothing to do
         }

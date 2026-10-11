@@ -85,7 +85,7 @@ build/psidlog: player/psid.c player/psid.h player/psidlog.c ext/chips/m6502.h
 firmware:
 	firmware/build.sh
 
-webplayer: firmware
-	tools/webplayer.sh
+webpage: firmware
+	tools/webpage.sh
 
-.PHONY: compare firmware webplayer
+.PHONY: compare firmware webpage

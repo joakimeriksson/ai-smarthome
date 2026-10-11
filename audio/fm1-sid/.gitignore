@@ -1,3 +1,4 @@
 build/
 ext/
 __pycache__/
+web/fm1_web.wasm

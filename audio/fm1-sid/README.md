@@ -26,8 +26,9 @@ i PR #31.
 
 Dessutom finns en **SID-spelare som firmware** (`firmware/`): riktiga C64-låtar (PSID) körs
 med sin egen 6502-kod på FM-1:ans CPU, ljudet från reSID 0.16 (eller egna modellen), och
-LCD:n visar de tre rösterna, sync/ring och filtret. Den går i `fm1-emu` och i
-webbemulatorn (`tools/webplayer.sh`); ljudet stämmer med reSID på datorn.
+LCD:n visar de tre rösterna, sync/ring och filtret. Den går i `fm1-emu` och som webbsida
+(`web/`, GitHub Pages) där hela FM-1 emuleras och man kan söka och spela hela HVSC; låtarna
+hämtas direkt från hvsc.c64.org. Ljudet stämmer med reSID på datorn.
 
 ## Short answer
 
@@ -120,29 +121,60 @@ chip drawn on the LCD.
   an oscilloscope and the CPU load.
 - Keys: PRESETS / SELECT encoder or OCT− / OCT+ = tune, PLAY = pause, EDIT = engine (reSID /
   own model), FX = 6581 / 8580. Hold OCT− and OCT+ for 3 s for the USB update mode.
-- `firmware/gen_assets.py` puts a playlist of 16 tunes (from `tools/tunes.sh`'s `build/`
-  cache) and an 8x12 font into `build/fw/assets.h`; `firmware/build.sh` makes
-  `build/fw/sidplayer.bin` (288 KB of the 568 KB app slot, 347 KB RAM, reSID's wave tables in
-  flash) and `sidplayer_xip.bin` for `fm1-emu --bin`. The tunes are HVSC files: the binary is
-  for your own use, not for publishing.
+- The tunes ride after the firmware in flash as a **tune pack** (`firmware/main.c` reads it at
+  the image's end, `_pack` in `firmware/app.ld`): "SIDPACK1", a count, the first entry and two
+  flags (own model; chip 6581 / 8580 for every tune), then offset, length and song per entry.
+  `tools/sidpack.py` makes one from .sid files, the web page builds the same in JavaScript
+  (`web/pack.js`). Without a pack the firmware plays its own tune.
+- `tools/housetune.py` writes that tune, *Pocket Sync* (31 s, PSID, BSD-2): the music is
+  computed in Python frame by frame as SID register writes (bass and drums through a resonant
+  low-pass, arpeggios, a lead that goes plain, hard-synced, then ring-modulated) and a 60-byte
+  6502 routine plays one frame of writes per call.
+- `firmware/build.sh` makes `build/fw/sidplayer.bin` (196 KB of the 568 KB app slot: player,
+  reSID with its wave tables in flash, the own model, a font and the own tune; 350 KB RAM),
+  `sidplayer_xip.bin` for `fm1-emu --bin`, and copies the image without a pack to
+  `web/sidplayer.bin` (committed, since CI has no JieLi toolchain).
+- The main loop sleeps (`idle`) until the next interrupt. On the FM-1 that saves power; in
+  the emulator it lets idle skipping jump ahead, which made the web build 6x faster.
 - Measured in `fm1-emu`: the audio interrupt takes ~9.5 % of the 240 MHz core with reSID, and
   its output matches host reSID fed the same stream (correlation 0.984). It needs PR #31's
-  emulator fixes; on master reSID's setup goes wrong.
+  emulator fixes; on master the CPU halts.
 
 ```sh
-tools/fetch_ext.sh && tools/tunes.sh          # engines, m6502.h, Felucca; the HVSC tunes
-firmware/build.sh                             # build/fw/sidplayer.bin, sidplayer_xip.bin
-../fm-1/target/release/fm1-emu --bin build/fw/sidplayer_xip.bin --entry 0x02000120 \
-    --ms 3000 --wav build/fw/out.wav --keys "t:PRESET:+3,t:EDIT" --snap   # LCD -> work/lcd_*.bmp
-tools/webplayer.sh [../fm-1]                  # the browser emulator with the player -> build/webemu
-(cd build/webemu && python3 -m http.server 8642)
+tools/fetch_ext.sh                            # engines, m6502.h, Felucca
+firmware/build.sh                             # build/fw/sidplayer*.bin, web/sidplayer.bin
+tools/sidpack.py build/fw/my_xip.bin --xip --first 1 A.sid B.sid:3   # a firmware with tunes
+../fm-1/target/release/fm1-emu --bin build/fw/my_xip.bin --entry 0x02000120 \
+    --ms 3000 --wav build/fw/out.wav --keys "t:PRESET:+1,t:EDIT" --snap 2500  # LCD -> work/
+tools/webpage.sh [../fm-1]                    # the web page with the emulator -> build/pages
 ```
 
-`tools/webplayer.sh` builds `../fm-1/web` into `build/webemu`, applies
-`tools/webplayer.patch` (a firmware entry that boots a raw XIP image with `fm1_boot` instead of
-an update package) and puts the image next to the page. The emulator runs in WebAssembly in
-the audio thread; on a slow machine pick a lower clock in the page (the player's interrupt
-needs ~23 MHz of the emulated CPU).
+## The web page (`web/`, GitHub Pages)
+
+`web/` is the player as a page: the FM-1's front panel (the emulator's own drawing code, as on
+`../fm-1/web`), the emulated machine in an AudioWorklet booting `sidplayer.bin` plus a tune
+pack the page builds from its playlist, and around it a player:
+
+- **Playlist**: picks chosen for sync, ring modulation and filter work (`web/tunes.json`, from
+  `tools/picks.py`: the HVSC path, header fields, the song's length from HVSC's
+  `Songlengths.md5`, and tags measured from each tune's own register stream with
+  `build/psidlog`), then *Pocket Sync*.
+- **All of HVSC**: the page fetches `Songlengths.md5` (5 MB, all 61,157 paths) from
+  hvsc.c64.org when asked and searches it; a tune is fetched when picked, added to the
+  playlist, and the machine reboots on the new pack. "Surprise me" draws a random PSID tune.
+  hvsc.c64.org sends `Access-Control-Allow-Origin: *`; no tune is hosted with the page.
+- **Your files**: .sid files dropped on the page or picked join the playlist, locally.
+- The page mirrors the firmware's state from the keys it sends (tune, engine, chip, pause), so
+  its buttons and the panel's knobs stay in step; it moves to the next tune at the end of the
+  HVSC song length. The address follows the tune: `?t=MUSICIANS/H/Hubbard_Rob/Sanxion.sid&s=2`.
+- `scripts/build-pages.mjs` (entry `fm1-sid`) puts the page and the fm-1 build's
+  `fm1_web.wasm` together; `.github/workflows/pages.yml` runs `web/smoke.mjs` on the result:
+  the wasm must boot the firmware with a pack of the own tune (no network) to sound and a
+  screen. With an fm1-core that lacks PR #31 this check fails (the CPU halts), so merge PR #31
+  first.
+- Headless Chromium on this cloud machine runs it at 0.9-1.0x real time; a desktop browser has
+  room to spare. The emulator skips idle time, so the work per second does not depend on the
+  emulated clock.
 
 ## Measured (own model)
 
@@ -196,10 +228,13 @@ tools/tunes.sh,           HVSC tunes on every engine + sidplayfp reference; alig
 player/psid.h, psid.c     PSID tunes on floooh's m6502 (the C64 side: RAM, banking, CIA latch)
 player/psidlog.c          the same on the host -> sidlog v2, to check against libsidplayfp
 firmware/main.c,          the FM-1 SID player: 6502 + reSID 0.16 / own model, LCD visualiser
-  resid_glue.cc, app.ld,  (GPL-3.0-only, on Felucca's HAL)
+  resid_glue.cc, app.ld,  (GPL-3.0-only, on Felucca's HAL); tunes from a pack after the image
   gen_assets.py, build.sh
-tools/webplayer.sh,       the browser emulator (../fm-1/web) with the player built in
-  webplayer.patch
+tools/sidpack.py          a firmware image with a tune pack
+tools/housetune.py        the firmware's own tune, Pocket Sync (PSID)
+web/                      the player page (GitHub Pages): panel, playlist, HVSC search, files
+tools/picks.py            web/tunes.json: the picks with HVSC lengths and measured tags
+tools/webpage.sh          the page with ../fm-1's wasm in build/pages, for a local look
 ```
 
 ```sh

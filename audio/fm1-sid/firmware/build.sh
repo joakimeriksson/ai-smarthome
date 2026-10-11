@@ -2,8 +2,9 @@
 # Build the SID player firmware for the FM-1 (pi32v2, JieLi toolchain):
 #   firmware/build.sh   -> build/fw/sidplayer.bin (app.bin for XIP 0x02000120)
 #                          build/fw/sidplayer_xip.bin (+0x120 pad, for fm1-emu --bin)
-# Needs ext/ (tools/fetch_ext.sh: reSID 0.16, chips/m6502.h, Felucca's hal) and the tunes in
-# build/tunes, build/hvsc (tools/tunes.sh, tools/scan_tunes.py).
+#                          build/fw/sidplayer_base.bin (no tune pack: the web page appends one)
+# Needs ext/ (tools/fetch_ext.sh: reSID 0.16, chips/m6502.h, Felucca's hal). The tunes come
+# after the image as a tune pack (tools/sidpack.py); without one it plays its own tune.
 # SPDX-License-Identifier: GPL-3.0-only
 set -eu
 cd "$(dirname "$0")/.."
@@ -45,9 +46,15 @@ img = text + b"\xff" * gap + data
 img += b"\xff" * (-len(img) % 4)
 assert nm["_start"] == 0x02000120, hex(nm["_start"])
 assert img[:4] == bytes([0x04, 0x81, 0x80, 0x00]), img[:4].hex()
+assert len(img) == nm["_pack"] - 0x02000120, (len(img), hex(nm["_pack"]))
 assert len(img) <= 0x8DFBC, f"image {len(img)} > app slot"
+open(f"{o}/sidplayer_base.bin", "wb").write(img)
+img += b"SIDPACK1" + bytes(8)              # an empty pack: the firmware's own tune
 open(f"{o}/sidplayer.bin", "wb").write(img)
 open(f"{o}/sidplayer_xip.bin", "wb").write(b"\0" * 0x120 + img)
 ram = nm["_bss_end"] - 0x01C08000
 print(f"{o}/sidplayer.bin: {len(img)} bytes of the 581564 app slot; RAM {ram} of 442368 bytes")
 PY
+# the web page (web/) boots the firmware without a pack and serves the own tune as a file
+cp "$O/sidplayer_base.bin" web/sidplayer.bin
+cp "$O/house.sid" web/house.sid

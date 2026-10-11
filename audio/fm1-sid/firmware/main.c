@@ -40,6 +40,48 @@ int memcmp(const void *a, const void *b, unsigned long n)
 
 #include "assets.h"
 
+/* ------------------------------------------------------------------------- the tunes --- */
+/* A tune pack appended to the image (tools/sidpack.py, or the web page): "SIDPACK1", u32
+ * count, u32 start (bits 0-15 the first entry, bit 16 the own model instead of reSID, bits
+ * 17-18 the chip for every tune: 0 the tune's header, 1 6581, 2 8580), then per entry u32
+ * offset (from the pack), length, song (0: the tune's start song); little-endian. Without one:
+ * the firmware's own tune (tools/housetune.py). */
+extern const uint8_t _pack[];
+#define MAXTUNES 256u
+#define PACK_MAX 0x80000u
+static const uint8_t *tune_ptr[MAXTUNES];
+static uint32_t tune_len[MAXTUNES], tune_song[MAXTUNES], ntunes, first_tune, pack_flags;
+
+static uint32_t rd32(const uint8_t *b) { return b[0] | b[1] << 8 | b[2] << 16 | (uint32_t)b[3] << 24; }
+
+static void load_pack(void)
+{
+    uint32_t n, i;
+    if (!memcmp(_pack, "SIDPACK1", 8)) {
+        n = rd32(_pack + 8);
+        first_tune = rd32(_pack + 12) & 0xFFFFu;
+        pack_flags = rd32(_pack + 12) >> 16;
+        for (i = 0; i < n && i < MAXTUNES; i++) {
+            const uint8_t *e = _pack + 16u + 12u * i;
+            uint32_t off = rd32(e), len = rd32(e + 4);
+            if (len < 0x7Cu || off > PACK_MAX || len > PACK_MAX - off)
+                continue;
+            tune_ptr[ntunes] = _pack + off;
+            tune_len[ntunes] = len;
+            tune_song[ntunes] = rd32(e + 8);
+            ntunes++;
+        }
+    }
+    if (!ntunes) {
+        tune_ptr[0] = HOUSE;
+        tune_len[0] = sizeof HOUSE;
+        tune_song[0] = 0;
+        ntunes = 1;
+    }
+    if (first_tune >= ntunes)
+        first_tune = 0;
+}
+
 /* reSID (firmware/resid_glue.cc) */
 void rs_init(int model, double clock, double fs);
 void rs_write(int reg, int val);
@@ -378,7 +420,7 @@ static void draw(void)
     p = cat(line, "Tune ");
     p = fmt_u(p, play_idx + 1u, 1);
     p = cat(p, "/");
-    p = fmt_u(p, NPLAY, 1);
+    p = fmt_u(p, ntunes, 1);
     p = cat(p, "  ");
     p = fmt_u(p, played_ms / 60000u, 1);
     p = cat(p, ":");
@@ -457,13 +499,14 @@ static void draw(void)
 /* (re)start playlist entry idx; header: take the chip model from the tune */
 static void start(uint32_t idx, int header)
 {
-    uint32_t t, i;
+    uint32_t t, i, song;
     running = 0;
     fm1_delay_ms(4);                        /* the ISR finishes the half it is in */
-    play_idx = idx % NPLAY;
-    psid_load(P, TUNES[PLAYLIST[play_idx].tune].data, TUNES[PLAYLIST[play_idx].tune].len, on_write, 0);
+    play_idx = idx % ntunes;
+    if (psid_load(P, tune_ptr[play_idx], tune_len[play_idx], on_write, 0))
+        psid_load(P, HOUSE, sizeof HOUSE, on_write, 0);   /* not a PSID: play ours instead */
     if (header)
-        model = psid_info(P)->model;
+        model = (pack_flags >> 1 & 3u) ? (pack_flags >> 1 & 3u) - 1u : psid_info(P)->model;
     if (engine)
         sid_init(&own, model ? SID_8580 : SID_6581, SID_CLOCK_PAL, FS_HZ);
     else
@@ -474,7 +517,8 @@ static void start(uint32_t idx, int header)
     play_cyc = 0;
     cyc_frac = 0;
     call_base = 0;
-    t = psid_init(P, PLAYLIST[play_idx].song);
+    song = tune_song[play_idx] ? tune_song[play_idx] : psid_info(P)->start;
+    t = psid_init(P, song ? song : 1u);
     gen_cyc = (t / PSID_PAL_FRAME + 1u) * PSID_PAL_FRAME;
     played_ms = 0;
     running = 1;
@@ -489,7 +533,9 @@ static void fm1_main(void)
     fm1_audio_init(abuf, HALF_WORDS, isr_alnk0, 3);
     fm1_timer5_start(isr_timer5, 4);
     fm1_irq_enable_all();
-    start(0, 1);
+    load_pack();
+    engine = pack_flags & 1u;
+    start(first_tune, 1);
     for (;;) {
         uint32_t rel, e, now;
         int32_t step;
@@ -504,7 +550,7 @@ static void fm1_main(void)
         if (e & (1u << 1)) step++;
         if (e & (1u << 0)) step--;
         if (step) {
-            start((play_idx + NPLAY * 8u + (uint32_t)step) % NPLAY, 1);
+            start((play_idx + ntunes * 8u + (uint32_t)step) % ntunes, 1);
         }
         if (e & (1u << 12))
             running = !running;
@@ -531,6 +577,9 @@ static void fm1_main(void)
             draw();
             lcd_frame();
         }
+        /* sleep until the next interrupt (TIMER5 ticks at 10 kHz): saves power on the FM-1,
+         * and lets an emulator with idle skipping jump ahead instead of running the loop */
+        __asm__ volatile("idle");
     }
 }
 

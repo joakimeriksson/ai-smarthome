@@ -15,7 +15,9 @@ if (!cat.picks?.length) fail("tunes.json has no picks");
 if (sidInfo(house)?.kind !== "PSID") fail("house.sid is not a PSID file");
 // two entries, the second first: the firmware has to find and start entry 1
 const img = bootImage(base, buildPack([{ bytes: house, song: 0 }, { bytes: house, song: 1 }], 1, 0));
-const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), {});
+// (the emulator imports a JIT compiler; this check runs it interpreted, as before)
+const NO_JIT = { env: { fm1_jit_compile: () => 0 } };
+const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), NO_JIT);
 const x = instance.exports;
 const p = x.fm1_alloc(img.length);
 new Uint8Array(x.memory.buffer, p, img.length).set(img);
@@ -37,7 +39,7 @@ if (colours < 6) fail("the screen is not drawn");
 // the synth mode (pack flag): silent until a key is down, then a note
 {
   const img = bootImage(base, buildPack([{ bytes: house, song: 0 }], 0, 8));
-  const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), {});
+  const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), NO_JIT);
   const y = instance.exports;
   const q = y.fm1_alloc(img.length);
   new Uint8Array(y.memory.buffer, q, img.length).set(img);

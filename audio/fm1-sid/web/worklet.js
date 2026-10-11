@@ -3,6 +3,27 @@
 // emulation. This one boots a raw app image (the SID player firmware + its tune pack) at XIP
 // 0x02000120. The page gets the LCD, the LEDs and the timing about 30 times a second.
 // SPDX-License-Identifier: GPL-3.0-only
+
+// The emulator's WebAssembly JIT, host side (as ../fm-1/web/jit.js): compile a hot region's
+// module and install its `run` in the emulator's function table; 0 = stay interpreted.
+function jitImports(exports) {
+  return {
+    fm1_jit_compile(ptr, len) {
+      try {
+        const x = exports();
+        const bytes = new Uint8Array(x.memory.buffer, ptr, len).slice();
+        const table = x.__indirect_function_table;
+        const run = new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory: x.memory, table } }).exports.run;
+        const slot = table.grow(1);
+        table.set(slot, run);
+        return slot;
+      } catch (e) {
+        return 0;
+      }
+    },
+  };
+}
+
 class Fm1 extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -27,7 +48,9 @@ class Fm1 extends AudioWorkletProcessor {
     // the module comes as bytes: a compiled WebAssembly.Module does not cross into the
     // AudioWorklet's scope everywhere
     if (!this.module) this.module = await WebAssembly.compile(m.wasm);
-    const x = (await WebAssembly.instantiate(this.module, {})).exports;
+    let x;
+    x = (await WebAssembly.instantiate(this.module, { env: jitImports(() => x) })).exports;
+    x.fm1_jit(1, 16);   // hot code compiled to WebAssembly, at most 16 regions per quantum
     const p = x.fm1_alloc(m.image.byteLength);
     new Uint8Array(x.memory.buffer, p, m.image.byteLength).set(new Uint8Array(m.image));
     x.fm1_boot(p, m.image.byteLength, 0x02000120, m.mhz);

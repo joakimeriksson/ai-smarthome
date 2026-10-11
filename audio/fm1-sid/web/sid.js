@@ -57,7 +57,8 @@ let packed = [];                       // the entries in the running image, in p
 // ------------------------------------------------------------------------------ panel
 const canvas = $("panel");
 const ctx = canvas.getContext("2d");
-const ui = (await WebAssembly.instantiate(wasm, {})).instance.exports;
+// (the panel's instance runs no machine: its JIT import is never called)
+const ui = (await WebAssembly.instantiate(wasm, { env: { fm1_jit_compile: () => 0 } })).instance.exports;
 const W = ui.panel_width(), H = ui.panel_height();
 canvas.width = W;
 canvas.height = H;

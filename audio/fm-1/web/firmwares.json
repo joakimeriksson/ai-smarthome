@@ -2,6 +2,11 @@
   "note": "Community firmwares for the M-VAVE FM-1 (list: fm1-editor.com/firmware), plus this repository's FM-1 SID (audio/fm1-sid). The web page fetches each package from its author's site (when the version moved on: the package the installer page names now) and unpacks it with web/fwsc.js; tools/fetch_firmwares.mjs does the same into reference/firmwares/<id>.xip.bin for fm1-live. All load at 0x02000120.",
   "default": "felucca",
   "firmwares": [
+    { "id": "mvave", "name": "M-VAVE stock firmware", "version": "", "author": "M-VAVE", "license": "M-VAVE's own",
+      "byo": true,
+      "about": "The firmware the FM-1 ships with: a DX7-style FM synth, both cores running. This page does not host it and cannot download it (M-VAVE's server does not allow other pages to): download FM-1.fwsc from M-VAVE, then open it here; this browser keeps it for next time. Its patches live in flash an update does not carry, so it starts with a small bank of the emulator's own; \"DX7 bank…\" loads a 32-voice .syx.",
+      "download": "https://yms-file-store.oss-cn-hongkong.aliyuncs.com/software/firmware/FM-1.fwsc",
+      "repo": "https://github.com/joakimeriksson/ai-smarthome/blob/master/audio/fm-1/docs/stock-firmware.md" },
     { "id": "felucca", "name": "Felucca", "version": "1.5.1", "author": "hugelton", "license": "GPL-3.0",
       "about": "The original open firmware: a four-operator FM synth with sequencer, arpeggiator and effects.",
       "repo": "https://github.com/hugelton/Felucca",

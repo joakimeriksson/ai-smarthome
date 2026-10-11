@@ -105,7 +105,7 @@ const DEMOS = [
     slug: 'fm-1',
     title: 'M-VAVE FM-1 Emulator',
     blurb: 'The FM-1 pocket synth\'s pi32v2 CPU, screen and audio in WebAssembly, ' +
-           'running fifteen community firmwares fetched from their authors\' own sites.',
+           'running the community firmwares from their authors\' own sites, and M-VAVE\'s own from a copy you download.',
     src: 'audio/fm-1',
     accent: '#f2a33a',            // the emulator page's amber
     build: (out, base) => {

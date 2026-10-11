@@ -47,12 +47,47 @@ fwSel.value = fw.id;
 mhzSel.value = mhz;
 
 // the package of catalog entry f, fetched from its author's site (nothing is hosted with this
-// page); kept per session. A package opened from this computer is the entry `local`.
+// page); kept per session. A package opened from this computer is the entry `local`. A `byo`
+// entry (M-VAVE's own: their server does not let pages fetch it) is the copy the visitor opened,
+// kept in this browser (IndexedDB) for the next visit.
 const packages = new Map();
+class NeedFile extends Error {}
 async function packageOf(f) {
   if (f.id === "local") return { bytes: f.bytes, url: null };
+  if (f.byo) {
+    if (!packages.has(f.id)) {
+      const kept = await idb("get", f.id);
+      if (!kept) throw new NeedFile();
+      packages.set(f.id, { bytes: kept, url: null });
+    }
+    return packages.get(f.id);
+  }
   if (!packages.has(f.id)) packages.set(f.id, await fetchPackage(f));
   return packages.get(f.id);
+}
+// a tiny key-value store in IndexedDB; any failure (private mode, blocked storage) is "nothing kept"
+function idb(op, key, value) {
+  return new Promise((done) => {
+    try {
+      const open = indexedDB.open("fm1-emulator", 1);
+      open.onupgradeneeded = () => open.result.createObjectStore("packages");
+      open.onerror = () => done(null);
+      open.onsuccess = () => {
+        try {
+          const tx = open.result.transaction("packages", op === "get" ? "readonly" : "readwrite");
+          const st = tx.objectStore("packages");
+          const r = op === "get" ? st.get(key) : op === "put" ? st.put(value, key) : st.delete(key);
+          r.onsuccess = () => done(op === "get" ? r.result || null : true);
+          r.onerror = () => done(null);
+        } catch { done(null); }
+      };
+    } catch { done(null); }
+  });
+}
+// a kept copy of a byo entry: known at once, so the page can say so before Start
+for (const f of catalog.firmwares.filter((f) => f.byo)) {
+  const kept = await idb("get", f.id);
+  if (kept) packages.set(f.id, { bytes: kept, url: null });
 }
 let bank = null;                           // a DX7 32-voice bank for the stock firmware, or null
 
@@ -65,6 +100,17 @@ function showFirmware() {
   let parts;
   if (fw.id === "local") {
     parts = [b, " · opened from this computer; it stays in this page."];
+  } else if (fw.byo) {
+    const dl = document.createElement("a");
+    dl.href = fw.download;
+    dl.textContent = "download FM-1.fwsc from M-VAVE";
+    const doc = document.createElement("a");
+    doc.href = fw.repo;
+    doc.textContent = "how it runs";
+    const have = packages.has(fw.id) ? " Your copy is kept in this browser; open another .fwsc to replace it." :
+      " Then click \u201cOpen .fwsc\u2026\u201d (or drop the file on the synth); this browser keeps it for next time.";
+    parts = [b, " · M-VAVE's own firmware. This page does not host it and cannot fetch it: ", dl, "." + have +
+      " It starts with a small patch bank of the emulator's own; \u201cDX7 bank\u2026\u201d loads a 32-voice .syx · ", doc];
   } else {
     const a = document.createElement("a");
     a.href = fw.repo;
@@ -102,10 +148,25 @@ mhzSel.addEventListener("change", () => {
   if (node) boot();
 });
 
-// a package from this computer: the file picker or a drop on the panel
+// a package from this computer: the file picker or a drop on the panel. With M-VAVE's entry
+// chosen, or a file named like theirs, it is that entry's copy and is kept for next time.
 let localFw = null;
 async function openLocal(file) {
   if (!file) return;
+  const mv = catalog.firmwares.find((f) => f.byo);
+  if (mv && (fw.byo || /^FM-1( \(\d+\))?\.fwsc$/i.test(file.name))) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    packages.set(mv.id, { bytes, url: null });
+    idb("put", mv.id, bytes);
+    fw = mv;
+    fwSel.value = mv.id;
+    store("fm1.fw", mv.id);
+    loadedUrl = null;
+    showFirmware();
+    if (node) boot();
+    else status.textContent = `${file.name} ready: click Start`;
+    return;
+  }
   localFw = { id: "local", name: file.name.replace(/\.fwsc$/i, ""), version: "", bytes: new Uint8Array(await file.arrayBuffer()) };
   let opt = [...fwSel.options].find((o) => o.value === "local");
   if (!opt) fwSel.add(opt = new Option("", "local"), 0);
@@ -271,14 +332,17 @@ let ac = null, last = null, bootSeq = 0, booting = 0;
 async function boot() {
   const seq = ++bootSeq;
   const f = fw;
-  if (f.id !== "local") status.textContent = `downloading ${f.name} from ${new URL(f.package).host}…`;
+  if (f.id !== "local" && !f.byo) status.textContent = `downloading ${f.name} from ${new URL(f.package).host}…`;
   let got;
   try {
     got = await packageOf(f);
   } catch (err) {
-    if (seq === bootSeq) status.textContent = `${f.name}: could not load it (${err.message})`;
+    if (seq !== bootSeq) return;
+    status.textContent = err instanceof NeedFile ? `${f.name}: open your FM-1.fwsc to boot it` :
+      `${f.name}: could not load it (${err.message})`;
     return;
   }
+  showFirmware();                                  // (says whether a kept copy is in use)
   if (seq !== bootSeq) return;                     // another choice came in meanwhile
   loadedUrl = got.url;
   showFirmware();

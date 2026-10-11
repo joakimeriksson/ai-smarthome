@@ -10,6 +10,7 @@ const want = new Set(process.argv.slice(2));
 mkdirSync(root + "reference/firmwares", { recursive: true });
 for (const f of cat.firmwares) {
   if (want.size && !want.has(f.id)) continue;
+  if (f.byo) continue;                     // M-VAVE's own: fm1-live --fwsc FM-1.fwsc
   try {
     const { bytes, url } = await fetchPackage(f);
     const app = appFromPackage(bytes);

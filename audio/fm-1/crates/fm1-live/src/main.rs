@@ -62,6 +62,9 @@ fn catalog() -> Vec<(String, String, String, String)> {
     };
     text.split("{ \"id\"").skip(1).filter_map(|chunk| {
         let obj = format!("{{ \"id\"{chunk}");
+        if obj.contains("\"byo\": true") {
+            return None; // M-VAVE's own, brought by the user: --fwsc FM-1.fwsc
+        }
         let id = field(&obj, "id")?;
         let path = format!("reference/firmwares/{id}.xip.bin");
         Some((id, field(&obj, "name")?, field(&obj, "version")?, path))

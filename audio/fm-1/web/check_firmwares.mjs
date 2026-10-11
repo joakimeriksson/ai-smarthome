@@ -4,6 +4,7 @@ const { appFromPackage, fetchPackage } = await import(new URL("./fwsc.js", impor
 const cat = JSON.parse(readFileSync(new URL("./firmwares.json", import.meta.url)));
 let bad = 0;
 for (const f of cat.firmwares) {
+  if (f.byo) continue;                     // brought by the user (M-VAVE's own), not fetched
   try {
     const { bytes, url } = await fetchPackage(f);
     const app = appFromPackage(bytes);

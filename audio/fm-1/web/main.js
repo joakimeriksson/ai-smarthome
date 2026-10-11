@@ -28,7 +28,8 @@ const bankInput = document.getElementById("bank");
 const bankName = document.getElementById("bankname");
 
 const wasm = await (await fetch("fm1_web.wasm")).arrayBuffer();   // the worklet gets its own copy
-const ui = (await WebAssembly.instantiate(wasm, {})).instance.exports;
+// (the panel's instance runs no machine: its JIT import is never called)
+const ui = (await WebAssembly.instantiate(wasm, { env: { fm1_jit_compile: () => 0 } })).instance.exports;
 const W = ui.panel_width(), H = ui.panel_height();
 canvas.width = W;
 canvas.height = H;
@@ -354,7 +355,7 @@ async function boot() {
   last = null;
   booting = seq;                                   // (frames of the old machine still on their way)
   node.port.postMessage({ type: "boot", seq, wasm: wasm.slice(0), package: got.bytes.slice().buffer,
-    syx: bank ? bank.slice().buffer : null, mhz });
+    syx: bank ? bank.slice().buffer : null, mhz, jit: params.get("jit") !== "0" });
   status.textContent = `booting ${f.name}…`;
 }
 
@@ -383,6 +384,8 @@ startBtn.addEventListener("click", async () => {
       status.textContent = m.halted ? `${fw.name}: the emulated CPU halted` :
         `${fw.name} · ${mhz} MHz · ${mips.toFixed(0)} M instructions/s · ${(m.ms / 1000).toFixed(1)} s · ` +
         `${m.short} short audio quanta`;
+      // (hover: the JIT's work in the audio thread)
+      status.title = m.jit ? `JIT: ${m.jit.regions} regions compiled, ${m.jit.failed} failed${m.jit.error ? ` (${m.jit.error})` : ""}` : "";
       last = { t: now, minsns: m.minsns };
     }
   };

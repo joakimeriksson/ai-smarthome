@@ -291,6 +291,9 @@ fn off_sp() -> u32 {
 fn off_rets() -> u32 {
     std::mem::offset_of!(Cpu, rets) as u32
 }
+fn off_hold() -> u32 {
+    std::mem::offset_of!(Cpu, hold_irq) as u32
+}
 fn off_pc() -> u32 {
     std::mem::offset_of!(Cpu, pc) as u32
 }
@@ -491,6 +494,15 @@ impl Gen<'_> {
     }
 
     /// After an instruction that may have called the bus: leave if the next tick is due.
+    fn check_brk_hold(&mut self, next_pc: u32, count: u32) {
+        let go = self.a.label();
+        self.a.ldr(9, CTX, OFF_BRK);
+        self.a.cbz(9, go);
+        self.a.mov32(9, 1);
+        self.a.str(9, CPU, off_hold());
+        self.exit_imm(next_pc, count);
+        self.a.bind(go);
+    }
     fn check_brk(&mut self, next_pc: u32, count: u32) {
         let go = self.a.label();
         self.a.ldr(9, CTX, OFF_BRK);
@@ -502,7 +514,7 @@ impl Gen<'_> {
 
 /// Native code for a block prefix of plain micro-ops (none careful).
 fn compile<B: Bus>(ops: &[crate::BOp], pc0: u32, mem: &JitMem) -> Option<(Vec<u32>, usize)> {
-    for o in [off_reg(15), off_sp(), off_rets(), off_pc()] {
+    for o in [off_reg(15), off_sp(), off_rets(), off_pc(), off_hold()] {
         if o >= 16384 {
             return None;
         }
@@ -887,7 +899,12 @@ fn compile<B: Bus>(ops: &[crate::BOp], pc0: u32, mem: &JitMem) -> Option<(Vec<u3
             }
         }
         if bus_used && !op.fast.may_jump() {
-            g.check_brk(next_pc, count);
+            if op.glue {
+                // leaving between a glued pair's two instructions: interrupts wait for the second
+                g.check_brk_hold(next_pc, count);
+            } else {
+                g.check_brk(next_pc, count);
+            }
         }
         pc = next_pc;
         if op.fast.may_jump() {

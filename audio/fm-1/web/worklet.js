@@ -1,6 +1,29 @@
 // The emulator in the audio thread: each 128-frame quantum runs the machine until its I2S
 // DMA has produced 128 frames, so the audio device paces the emulation. The page gets the
 // LCD and the LEDs about 30 times a second; keys, knobs and the pot come back as messages.
+// The WebAssembly JIT's host side, as web/jit.js (a copy: an AudioWorklet does not import
+// modules everywhere): compile a hot block's module, install its `run` in the function table.
+function jitImports(exports, stats) {
+  return {
+    fm1_jit_compile(ptr, len) {
+      try {
+        const x = exports();
+        const bytes = new Uint8Array(x.memory.buffer, ptr, len).slice();
+        const table = x.__indirect_function_table;
+        const run = new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory: x.memory, table } }).exports.run;
+        const slot = table.grow(1);
+        table.set(slot, run);
+        stats.regions++;
+        return slot;
+      } catch (e) {
+        stats.failed++;
+        stats.error = String(e);
+        return 0;
+      }
+    },
+  };
+}
+
 class Fm1 extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -30,7 +53,11 @@ class Fm1 extends AudioWorkletProcessor {
     // AudioWorklet's scope (Chrome delivers it as a messageerror). Compiled once, here: on a
     // phone compiling it again on every firmware change takes a noticeable while
     if (!this.module) this.module = await WebAssembly.compile(m.wasm);
-    const x = (await WebAssembly.instantiate(this.module, {})).exports;
+    let x;
+    this.jit = { regions: 0, failed: 0, error: "" };
+    x = (await WebAssembly.instantiate(this.module, { env: jitImports(() => x, this.jit) })).exports;
+    // hot code compiled to WebAssembly, a few blocks per quantum at most (?jit=0: interpreter only)
+    x.fm1_jit(m.jit === false ? 0 : 1, 16);
     // the whole update package (.fwsc): the machine unpacks it, gets the flash chip and the
     // boot parameters from it (what M-VAVE's own firmware needs; the others boot the same)
     const copy = (buf) => {
@@ -74,7 +101,7 @@ class Fm1 extends AudioWorkletProcessor {
       const lcd = new Uint16Array(x.memory.buffer, x.fm1_lcd(), 240 * 240).slice();
       const leds = new Float32Array(x.memory.buffer, x.fm1_leds(), 41).slice();
       this.port.postMessage({ type: "frame", lcd, leds, ms: x.fm1_ms(), minsns: x.fm1_minsns(),
-        short: this.short, halted: x.fm1_halted() }, [lcd.buffer, leds.buffer]);
+        short: this.short, halted: x.fm1_halted(), jit: this.jit }, [lcd.buffer, leds.buffer]);
     }
     return true;
   }

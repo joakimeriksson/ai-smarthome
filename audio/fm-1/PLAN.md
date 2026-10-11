@@ -321,6 +321,46 @@ PurpleMonkey, FM1 Quest, SLOOP (+ALG), X0X. `web/firmwares.json` is the catalog.
   modelled), and both fall back to core 0. The stock M-VAVE firmware still stops early in
   its RTOS (no interrupts, no LCD): not in the picker.
 
+## 5.9 Speed pass: every firmware at 240 MHz, native and in the browser (2026-10-11)
+
+Real-time factor at 240 MHz (8 s bench native, 4 s in node for the wasm build), before -> after:
+
+| | slowest | Felucca | fastest |
+|---|---|---|---|
+| native (AArch64 JIT) | X0X 1.14x -> 2.65x | 1.63x -> 4.4x | Melodee 3.1x -> 5.9x (Hortator 6.3x) |
+| wasm | X0X 0.53x -> 1.62x | 0.66x -> 2.3x | Melodee 0.97x -> 3.5x (Hortator 3.7x) |
+
+Every firmware's bench audio is byte-identical to before (the length can differ by an audio
+half: the run loop checks its budget per block); JIT == block interpreter == per step.
+
+- The slow path was 1.7-3.8% of instructions and half the time: each one also ended a block
+  (JIT exit, re-entry). Now 0.1% (ISR prologues, `rti`). New micro-ops: execute's raw-decoded
+  routes (16 pair loads / stores, 18/19 pre / post-increment, 21 64-bit ops, 22 rev8, 27 rets
+  pops) through one shared `exec_raw`, so the micro-op and the route cannot drift; `{rets} =
+  [sp++]`, `tbb` / `tbh`, pair moves, `~ - abs rev8 clz`, `/ %`, `& ~R`, shifts by register,
+  `[++R=R]`-style accesses. `[--sp] = rets` had a micro-op that could never be built (the store
+  matcher returned first).
+- Dual-issue pairs whose second instruction reads and writes no register the first writes run
+  as two plain ops (`BOp::glue`), compiled too; a block cut between them holds interrupts back
+  (`Cpu::hold_irq`) as a pair in flight does.
+- A pc whose first instruction needs `step` is remembered (an empty block) instead of rebuilt.
+- wasm: the hot match is `#[inline(always)]` with the rare ops out of line (it had stopped being
+  inlined: a call per instruction); one codegen unit and `-inline-threshold=2000` (+3-4%).
+- WebAssembly JIT (`crates/fm1-core/src/jit_wasm.rs`, after esp32sim's): a hot block's region
+  (blocks reachable over fixed edges, <= 32 blocks / 384 ops) becomes a small module whose
+  `run` the host installs in the exported function table (`web/jit.js`, a copy in worklet.js);
+  Rust calls it by index, helpers are `call_indirect` targets. Same timing rules as jit.rs.
+  Per-block modules gained nothing (blocks average 3.5 instructions); regions doubled the speed.
+  Chrome compiles them synchronously in the AudioWorklet (0 failures; ~25 us each; at most 16
+  per audio quantum). `?jit=0` turns it off; the status line's tooltip counts the regions.
+- Tools: `tools/bench_all.sh` (speed table, `WASM=1`, audio identity with `WAV=`/`REF=`),
+  `tools/bench_ab.sh` (interleaved A/B: back-to-back runs drift 6-8%), `tools/check_modes.sh`.
+- Tried and dropped: tick accounting per block in the interpreter (owing the ticks and paying
+  them before any non-RAM access): 5-7% slower native and wasm (blocks are short).
+- Next: the AArch64 JIT compiles natively what still goes through `h_op` (8.8% on X0X: the new
+  micro-ops), the careful path (pairs that cannot be glued, if/else blocks: ~9%), regions for
+  the native JIT too; the browser default clock can move to 240 MHz.
+
 ## 6. Phase 5 — Boot & integration
 
 - Boot stock firmware to a stable idle/main-loop state.

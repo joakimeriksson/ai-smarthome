@@ -2,8 +2,12 @@
 import { readFileSync } from "node:fs";
 const mhz = +(process.argv[2] || 120), secs = +(process.argv[3] || 6);
 const wasm = readFileSync(new URL("../target/wasm/wasm32-unknown-unknown/release/fm1_web.wasm", import.meta.url));
-const { instance } = await WebAssembly.instantiate(wasm, {});
-const x = instance.exports;
+const { jitImports } = await import("./jit.js");
+let x;
+const { instance } = await WebAssembly.instantiate(wasm, { env: jitImports(() => x) });
+x = instance.exports;
+// FM1_NO_JIT=1: the interpreter only; FM1_JIT_PER=n: compiles per render call (as the worklet)
+if (!process.env.FM1_NO_JIT) x.fm1_jit(1, +(process.env.FM1_JIT_PER || 16));
 const fw = readFileSync(process.env.FM1_FWSC || process.env.FM1_FW || new URL("../work/felucca_xip.bin", import.meta.url));
 const p = x.fm1_alloc(fw.length);
 new Uint8Array(x.memory.buffer, p, fw.length).set(fw);

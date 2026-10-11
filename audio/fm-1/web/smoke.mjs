@@ -8,8 +8,11 @@ const cat = JSON.parse(readFileSync(new URL("firmwares.json", dir)));
 const local = process.argv[3];
 const { bytes, url } = local ? { bytes: new Uint8Array(readFileSync(local)), url: local }
   : await fetchPackage(cat.firmwares.find((f) => f.id === "felucca"));
-const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), {});
-const x = instance.exports;
+const { jitImports } = await import(new URL("jit.js", dir));
+let x;
+const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), { env: jitImports(() => x) });
+x = instance.exports;
+x.fm1_jit(1, 16);   // as the page runs it: hot code compiled
 const p = x.fm1_alloc(bytes.length);
 new Uint8Array(x.memory.buffer, p, bytes.length).set(bytes);
 if (x.fm1_boot_fwsc(p, bytes.length, 0, 0, 100) !== 0) {

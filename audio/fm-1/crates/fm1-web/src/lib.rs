@@ -7,6 +7,10 @@
 //!   hit-tests the pointer.
 //!
 //! Plain `extern "C"` exports and pointers into linear memory: no bindings generator needed.
+//!
+//! Hot code runs compiled to WebAssembly once the host turns it on (`fm1_jit`): the module
+//! imports `env.fm1_jit_compile`, which compiles a block's module and installs it in the exported
+//! function table (web/jit.js; a host without it passes a stub that returns 0).
 
 use fm1_core::{Bus, Cpu};
 use fm1_soc::{machine, Action, Soc};
@@ -36,6 +40,8 @@ impl Machine {
         soc.periph.hz = mhz as u64 * 1_000_000;
         soc.periph.skip_idle = true;
         let mut cpu = Cpu::new(entry);
+        // (cpu1 follows cpu0's setting: run_dual)
+        cpu.jit_on = unsafe { JIT };
         cpu.user = true; // the SPL hands cpu0 over in user mode (fm1-core's Cpu::user)
         let params = RAM_BASE + 0x7fc00;
         soc.write32(params, params + 0x40);
@@ -57,6 +63,8 @@ impl Machine {
 }
 
 static mut M: Option<Machine> = None;
+static mut JIT: bool = false;
+static mut JIT_PER_RENDER: u32 = 0;
 static mut OUT_L: [f32; 1024] = [0.0; 1024];
 static mut OUT_R: [f32; 1024] = [0.0; 1024];
 static mut LEDS: [f32; 41] = [0.0; 41];
@@ -102,11 +110,33 @@ pub extern "C" fn fm1_boot_fwsc(ptr: *mut u8, len: u32, syx: *mut u8, syx_len: u
     }
 }
 
+/// Compile hot code to WebAssembly (`on` = 1; the host's `env.fm1_jit_compile` does the
+/// compiling), from the next boot on and in the running machine. `per_render`: blocks that may be
+/// compiled in one `fm1_render` (0: no limit), so compiling never holds up an audio quantum long.
+#[no_mangle]
+pub extern "C" fn fm1_jit(on: u32, per_render: u32) {
+    unsafe {
+        JIT = on != 0;
+        JIT_PER_RENDER = per_render;
+    }
+    if let Some(m) = machine() {
+        m.cpu.jit_on = on != 0;
+        if let Some(c1) = m.cpu1.as_mut() {
+            c1.jit_on = on != 0;
+        }
+    }
+}
+
 /// Render `frames` (<= 1024) stereo frames into the out buffers, running the machine until the
 /// I2S DMA has produced them (at most `max_insns`). Returns the frames that are real audio.
 #[no_mangle]
 pub extern "C" fn fm1_render(frames: u32, max_insns: u32) -> u32 {
     let Some(m) = machine() else { return 0 };
+    #[cfg(target_arch = "wasm32")]
+    {
+        let per = unsafe { JIT_PER_RENDER };
+        fm1_core::jit_wasm::COMPILE_BUDGET.store(if per == 0 { u32::MAX } else { per }, std::sync::atomic::Ordering::Relaxed);
+    }
     let frames = frames.min(1024) as usize;
     let mut spent = 0u32;
     while m.audio.len() < 2 * frames && spent < max_insns && !m.halted {

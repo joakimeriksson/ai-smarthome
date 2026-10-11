@@ -264,6 +264,17 @@ impl Cpu {
             // classes match only the masks the corpora used (libm's sin pops {rets, r11-r8, r6-r4})
             Err(_) if win & 0xffff == 0xe8d9 => fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry: &RETS_PUSH_MASK_CRAW },
             Err(_) if win & 0xffff == 0xe8d1 => fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry: &RETS_POP_MASK_CRAW },
+            // 4-byte ALU forms decode_alu4 knows the layout of (`6c e8` `[R+#i] <<= #n`, `64 e8`
+            // `[R+#i] &= R`, ...): the table's classes fit only the offsets the corpora used
+            // (m6502's `[r0+24] <<= 1`, `[r1+-4] &= r0`)
+            Err(_) if decode_alu4(win & 0xffff_ffff).is_some() => {
+                fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry: &ALU4_CRAW }
+            }
+            // `d1..d7 ec/ed/ee`: post-increment loads / stores `[R++=#i]` (route 19 decodes the
+            // fields; the classes fit only the corpus increments: `h[r4++=480] = r0`)
+            Err(_) if matches!(win & 0xff, 0xd1..=0xd7) && matches!((win >> 8) & 0xff, 0xec | 0xed | 0xee) => {
+                fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry: &POST_INC_CRAW }
+            }
             Err(e) => return Err(CoreError::Decode(e)),
         };
         let alu4 = if insn.entry.len == 4 { decode_alu4(insn.raw) } else { None };
@@ -2338,6 +2349,14 @@ macro_rules! carry_entry {
     };
 }
 carry_entry!(ADC_CRAW, "adc_craw", "R = R + R + c");
+static ALU4_CRAW: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
+    name: "alu4_craw", syntax: "R op= (alu4 raw)", len: 4, count: 0, mask: 0, match_: 0,
+    group: "alu", alt: &[], samples: &[], slots: &[],
+};
+static POST_INC_CRAW: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
+    name: "post_inc_craw", syntax: "[R++=#i] = R (raw)", len: 4, count: 0, mask: 0, match_: 0,
+    group: "load", alt: &[], samples: &[], slots: &[],
+};
 static RETS_PUSH_MASK_CRAW: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
     name: "sp_mov_rets_mask_craw", syntax: "[--sp] = {rets, R*4}", len: 4, count: 0, mask: 0, match_: 0,
     group: "stack", alt: &[], samples: &[], slots: &[],
@@ -2968,6 +2987,31 @@ mod tests {
         cpu.step(&mut ram).unwrap();
         cpu.step(&mut ram).unwrap();
         assert_eq!(cpu.regs[0] & (F_C | F_Z), F_C | F_Z);
+    }
+
+    #[test]
+    fn corpus_unseen_offsets_decode() {
+        // forms whose table classes fitted only the corpus operands (found running m6502 and the
+        // SID player firmware): `6c e8 18 01` [r0+24] <<= 1, `64 e8 fe 10` [r1+-4] &= r0,
+        // `d1 ed 41 0e` h[r4++=480] = r0
+        let mut mem = vec![0u8; 0x400];
+        mem[..12].copy_from_slice(&[0x6c, 0xe8, 0x18, 0x01, 0x64, 0xe8, 0xfe, 0x10, 0xd1, 0xed, 0x41, 0x0e]);
+        mem[0x118..0x11c].copy_from_slice(&0x4000_0001u32.to_le_bytes());
+        mem[0x1fc..0x200].copy_from_slice(&0xffff_00ffu32.to_le_bytes());
+        let mut ram = FlatRam::new(mem);
+        let mut cpu = Cpu::new(0);
+        cpu.regs[0] = 0x100;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(ram.read32(0x118), 0x8000_0002, "[r0+24] <<= 1");
+        cpu.regs[1] = 0x200;
+        cpu.regs[0] = 0x0f0f_0f0f;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(ram.read32(0x1fc), 0x0f0f_000f, "[r1+-4] &= r0");
+        cpu.regs[4] = 0x300;
+        cpu.regs[0] = 0xbeef;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(ram.read16(0x300), 0xbeef);
+        assert_eq!(cpu.regs[4], 0x300 + 480, "post-increment by 480");
     }
 
     #[test]

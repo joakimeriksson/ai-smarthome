@@ -389,6 +389,11 @@ shift / multiply, soft double) compare the emulator with the host.
 - **`fc e1` 64-bit multiply-accumulate** `rP += rA * rB (u|s)`: the fields of `f8 e1`.
 - **`d1 e8 <mask>` / `d9 e8 <mask>`**: pop / push of rets and a register mask for any mask
   (libm's `sin` pops `{rets, r11-r8, r6-r4}`; the classes matched only the corpus masks).
+- **Table classes fitted to corpus operands** (found running floooh's m6502 in a SID player
+  firmware, `audio/fm1-sid/firmware`): when the table has no class, `fetch_at` now falls back
+  to `decode_alu4` for every 4-byte ALU form it knows (`6c e8` `[r0+24] <<= 1`, `64 e8`
+  `[r1+-4] &= r0`) and to route 19 for the post-increment family `d1..d7 ec/ed/ee`
+  (`h[r4++=480] = r0`).
 
 ### Remaining exec gaps (known, traced)
 

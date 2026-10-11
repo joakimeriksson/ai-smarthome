@@ -37,6 +37,7 @@ firmwares from their whole package.
 | latch clear word `0x1EEF1A4` | a pending context switch lost, a task ran on after blocking | reads 0 (the set word reads the pending bits) |
 | CRC-16 unit (`0x13500`) | the USR area did not open: every directory entry failed its CRC | `[+4]` register, writes to `[+0]` feed bytes (CCITT, MSB first) |
 | `idle` | 0.44x real time | waits for an interrupt: with `skip_idle`, time jumps to the next event |
+| random number generator (`0x13B00`) | ~8 s after boot the UI froze and keys were ignored | xorshift from a fixed seed; a routine in the audio driver parks its task when a random word equals a fixed descrambled one, which a constant 0 always did |
 | two stacks | interrupts clobbered task stacks or tasks never switched | see below |
 
 ## The stack model (`Cpu::user`)

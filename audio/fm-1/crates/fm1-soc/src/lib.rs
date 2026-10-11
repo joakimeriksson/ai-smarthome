@@ -71,6 +71,7 @@ enum Region {
     Bt,
     Spi2,
     Crc,
+    Rand,
     XipFlash,
     Dbg,
     Irqc,
@@ -112,6 +113,8 @@ pub struct Soc {
     audio_trace: bool,
     /// The CRC-16 unit's register (0x13504).
     crc: u16,
+    /// The random number generator's state (JL_RAND, 0x13B00: R64L / R64H).
+    rand: u64,
     /// The cores' hardware lock (`lockset` / `lockclr`): which core holds it.
     lock_owner: Option<u32>,
     /// FM1_GPIO_TRACE: GPIO register writes by address (debugging port use).
@@ -145,6 +148,7 @@ impl Soc {
             paused: [false; 2],
             lock_owner: None,
             crc: 0,
+            rand: 0x9e37_79b9_7f4a_7c15,
             cpu1_release: false,
             audio_trace: std::env::var_os("FM1_AUDIO_TRACE").is_some(),
             xip_flash: false,
@@ -232,6 +236,7 @@ impl Soc {
             0x12100..=0x1212f => Region::Uart1,
             0x13100..=0x1311f => Region::Adc,
             0x13500..=0x1350f => Region::Crc,
+            0x13b00..=0x13b07 => Region::Rand,
             0x11900..=0x119ff => Region::Ana,
             0x20000..=0x2ffff => Region::Bt,
             0x1eee240..=0x1eee24f => Region::Dbg,
@@ -531,6 +536,18 @@ impl Soc {
             }
             Region::Dbg => self.sfr_get(addr),
             Region::Crc => if addr == 0x13504 { self.crc as u32 } else { 0 },
+            // JL_RAND (0x13B00 R64L, 0x13B04 R64H): a new number at every read, from a fixed
+            // seed so runs repeat. Read as 0 it hung the stock firmware ~8 s after boot: a
+            // routine in its audio driver parks the task when a random word equals a fixed
+            // descrambled one, which real hardware never hits.
+            Region::Rand => {
+                let mut x = self.rand;
+                x ^= x << 13;
+                x ^= x >> 7;
+                x ^= x << 17;
+                self.rand = x;
+                (if addr == 0x13b00 { x } else { x >> 32 }) as u32
+            }
             Region::Unknown => {
                 self.log_unknown(addr, 4, false, 0);
                 0
@@ -624,6 +641,7 @@ impl Soc {
             // the CRC-16 unit (chip_crc16): [+4] = the register (the SDK seeds it with 0),
             // each write to [+0] feeds one byte through CRC-16/CCITT (0x1021, MSB first).
             // The stock NOR file system checks every directory entry with it.
+            Region::Rand => {}
             Region::Crc => match addr {
                 0x13500 => {
                     let mut c = self.crc ^ ((value as u16 & 0xff) << 8);

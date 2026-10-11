@@ -29,6 +29,9 @@ ENGINES = [
 # C64 tunes from HVSC (tools/tunes.sh): their 6502 code's register stream on every engine,
 # plus sidplayfp's full-C64 render (reSIDfp) as a reference ("ref", aligned to ours)
 TUNES = [
+    ("tune_rolands1", "Roland's Rat Race – Martin Galway, 1985", "sync 31 % av tiden, inget filter"),
+    ("tune_sanxion1", "Sanxion, låt 1 – Rob Hubbard, 1986", "sync 29 %, ring 11 %, cutoff 9 ggr/s"),
+    ("tune_sanxion2", "Sanxion, låt 2 – Rob Hubbard, 1986", "filtret 84 % av tiden, cutoff 41 ggr/s"),
     ("tune_contaxia", "Contaxia – Reyn Ouwehand, 1989", "sync 57 %, ring 96 % av tiden, cutoff ändras 24 ggr/s"),
     ("tune_thatsthe", "That's the Way It Is – Jeroen Tel, 1988", "sync 68 %, ring 68 %, cutoff 38 ggr/s"),
     ("tune_pandora", "Pandora – Rob Hubbard, 1988", "sync 46 %, ring 46 %, cutoff 55 ggr/s"),

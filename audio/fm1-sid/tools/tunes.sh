@@ -2,15 +2,18 @@
 # C64 tunes for the comparison: fetch tunes from HVSC (not part of the repo), run them on
 # libsidplayfp's C64 with build/sidlogger (register stream, cycle-exact), replay on every
 # engine, and render a reference with sidplayfp (reSIDfp) when it is installed.
-#   tools/tunes.sh [seconds]      -> build/cmp/tune_<name>.<engine>.wav, .ref.wav
+#   tools/tunes.sh [seconds [name ...]]   -> build/cmp/tune_<name>.<engine>.wav, .ref.wav
 set -eu
 cd "$(dirname "$0")/.."
 SECS="${1:-30}"
+[ $# -gt 0 ] && shift
+ONLY=" $* "
 HVSC="${HVSC_MIRROR:-https://hvsc.brona.dk/HVSC/C64Music}"
 mkdir -p build/tunes build/cmp
 # name  path-in-HVSC  song
 while read -r name path song; do
     [ -z "$name" ] && continue
+    [ "$ONLY" = "  " ] || case "$ONLY" in *" $name "*) ;; *) continue ;; esac
     f="build/tunes/$(basename "$path")"
     [ -f "$f" ] || curl -sSf -o "$f" "$HVSC/$path"
     build/sidlogger "$f" "build/cmp/tune_$name.sidlog" "$song" "$SECS"
@@ -19,6 +22,9 @@ while read -r name path song; do
         sidplayfp -q -m -o"$song" -t$((SECS + 4)) --residfp -w"build/tunes/$name.ref.wav" "$f" > /dev/null 2>&1 || true
     fi
 done <<'LIST'
+rolands1     MUSICIANS/G/Galway_Martin/Rolands_Ratrace.sid        1
+sanxion1     MUSICIANS/H/Hubbard_Rob/Sanxion.sid                  1
+sanxion2     MUSICIANS/H/Hubbard_Rob/Sanxion.sid                  2
 contaxia     MUSICIANS/O/Ouwehand_Reyn/Contaxia.sid               1
 thatsthe     MUSICIANS/T/Tel_Jeroen/Thats_the_Way_It_Is_main.sid  1
 pandora      MUSICIANS/H/Hubbard_Rob/Pandora.sid                  1

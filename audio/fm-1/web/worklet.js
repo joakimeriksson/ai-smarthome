@@ -29,9 +29,18 @@ class Fm1 extends AudioWorkletProcessor {
     // AudioWorklet's scope (Chrome delivers it as a messageerror)
     const { instance } = await WebAssembly.instantiate(m.wasm, {});
     const x = instance.exports;
-    const p = x.fm1_alloc(m.firmware.byteLength);
-    new Uint8Array(x.memory.buffer, p, m.firmware.byteLength).set(new Uint8Array(m.firmware));
-    x.fm1_boot(p, m.firmware.byteLength, m.entry, m.mhz);
+    // the whole update package (.fwsc): the machine unpacks it, gets the flash chip and the
+    // boot parameters from it (what M-VAVE's own firmware needs; the others boot the same)
+    const copy = (buf) => {
+      const p = x.fm1_alloc(buf.byteLength);
+      new Uint8Array(x.memory.buffer, p, buf.byteLength).set(new Uint8Array(buf));
+      return p;
+    };
+    const pkg = copy(m.package);
+    const bank = m.syx ? copy(m.syx) : 0;
+    if (x.fm1_boot_fwsc(pkg, m.package.byteLength, bank, m.syx ? m.syx.byteLength : 0, m.mhz) !== 0) {
+      throw new Error("not an FM-1 update package (or a DX7 bank it cannot use)");
+    }
     this.x = x;                         // (a reboot replaces the whole instance)
     this.budget = m.mhz * 1e6 * 0.02;   // at most 20 ms of emulated time per quantum
     this.short = 0;

@@ -58,23 +58,31 @@ function unscrambleArea(buf, from, len, base, key) {
   for (let i = 0; i < len; i += 32) unmask(buf, from + i, Math.min(32, len - i), key ^ ((from + i - base) >> 2));
 }
 
-export function appFromPackage(file) {
-  // the UFW header, then its flash-image entry
+// The flash image inside the package, byte for byte as the updater writes it to the chip
+// (headers masked, the app area encrypted with the chip key).
+export function flashFromPackage(file) {
+  return rawFlash(file).slice();
+}
+
+function rawFlash(file) {
   const hdr = new Uint8Array(20 * 0x2f);
   for (let i = 0; i < 20; i++) hdr.set(file.subarray(i * 0x30, i * 0x30 + 0x2f), i * 0x2f);
   unmask(hdr, 0, 0x40);
   if (crc16(hdr, 2, 0x3e) !== u16(hdr, 0)) throw new Error("not an FM-1 update package (.fwsc)");
   const entries = u16(hdr, 8);
-  let flash = null;
   for (let k = 0; k < entries; k++) {
     const e = hdr.slice(0x40 + k * 0x50, 0x90 + k * 0x50);
     unmask(e, 0, 0x50);
     if (u16(e, 0) === 0) {
       const at = u32(e, 8) + 20 * (0x30 - 0x2f);
-      flash = file.slice(at, at + u32(e, 12));
+      return file.slice(at, at + u32(e, 12));
     }
   }
-  if (!flash) throw new Error("no flash image in the package");
+  throw new Error("no flash image in the package");
+}
+
+export function appFromPackage(file) {
+  const flash = rawFlash(file);   // a copy: unpacking works on it in place
 
   // the JLFS directory: the chip key and where the app area starts
   unmask(flash, 0, 32);

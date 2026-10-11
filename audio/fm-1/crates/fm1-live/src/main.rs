@@ -2,6 +2,7 @@
 //!
 //!   fm1-live [--bin work/felucca_xip.bin] [--entry 0x02000120] [--mhz 240]
 //!   fm1-live --bench 3000          # headless: how fast does it run?
+//!   fm1-live --fwsc FM-1.fwsc [--syx bank.syx]   # M-VAVE's stock firmware, from its package
 //!
 //! The emulator runs on its own thread, paced to the wall clock: its
 //! emulated time stays a little ahead of real time and the I2S output is
@@ -17,7 +18,7 @@
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use fm1_core::{Bus, Cpu};
-use fm1_soc::{Action, Soc, VEC_BASE};
+use fm1_soc::{machine, Action, Soc, VEC_BASE};
 use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
 use panel::{Ctl, ENCS, H, W};
 
@@ -44,6 +45,10 @@ struct Opts {
     shot: Option<u64>,
     /// What runs, for the window title.
     name: String,
+    /// M-VAVE's stock firmware from its update package (fm1_soc::stock_from_package)
+    fwsc: Option<String>,
+    /// a DX7 32-voice bank for the stock firmware's slots 1-32
+    syx: Option<String>,
 }
 
 /// The firmware catalog web/firmwares.json as (id, name, version, image path): each image is
@@ -66,7 +71,7 @@ fn catalog() -> Vec<(String, String, String, String)> {
 fn parse() -> Option<Opts> {
     let a: Vec<String> = std::env::args().collect();
     let mut o = Opts { bin: "work/felucca_xip.bin".into(), entry: 0x0200_0120, mhz: 240, bench: None, shot: None,
-                       name: "Felucca".into() };
+                       name: "Felucca".into(), fwsc: None, syx: None };
     let mut i = 1;
     while i < a.len() {
         match a[i].as_str() {
@@ -89,6 +94,11 @@ fn parse() -> Option<Opts> {
                 o.bin = path;
                 o.name = format!("{name} {ver}");
             }
+            "--fwsc" => {
+                o.fwsc = Some(a.get(i + 1)?.clone());
+                o.name = "M-VAVE stock firmware".into();
+            }
+            "--syx" => o.syx = Some(a.get(i + 1)?.clone()),
             "--entry" => o.entry = u32::from_str_radix(a.get(i + 1)?.trim_start_matches("0x"), 16).ok()?,
             "--mhz" => o.mhz = a.get(i + 1)?.parse().ok()?,
             "--bench" => o.bench = Some(a.get(i + 1)?.parse().ok()?),
@@ -100,9 +110,12 @@ fn parse() -> Option<Opts> {
     Some(o)
 }
 
-/// The machine: cpu0 + SoC, stepped with interrupts and the peripheral clock.
+/// The machine: cpu0 + SoC, stepped with interrupts and the peripheral clock; cpu1 once
+/// the firmware releases it.
 struct Machine {
     cpu: Cpu,
+    /// The second core, from when cpu0 releases it (fm1_soc::machine).
+    cpu1: Option<Cpu>,
     soc: Soc,
     /// FM1_SKIP_LOG: where idle skips happen (pc -> count).
     skip_log: Option<std::collections::HashMap<u32, u64>>,
@@ -116,61 +129,50 @@ struct Machine {
 
 impl Machine {
     fn new(o: &Opts) -> std::io::Result<Self> {
-        let image = std::fs::read(&o.bin)?;
+        let stock = match &o.fwsc {
+            Some(path) => {
+                let syx = o.syx.as_ref().map(std::fs::read).transpose()?;
+                let pkg = std::fs::read(path)?;
+                let st = fm1_soc::stock_from_package(&pkg, syx.as_deref())
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{path}: {e}")))?;
+                Some(st)
+            }
+            None => None,
+        };
+        let image = match &stock {
+            Some(st) => st.xip.clone(),
+            None => std::fs::read(&o.bin)?,
+        };
         let mut soc = Soc::new(RAM_SIZE, image);
         soc.periph.hz = o.mhz * 1_000_000;
         soc.periph.skip_idle = true;
-        let mut cpu = Cpu::new(o.entry);
+        let mut cpu = Cpu::new(stock.as_ref().map_or(o.entry, |st| st.entry));
         cpu.jit_on = std::env::var("FM1_NO_JIT").is_err();
+        // the SPL hands cpu0 over in user mode (see fm1-emu)
+        cpu.user = std::env::var_os("FM1_SUPERVISOR_START").is_none();
         // the SPL's boot-parameter struct (see fm1-emu): an all-zero pair
         let params = RAM_BASE + 0x7fc00;
         soc.write32(params, params + 0x40);
         cpu.regs[0] = params;
+        if let Some(st) = &stock {
+            cpu.regs[0] = fm1_soc::stock_boot(&mut soc, &st.flash, params);
+        }
         let skip_log = std::env::var("FM1_SKIP_LOG").ok().map(|_| Default::default());
         let blocks = std::env::var("FM1_NO_BLOCKS").is_err();
         let watch_call = std::env::var("FM1_WATCH_LEDPUT").ok().and_then(|v| v.parse().ok()).map(|ms| (0x0201_ad60u32, ms));
         let blocks = blocks && watch_call.is_none();
-        Ok(Self { cpu, soc, skip_log, blocks, pending_tick: false, watch_call, watch_hits: 0 })
+        Ok(Self { cpu, cpu1: None, soc, skip_log, blocks, pending_tick: false, watch_call, watch_hits: 0 })
     }
 
+    /// Run n instructions of cpu0, and of cpu1 alongside once it is running
+    /// (fm1_soc::machine). FM1_NO_BLOCKS: the per-step reference loop, cpu0 only.
     fn run(&mut self, n: u32) -> Result<(), String> {
         if !self.blocks {
             return self.run_steps(n);
         }
-        let mut done = 0u32;
-        // the next instruction's tick already happened (and found something due)
-        let mut ticked = std::mem::take(&mut self.pending_tick);
-        while done < n {
-            if ticked || self.soc.periph.tick() {
-                self.soc.advance(0);
-            }
-            ticked = false;
-            self.soc.periph.in_isr = !self.cpu.irq_levels.is_empty();
-            if self.soc.periph.any_pending() {
-                if let Some((irq, prio)) = self.soc.pending_irq() {
-                    if self.cpu.irq_ready(prio) {
-                        let handler = self.soc.read32(VEC_BASE + 4 * irq as u32);
-                        self.cpu.interrupt(handler, prio);
-                    }
-                }
-            }
-            match self.cpu.run_fast(&mut self.soc, n - done) {
-                Ok((0, _)) => {
-                    if let Err(e) = self.cpu.step(&mut self.soc) {
-                        return Err(format!("{e:?} at pc {:#010x}", self.cpu.pc));
-                    }
-                    done += 1;
-                }
-                Ok((k, due)) => {
-                    done += k;
-                    ticked = due;
-                }
-                Err(e) => return Err(format!("{e:?} at pc {:#010x}", self.cpu.pc)),
-            }
-        }
-        // the next instruction's tick may already have happened: carry it
-        self.pending_tick = ticked;
-        Ok(())
+        let jit = self.cpu.jit_on;
+        let Machine { cpu, cpu1, soc, pending_tick, .. } = self;
+        machine::run_dual(cpu1, soc, n, RAM_SIZE, jit, |soc, k| machine::run_blocks(cpu, soc, k, pending_tick))
     }
 
     /// The reference loop: one instruction per iteration.
@@ -256,6 +258,10 @@ fn bench(o: &Opts, ms: u64) {
             break;
         }
         insns += 100_000;
+        if std::env::var_os("FM1_BENCH_TRACE").is_some() {
+            // a checkpoint to diff between runs (JIT against the interpreter)
+            eprintln!("cp {insns} cyc {} pc {:#010x} sp {:#x} r {:x?}", m.soc.periph.cycles, m.cpu.pc, m.cpu.sp, &m.cpu.regs[..8]);
+        }
     }
     if sample {
         let mut v: Vec<_> = pcs.into_iter().collect();
@@ -267,6 +273,9 @@ fn bench(o: &Opts, ms: u64) {
     }
     let wall = t.elapsed().as_secs_f64();
     println!("icache: {} decodes for {} instructions", m.cpu.decodes, insns);
+    if let Some(c1) = &m.cpu1 {
+        println!("cpu1: {} instructions ({:.1} M per emulated s)", c1.insn_count, c1.insn_count as f64 / 1e3 / ms as f64);
+    }
     if let Ok(path) = std::env::var("FM1_BENCH_WAV") {
         let bytes: Vec<u8> = m.soc.periph.audio.iter().flat_map(|s| s.to_le_bytes()).collect();
         let _ = std::fs::write(&path, bytes);

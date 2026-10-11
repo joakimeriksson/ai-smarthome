@@ -25,7 +25,9 @@
 
 use fm1_core::Bus;
 
+pub mod fwsc;
 mod lcd;
+pub mod machine;
 pub mod periph;
 mod ram;
 mod spiflash;
@@ -33,12 +35,16 @@ mod spiflash;
 pub use lcd::{write_bmp, Lcd};
 pub use periph::{Action, Periph, CPU_HZ, VEC_BASE};
 pub use ram::Ram;
-pub use spiflash::SpiFlash;
+pub use spiflash::{SpiFlash, FLASH_SIZE};
 
 pub const XIP_BASE: u32 = 0x0200_0000;
 pub const RAM_BASE: u32 = 0x01c0_0000;
 pub const OVL_BASE: u32 = 0x0400_0000;
 pub const SRAM2_BASE: u32 = 0x01f0_0000;
+/// The stock firmware's .bd_base: what the BT baseband's window register 0x2FC44 reads.
+pub const BT_WINDOW_BASE: u32 = 0x01c0_9e7c;
+/// The flash offset behind XIP 0x02000000 (the stock layout: the app area starts at 0x4000).
+pub const XIP_FLASH_OFFSET: usize = 0x4000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnknownAccess {
@@ -61,6 +67,11 @@ enum Region {
     Usb,
     Uart1,
     Adc,
+    Ana,
+    Bt,
+    Spi2,
+    Crc,
+    XipFlash,
     Dbg,
     Irqc,
     /// Interrupt controller enable/priority words and software latch.
@@ -89,6 +100,22 @@ pub struct Soc {
     /// Timers, audio DMA, ADC, interrupt controller and the front panel.
     pub periph: Periph,
     sfr: std::collections::HashMap<u32, u32>,
+    /// Core 0 / 1 paused by the other (C0_CON / C1_CON bit 2 pulses, bit 3 resumes).
+    paused: [bool; 2],
+    /// The XIP window continues into the flash chip past the image (the stock layout; other
+    /// firmwares' images read 0 past their end, as they always have here).
+    pub xip_flash: bool,
+    /// cpu0 set 0x10008 bit 3 (core 1's release); latched until the runner starts cpu1, as
+    /// firmwares hold the bit only while they wait for core 1 to report in.
+    pub cpu1_release: bool,
+    /// FM1_AUDIO_TRACE: log each audio half-buffer (debugging the DMA's pace).
+    audio_trace: bool,
+    /// The CRC-16 unit's register (0x13504).
+    crc: u16,
+    /// The cores' hardware lock (`lockset` / `lockclr`): which core holds it.
+    lock_owner: Option<u32>,
+    /// FM1_GPIO_TRACE: GPIO register writes by address (debugging port use).
+    pub gpio_writes: Option<std::collections::BTreeMap<u32, u64>>,
     unknown_log: Vec<UnknownAccess>,
 }
 
@@ -115,6 +142,13 @@ impl Soc {
             ticks: 0,
             periph: Periph::default(),
             sfr: std::collections::HashMap::new(),
+            paused: [false; 2],
+            lock_owner: None,
+            crc: 0,
+            cpu1_release: false,
+            audio_trace: std::env::var_os("FM1_AUDIO_TRACE").is_some(),
+            xip_flash: false,
+            gpio_writes: std::env::var("FM1_GPIO_TRACE").ok().map(|_| Default::default()),
             unknown_log: Vec::new(),
         }
     }
@@ -126,6 +160,9 @@ impl Soc {
     pub fn advance(&mut self, n: u64) {
         let due = self.periph.advance(n);
         if let Some((adr, words)) = due.audio_half {
+            if self.audio_trace {
+                eprintln!("half {} ms {}", self.periph.ms(), self.periph.cycles);
+            }
             for i in 0..words {
                 let w = self.read32(adr.wrapping_add(i * 4)) as i32;
                 self.periph.audio.push((w >> 8).clamp(-32768, 32767) as i16);
@@ -137,6 +174,17 @@ impl Soc {
     #[inline]
     pub fn pending_irq(&self) -> Option<(u8, u8)> {
         self.periph.pending_irq()
+    }
+
+    /// Core `core` (0, 1) is paused by the other through its CON register's bit 2
+    /// (0x1EEE000 / 0x1EEE004): the stock firmware stops core 1 around flash work.
+    pub fn core_paused(&self, core: u32) -> bool {
+        core < 2 && self.paused[core as usize]
+    }
+
+    /// The highest-priority interrupt pending for core `core` (its own enable bank).
+    pub fn pending_irq_for(&self, core: u32) -> Option<(u8, u8)> {
+        self.periph.pending_irq_for(core)
     }
 
     pub fn unknown_accesses(&self) -> &[UnknownAccess] {
@@ -164,6 +212,9 @@ impl Soc {
     fn region(&self, addr: u32) -> Region {
         match addr {
             a if a >= XIP_BASE && (a - XIP_BASE) < self.xip.len() as u32 => Region::Xip,
+            // past the loaded image the XIP window still shows the flash chip (the stock
+            // firmware reads its USR preset area, which it writes over SPI, through XIP)
+            a if self.xip_flash && a >= XIP_BASE && (a - XIP_BASE) as usize + XIP_FLASH_OFFSET < spiflash::FLASH_SIZE => Region::XipFlash,
             a if a >= RAM_BASE && (a - RAM_BASE) < self.ram.len() as u32 => Region::Ram,
             a if a >= OVL_BASE && (a - OVL_BASE) < self.ovl.len() as u32 => Region::Ovl,
             a if a >= SRAM2_BASE && (a - SRAM2_BASE) < self.sram2.len() as u32 => Region::Sram2,
@@ -173,12 +224,16 @@ impl Soc {
             0x50000..=0x501ff => Region::Gpio,
             0x51000..=0x5103f => Region::Iomap,
             0x10000..=0x1001f => Region::Clk,
-            0x10500..=0x1091f => Region::Timer,
+            0x10400..=0x1091f => Region::Timer,
             0x11c00..=0x11c1f => Region::Spi0,
             0x11d00..=0x11d1f => Region::Spi1,
+            0x11e00..=0x11e1f => Region::Spi2,
             0x11800..=0x1183f => Region::Usb,
             0x12100..=0x1212f => Region::Uart1,
             0x13100..=0x1311f => Region::Adc,
+            0x13500..=0x1350f => Region::Crc,
+            0x11900..=0x119ff => Region::Ana,
+            0x20000..=0x2ffff => Region::Bt,
             0x1eee240..=0x1eee24f => Region::Dbg,
             _ => Region::Unknown,
         }
@@ -196,7 +251,10 @@ impl Soc {
     fn spi1_write(&mut self, addr: u32, value: u32) {
         match addr {
             0x11d00 => {
-                // CON: bit14 pending-clear acknowledged silently
+                // CON: bit14 clears the pending transfer-done (and its IRQ 16)
+                if value & 0x4000 != 0 {
+                    self.periph.spi1_pending = false;
+                }
                 let stored = self.sfr_get(addr);
                 self.sfr_set(addr, (stored & !0x4000) | (value & !0x4000));
             }
@@ -206,6 +264,7 @@ impl Soc {
                 let pc = self.sfr_get(0x50080);
                 self.lcd.feed(value as u8, pc & 0x100 != 0);
                 self.sfr_set(addr, value);
+                self.spi1_done();
             }
             0x11d0c => self.sfr_set(addr, value), // ADR
             0x11d10 => {
@@ -219,8 +278,52 @@ impl Soc {
                     self.lcd.feed(b, pc & 0x100 != 0);
                 }
                 self.sfr_set(addr, 0);
+                self.spi1_done();
             }
             _ => self.sfr_set(addr, value),
+        }
+    }
+
+    /// SPI2 (0x11E00, CON/BAUD/BUF/ADR/CNT like SPI1): the stock firmware shifts the key
+    /// matrix's column pattern into the two 74HC595s with it, one 2-byte DMA per column,
+    /// driven by its IRQ 37 handler (which also reads the rows and pulses RCLK on PA1).
+    fn spi2_write(&mut self, addr: u32, value: u32) {
+        match addr {
+            0x11e00 => {
+                if value & 0x4000 != 0 {
+                    self.periph.spi2_pending = false;
+                }
+                self.sfr_set(addr, value & !0xc000);
+            }
+            0x11e08 => {
+                self.periph.sr_shift_byte(value as u8);
+                self.sfr_set(addr, value);
+                self.spi2_started(1);
+            }
+            0x11e10 => {
+                let adr = self.sfr_get(0x11e0c);
+                for i in 0..value.min(64) {
+                    let b = self.read8(adr.wrapping_add(i));
+                    self.periph.sr_shift_byte(b);
+                }
+                self.sfr_set(addr, 0);
+                self.spi2_started(value);
+            }
+            _ => self.sfr_set(addr, value),
+        }
+    }
+
+    fn spi2_started(&mut self, bytes: u32) {
+        let con = self.sfr_get(0x11e00);
+        let baud = self.sfr_get(0x11e04);
+        self.periph.spi2_start(bytes, baud, con & 0x2000 != 0);
+    }
+
+    /// A SPI1 transfer finished (instantly here): with CON bit 13 (interrupt enable) that is
+    /// IRQ 16, the stock LCD driver's DMA-done (its layer flush waits for the handler).
+    fn spi1_done(&mut self) {
+        if self.sfr_get(0x11d00) & 0x2000 != 0 {
+            self.periph.spi1_pending = true;
         }
     }
 
@@ -237,6 +340,27 @@ impl Soc {
 }
 
 impl Bus for Soc {
+    fn idle(&mut self, core: u32) {
+        if core == 0 {
+            self.periph.idle();
+        }
+    }
+
+    fn hw_lock(&mut self, core: u32, set: bool) -> bool {
+        match (set, self.lock_owner) {
+            (true, Some(c)) if c != core => false,
+            (true, _) => {
+                self.lock_owner = Some(core);
+                true
+            }
+            (false, Some(c)) if c == core => {
+                self.lock_owner = None;
+                true
+            }
+            (false, _) => true,
+        }
+    }
+
     #[inline(always)]
     fn tick(&mut self) -> bool {
         self.periph.tick()
@@ -340,14 +464,46 @@ impl Soc {
                 u32::from_le_bytes([g(o), g(o + 1), g(o + 2), g(o + 3)])
             }
             Region::Ram => self.ram.read32(addr - RAM_BASE),
+            Region::XipFlash => {
+                let o = (addr - XIP_BASE) as usize + XIP_FLASH_OFFSET;
+                let g = |i: usize| self.flash.mem.get(i).copied().unwrap_or(0xff);
+                u32::from_le_bytes([g(o), g(o + 1), g(o + 2), g(o + 3)])
+            }
             Region::Ovl => self.ovl.read32(addr - OVL_BASE),
             Region::Sram2 => self.sram2.read32(addr - SRAM2_BASE),
             Region::Irqc => {
-                // 0x1eee008 bit 14: controller ready (the early init spins on it)
+                // 0x1eee008 bit 14: controller ready (the early init spins on it);
+                // 0x1eee000 / 0x1eee004 (C0_CON / C1_CON): see `core_paused`
                 let v = self.sfr_get(addr);
-                if addr == 0x1eee008 { v | 0x4000 } else { v }
+                match addr {
+                    0x1eee008 => v | 0x4000,
+                    0x1eee000 | 0x1eee004 => {
+                        let core = ((addr >> 2) & 1) as usize;
+                        (v & !0x14) | if self.paused[core] { 0x10 } else { 0 }
+                    }
+                    _ => v,
+                }
             }
             Region::Iomap | Region::Usb | Region::Uart1 | Region::Clk => self.sfr_get(addr),
+            // JL_ANA (analog: WLA, DAC trim). 0x11978 is the DAC trim measurement after the
+            // strobe at the same word: bit 5 = conversion done, bits 8-15 = the value (mid
+            // scale here), bit 18 = "this trim step is right". With these the stock
+            // firmware's audio_ana calibration finishes at once instead of polling forever
+            // (a trim only nudges the DAC's DC offset).
+            Region::Ana => {
+                let v = self.sfr_get(addr);
+                if addr == 0x11978 { (v & !0xff00) | 0x4_0000 | 0x8000 | 0x20 } else { v }
+            }
+            // the Bluetooth baseband (bsfr 0x20000; no radio here): reads 0, writes are
+            // dropped (self-clearing requests like bt_clkn_compare_arm's capture at 0x2001C
+            // must read done), except 0x2FC44, the read-only base of the RAM window its
+            // buffers live in (never written: fixed in hardware). The stock BT stack checks
+            // buffers against it: descriptors within 2 KiB and below its own .bd_base + 1088
+            // (the constant it loads next to the read), bulk buffers within 32 KiB. .bd_base
+            // opens the BT bss (SDK btctler_lib_bss.ld): 0x01C09E7C in the stock V13 image.
+            Region::Bt => {
+                if addr == 0x2fc44 { BT_WINDOW_BASE } else { 0 }
+            }
             Region::Gpio | Region::Adc | Region::Alnk | Region::Irqc2 => {
                 match self.periph.read(addr) {
                     Some(v) => v,
@@ -361,6 +517,8 @@ impl Soc {
                 }
             }
             Region::Spi0 => self.flash.read(addr),
+            // SPI2: transfers finish at once (CON bit 15 reads done)
+            Region::Spi2 => self.sfr_get(addr) | if addr == 0x11e00 { 0x8000 } else { 0 },
             Region::Spi1 => {
                 if addr == 0x11d00 {
                     // CON: always report transfer-done so polls finish
@@ -372,6 +530,7 @@ impl Soc {
                 }
             }
             Region::Dbg => self.sfr_get(addr),
+            Region::Crc => if addr == 0x13504 { self.crc as u32 } else { 0 },
             Region::Unknown => {
                 self.log_unknown(addr, 4, false, 0);
                 0
@@ -400,12 +559,30 @@ impl Soc {
     #[inline(never)]
     fn write32_slow(&mut self, addr: u32, value: u32) {
         match self.region(addr) {
-            Region::Xip => self.log_unknown(addr, 4, true, value), // flash writes go via the ROM
+            Region::Xip | Region::XipFlash => self.log_unknown(addr, 4, true, value), // flash writes go via the ROM
             Region::Ram => self.ram.write32(addr - RAM_BASE, value),
             Region::Ovl => self.ovl.write32(addr - OVL_BASE, value),
             Region::Sram2 => self.sram2.write32(addr - SRAM2_BASE, value),
-            Region::Irqc => self.sfr_set(addr, value),
+            Region::Irqc => {
+                if addr == 0x1eee000 || addr == 0x1eee004 {
+                    // C0_CON / C1_CON: writing bit 2 pauses that core (bit 4 reads "paused");
+                    // a write with bit 3 and without bit 2 runs it again. Both are pulses:
+                    // the stock IPC pauses with `|= 4` and resumes with `|= 8` on the same word.
+                    let core = ((addr >> 2) & 1) as usize;
+                    if value & 4 != 0 {
+                        self.paused[core] = true;
+                    } else if value & 8 != 0 {
+                        self.paused[core] = false;
+                    }
+                    self.sfr_set(addr, value & !0x14);
+                } else {
+                    self.sfr_set(addr, value);
+                }
+            }
             Region::Gpio => {
+                if let Some(h) = self.gpio_writes.as_mut() {
+                    *h.entry(addr).or_insert(0) += 1;
+                }
                 // PD0 drives the flash chip select; PA1/PA3/PA4 clock the
                 // key-matrix shift registers
                 if addr == 0x500c0 {
@@ -421,7 +598,15 @@ impl Soc {
             }
             Region::Spi0 => self.flash.write(addr, value),
             Region::Iomap => self.sfr_set(addr, value),
-            Region::Clk => self.sfr_set(addr, value),
+            Region::Ana => self.sfr_set(addr, value),
+            Region::Bt => {}
+            Region::Clk => {
+                if addr == 0x10008 && value & 8 != 0 && self.sfr_get(addr) & 8 == 0 {
+                    self.cpu1_release = true;
+                    self.periph.next_due = 0; // the runner looks at it before the next instruction
+                }
+                self.sfr_set(addr, value)
+            }
             Region::Usb => self.sfr_set(addr, value),
             Region::Uart1 => self.sfr_set(addr, value),
             Region::Adc => {
@@ -435,6 +620,21 @@ impl Soc {
                 }
             }
             Region::Spi1 => self.spi1_write(addr, value),
+            Region::Spi2 => self.spi2_write(addr, value),
+            // the CRC-16 unit (chip_crc16): [+4] = the register (the SDK seeds it with 0),
+            // each write to [+0] feeds one byte through CRC-16/CCITT (0x1021, MSB first).
+            // The stock NOR file system checks every directory entry with it.
+            Region::Crc => match addr {
+                0x13500 => {
+                    let mut c = self.crc ^ ((value as u16 & 0xff) << 8);
+                    for _ in 0..8 {
+                        c = if c & 0x8000 != 0 { (c << 1) ^ 0x1021 } else { c << 1 };
+                    }
+                    self.crc = c;
+                }
+                0x13504 => self.crc = value as u16,
+                _ => {}
+            },
             Region::Dbg => {
                 match dbg_line(addr) {
                     "msg" => {
@@ -447,4 +647,60 @@ impl Soc {
             Region::Unknown => self.log_unknown(addr, 4, true, value),
         }
     }
+}
+
+/// M-VAVE's stock firmware out of its update package: the XIP window's contents (the app
+/// area, unscrambled), the whole flash (the image as written, grown to the chip's size, the
+/// USR patch area given this emulator's default bank when blank and then an optional DX7
+/// bank in slots 1-32) and the entry point.
+pub struct Stock {
+    pub xip: Vec<u8>,
+    pub flash: Vec<u8>,
+    pub entry: u32,
+}
+
+pub fn stock_from_package(pkg: &[u8], syx: Option<&[u8]>) -> Result<Stock, String> {
+    let u = fwsc::unpack(pkg)?;
+    let mut flash = fwsc::full_flash(&u.raw, FLASH_SIZE);
+    if let Some(usr) = fwsc::usr_offset(&u) {
+        fwsc::usr_fill_defaults(&mut flash, usr);
+        if let Some(b) = syx {
+            fwsc::usr_load_syx(&mut flash, usr, b, 0)?;
+        }
+    }
+    let app = u.entry("app.bin").map(|h| h.offset).unwrap_or(0x120);
+    Ok(Stock { xip: u.xip, flash, entry: XIP_BASE + app as u32 })
+}
+
+/// Ready a Soc for the stock firmware: its flash chip, and the SPL's boot parameters at
+/// `params`. Returns the value for r0.
+pub fn stock_boot(soc: &mut Soc, flash: &[u8], params: u32) -> u32 {
+    soc.flash.load(flash);
+    soc.xip_flash = true;
+    write_boot_info(soc, params, flash)
+}
+
+/// The boot-parameter block the SPL (uboot.boot) hands the stock app in r0, as the SDK's
+/// `BOOT_DEVICE_INFO` (include_lib/system/boot.h) and the SPL's own code at 0x31B2..0x3200
+/// build it: fs_info (-> the flash header copied right after the struct), sfc_base_addr (the
+/// flash offset behind XIP 0x02000000: 0x4000), app_addr 0x02000000, chip_id, trim_value, an
+/// 8-byte MAC, then the 32-byte flash header unmasked (CRC-16 keystream from 0xFFFF; its CRC
+/// checks). The app copies parts of it to 0x01C7FD50 (boot_hwinfo_save) and its NOR file
+/// system finds the flash from sfc_base_addr. Writes the block at `at` (RAM); returns `at`.
+pub fn write_boot_info(soc: &mut Soc, at: u32, flash: &[u8]) -> u32 {
+    let mut head = [0u8; 32];
+    head.copy_from_slice(&flash[..32]);
+    let mut key: u16 = 0xffff;
+    for b in head.iter_mut() {
+        *b ^= key as u8;
+        key = (key << 1) ^ if key & 0x8000 != 0 { 0x1021 } else { 0 };
+    }
+    let words = [at + 24, 0x4000, XIP_BASE, 0, 0, 0];
+    for (i, w) in words.iter().enumerate() {
+        soc.write32(at + 4 * i as u32, *w);
+    }
+    for (i, b) in head.iter().enumerate() {
+        soc.write8(at + 24 + i as u32, *b);
+    }
+    at
 }

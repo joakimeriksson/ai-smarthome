@@ -9,7 +9,7 @@
 //! Plain `extern "C"` exports and pointers into linear memory: no bindings generator needed.
 
 use fm1_core::{Bus, Cpu};
-use fm1_soc::{Action, Soc, VEC_BASE};
+use fm1_soc::{machine, Action, Soc};
 use std::collections::VecDeque;
 
 #[path = "../../fm1-live/src/panel.rs"]
@@ -20,6 +20,8 @@ const RAM_SIZE: usize = 1 << 20;
 
 struct Machine {
     cpu: Cpu,
+    /// the second core once the firmware releases it (fm1_soc::machine)
+    cpu1: Option<Cpu>,
     soc: Soc,
     pending_tick: bool,
     /// interleaved L/R i16 not yet handed out
@@ -28,54 +30,29 @@ struct Machine {
 }
 
 impl Machine {
-    fn new(image: Vec<u8>, entry: u32, mhz: u32) -> Self {
+    /// `stock_flash`: M-VAVE's firmware, whose flash chip and boot parameters come along.
+    fn new(image: Vec<u8>, entry: u32, mhz: u32, stock_flash: Option<&[u8]>) -> Self {
         let mut soc = Soc::new(RAM_SIZE, image);
         soc.periph.hz = mhz as u64 * 1_000_000;
         soc.periph.skip_idle = true;
         let mut cpu = Cpu::new(entry);
+        cpu.user = true; // the SPL hands cpu0 over in user mode (fm1-core's Cpu::user)
         let params = RAM_BASE + 0x7fc00;
         soc.write32(params, params + 0x40);
         cpu.regs[0] = params;
-        Machine { cpu, soc, pending_tick: false, audio: VecDeque::new(), halted: false }
+        if let Some(f) = stock_flash {
+            cpu.regs[0] = fm1_soc::stock_boot(&mut soc, f, params);
+        }
+        Machine { cpu, cpu1: None, soc, pending_tick: false, audio: VecDeque::new(), halted: false }
     }
 
-    /// The block loop of fm1-live (interrupts exact at block granularity).
+    /// fm1-live's loop: cpu0's blocks (interrupts exact at block granularity), cpu1 beside.
     fn run(&mut self, n: u32) {
-        let mut done = 0u32;
-        let mut ticked = std::mem::take(&mut self.pending_tick);
-        while done < n {
-            if ticked || self.soc.periph.tick() {
-                self.soc.advance(0);
-            }
-            ticked = false;
-            self.soc.periph.in_isr = !self.cpu.irq_levels.is_empty();
-            if self.soc.periph.any_pending() {
-                if let Some((irq, prio)) = self.soc.pending_irq() {
-                    if self.cpu.irq_ready(prio) {
-                        let handler = self.soc.read32(VEC_BASE + 4 * irq as u32);
-                        self.cpu.interrupt(handler, prio);
-                    }
-                }
-            }
-            match self.cpu.run_fast(&mut self.soc, n - done) {
-                Ok((0, _)) => {
-                    if self.cpu.step(&mut self.soc).is_err() {
-                        self.halted = true;
-                        return;
-                    }
-                    done += 1;
-                }
-                Ok((k, due)) => {
-                    done += k;
-                    ticked = due;
-                }
-                Err(_) => {
-                    self.halted = true;
-                    return;
-                }
-            }
+        let jit = self.cpu.jit_on;
+        let Machine { cpu, cpu1, soc, pending_tick, .. } = self;
+        if machine::run_dual(cpu1, soc, n, RAM_SIZE, jit, |soc, k| machine::run_blocks(cpu, soc, k, pending_tick)).is_err() {
+            self.halted = true;
         }
-        self.pending_tick = ticked;
     }
 }
 
@@ -105,7 +82,24 @@ pub extern "C" fn fm1_alloc(len: u32) -> *mut u8 {
 pub extern "C" fn fm1_boot(ptr: *mut u8, len: u32, entry: u32, mhz: u32) {
     // SAFETY: ptr/len come from fm1_alloc and JS filled them.
     let image = unsafe { Vec::from_raw_parts(ptr, len as usize, len as usize) };
-    unsafe { M = Some(Machine::new(image, entry, mhz)) };
+    unsafe { M = Some(Machine::new(image, entry, mhz, None)) };
+}
+
+/// Boot M-VAVE's stock firmware from its whole update package (.fwsc) at `ptr`, with a DX7
+/// 32-voice bank (.syx) for patch slots 1-32 at `syx` when `syx_len` is not 0 (both from
+/// fm1_alloc). Returns 0, or 1 when the package does not unpack (the machine is not booted).
+#[no_mangle]
+pub extern "C" fn fm1_boot_fwsc(ptr: *mut u8, len: u32, syx: *mut u8, syx_len: u32, mhz: u32) -> u32 {
+    // SAFETY: as fm1_boot.
+    let pkg = unsafe { Vec::from_raw_parts(ptr, len as usize, len as usize) };
+    let bank = (syx_len != 0).then(|| unsafe { Vec::from_raw_parts(syx, syx_len as usize, syx_len as usize) });
+    match fm1_soc::stock_from_package(&pkg, bank.as_deref()) {
+        Ok(st) => {
+            unsafe { M = Some(Machine::new(st.xip, st.entry, mhz, Some(&st.flash))) };
+            0
+        }
+        Err(_) => 1,
+    }
 }
 
 /// Render `frames` (<= 1024) stereo frames into the out buffers, running the machine until the

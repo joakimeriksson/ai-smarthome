@@ -25,6 +25,11 @@
            padding: 5px 8px; max-width: 100%; }
   select:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
   #about { color: var(--dim); flex: 1 1 320px; min-width: 0; }
+  .dim { color: var(--dim); }
+  .file { cursor: pointer; color: var(--ink) !important; background: #232427; border: 1px solid #3a3b3f;
+          border-radius: 6px; padding: 5px 10px; }
+  .file:focus-within { outline: 2px solid var(--amber); outline-offset: 1px; }
+  .file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   #about b { color: var(--ink); font-weight: 600; }
   .help { color: var(--dim); font-size: 13px; max-width: 90ch; }
   .help b { color: var(--ink); font-weight: 600; }
@@ -40,6 +45,9 @@
   <div class="bar">
     <label>Firmware <select id="fw" aria-label="Firmware"></select></label>
     <label>Clock <select id="mhz" aria-label="Emulated clock"></select></label>
+    <label class="file">Open .fwsc… <input type="file" id="open" accept=".fwsc"></label>
+    <label class="file" title="A DX7 32-voice bank for M-VAVE's firmware">DX7 bank… <input type="file" id="bank" accept=".syx"></label>
+    <span id="bankname" class="dim"></span>
     <span id="about"></span>
   </div>
   <div class="stage">
@@ -54,6 +62,9 @@
     a lower clock keeps the emulation real-time on slower machines. Changing the firmware or the clock reboots the synth.
     The firmwares are the community's own builds, unchanged; the list is from
     <a href="https://fm1-editor.com/firmware/">fm1-editor.com/firmware</a>.
+    <b>M-VAVE's own firmware</b>: their server does not let other pages fetch it, so download <code>FM-1.fwsc</code>
+    from M-VAVE and open it here (or drop it on the synth). Its patches live in a part of the flash that updates do
+    not carry, so it starts with a small bank of this emulator's own; open a DX7 32-voice <code>.syx</code> for slots 1–32.
   </p>
 </main>
 <script type="module" src="main.js"></script>

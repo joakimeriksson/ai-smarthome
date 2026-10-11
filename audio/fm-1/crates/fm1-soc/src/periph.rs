@@ -15,10 +15,14 @@
 //!   IRQ 11;
 //! * SARADC `0x13100`: CON (start = bit 6, done = bit 7, channel bits 8-11),
 //!   RES = 10-bit value — MASTER pot on ch 4, battery on ch 3;
-//! * the interrupt controller: enable/priority nibbles at `0x1EEF100`
-//!   (one per source, bit 0 enable, bits 1-3 priority), software latch
-//!   set/clear at `0x1EEF1A0/1A4` (bit b = IRQ 120+b), RAM vector table at
-//!   `0x01C7FE00`;
+//! * the interrupt controller: enable/priority nibbles at `0x1EEF100` for cpu0 and
+//!   `0x1EEF300` for cpu1 (one per source, bit 0 enable, bits 1-3 priority; the sources are
+//!   shared, each core takes what its own bank enables), software latch set/clear at
+//!   `0x1EEF1A0/1A4` (bit b = IRQ 120+b; the stock RTOS's context switch is bit 7 - cnum, its
+//!   cross-core doorbell another bit), one RAM vector table at `0x01C7FE00` for both;
+//! * the OS tick block at `0x1EEF0EC` (stock firmware): b[+0] bit 0 enable, bit 6 written =
+//!   acknowledge, bit 7 read = pending; `+4` the count (written: restart), `+8` the period
+//!   (`os_start`: clk/100, 10 ms); IRQ 3 (FM-1-RE docs/io/02-rtos.md);
 //! * the key/encoder matrix: 11 columns from two 74HC595s (PA4 SER, PA3
 //!   SRCLK, PA1 RCLK, MSB first, a low bit selects the column), rows PA0,
 //!   PA5-PA8, PB7 with pull-ups (low = closed).
@@ -34,6 +38,28 @@ const FRAME_T4: u64 = 544;
 
 pub const IRQ_ALNK0: u8 = 11;
 pub const IRQ_TIMER5: u8 = 63;
+pub const IRQ_OS_TICK: u8 = 3;
+pub const IRQ_SPI1: u8 = 16;
+pub const IRQ_SARADC: u8 = 24;
+pub const IRQ_SPI2: u8 = 37;
+
+/// The JL_TIMER prescaler table: CON bits 4-7 index it (the stock firmware's own copy at
+/// 0x0204F8C0 reads the same).
+const TMR_DIV: [u64; 16] = [1, 4, 16, 64, 2, 8, 32, 128, 256, 1024, 4096, 16384, 512, 2048, 8192, 32768];
+
+/// TIMER0..3 (`0x10400 + 0x100 * n`, IRQ 4 + n): CON (bit 0 on; low nibble 9 = the 24 MHz
+/// crystal, bits 4-7 the prescaler, bit 15 pending, written bit 14 clears it), CNT (where it
+/// counts from), PRD (the count that raises the interrupt and restarts). The stock firmware
+/// runs its usr_timer engine (the 2 ms ADC scan, key scan) on TIMER1.
+#[derive(Clone, Copy, Default)]
+struct Tmr {
+    con: u32,
+    prd: u32,
+    cnt0: u32,
+    start: u64,
+    next: u64,
+    pending: bool,
+}
 pub const VEC_BASE: u32 = 0x01C7_FE00;
 
 /// Key id at (packed row bit, physical column), -1 = none
@@ -73,7 +99,11 @@ pub struct Periph {
     cnt_streak: u32,
     /// Nothing timed happens before this cycle (0 = recompute): `advance`
     /// returns at once until then.
-    next_due: u64,
+    pub(crate) next_due: u64,
+    /// At most this many ticks per stretch of compiled code (`tick_room`): with two cores the
+    /// JIT must hand back after a slice, or a loop waiting on cpu1 spins until the next event
+    /// (up to 2^30 instructions) before cpu1 runs at all.
+    pub room_cap: u64,
     /// Cycles jumped over by `skip_idle`.
     pub skipped: u64,
     // TIMER4
@@ -103,6 +133,24 @@ pub struct Periph {
     pub ilat: u32,
     /// Enable/priority words at 0x1EEF100 (one nibble per source).
     pub icfg: [u32; 32],
+    /// cpu1's enable/priority words at 0x1EEF300.
+    pub icfg1: [u32; 32],
+    /// The OS tick block at 0x1EEF0EC (enable byte, period, when it started, next tick).
+    tick_ctl: u32,
+    tick_prd: u32,
+    tick_start: u64,
+    tick_next: u64,
+    tick_pending: bool,
+    /// SPI1 finished a transfer with its interrupt enabled (CON bit 13); CON bit 14 clears.
+    pub spi1_pending: bool,
+    /// SARADC: a conversion finished (CON bit 7), and its IRQ 24 when CON bit 5 enabled it.
+    adc_done: bool,
+    adc_irq: bool,
+    /// SPI2 finished a transfer with its interrupt enabled (the stock key scan), and when
+    /// the transfer under way finishes.
+    pub spi2_pending: bool,
+    spi2_next: u64,
+    tmr: [Tmr; 4],
     // key matrix
     sr_shift: u16,
     sr_latched: u16,
@@ -144,6 +192,7 @@ impl Default for Periph {
             cnt_streak: 0,
             next_due: 0,
             skipped: 0,
+            room_cap: u64::MAX,
             t4_con: 0,
             t4_base: 0,
             t5_con: 0,
@@ -164,6 +213,18 @@ impl Default for Periph {
             adc_value,
             ilat: 0,
             icfg: [0; 32],
+            icfg1: [0; 32],
+            tick_ctl: 0,
+            tick_prd: 0,
+            tick_start: 0,
+            tick_next: u64::MAX,
+            tick_pending: false,
+            spi1_pending: false,
+            adc_done: false,
+            adc_irq: false,
+            spi2_pending: false,
+            spi2_next: u64::MAX,
+            tmr: [Tmr { next: u64::MAX, ..Default::default() }; 4],
             sr_shift: 0xffff,
             sr_latched: 0xffff,
             pa_out: 0,
@@ -202,6 +263,27 @@ impl Periph {
         (self.t5_prd.max(1) as u64 * self.hz / T5_HZ).max(1)
     }
 
+    /// CPU cycles per count of TIMER0..3 `i` (the crystal through the prescaler).
+    fn tmr_cycles_per_count(&self, i: usize) -> u64 {
+        TMR_DIV[((self.tmr[i].con >> 4) & 15) as usize] * self.hz / T4_HZ
+    }
+
+    fn tmr_arm(&mut self, i: usize) {
+        let t = self.tmr[i];
+        if t.con & 3 == 0 || t.prd == 0 {
+            self.tmr[i].next = u64::MAX;
+            return;
+        }
+        let left = t.prd.saturating_sub(t.cnt0).max(1) as u64;
+        self.tmr[i].start = self.cycles;
+        self.tmr[i].next = self.cycles + left * self.tmr_cycles_per_count(i).max(1);
+    }
+
+    /// The OS tick: 10 ms however the period register is scaled (os_start writes clk/100).
+    fn tick_period(&self) -> u64 {
+        (self.hz / 100).max(1)
+    }
+
     fn half_period(&self) -> u64 {
         (self.alnk_len.max(2) as u64 / 2 * FRAME_T4 * self.hz / T4_HZ).max(1)
     }
@@ -212,7 +294,10 @@ impl Periph {
 
     /// The next cycle at which something timed happens.
     fn next_event(&self) -> u64 {
-        let mut n = self.t5_next.min(self.alnk_next);
+        let mut n = self.t5_next.min(self.alnk_next).min(self.tick_next).min(self.spi2_next);
+        for t in &self.tmr {
+            n = n.min(t.next);
+        }
         if let Some((at, _)) = self.script.front() {
             n = n.min(*at);
         }
@@ -237,6 +322,30 @@ impl Periph {
             self.t5_next += period;
             if self.t5_next <= self.cycles {
                 self.t5_next = self.cycles + period;
+            }
+        }
+        if self.cycles >= self.spi2_next {
+            self.spi2_pending = true;
+            self.spi2_next = u64::MAX;
+        }
+        for i in 0..4 {
+            if self.cycles >= self.tmr[i].next {
+                self.tmr[i].pending = true;
+                self.tmr[i].cnt0 = 0;
+                let per = self.tmr[i].prd.max(1) as u64 * self.tmr_cycles_per_count(i).max(1);
+                self.tmr[i].start = self.tmr[i].next;
+                self.tmr[i].next += per;
+                if self.tmr[i].next <= self.cycles {
+                    self.tmr[i].next = self.cycles + per;
+                }
+            }
+        }
+        if self.cycles >= self.tick_next {
+            self.tick_pending = true;
+            self.tick_start = self.tick_next;
+            self.tick_next += self.tick_period();
+            if self.tick_next <= self.cycles {
+                self.tick_next = self.cycles + self.tick_period();
             }
         }
         if self.cycles >= self.alnk_next {
@@ -302,7 +411,7 @@ impl Periph {
     /// Ticks that can pass before one is due (a tick is due once cycles reach next_due).
     #[inline]
     pub fn tick_room(&self) -> u64 {
-        self.next_due.saturating_sub(self.cycles + 1)
+        self.next_due.saturating_sub(self.cycles + 1).min(self.room_cap)
     }
 
     #[inline]
@@ -313,13 +422,20 @@ impl Periph {
     /// Any interrupt source pending at all (before enables and priorities).
     #[inline(always)]
     pub fn any_pending(&self) -> bool {
-        self.t5_pending || self.alnk_pend & 0xf0 != 0 || self.ilat != 0
+        self.t5_pending || self.alnk_pend & 0xf0 != 0 || self.ilat != 0 || self.tick_pending || self.spi1_pending
+            || self.tmr.iter().any(|t| t.pending) || self.adc_irq || self.spi2_pending
     }
 
-    /// The highest-priority enabled, pending source: (irq, prio).
+    /// The highest-priority source cpu0 has enabled and that is pending: (irq, prio).
     pub fn pending_irq(&self) -> Option<(u8, u8)> {
-        let icfg = |n: u8| self.icfg[(n >> 3) as usize];
-        if !self.t5_pending && self.alnk_pend & 0xf0 == 0 && self.ilat == 0 {
+        self.pending_irq_for(0)
+    }
+
+    /// The same for core `core` (its own enable bank).
+    pub fn pending_irq_for(&self, core: u32) -> Option<(u8, u8)> {
+        let bank = if core == 0 { &self.icfg } else { &self.icfg1 };
+        let icfg = |n: u8| bank[(n >> 3) as usize];
+        if !self.any_pending() {
             return None;
         }
         let mut best: Option<(u8, u8)> = None;
@@ -334,6 +450,23 @@ impl Periph {
         };
         if self.t5_pending {
             consider(IRQ_TIMER5);
+        }
+        if self.tick_pending {
+            consider(IRQ_OS_TICK);
+        }
+        if self.spi1_pending {
+            consider(IRQ_SPI1);
+        }
+        if self.adc_irq {
+            consider(IRQ_SARADC);
+        }
+        if self.spi2_pending {
+            consider(IRQ_SPI2);
+        }
+        for i in 0..4 {
+            if self.tmr[i].pending {
+                consider(4 + i as u8);
+            }
         }
         if self.alnk_pend & 0xf0 != 0 && self.alnk_con0 & 0x800 != 0 {
             consider(IRQ_ALNK0);
@@ -381,6 +514,20 @@ impl Periph {
                 }
                 ((self.cycles - self.t4_base) as u128 * T4_HZ as u128 / self.hz as u128) as u32
             }
+            0x10400 | 0x10500 | 0x10600 | 0x10700 => {
+                let t = &self.tmr[((addr - 0x10400) >> 8) as usize];
+                t.con | if t.pending { 0x8000 } else { 0 }
+            }
+            0x10404 | 0x10504 | 0x10604 | 0x10704 => {
+                let i = ((addr - 0x10400) >> 8) as usize;
+                let t = self.tmr[i];
+                if t.next == u64::MAX {
+                    t.cnt0
+                } else {
+                    t.cnt0 + ((self.cycles - t.start) / self.tmr_cycles_per_count(i).max(1)) as u32
+                }
+            }
+            0x10408 | 0x10508 | 0x10608 | 0x10708 => self.tmr[((addr - 0x10400) >> 8) as usize].prd,
             0x10900 => self.t5_con | if self.t5_pending { 0x8000 } else { 0 },
             0x10904 => {
                 if self.t5_con & 1 != 0 && self.t5_next != u64::MAX {
@@ -398,10 +545,30 @@ impl Periph {
             0x12e0c => self.alnk_con3,
             0x12e1c => self.alnk_adr,
             0x12e20 => self.alnk_len,
-            0x13100 => self.adc_con | if self.adc_con & 0x40 != 0 { 0x80 } else { 0 },
+            // conversions are instant: done (bit 7) once started. Bit 4 reads as written
+            // (Felucca's `|= 0x40` read-modify-write must keep it); the stock scan's "skip
+            // while bit 4" passes because its IRQ 24 handler writes CON = 0x40, then 0.
+            0x13100 => (self.adc_con & !0x80) | if self.adc_done { 0x80 } else { 0 },
             0x13104 => self.adc_value[((self.adc_con >> 8) & 0xf) as usize] as u32,
-            0x1eef1a0 | 0x1eef1a4 => self.ilat,
+            // the latch's set word reads the pending bits; its clear word reads 0: the stock
+            // IRQ 122 handler acknowledges with `[0x1EEF1A4] |= 4`, and a read-back of every
+            // pending bit there cleared a pending context switch too (a task ran on after
+            // blocking and was queued on its wait list twice)
+            0x1eef1a0 => self.ilat,
+            0x1eef1a4 => 0,
             0x1eef100..=0x1eef17f => self.icfg[((addr - 0x1eef100) / 4) as usize],
+            0x1eef300..=0x1eef37f => self.icfg1[((addr - 0x1eef300) / 4) as usize],
+            0x1eef0ec => self.tick_ctl | if self.tick_pending { 0x80 } else { 0 },
+            0x1eef0f0 => {
+                // how far into the period, in the period register's units
+                if self.tick_next == u64::MAX {
+                    0
+                } else {
+                    let into = (self.cycles - self.tick_start).min(self.tick_period());
+                    (into as u128 * self.tick_prd as u128 / self.tick_period() as u128) as u32
+                }
+            }
+            0x1eef0f4 => self.tick_prd,
             0x50004 => self.pa_in(),
             0x50044 => self.pb_in(),
             _ => return None,
@@ -434,6 +601,24 @@ impl Periph {
             }
             0x10904 => {}
             0x10908 => self.t5_prd = v,
+            0x10400 | 0x10500 | 0x10600 | 0x10700 => {
+                let i = ((addr - 0x10400) >> 8) as usize;
+                if v & 0x4000 != 0 {
+                    self.tmr[i].pending = false;
+                }
+                self.tmr[i].con = v & !0xc000;
+                self.tmr_arm(i);
+            }
+            0x10404 | 0x10504 | 0x10604 | 0x10704 => {
+                let i = ((addr - 0x10400) >> 8) as usize;
+                self.tmr[i].cnt0 = v;
+                self.tmr_arm(i);
+            }
+            0x10408 | 0x10508 | 0x10608 | 0x10708 => {
+                let i = ((addr - 0x10400) >> 8) as usize;
+                self.tmr[i].prd = v;
+                self.tmr_arm(i);
+            }
             0x12e00 => {
                 let was = self.alnk_con0 & 0x800;
                 self.alnk_con0 = v & 0xffff & !0x8000;
@@ -449,9 +634,44 @@ impl Periph {
             0x12e0c => self.alnk_con3 = v & 0xff,
             0x12e1c => self.alnk_adr = v,
             0x12e20 => self.alnk_len = v & 0xffff,
-            0x13100 => self.adc_con = v,
+            0x13100 => {
+                // bit 6 with bit 4 (enable) starts a conversion, which finishes at once; with
+                // bit 5 it raises IRQ 24 (the stock driver reads RES in that handler). Bit 6
+                // without bit 4 acknowledges (`CON = 0x40`).
+                if v & 0x40 != 0 {
+                    if v & 0x10 != 0 {
+                        self.adc_done = true;
+                        self.adc_irq = v & 0x20 != 0;
+                    } else {
+                        self.adc_done = false;
+                        self.adc_irq = false;
+                    }
+                }
+                self.adc_con = v;
+            }
             0x13104 => {}
             0x1eef100..=0x1eef17f => self.icfg[((addr - 0x1eef100) / 4) as usize] = v,
+            0x1eef300..=0x1eef37f => self.icfg1[((addr - 0x1eef300) / 4) as usize] = v,
+            0x1eef0ec => {
+                if v & 0x40 != 0 {
+                    self.tick_pending = false;
+                }
+                let was = self.tick_ctl & 1;
+                self.tick_ctl = v & 0x3f;
+                if was == 0 && v & 1 != 0 {
+                    self.tick_start = self.cycles;
+                    self.tick_next = self.cycles + self.tick_period();
+                } else if v & 1 == 0 {
+                    self.tick_next = u64::MAX;
+                }
+            }
+            0x1eef0f0 => {
+                self.tick_start = self.cycles;
+                if self.tick_next != u64::MAX {
+                    self.tick_next = self.cycles + self.tick_period();
+                }
+            }
+            0x1eef0f4 => self.tick_prd = v,
             0x1eef1a0 => self.ilat |= v,
             0x1eef1a4 => self.ilat &= !v,
             0x50000 => {
@@ -511,6 +731,41 @@ impl Periph {
     }
 
     // ---- key matrix -----------------------------------------------------
+
+    /// cpu0 executed `idle` (it sleeps until an interrupt): with `skip_idle` and nothing
+    /// pending, time jumps to just before the next event, where the interrupt that wakes it
+    /// comes from. The stock firmware's idle task runs it on every pass.
+    pub fn idle(&mut self) {
+        if !self.skip_idle || self.any_pending() {
+            return;
+        }
+        let next = self.next_event();
+        if next != u64::MAX && next > self.cycles + 1 {
+            self.skipped += next - 1 - self.cycles;
+            self.cycles = next - 1;
+            self.next_due = 0;
+        }
+    }
+
+    /// A SPI2 transfer of `bytes` started (with its interrupt enabled when `irq`): it takes
+    /// 16 * (baud + 1) peripheral clocks a byte (48 MHz assumed), so the stock firmware's
+    /// interrupt-driven column scan runs at a hardware-like pace instead of back to back.
+    pub fn spi2_start(&mut self, bytes: u32, baud: u32, irq: bool) {
+        self.next_due = 0;
+        if irq {
+            let clocks = bytes.max(1) as u64 * 16 * (baud as u64 + 1);
+            self.spi2_next = self.cycles + (clocks * self.hz / 48_000_000).max(1);
+        }
+    }
+
+    /// A byte clocked into the 74HC595 chain by SPI2, MSB first (the stock firmware drives
+    /// the matrix columns this way; Felucca bit-bangs SER/SRCLK on PA4/PA3). RCLK (PA1)
+    /// still latches.
+    pub fn sr_shift_byte(&mut self, b: u8) {
+        for bit in (0..8).rev() {
+            self.sr_shift = (self.sr_shift << 1) | ((b >> bit) & 1) as u16;
+        }
+    }
 
     fn pa_write(&mut self, v: u32) {
         let old = self.pa_out;

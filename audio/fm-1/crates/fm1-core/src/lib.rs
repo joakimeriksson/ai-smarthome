@@ -66,10 +66,18 @@ pub trait Bus {
     }
     /// Let ticks pass that `tick_room` allowed.
     fn add_ticks(&mut self, _n: u64) {}
+    /// The cores' shared hardware lock: `lockset` (`set`) takes it for `core` or reports
+    /// that the other core holds it (the instruction then retries); `lockclr` releases.
+    /// A single-core bus always grants it.
+    fn hw_lock(&mut self, _core: u32, _set: bool) -> bool {
+        true
+    }
     /// Would the next tick be due?
     fn next_tick_due(&self) -> bool {
         true
     }
+    /// `idle` on `core`: it waits for an interrupt (a bus with a clock may skip ahead).
+    fn idle(&mut self, _core: u32) {}
 }
 
 /// CPU architectural state.
@@ -83,6 +91,18 @@ pub struct Cpu {
     pub sp: u32,
     pub ssp: u32,
     pub usp: u32,
+    /// User mode. `sp` is the stack in use; `usp` and `ssp` are registers of their own. An
+    /// interrupt taken in user mode saves sp in usp and continues on ssp (the stock RTOS's
+    /// context switch saves the task's frame through `sp = usp`, picks the next task with
+    /// `usp = sp` and gets back to the ISR stack with `sp = ssp`); the `rti` that returns
+    /// to user mode keeps sp in ssp and goes on with usp. An interrupt in supervisor mode
+    /// stays on its stack. The SPL hands cpu0 over in user mode (crt0s set `sp`, then a
+    /// different `ssp`); cpu1 starts in supervisor mode (the stock stub leaves it with
+    /// `usp = ..; sp = ..; reti = ..; rti`, where an rti with no interrupt in progress
+    /// enters user mode).
+    pub user: bool,
+    /// Per interrupt depth: was the interrupted code in user mode (bit = depth).
+    user_irq: u32,
     pub rets: u32,
     /// Total instructions retired (for traces and tests).
     pub insn_count: u64,
@@ -176,6 +196,18 @@ impl Cpu {
     /// wrapper saves `{psr, rets, reti}` itself and returns with `rti`).
     pub fn interrupt(&mut self, handler: u32, prio: u8) {
         self.sreg_store[1] = self.pc;
+        // From user mode the ISR runs on ssp (the user sp waits in usp: the stock RTOS's
+        // context switch saves the task's frame through it and picks the next task's);
+        // from supervisor mode it stays on the same stack.
+        let depth = self.irq_levels.len().min(31);
+        if self.user {
+            self.user_irq |= 1 << depth;
+            self.usp = self.sp;
+            self.sp = self.ssp;
+            self.user = false;
+        } else {
+            self.user_irq &= !(1 << depth);
+        }
         self.irq_levels.push(prio);
         self.nest_ok = false;
         self.pc = handler;
@@ -526,10 +558,24 @@ impl Cpu {
         match n {
             "rets" => self.rets = v,
             "sp" => self.sp = v,
-            "ssp" => self.ssp = v,
-            "usp" => self.usp = v,
+            "ssp" => self.set_ssp(v),
+            "usp" => self.set_usp(v),
             _ => self.set_sreg(n, v),
         }
+    }
+
+    /// `ssp` / `usp` as the instructions see them (registers of their own; see `user`).
+    pub fn get_ssp(&self) -> u32 {
+        self.ssp
+    }
+    pub fn get_usp(&self) -> u32 {
+        self.usp
+    }
+    pub fn set_ssp(&mut self, v: u32) {
+        self.ssp = v;
+    }
+    pub fn set_usp(&mut self, v: u32) {
+        self.usp = v;
     }
 
     fn sreg_index(n: &str) -> usize {
@@ -540,9 +586,12 @@ impl Cpu {
             self.core_id
         } else if n == "icfg" {
             // low byte: the ISR priorities in progress (`icfg & 0xff` is the
-            // RTOS's "in interrupt context" test)
+            // RTOS's "in interrupt context" test); bit 9: the global enable `sti` / `cli`
+            // set and clear (the SDK's cpu_irq_disabled() is `(icfg & 0x300) != 0x300`,
+            // bit 8 being the software master enable; the stock RTOS asserted in
+            // os_mutex_pend while bit 9 read 0). Writes keep their own bit 9 out of it.
             let active = self.irq_levels.iter().fold(0u32, |m, &p| m | 1 << p);
-            (self.sreg_store[0] & !0xff) | active
+            (self.sreg_store[0] & !0x2ff) | active | if self.ie { 0x200 } else { 0 }
         } else {
             self.sreg_store[Self::sreg_index(n)]
         }
@@ -1072,6 +1121,19 @@ impl Cpu {
             return Ok(Some(None));
         }
 
+        // ---- rotate right `R = R <> #i` (c4 e1): d = bits(28,31), s = bits(20,23),
+        // n = bits(16,19) | bit24 << 4 (corpus: `c4 e1 08 01` r0 = r0 <> 24, `29 71` r7 =
+        // r2 <> 25). The stock printf-style switch `(c - 'h') <> 1` relies on odd values
+        // rotating into the top bit. (The solver's slots overfit the few samples.)
+        if s == "R = R <> #i" && insn.entry.len == 4 {
+            let raw = insn.raw;
+            let d = ((raw >> 28) & 0xf) as usize;
+            let src = self.regs[((raw >> 20) & 0xf) as usize];
+            let n = (((raw >> 16) & 0xf) | (((raw >> 24) & 1) << 4)) as u32;
+            self.regs[d] = src.rotate_right(n);
+            return Ok(Some(None));
+        }
+
         // ---- push/pop of named special registers ----------------------------
         // `[--sp] = {psr, rets, reti}` / `{psr, rets, reti} = [sp++]` (interrupt
         // prologues, context switches): same convention as the register
@@ -1148,7 +1210,16 @@ impl Cpu {
             "cc = #i" => { self.cc = v(self, 0)? != 0; return Ok(Some(None)); }
             "callns R" => { self.rets = next_pc; return Ok(Some(Some(self.regs[r(self, 0)?]))); }
             "rti" => {
-                self.irq_levels.pop();
+                // back to the mode the interrupt came from; with none in progress, user mode
+                let to_user = match self.irq_levels.pop() {
+                    Some(_) => self.user_irq >> self.irq_levels.len().min(31) & 1 != 0,
+                    None => true,
+                };
+                if to_user && !self.user {
+                    self.ssp = self.sp;
+                    self.sp = self.usp;
+                    self.user = true;
+                }
                 // back in an outer ISR: it was interrupted with reti on its stack
                 self.nest_ok = !self.irq_levels.is_empty();
                 return Ok(Some(Some(self.sregs("reti"))));
@@ -1211,8 +1282,8 @@ impl Cpu {
             Some(match n {
                 "rets" => cpu.rets,
                 "sp" => cpu.sp,
-                "ssp" => cpu.ssp,
-                "usp" => cpu.usp,
+                "ssp" => cpu.get_ssp(),
+                "usp" => cpu.get_usp(),
                 "psr" | "icfg" | "reti" | "retx" | "rete" | "sspn" | "cnum" => cpu.sregs(n),
                 _ => return None,
             })
@@ -1236,8 +1307,8 @@ impl Cpu {
                 match lhs {
                     "rets" => self.rets = val,
                     "sp" => self.sp = val,
-                    "ssp" => self.ssp = val,
-                    "usp" => self.usp = val,
+                    "ssp" => self.set_ssp(val),
+                    "usp" => self.set_usp(val),
                     "psr" | "icfg" | "reti" | "retx" | "rete" | "sspn" => self.set_sreg(lhs, val),
                     _ => return Ok(None),
                 }
@@ -1307,8 +1378,10 @@ impl Cpu {
             }
         };
         match s {
-            "nop" | "csync" | "idle" | "lockclr" | "lockset" | "pfetch [R]"
+            "nop" | "csync" | "lockclr" | "lockset" | "pfetch [R]"
             | "sti R" | "cli R" => {}
+            // the core halts until an interrupt: the bus may let time pass
+            "idle" => bus.idle(self.core_id),
             "sti" => self.ie = true,
             "cli" => self.ie = false,
             "R = R" => { let d = r(self, 0)?; self.regs[d] = self.regs[r(self, 1)?]; }
@@ -1559,7 +1632,14 @@ impl Cpu {
                 }
             }
             2 => {}
-            3 => {}
+            3 => {
+                // lockset / lockclr: the hardware lock the cores share (the stock RTOS takes
+                // it around every kernel critical section; with both cores running, a no-op
+                // let a task be queued on a wait list twice). Held by the other core: retry.
+                if !bus.hw_lock(self.core_id, name == "lockset_r") {
+                    jumped = Some(self.pc);
+                }
+            }
 
             // ---- moves ------------------------------------------------
             4 => {
@@ -1582,13 +1662,11 @@ impl Cpu {
             }
             6 => {
                 let v = ((insn.raw >> 16) & 0xffffffff) as u32;
-                self.ssp = v;
-                //每个 core shares one stack in bring-up
-                self.sp = v;
+                self.set_ssp(v);
             }
             7 => {
                 let v = ((insn.raw >> 16) & 0xffffffff) as u32;
-                self.usp = v;
+                self.set_usp(v);
             }
 
             // ---- arithmetic -------------------------------------------
@@ -2069,9 +2147,14 @@ impl Cpu {
                 self.rep_start = next_pc;
                 self.rep_end = next_pc + n;
                 if name == "rep_i_r" {
+                    // The count is latched at the rep: the register reads what is left (0) and
+                    // the block may reuse it (the stock memmove tail is `rep 4 r2 { r2 =
+                    // b[r1++=1]; b[r3++=1] = r2 }`; counting in r2 overran into a return
+                    // address), while `rep 4 r5 {..}; if (r5 != 0) goto rep` still sees 0.
                     let r = (raw & 0xf) as usize;
-                    self.rep_reg = Some(r);
+                    self.rep_reg = None;
                     self.rep_count = self.regs[r];
+                    self.regs[r] = 0;
                 } else {
                     self.rep_reg = None;
                     self.rep_count = ((raw >> 8) & 0x1f) as u32 + 1;
@@ -2162,8 +2245,8 @@ fn sreg_get_named(cpu: &Cpu, n: &str) -> u32 {
     match n {
         "rets" => cpu.rets,
         "sp" => cpu.sp,
-        "ssp" => cpu.ssp,
-        "usp" => cpu.usp,
+        "ssp" => cpu.get_ssp(),
+        "usp" => cpu.get_usp(),
         _ => cpu.sregs(n),
     }
 }
@@ -2381,9 +2464,10 @@ fn decode_alu4(raw: u64) -> Option<Alu4> {
             0xe => reg_dst(Op::Mul, Rhs::Imm(comp)),
             _ => None,
         },
-        0xe8 if b0 == 0x6c => {
+        0xe8 if b0 == 0x6c || b0 == 0x6d => {
             // `[R+#i] <<= #n` (6c e8): base bits 28-31, word offset bits
-            // 18-23, shift bits 24-27, op bits 16-17 like the e1 shifts
+            // 18-23, shift bits 24-27, op bits 16-17 like the e1 shifts;
+            // 6d e8: the same with 16 added to the shift (`6d e8 02 16` [r1+0] >>= 22)
             let op = match (raw >> 16) & 3 {
                 0 => Op::Shl,
                 2 => Op::Shr,
@@ -2394,7 +2478,7 @@ fn decode_alu4(raw: u64) -> Option<Alu4> {
                 dst: Dst::Mem(sext6x4(raw >> 18)),
                 src: s_hi,
                 op,
-                rhs: Rhs::Imm(((raw >> 24) & 0xf) as u32),
+                rhs: Rhs::Imm(((raw >> 24) & 0xf) as u32 + 16 * (b0 & 1)),
             })
         }
         0xe8 if b0 == 0x66 => {

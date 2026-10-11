@@ -1,9 +1,10 @@
 // The page: the front panel (drawn by the same Rust code as the native window, in its own wasm
 // instance), the pointer and keyboard input, the firmware and clock pickers, and the audio graph
-// that runs the emulator.
-import { appFromPackage, fetchPackage } from "./fwsc.js";
+// that runs the emulator. Every firmware boots from its whole update package (.fwsc), unpacked
+// in the wasm: a catalog entry's fetched from its author's site, or one opened from this
+// computer (M-VAVE's own: their server does not let other pages fetch it).
+import { fetchPackage } from "./fwsc.js";
 
-const ENTRY = 0x02000120;                  // every firmware's app links here (behind 0x120 padding)
 const CLOCKS = [60, 80, 100, 120, 160, 200, 240];
 const params = new URLSearchParams(location.search);
 const stored = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -22,6 +23,9 @@ const fwSel = document.getElementById("fw");
 const mhzSel = document.getElementById("mhz");
 const about = document.getElementById("about");
 const title = document.getElementById("title");
+const openInput = document.getElementById("open");
+const bankInput = document.getElementById("bank");
+const bankName = document.getElementById("bankname");
 
 const wasm = await (await fetch("fm1_web.wasm")).arrayBuffer();   // the worklet gets its own copy
 const ui = (await WebAssembly.instantiate(wasm, {})).instance.exports;
@@ -42,30 +46,31 @@ for (const c of new Set([...CLOCKS, mhz].sort((a, b) => a - b))) mhzSel.add(new 
 fwSel.value = fw.id;
 mhzSel.value = mhz;
 
-// the image of catalog entry f: its package, fetched from its author's site and unpacked here
-// (nothing is hosted with this page), the app behind 0x120 bytes of padding; kept per session
-const images = new Map();
-async function imageOf(f) {
-  if (!images.has(f.id)) {
-    const { bytes, url } = await fetchPackage(f);
-    const app = appFromPackage(bytes);
-    const image = new Uint8Array(0x120 + app.length);
-    image.set(app, 0x120);
-    images.set(f.id, { image, url });
-  }
-  return images.get(f.id);
+// the package of catalog entry f, fetched from its author's site (nothing is hosted with this
+// page); kept per session. A package opened from this computer is the entry `local`.
+const packages = new Map();
+async function packageOf(f) {
+  if (f.id === "local") return { bytes: f.bytes, url: null };
+  if (!packages.has(f.id)) packages.set(f.id, await fetchPackage(f));
+  return packages.get(f.id);
 }
+let bank = null;                           // a DX7 32-voice bank for the stock firmware, or null
 
 let loadedUrl = null;                      // the package the running machine came from
 
 function showFirmware() {
   title.textContent = `M-VAVE FM-1 · ${fw.name} (emulated)`;
-  const a = document.createElement("a");
-  a.href = fw.repo;
-  a.textContent = "source";
   const b = document.createElement("b");
-  b.textContent = `${fw.name} ${fw.version}`;
-  const parts = [b, ` by ${fw.author} · ${fw.license} · `, a, ` · ${fw.about}`];
+  b.textContent = `${fw.name} ${fw.version}`.trim();
+  let parts;
+  if (fw.id === "local") {
+    parts = [b, " · opened from this computer; it stays in this page."];
+  } else {
+    const a = document.createElement("a");
+    a.href = fw.repo;
+    a.textContent = "source";
+    parts = [b, ` by ${fw.author} · ${fw.license} · `, a, ` · ${fw.about}`];
+  }
   if (loadedUrl) {
     const p = document.createElement("a");
     p.href = loadedUrl;
@@ -73,6 +78,7 @@ function showFirmware() {
     parts.push(" Running ", p, ".");
   }
   about.replaceChildren(...parts);
+  if (fw.id === "local") return;           // (not something a link can bring back)
   const q = new URLSearchParams(location.search);
   q.set("fw", fw.id);
   q.set("mhz", mhz);
@@ -81,7 +87,7 @@ function showFirmware() {
 showFirmware();
 
 fwSel.addEventListener("change", () => {
-  fw = byId.get(fwSel.value);
+  fw = byId.get(fwSel.value) || localFw;
   loadedUrl = null;
   store("fm1.fw", fw.id);
   showFirmware();
@@ -94,6 +100,43 @@ mhzSel.addEventListener("change", () => {
   showFirmware();
   mhzSel.blur();
   if (node) boot();
+});
+
+// a package from this computer: the file picker or a drop on the panel
+let localFw = null;
+async function openLocal(file) {
+  if (!file) return;
+  localFw = { id: "local", name: file.name.replace(/\.fwsc$/i, ""), version: "", bytes: new Uint8Array(await file.arrayBuffer()) };
+  let opt = [...fwSel.options].find((o) => o.value === "local");
+  if (!opt) fwSel.add(opt = new Option("", "local"), 0);
+  opt.text = `${localFw.name} (your file)`;
+  fwSel.value = "local";
+  fw = localFw;
+  loadedUrl = null;
+  showFirmware();
+  if (node) boot();
+  else status.textContent = `${file.name} ready: click Start`;
+}
+openInput.addEventListener("change", () => { openLocal(openInput.files[0]); openInput.value = ""; });
+bankInput.addEventListener("change", async () => {
+  const file = bankInput.files[0];
+  bankInput.value = "";
+  if (!file) return;
+  bank = new Uint8Array(await file.arrayBuffer());
+  bankName.textContent = file.name;
+  if (node) boot();
+});
+const stage = document.querySelector(".stage");
+stage.addEventListener("dragover", (e) => { e.preventDefault(); });
+stage.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const file = [...e.dataTransfer.files].find((f) => /\.(fwsc|syx)$/i.test(f.name));
+  if (!file) return;
+  if (/\.syx$/i.test(file.name)) {
+    file.arrayBuffer().then((b) => { bank = new Uint8Array(b); bankName.textContent = file.name; if (node) boot(); });
+  } else {
+    openLocal(file);
+  }
 });
 
 // ---------------------------------------------------------------- drawing
@@ -222,22 +265,22 @@ let ac = null, last = null, bootSeq = 0;
 async function boot() {
   const seq = ++bootSeq;
   const f = fw;
-  status.textContent = `downloading ${f.name} from ${new URL(f.package).host}…`;
+  if (f.id !== "local") status.textContent = `downloading ${f.name} from ${new URL(f.package).host}…`;
   let got;
   try {
-    got = await imageOf(f);
+    got = await packageOf(f);
   } catch (err) {
     if (seq === bootSeq) status.textContent = `${f.name}: could not load it (${err.message})`;
     return;
   }
   if (seq !== bootSeq) return;                     // another choice came in meanwhile
-  const firmware = got.image.slice().buffer;
   loadedUrl = got.url;
   showFirmware();
   down.fill(0);                                    // nothing held across a reboot
   frame = null;
   last = null;
-  node.port.postMessage({ type: "boot", wasm: wasm.slice(0), firmware, entry: ENTRY, mhz });
+  node.port.postMessage({ type: "boot", wasm: wasm.slice(0), package: got.bytes.slice().buffer,
+    syx: bank ? bank.slice().buffer : null, mhz });
   status.textContent = `booting ${f.name}…`;
 }
 

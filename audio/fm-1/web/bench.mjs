@@ -1,13 +1,14 @@
-// Speed of the WebAssembly build: [FM1_FW=image.xip.bin] node web/bench.mjs [mhz] [seconds] [out.raw]
+// Speed of the WebAssembly build: [FM1_FW=image.xip.bin | FM1_FWSC=package.fwsc] node web/bench.mjs [mhz] [seconds] [out.raw]
 import { readFileSync } from "node:fs";
 const mhz = +(process.argv[2] || 120), secs = +(process.argv[3] || 6);
 const wasm = readFileSync(new URL("../target/wasm/wasm32-unknown-unknown/release/fm1_web.wasm", import.meta.url));
 const { instance } = await WebAssembly.instantiate(wasm, {});
 const x = instance.exports;
-const fw = readFileSync(process.env.FM1_FW || new URL("../work/felucca_xip.bin", import.meta.url));
+const fw = readFileSync(process.env.FM1_FWSC || process.env.FM1_FW || new URL("../work/felucca_xip.bin", import.meta.url));
 const p = x.fm1_alloc(fw.length);
 new Uint8Array(x.memory.buffer, p, fw.length).set(fw);
-x.fm1_boot(p, fw.length, 0x02000120, mhz);
+if (process.env.FM1_FWSC) x.fm1_boot_fwsc(p, fw.length, 0, 0, mhz);   // a whole package (M-VAVE's own, ...)
+else x.fm1_boot(p, fw.length, 0x02000120, mhz);
 const out = process.argv[4] ? [] : null;   // optional: the real audio as i16 L/R to this file
 const t0 = performance.now();
 let frames = 0, real = 0;

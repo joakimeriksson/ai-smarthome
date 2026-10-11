@@ -28,6 +28,8 @@ pub struct SpiFlash {
     wel: bool,
     /// bytes in the current command (after the opcode), for address assembly
     pending_prog: Vec<u8>,
+    /// FM1_FLASH_TRACE: log each command on CS release
+    trace: bool,
     /// JEDEC / unique-id reads
     pub jedec: [u8; 3],
 }
@@ -45,6 +47,7 @@ impl SpiFlash {
             wel: false,
             pending_prog: Vec::new(),
             jedec: [0x85, 0x60, 0x14],
+            trace: std::env::var_os("FM1_FLASH_TRACE").is_some(),
         }
     }
 
@@ -55,6 +58,9 @@ impl SpiFlash {
     }
 
     pub fn set_cs(&mut self, low: bool) {
+        if !low && self.cs_low && self.trace && self.nbytes > 0 {
+            eprintln!("flash cmd {:02x} addr {:06x} bytes {}", self.cmd, self.addr, self.nbytes);
+        }
         if low && !self.cs_low {
             self.cmd = 0;
             self.nbytes = 0;

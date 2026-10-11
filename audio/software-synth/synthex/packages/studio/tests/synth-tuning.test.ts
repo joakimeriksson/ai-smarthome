@@ -29,12 +29,11 @@ beforeAll(async () => {
     port = { onmessage: null, postMessage() { /* host side */ } }
   }
   g['registerProcessor'] = (name: string, cls: new () => Proc) => { registry[name] = cls }
-  const J = '../../../../js'
-  await import(`${J}/va-processor.js`)
-  await import(`${J}/ws-processor.js`)
-  await import(`${J}/sid-processor.js`)
-  await import(`${J}/fm-processor.js`)
-  await import(`${J}/pm-processor.js`)
+  await import(new URL('../../../../js/va-processor.js', import.meta.url).href)
+  await import(new URL('../../../../js/ws-processor.js', import.meta.url).href)
+  await import(new URL('../../../../js/sid-processor.js', import.meta.url).href)
+  await import(new URL('../../../../js/fm-processor.js', import.meta.url).href)
+  await import(new URL('../../../../js/pm-processor.js', import.meta.url).href)
 })
 
 function render(proc: string, setup: [string, unknown][], note: number, seconds = 0.9): Float64Array {

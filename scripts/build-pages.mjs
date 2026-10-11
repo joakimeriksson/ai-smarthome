@@ -98,6 +98,9 @@ const DEMOS = [
     // Landing page inside the demo, rather than its bare index.
     entry: 'demo.html',
   },
+  // The tracker outgrew this repository and lives in its own now, deploying
+  // itself on every push. It stays on this page because it belongs on it -
+  // but as a link, so there is no copy of it here to drift.
   {
     slug: 'fm-1',
     title: 'M-VAVE FM-1 Emulator',

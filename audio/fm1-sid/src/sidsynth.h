@@ -14,6 +14,9 @@
  *   hard restart  a frame of ADSR 0 / gate off before a retrigger, so attacks stay sharp
  *
  * Polyphony: 3 notes per chip (1 per chip with sync / ring patches); 1 to SYN_MAXCHIPS chips.
+ * A part (sidsyn_set_voice): the synth plays one voice of one chip only, so three of them, each
+ * with its own patch, share a chip as the tracks of C64 music do. A part's filter routes only its
+ * voice, and its sync / ring take the neighbouring voice as the source (the one before it).
  * SPDX-License-Identifier: BSD-2-Clause */
 #ifndef SIDSYNTH_H
 #define SIDSYNTH_H
@@ -67,6 +70,7 @@ typedef struct {
     int32_t cut_ofs;             /* knob offset to the cutoff */
     int32_t transpose;           /* semitones */
     uint8_t vol;
+    int8_t voice;                /* -1: all of chip 0..nchips-1; 0..2: a part on that voice of chip 0 */
     /* optional, set after sidsyn_init: another SID engine plays the notes. Every register
      * write goes to write() instead of chip[], and env() reports a voice's envelope level
      * (0..255) for the voice allocation. The caller then runs sidsyn_tick at the frame rate
@@ -78,6 +82,8 @@ typedef struct {
 
 void sidsyn_init(sidsyn_t *y, uint32_t nchips, sid_model_t model, uint32_t fs);
 void sidsyn_set_patch(sidsyn_t *y, const sid_patch_t *p);
+/* a part on voice 0..2 of the first chip, or -1 for every voice again; sets the patch again */
+void sidsyn_set_voice(sidsyn_t *y, int voice);
 void sidsyn_note_on(sidsyn_t *y, uint32_t note);
 void sidsyn_note_off(sidsyn_t *y, uint32_t note);
 void sidsyn_all_off(sidsyn_t *y);

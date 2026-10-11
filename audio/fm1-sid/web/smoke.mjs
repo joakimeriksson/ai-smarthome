@@ -56,4 +56,11 @@ if (colours < 6) fail("the screen is not drawn");
   y.fm1_key(21, 0);
   console.log(`synth: ${quiet.toFixed(4)} before a key, ${note.toFixed(4)} with C4 down`);
   if (quiet > 0.002 || note < 0.01) fail("the synth mode does not play the keys");
+  level(0.5);
+  y.fm1_key(12, 1);                       // PLAY: the step sequencer's own pattern
+  level(0.1);
+  y.fm1_key(12, 0);
+  const seq = level(2);
+  console.log(`sequencer: ${seq.toFixed(4)} with PLAY`);
+  if (seq < 0.02) fail("the step sequencer does not play");
 }

@@ -9,7 +9,8 @@ import { buildPack, bootImage, sidInfo } from "./pack.js";
 
 const HVSC = "https://www.hvsc.c64.org/download/C64Music/";
 const MHZ = 240;                       // the FM-1's clock; idle time is skipped, not emulated
-const KEY = { OCTDN: 0, OCTUP: 1, FX: 2, EDIT: 6, HOME: 8, PLAY: 12 };
+const KEY = { OCTDN: 0, OCTUP: 1, FX: 2, SCL: 3, EDIT: 6, GLO: 7, HOME: 8, ARP: 10, SEQ: 11, PLAY: 12, REC: 13 };
+const KIT = 12;                        // a track's patch: the drum kit
 // fm1-sid's instruments (src/sidsynth.c SID_PATCHES), in the firmware's order
 const PATCHES = ["Saw Lead", "PWM Bass", "Major Chord", "Minor Chord", "Sync Lead", "Ring Bell",
   "Kick", "Snare", "Hat", "Reso Pad", "P&S Organ", "BP Sweep"];
@@ -42,7 +43,14 @@ const st = {
   booted: false,
   mode: 0,                             // 0 the tune player, 1 the synth (HOME switches)
   patch: 0, octave: 0, knob: [0, 0, 0, 0],
+  // the step sequencer (the firmware's, mirrored): its page, running, recording, the selected
+  // track, each track's patch and knobs, the tempo
+  seq: null,
 };
+const seqFresh = () => ({ view: 0, on: 0, rec: 0, sel: 0, trk: [1, 0, KIT], knob: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], bpm: 120 });
+st.seq = seqFresh();
+const parts = () => st.mode === 1 && (st.seq.view || st.seq.on || st.seq.rec);
+const patchName = (n) => n === KIT ? "Drum Kit" : PATCHES[n];
 let node = null, ac = null, gain = null, analyser = null, frame = null, bootSeq = 0;
 let packed = [];                       // the entries in the running image, in pack order
 
@@ -89,8 +97,14 @@ function setKey(id, on) {
   else if (id === KEY.EDIT) { st.engine ^= 1; store("fm1sid.engine", st.engine); restarted(); }
   else if (id === KEY.FX) { st.model = st.model === "6581" ? "8580" : "6581"; restarted(); }
   else if (st.mode) {
+    const q = st.seq;
     if (id === KEY.OCTUP) st.octave = Math.min(2, st.octave + 1);
     else if (id === KEY.OCTDN) st.octave = Math.max(-2, st.octave - 1);
+    else if (id === KEY.SEQ) q.view ^= 1;
+    else if (id === KEY.PLAY) q.on ^= 1;
+    else if (id === KEY.REC) q.rec ^= 1;
+    else if (id >= KEY.SCL && id < KEY.SCL + 3) q.sel = id - KEY.SCL;
+    showList();
   } else if (id === KEY.PLAY) st.paused = !st.paused;
   else if (id === KEY.OCTUP) stepped(1);
   else if (id === KEY.OCTDN) stepped(-1);
@@ -100,14 +114,25 @@ function tap(id) { setKey(id, true); setTimeout(() => setKey(id, false), 90); }
 function turnMachine(enc, clicks) {
   send({ type: "enc", enc, clicks });
   if (!st.booted) return;
-  if (st.mode && (enc === 6 || enc === 0)) {
+  const q = st.seq;
+  if (st.mode && enc === 0 && q.view && !q.on) {
+    // (SELECT on the sequencer's page moves the step cursor)
+  } else if (st.mode && (enc === 6 || enc === 0) && parts()) {
+    q.trk[q.sel] = ((q.trk[q.sel] + clicks) % (KIT + 1) + KIT + 1) % (KIT + 1);
+    q.knob[q.sel] = [0, 0, 0, 0];
+    showList();
+    showNow();
+  } else if (st.mode && (enc === 6 || enc === 0)) {
     st.patch = ((st.patch + clicks) % PATCHES.length + PATCHES.length) % PATCHES.length;
     st.knob = [0, 0, 0, 0];
     showList();
     showNow();
+  } else if (st.mode && enc === 1) {
+    q.bpm = Math.max(40, Math.min(240, q.bpm + 2 * clicks));
+    showNow();
   } else if (st.mode && enc >= 2 && enc <= 5) {
-    const k = enc - 2, lim = k ? 15 : 64;
-    st.knob[k] = Math.max(-lim, Math.min(lim, st.knob[k] + clicks));
+    const k = enc - 2, lim = k ? 15 : 64, kn = parts() ? q.knob[q.sel] : st.knob;
+    kn[k] = Math.max(-lim, Math.min(lim, kn[k] + clicks));
     showNow();
   } else if (enc === 6 || enc === 0) stepped(clicks);
 }
@@ -171,7 +196,7 @@ canvas.addEventListener("wheel", (e) => {
 // keyboard: the FM-1 page's layout, plus N / P for the next / previous tune
 const PIANO = "awsedftgyhujkolp;'";
 const BUTTONS = { z: 0, x: 1, " ": 12, r: 13, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 0: 11 };
-const ENC_KEYS = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowDown: [1, -1], ArrowUp: [1, 1] };
+const ENC_KEYS = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowDown: [1, -1], ArrowUp: [1, 1], ",": [2, -1], ".": [2, 1] };
 const typing = (e) => e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLButtonElement && e.key === " ";
 function keyId(k) {
   const i = PIANO.indexOf(k.toLowerCase());
@@ -231,6 +256,7 @@ async function boot(first) {
   st.patch = 0;                                      // (the firmware starts on these)
   st.octave = 0;
   st.knob = [0, 0, 0, 0];
+  st.seq = seqFresh();
   st.model = modelOf(packed[st.idx]);
   st.booted = false;
   restarted();
@@ -271,6 +297,14 @@ function pickPatch(n) {
   if (!node) { st.mode = 1; start(initial).then(() => setTimeout(() => pickPatch(n), 1200)); return; }
   if (!st.booted) return;
   if (!st.mode) { tap(KEY.HOME); setTimeout(() => pickPatch(n), 250); return; }
+  if (parts()) {                       // the selected track's patch (the kit included)
+    let d = n - st.seq.trk[st.seq.sel];
+    if (d > 6) d -= 13;
+    if (d < -6) d += 13;
+    if (d) turnMachine(ENC_TUNE, d);
+    return;
+  }
+  if (n === KIT) { toast("The drum kit is for the sequencer's tracks: open the sequencer (SEQ) first."); return; }
   let d = n - st.patch;
   if (d > 6) d -= 12;
   if (d < -6) d += 12;
@@ -519,10 +553,11 @@ function showList() {
 }
 function showPatches() {
   const ul = $("patches");
-  ul.replaceChildren(...PATCHES.map((name, i) => {
+  const now = parts() ? st.seq.trk[st.seq.sel] : st.patch;
+  ul.replaceChildren(...[...PATCHES, "Drum Kit"].map((name, i) => {
     const li = el("li");
     const b = el("button", "row");
-    if (st.mode && node && i === st.patch) b.classList.add("on");
+    if (st.mode && node && i === now) b.classList.add("on");
     const n = el("span", "n");
     n.append(el("span", "num", String(i + 1).padStart(2, "0")), eq());
     b.append(n, el("span", "t", name), el("span", "a", PATCH_NOTES[i]));
@@ -535,7 +570,8 @@ const PATCH_NOTES = ["sawtooth into a resonant low-pass, delayed vibrato", "puls
   "pulse arpeggio 0 4 7 on every key", "pulse arpeggio 0 3 7 on every key",
   "saw hard-synced to the note, sweeping up · two voices a note", "triangle ring-modulated by a voice 19 semitones up · two voices a note",
   "noise click, pulse, a falling triangle", "noise and pulse", "noise through a high-pass",
-  "slow saw, resonant low-pass opening", "pulse and saw at once", "saw through a band-pass at full resonance, sweeping"];
+  "slow saw, resonant low-pass opening", "pulse and saw at once", "saw through a band-pass at full resonance, sweeping",
+  "sequencer tracks: C–D# kick, E–G snare, G#–B hat"];
 
 function eq() {
   const s = el("span", "eq");
@@ -548,11 +584,19 @@ function showNow() {
   document.body.classList.toggle("synth", st.mode === 1);
   for (const b of document.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", String(Number(b.dataset.mode) === st.mode));
   if (st.mode) {
-    $("np-title").textContent = PATCHES[st.patch];
-    $("np-author").textContent = `fm1-sid instrument ${st.patch + 1} of ${PATCHES.length} · three voices on one SID`;
+    const q = st.seq, pt = parts();
+    $("np-title").textContent = pt ? `Track ${q.sel + 1}: ${patchName(q.trk[q.sel])}` : PATCHES[st.patch];
+    $("np-author").textContent = pt ? `step sequencer · ${q.on ? "playing" : "stopped"}${q.rec ? " · recording" : ""} · ${q.bpm} BPM` :
+      `fm1-sid instrument ${st.patch + 1} of ${PATCHES.length} · three voices on one SID`;
+    $("seq-bpm").textContent = String(q.bpm);
+    $("seq-view").setAttribute("aria-pressed", String(!!q.view));
+    $("seq-play").setAttribute("aria-pressed", String(!!q.on));
+    $("seq-play").textContent = q.on ? "■ Stop" : "▶ Play";
+    $("seq-rec").setAttribute("aria-pressed", String(!!q.rec));
+    for (const b of document.querySelectorAll("[data-track]")) b.setAttribute("aria-pressed", String(Number(b.dataset.track) === q.sel));
     $("np-chip").textContent = node ? st.model : "";
     $("np-oct").textContent = `${st.octave >= 0 ? "+" : "−"}${Math.abs(st.octave)}`;
-    st.knob.forEach((v, k) => { $(`knob${k}`).textContent = `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v)}`; });
+    (pt ? q.knob[q.sel] : st.knob).forEach((v, k) => { $(`knob${k}`).textContent = `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v)}`; });
     for (const b of document.querySelectorAll("[data-engine]")) b.setAttribute("aria-pressed", String(Number(b.dataset.engine) === st.engine));
     for (const b of document.querySelectorAll("[data-chip]")) b.setAttribute("aria-pressed", String(Number(b.dataset.chip) === st.chip));
     document.title = node ? `${PATCHES[st.patch]} · FM-1 SID synth` : "FM-1 SID";
@@ -728,6 +772,15 @@ $("oct-dn").addEventListener("click", () => node ? tap(KEY.OCTDN) : null);
 $("oct-up").addEventListener("click", () => node ? tap(KEY.OCTUP) : null);
 for (const b of document.querySelectorAll("[data-knob]")) b.addEventListener("click", () => knobBy(Number(b.dataset.knob), Number(b.dataset.d)));
 $("midi").addEventListener("click", connectMidi);
+const seqKey = (id) => () => { if (!node || !st.booted) return; if (!st.mode) { tap(KEY.HOME); setTimeout(() => tap(id), 250); } else tap(id); };
+$("seq-view").addEventListener("click", seqKey(KEY.SEQ));
+$("seq-play").addEventListener("click", seqKey(KEY.PLAY));
+$("seq-rec").addEventListener("click", seqKey(KEY.REC));
+$("seq-clr").addEventListener("click", seqKey(KEY.GLO));
+$("seq-clrtrk").addEventListener("click", seqKey(KEY.ARP));
+for (const b of document.querySelectorAll("[data-track]")) b.addEventListener("click", seqKey(KEY.SCL + Number(b.dataset.track)));
+$("bpm-dn").addEventListener("click", () => node && st.mode && turnMachine(1, -2));
+$("bpm-up").addEventListener("click", () => node && st.mode && turnMachine(1, 2));
 
 // your own .sid files: the picker or a drop anywhere on the page
 async function openFiles(files) {

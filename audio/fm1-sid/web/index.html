@@ -109,6 +109,13 @@
   .kn span { flex: 1; }
   .kn .ib { width: 28px; height: 28px; font-size: 16px; line-height: 1; }
   .kn output { min-width: 2.6em; text-align: center; font-family: var(--mono); color: var(--ink); }
+  .seqbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; align-items: center; }
+  .seqbar .btn { height: 34px; font-size: 13px; }
+  .seqbar .btn[aria-pressed="true"] { background: var(--c64-deep); border-color: var(--c64); color: #fff; }
+  .seqbar .rec[aria-pressed="true"] { background: #6e2a2e; border-color: var(--ring); }
+  .seqbar .tracks { padding: 2px; }
+  .seqbar .tracks button { padding: 5px 12px; }
+  .seqbar .bpm { padding: 3px 8px; }
   .seg { display: flex; background: #101118; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
   .seg button { flex: 1; border: 0; background: none; border-radius: 7px; padding: 7px 8px; cursor: pointer; color: var(--dim); font-size: 13px; white-space: nowrap; }
   .seg button[aria-pressed="true"] { background: var(--c64-deep); color: #fff; box-shadow: inset 0 0 0 1px var(--c64); }
@@ -265,6 +272,19 @@
       </div>
       <div class="only-synth synth-ctl">
         <p class="hint-keys">Play the FM-1’s keys, your computer’s <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> … <kbd>;</kbd> <kbd>'</kbd> (C4–F5), or a MIDI keyboard.</p>
+        <div class="seqbar" role="group" aria-label="Step sequencer">
+          <button class="btn" id="seq-view" type="button" aria-pressed="false" title="SEQ: the sequencer's page on the screen">Sequencer</button>
+          <button class="btn" id="seq-play" type="button" aria-pressed="false" title="PLAY">▶ Play</button>
+          <button class="btn rec" id="seq-rec" type="button" aria-pressed="false" title="REC: running, keys land on the nearest step; stopped, they fill the cursor">● Rec</button>
+          <span class="seg tracks" role="group" aria-label="Track">
+            <button type="button" data-track="0" aria-pressed="true" title="SCL">1</button>
+            <button type="button" data-track="1" aria-pressed="false" title="ENV">2</button>
+            <button type="button" data-track="2" aria-pressed="false" title="LFO">3</button>
+          </span>
+          <button class="btn" id="seq-clr" type="button" title="GLO: clear the step">Clear step</button>
+          <button class="btn" id="seq-clrtrk" type="button" title="ARP: clear the track">Clear track</button>
+          <span class="kn bpm"><span>BPM</span><button class="ib" id="bpm-dn" type="button" aria-label="Slower">−</button><output id="seq-bpm">120</output><button class="ib" id="bpm-up" type="button" aria-label="Faster">+</button></span>
+        </div>
         <div class="knobs">
           <div class="kn"><span>Octave</span><button class="ib" id="oct-dn" type="button" aria-label="Octave down">−</button><output id="np-oct">+0</output><button class="ib" id="oct-up" type="button" aria-label="Octave up">+</button></div>
           <div class="kn"><span>Cutoff</span><button class="ib" type="button" data-knob="0" data-d="-4" aria-label="Cutoff down">−</button><output id="knob0">±0</output><button class="ib" type="button" data-knob="0" data-d="4" aria-label="Cutoff up">+</button></div>
@@ -329,6 +349,12 @@
         <p class="hint">fm1-sid’s own instrument driver, the way C64 music drivers play the chip: per-frame wave
           tables, pulse and filter sweeps, vibrato, hard restart. Three voices share one SID and its filter.
           The knobs: KNOB1 cutoff, KNOB2 resonance, KNOB3 attack, KNOB4 release.</p>
+        <p class="hint"><b>Step sequencer</b>: three tracks of 16 steps, each on its own SID voice with its own
+          patch; track 3 starts as a drum kit (C–D# kick, E–G snare, G#–B hat). SEQ shows it, PLAY runs it,
+          REC records: while it runs, keys land on the nearest step; stopped, they fill the step under the
+          cursor (SELECT moves it). SCL / ENV / LFO pick track 1 / 2 / 3, PRESETS its patch, ALGORITHM the
+          tempo, GLO clears a step, ARP a track. The tracks share the chip's one filter, set by the first
+          track whose patch has it; sync and ring take the voice before as their source.</p>
         <ol class="list" id="patches"></ol>
       </div>
       <div id="pane-files" role="tabpanel" aria-labelledby="tab-files" hidden>
@@ -369,9 +395,10 @@
     <p class="sub">The firmware reads the FM-1’s own controls; the buttons above press them for you.</p>
     <div class="ctl-grid">
       <div><h3>On the FM-1</h3><p><b>HOME</b>: tune player or SID synth. Player: <b>PRESETS</b> / <b>SELECT</b>, <b>OCT−</b> / <b>OCT+</b>: tune; <b>PLAY</b>: pause.
-        Synth: the keys play; <b>PRESETS</b> / <b>SELECT</b>: instrument; <b>OCT±</b>: octave; <b>KNOB1–4</b>: cutoff, resonance, attack, release; <b>PLAY</b>: all notes off.
+        Synth: the keys play; <b>PRESETS</b> / <b>SELECT</b>: instrument; <b>OCT±</b>: octave; <b>KNOB1–4</b>: cutoff, resonance, attack, release.
+        Sequencer: <b>SEQ</b> page, <b>PLAY</b> run / stop, <b>REC</b> record, <b>SCL ENV LFO</b> track 1 2 3, <b>ALGORITHM</b> tempo, <b>GLO</b> clear step, <b>ARP</b> clear track.
         Both: <b>EDIT</b>: reSID or the own model; <b>FX</b>: 6581 or 8580.</p></div>
-      <div><h3>Keyboard</h3><p><kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> … <kbd>'</kbd>: the note keys · <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>N</kbd> <kbd>P</kbd>: tune or instrument · <kbd>7</kbd>: HOME · <kbd>Space</kbd>: PLAY · <kbd>5</kbd>: EDIT · <kbd>1</kbd>: FX · <kbd>Z</kbd> <kbd>X</kbd>: OCT− / OCT+</p></div>
+      <div><h3>Keyboard</h3><p><kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> … <kbd>'</kbd>: the note keys · <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>N</kbd> <kbd>P</kbd>: tune or instrument · <kbd>7</kbd>: HOME · <kbd>Space</kbd>: PLAY · <kbd>0</kbd>: SEQ · <kbd>R</kbd>: REC · <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd>: tracks · <kbd>,</kbd> <kbd>.</kbd>: tempo · <kbd>5</kbd>: EDIT · <kbd>1</kbd>: FX · <kbd>Z</kbd> <kbd>X</kbd>: OCT− / OCT+</p></div>
       <div><h3>Links</h3><p>The address bar follows the tune: copy it to send someone straight to it. <code>?t=</code> takes any HVSC path, <code>?mode=synth</code> starts on the synth.</p></div>
     </div>
       <p class="note"><b>On a real FM-1</b>: <a href="sidplayer.fwsc" download>sidplayer.fwsc</a> is this firmware as an

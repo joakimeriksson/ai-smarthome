@@ -75,3 +75,17 @@ build/sidlogger: host/sidlogger.cpp $(LSP)/src/.libs/libsidplayfp.a
 
 compare: build/sid_record build/sid_replay
 	tools/compare.sh
+
+# the PSID player (player/psid.c around floooh's m6502.h, ext/chips) on the host: register stream
+# as sidlog v2, to check it against build/sidlogger; and the FM-1 firmware that plays the tunes
+build/psidlog: player/psid.c player/psid.h player/psidlog.c ext/chips/m6502.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) -Iext/chips -Iplayer -o $@ player/psid.c player/psidlog.c
+
+firmware:
+	firmware/build.sh
+
+webplayer: firmware
+	tools/webplayer.sh
+
+.PHONY: compare firmware webplayer

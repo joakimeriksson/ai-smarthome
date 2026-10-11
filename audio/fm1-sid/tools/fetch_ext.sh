@@ -3,6 +3,7 @@
 # generate the headers their autoconf builds would make:
 #   reSID 0.16 (Dag Lem), reSID 1.0 (libsidplayfp/resid), reSIDfp (libsidplayfp/libresidfp),
 #   libsidplayfp 2.6.0 (patched with a SID write hook, for build/sidlogger)
+# and for the player firmware: floooh/chips m6502.h (zlib) and Felucca's FM-1 hal (GPL-3.0)
 set -eu
 cd "$(dirname "$0")/.."
 mkdir -p ext && cd ext
@@ -24,4 +25,8 @@ if [ ! -f libsidplayfp-2.6.0/src/.libs/libsidplayfp.a ]; then
         patch -s -d libsidplayfp-2.6.0 -p1 < ../tools/libsidplayfp-2.6.0-sidlog.patch; }
     (cd libsidplayfp-2.6.0 && ./configure -q --disable-shared --enable-static --without-exsid --without-usbsid && make -s -j4)
 fi
-echo "ext/: reSID 0.16, reSID 1.0, reSIDfp, libsidplayfp ready"
+# the 6502 core for player/psid.c and the FM-1 startup / vector / ISR code for firmware/
+mkdir -p chips
+[ -f chips/m6502.h ] || curl -sSfL -o chips/m6502.h https://raw.githubusercontent.com/floooh/chips/master/chips/m6502.h
+[ -d Felucca ] || git clone -q --depth 1 https://github.com/hugelton/Felucca Felucca
+echo "ext/: reSID 0.16, reSID 1.0, reSIDfp, libsidplayfp, m6502.h, Felucca ready"

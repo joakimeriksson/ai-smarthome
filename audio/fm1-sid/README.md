@@ -24,6 +24,11 @@ behålls ovanpå reSID. På vägen hittades fyra fel i FM-1-emulatorn (64-bitars
 multiply-accumulate och push/pop-masker) som gjorde all `double`-räkning fel; fixarna ligger
 i PR #31.
 
+Dessutom finns en **SID-spelare som firmware** (`firmware/`): riktiga C64-låtar (PSID) körs
+med sin egen 6502-kod på FM-1:ans CPU, ljudet från reSID 0.16 (eller egna modellen), och
+LCD:n visar de tre rösterna, sync/ring och filtret. Den går i `fm1-emu` och i
+webbemulatorn (`tools/webplayer.sh`); ljudet stämmer med reSID på datorn.
+
 ## Short answer
 
 Yes. A SID chip costs **~8 % of one 240 MHz core with reSID 0.16 (fast mode)** and ~6 % with
@@ -91,6 +96,54 @@ push / pop for masks the corpora never had. The fixes, their probes and notes ar
 `fm-1-flags-carry`). Until it is merged, `fm1/run_resid.py` needs an `fm1-emu` built from
 that branch; `fm1/run.py` (the own model, integer only) runs on either.
 
+## The SID player firmware (`firmware/`, `player/`)
+
+Path C below, built: C64 tunes played by their own 6502 code on the FM-1's CPU, with the
+chip drawn on the LCD.
+
+- `player/psid.c` is the C64 side of a PSID tune around floooh's cycle-stepped `m6502.h`
+  (zlib, undocumented opcodes included; `ext/chips`): 64 KB RAM, `$01` banking, the CIA
+  timer latch (`$DC04/05`) for the play rate, `$D012` raster reads, OSC3 / ENV3 reads. It runs
+  `init` and `play` as subroutines and hands each SID write to a callback with its C64 cycle.
+  RSID tunes (which need the full C64: interrupts, VIC, both CIAs) are not supported; JaC64
+  (Java) or libsidplayfp would be the place to borrow that from.
+- `player/psidlog.c` (`make build/psidlog`) runs the same code on the host and writes a
+  sidlog v2, so `host/replay.cc` and `tools/refcheck.py` can hold it against libsidplayfp's
+  stream: Sanxion 0.979, Roland's Rat Race 0.888, Contaxia 0.915 log-spectrum correlation
+  against the `sidplayfp` render.
+- `firmware/main.c` (GPL-3.0-only: it is built on Felucca's HAL, startup and ISR code in
+  `ext/Felucca`) plays them. The main loop runs the play routine up to three frames ahead
+  and queues the writes with their cycle; the audio interrupt (ALNK0, 128-frame half buffers
+  at 44117.6 Hz) clocks reSID 0.16 fast (`firmware/resid_glue.cc`) to each write's cycle, or
+  renders the own model to the sample. The LCD shows each voice (waveform, gate, note,
+  envelope, pulse width; SYNC / RING badges), the filter (mode, routing, cutoff, resonance),
+  an oscilloscope and the CPU load.
+- Keys: PRESETS / SELECT encoder or OCT− / OCT+ = tune, PLAY = pause, EDIT = engine (reSID /
+  own model), FX = 6581 / 8580. Hold OCT− and OCT+ for 3 s for the USB update mode.
+- `firmware/gen_assets.py` puts a playlist of 16 tunes (from `tools/tunes.sh`'s `build/`
+  cache) and an 8x12 font into `build/fw/assets.h`; `firmware/build.sh` makes
+  `build/fw/sidplayer.bin` (288 KB of the 568 KB app slot, 347 KB RAM, reSID's wave tables in
+  flash) and `sidplayer_xip.bin` for `fm1-emu --bin`. The tunes are HVSC files: the binary is
+  for your own use, not for publishing.
+- Measured in `fm1-emu`: the audio interrupt takes ~9.5 % of the 240 MHz core with reSID, and
+  its output matches host reSID fed the same stream (correlation 0.984). It needs PR #31's
+  emulator fixes; on master reSID's setup goes wrong.
+
+```sh
+tools/fetch_ext.sh && tools/tunes.sh          # engines, m6502.h, Felucca; the HVSC tunes
+firmware/build.sh                             # build/fw/sidplayer.bin, sidplayer_xip.bin
+../fm-1/target/release/fm1-emu --bin build/fw/sidplayer_xip.bin --entry 0x02000120 \
+    --ms 3000 --wav build/fw/out.wav --keys "t:PRESET:+3,t:EDIT" --snap   # LCD -> work/lcd_*.bmp
+tools/webplayer.sh [../fm-1]                  # the browser emulator with the player -> build/webemu
+(cd build/webemu && python3 -m http.server 8642)
+```
+
+`tools/webplayer.sh` builds `../fm-1/web` into `build/webemu`, applies
+`tools/webplayer.patch` (a firmware entry that boots a raw XIP image with `fm1_boot` instead of
+an update package) and puts the image next to the page. The emulator runs in WebAssembly in
+the audio thread; on a slow machine pick a lower clock in the page (the player's interrupt
+needs ~23 MHz of the emulated CPU).
+
 ## Measured (own model)
 
 `fm1/run.py` builds the bench (`fm1/bench.c` + `fm1/workload.h`: a held chord on every
@@ -140,6 +193,13 @@ host/sidlogger.cpp        a tune's SID writes, cycle-exact, from libsidplayfp's 
 tools/scan_tunes.py       rank HVSC tunes by sync / ring / filter use
 tools/tunes.sh,           HVSC tunes on every engine + sidplayfp reference; alignment check
   refcheck.py
+player/psid.h, psid.c     PSID tunes on floooh's m6502 (the C64 side: RAM, banking, CIA latch)
+player/psidlog.c          the same on the host -> sidlog v2, to check against libsidplayfp
+firmware/main.c,          the FM-1 SID player: 6502 + reSID 0.16 / own model, LCD visualiser
+  resid_glue.cc, app.ld,  (GPL-3.0-only, on Felucca's HAL)
+  gen_assets.py, build.sh
+tools/webplayer.sh,       the browser emulator (../fm-1/web) with the player built in
+  webplayer.patch
 ```
 
 ```sh
@@ -243,7 +303,7 @@ compatible).
 view, wavetable / pulse / filter table editors, a small tracker), multi-SID, and room for C.
 More work: USB, MIDI, flash and the update path have to come along.
 
-**C. A `.sid` player.** A 6502 core plus the PSID format plays the C64 music library with the
+**C. A `.sid` player** (built: see "The SID player firmware" above). A 6502 core plus the PSID format plays the C64 music library with the
 same chip model. Cost is small: a typical play routine runs a few thousand 6502 cycles per
 frame, i.e. a few million pi32v2 instructions per second. Digi-heavy tunes that write
 registers at kHz rates need the chip rendered in smaller chunks (supported: `sid_render`
@@ -269,4 +329,5 @@ takes any length).
 3. Felucca engine (path A): `eng_sid.c`, build Felucca with the toolchain, play it in
    `fm1-live` and the web emulator.
 4. On the real FM-1 when it arrives: cycle cost, sound check against a real C64.
-5. Optional: the 6502 + PSID player (path C), a tracker UI (path B).
+5. The player: RSID tunes (full C64 from JaC64 or libsidplayfp), multi-SID tunes, tunes
+   loaded over USB instead of built in; a tracker UI (path B).

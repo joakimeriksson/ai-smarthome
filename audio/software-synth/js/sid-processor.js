@@ -1375,7 +1375,8 @@ jsSID.ReSID.sampling_method = Object.freeze({
 	SAMPLE_FAST: {},
 	SAMPLE_INTERPOLATE: {},
 	SAMPLE_RESAMPLE_INTERPOLATE: {},
-	SAMPLE_RESAMPLE_FAST: {}
+	SAMPLE_RESAMPLE_FAST: {},
+	SAMPLE_AVERAGE: {}
 });
 
 jsSID.ReSID.prototype.set_chip_model = function(model) {
@@ -1742,6 +1743,8 @@ jsSID.ReSID.prototype.clock = function(delta_t, buf, n, interleave, buf_offset) 
 			return this.clock_resample_interpolate(delta_t, buf, n, interleave, buf_offset);
 		case jsSID.ReSID.sampling_method.SAMPLE_RESAMPLE_FAST:
 			return this.clock_resample_fast(delta_t, buf, n, interleave, buf_offset);
+		case jsSID.ReSID.sampling_method.SAMPLE_AVERAGE:
+			return this.clock_average(delta_t, buf, n, interleave, buf_offset);
 	}
 };
 
@@ -1815,6 +1818,71 @@ jsSID.ReSID.prototype.clock_interpolate = function(delta_t, buf, n, interleave, 
 
 };
 
+
+// SAMPLE_AVERAGE — not in reSID. SAMPLE_INTERPOLATE point-samples a signal
+// that is clocked at ~1 MHz and full of edges (saw, pulse, sync), so every
+// harmonic above 24 kHz folds back into the audio band: a raw saw at C6 was
+// only 26 dB above its own inharmonic alias junk, and the real chip has none
+// (its output is analog). reSID's own cure, the resampling FIR, is ~1500 taps
+// per sample per chip - far beyond a worklet running three chips.
+//
+// This method still clocks every cycle (so envelopes, sync, filter and the
+// 6581 quirks are exactly as before) but, instead of keeping one cycle per
+// sample, integrates ALL of them under a triangular kernel two output periods
+// wide (a 2nd-order B-spline, i.e. a CIC-2 decimator). Its nulls sit exactly
+// on the multiples of the output rate where aliases come from. Costs two
+// multiply-adds per cycle; output is delayed by one sample.
+jsSID.ReSID.prototype.clock_average = function(delta_t, buf, n, interleave, buf_offset) {
+	var FIX = jsSID.ReSID.const.FIXP_SHIFT, MASK = jsSID.ReSID.const.FIXP_MASK;
+	// extfilt units -> 16-bit sample, as output() does
+	var scale = 1 / ((4095 * 255 >> 7) * 3 * 15 * 2 / 65536);
+	if (this.avg_tail === undefined) {
+		this.avg_tail = 0; this.avg_tail_w = 0;       // late half of the previous period
+		this.avg_pA = 0; this.avg_pB = 0; this.avg_pn = 0; // cycles already clocked into this period
+	}
+	var s = 0;
+	for (;;) {
+		var next_sample_offset = this.sample_offset + this.cycles_per_sample;
+		var delta_t_sample = next_sample_offset >> FIX;
+		if (delta_t_sample > delta_t) {
+			break;
+		}
+		if (s >= n) {
+			return s;
+		}
+		var len = this.avg_pn + delta_t_sample;
+		var inv = 1 / len;
+		var A = this.avg_pA, B = this.avg_pB;
+		for (var i = this.avg_pn; i < len; i++) {
+			this.clock_one();
+			var x = this.extfilt.Vo, u = (i + 0.5) * inv;
+			B += x * u;
+			A += x - x * u;
+		}
+		this.avg_pA = 0; this.avg_pB = 0; this.avg_pn = 0;
+		delta_t -= delta_t_sample;
+		this.sample_offset = next_sample_offset & MASK;
+
+		var v = (this.avg_tail + A) / ((this.avg_tail_w + len) * 0.5) * scale;
+		this.avg_tail = B; this.avg_tail_w = len;
+		if (v >= 32767) v = 32767; else if (v < -32768) v = -32768;
+		buf[s++ * interleave + buf_offset] = v / 32768;
+	}
+	// Cycles left over belong to the next period: clock them now, weighted
+	// against the nominal period length.
+	if (delta_t > 0) {
+		var nominal = (this.cycles_per_sample >> FIX) + 1;
+		for (var k = 0; k < delta_t; k++) {
+			this.clock_one();
+			var xx = this.extfilt.Vo, uu = (this.avg_pn + 0.5) / nominal;
+			this.avg_pB += xx * uu;
+			this.avg_pA += xx - xx * uu;
+			this.avg_pn++;
+		}
+	}
+	this.sample_offset -= delta_t << FIX;
+	return s;
+};
 
 jsSID.ReSID.prototype.clock_resample_interpolate = function(delta_t, buf, n, interleave, buf_offset) {
 	var s = 0;
@@ -2027,6 +2095,9 @@ const freqtblhi = [
 
 const NUM_VOICES = 3; // 1 SID chip per voice, 3 chips = 3-note polyphony
 const NUM_CHIPS = 3;
+// A released chip keeps running this long after its envelopes reach zero, so
+// the filter and output stage settle before it is frozen (see this._idle).
+const IDLE_SAMPLES = 4096;
 const TWO_PI = 2 * Math.PI;
 
 // GT2 frequency tables (freqtbllo/freqtblhi) are provided by the ReSID library above
@@ -2038,15 +2109,63 @@ function midiToSidFreq(note) {
   // played EVERYTHING an octave flat (A4 came out at 220 Hz), which also made
   // SID tracks sit an octave under every other instrument in the studio.
   // Interpolate between entries for smooth fractional-semitone sweeps.
-  const sidNote = note - 12;
-  const idx = Math.max(0, Math.min(94, Math.floor(sidNote)));
+  //
+  // Clamped to the table (C-0..B-7). Past either end the interpolation used
+  // to EXTRAPOLATE, and the result was written to a 16-bit register: a hat
+  // table's +72 on a low key wrapped 0x107DE to 0x07DE — a rumble at 1/30th
+  // of the intended noise rate.
+  const sidNote = Math.max(0, Math.min(95, note - 12));
+  const idx = Math.min(94, Math.floor(sidNote));
   const frac = sidNote - idx;
   const freqA = freqtbllo[idx] | (freqtblhi[idx] << 8);
   if (frac < 0.001) return freqA;
-  const idxB = Math.min(95, idx + 1);
-  const freqB = freqtbllo[idxB] | (freqtblhi[idxB] << 8);
+  const freqB = freqtbllo[idx + 1] | (freqtblhi[idx + 1] << 8);
   return Math.round(freqA + (freqB - freqA) * frac);
 }
+
+// MOS 6581 datasheet envelope times (ms) for register values 0..15. The
+// filter envelope below is a software (frame-rate) envelope, as a C64 player
+// would run, but its A/D/R nibbles now mean the same times as the chip's own.
+const SID_ATTACK_MS = [2, 8, 16, 24, 38, 56, 68, 80, 100, 250, 500, 800, 1000, 3000, 5000, 8000];
+const SID_DECAY_MS = [6, 24, 48, 72, 114, 168, 204, 240, 300, 750, 1500, 2400, 3000, 9000, 15000, 24000];
+
+// Everything a preset can set. A preset REPLACES these (performance controls
+// excepted) — merging let a drum preset's hidden noise layer (`layerOn`) ride
+// along into every preset loaded after it.
+const DEFAULT_PARAMS = {
+  waveform: 0x41,    // SID control register value (waveform + gate)
+  pulseWidth: 0x800, // 12-bit
+  ad: 0x0A,          // attack/decay byte
+  sr: 0xF8,          // sustain/release byte
+  osc2On: false,     // enable oscillator 2
+  osc2Waveform: 0x11,
+  osc2Detune: 0,     // semitones
+  osc2EnvAmt: 0,     // sweep range in semitones (scaled by ×48)
+  osc2SweepSpeed: 8, // 0=instant, 15=very slow (decay rate 0-15)
+  ringMod: false,
+  hardSync: false,
+  filterOn: false,
+  filterMode: 0x10,  // SID filter type bits (0x10=LP, 0x20=BP, 0x40=HP)
+  filterCutoff: 0xFF,// 0-255 (maps to SID regs 0x15/0x16)
+  filterReso: 0,     // 0-15
+  filterEnvAmt: 0,
+  fltAd: 0x08,
+  fltSr: 0x00,
+  masterVolume: 0x0F,
+  layerOn: false,
+  // Delayed vibrato, as Martin Galway's players do it: the note starts dead
+  // on pitch and the vibrato cuts in after vibDelay seconds at full depth.
+  // Wizball's high-score lead measures +-31 cents at ~5.7 Hz after ~240 ms.
+  vibDepth: 0,       // cents, 0 = off
+  vibRate: 5.5,      // Hz
+  vibDelay: 0.24,    // seconds from note-on
+  // Velocity -> filter cutoff: each note sets its own cutoff, the way
+  // Galway's player writes a new cutoff with every bass note (Wizball's
+  // talking bass steps between 40 and 111 of 255). Added to filterCutoff as
+  // filterVelAmt * 255 * velocity/127.
+  filterVelAmt: 0,
+};
+const PERFORMANCE_PARAMS = ['pitchBend', 'pitchBendRange', 'portamento', 'portamentoTime'];
 
 // ─── SID Synth Processor ────────────────────────────────────────────────────
 
@@ -2061,7 +2180,7 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         sampleRate: sampleRate,
         clock: jsSID.chip.clock.PAL,
         model: jsSID.chip.model.MOS6581,
-        method: jsSID.ReSID.sampling_method.SAMPLE_INTERPOLATE
+        method: jsSID.ReSID.sampling_method.SAMPLE_AVERAGE
       });
       // Set max volume, no filter type initially
       sid.poke(0x18, 0x0F);
@@ -2070,6 +2189,24 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
       sid.poke(0x16, 0xFF);
       this.sids.push(sid);
     }
+    // Shadow registers: writes that change nothing are skipped, and a write
+    // to the routing/mode/volume registers can be recognised as a DC step.
+    this.regs = [];
+    for (let i = 0; i < NUM_CHIPS; i++) {
+      const r = new Int16Array(32); // reSID powers up with every register at 0
+      r[0x18] = 0x0F; r[0x15] = 0x00; r[0x16] = 0xFF;
+      this.regs.push(r);
+    }
+    this._mixBuf = new Float32Array(128);
+    this._chipBuf = new Array(128);
+    // Idle chips are not clocked. reSID steps every chip cycle by cycle — about
+    // 20 % of a core per track for three chips — and the studio runs every
+    // track on ONE audio thread, so five SID tracks overran real time and the
+    // browser dropped blocks (heard as spikes). A chip whose three envelopes
+    // have been at zero for IDLE_SAMPLES outputs its last sample (its DC
+    // level, so nothing steps) until any register write wakes it.
+    this._idle = new Int32Array(NUM_CHIPS);
+    this._hold = new Float32Array(NUM_CHIPS);
 
     // Voice N = SID chip N. All 3 channels on that chip work together:
     //   Channel 0: main oscillator (osc1)
@@ -2078,42 +2215,26 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     this.voices = [];
     for (let i = 0; i < NUM_VOICES; i++) {
       this.voices.push({
-        active: false, note: 0, velocity: 0,
+        active: false, played: false, note: 0, velocity: 0,
         chip: i,                      // 1 SID chip per voice
         baseNote: 0,
         sweep: 0,  // current sweep level 0-255 (decays from 255 to 0)
+        glide: 0, glideStep: 0,       // portamento offset (semitones) and per-frame step
+        tick: 0,                      // samples since this voice's last 50 Hz frame
+        age: 0, vib: 0,               // samples since note-on; vibrato offset (semitones)
         layerPending: 0, layerCtrl: 0,
         tbl: {
           wavePtr: 0, wavetime: 0, waveActive: false,
-          wave: 0x41, tableNote: 0,
-          pulsePtr: 0, pulseActive: false, pulseModTicks: 0, pulseModSpeed: 0, tablePulse: 0x800
+          wave: 0x41, tableNote: 0, absNote: -1,
+          pulsePtr: 0, pulseActive: false, pulsetime: 0, tablePulse: 0x800
         }
       });
     }
 
-    this.params = {
-      waveform: 0x41,    // SID control register value (waveform + gate)
-      pulseWidth: 0x800, // 12-bit
-      ad: 0x0A,          // attack/decay byte
-      sr: 0xF8,          // sustain/release byte
-      osc2On: false,     // enable oscillator 2
-      osc2Waveform: 0x11,
-      osc2Detune: 0,     // semitones
-      osc2EnvAmt: 0,     // sweep range in semitones (scaled by ×48)
-      osc2SweepSpeed: 8, // 0=instant, 15=very slow (decay rate 0-15)
-      ringMod: false,
-      hardSync: false,
-      filterOn: false,
-      filterMode: 0x10,  // SID filter type bits (0x10=LP, 0x20=BP, 0x40=HP)
-      filterCutoff: 0xFF,// 0-255 (maps to SID regs 0x15/0x16)
-      filterReso: 0,     // 0-15
-      filterEnvAmt: 0,
-      fltAd: 0x08,
-      fltSr: 0x00,
-      masterVolume: 0x0F,
-      pitchBend: 0,
-      pitchBendRange: 2,
-    };
+    this.params = Object.assign({}, DEFAULT_PARAMS, {
+      pitchBend: 0, pitchBendRange: 2, portamento: false, portamentoTime: 0.1,
+    });
+    this._lastNote = null;
 
     // GT2 table system
     this.tableEnabled = false;
@@ -2132,37 +2253,93 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
       this.fltEnvs.push({ level: 0, stage: 0, counter: 0 }); // 0=off,1=A,2=D,3=S,4=R
     }
 
-    // 50Hz tick
+    // 50Hz tick. The filter table (one filter, shared like the real chip's)
+    // runs on the global frame clock; each voice runs its own wave/pulse
+    // tables, sweep and filter envelope on a frame clock that starts AT its
+    // note-on, as a player's frame does. On a free-running global clock the
+    // first table row landed 0-20 ms after the key — a kick's noise crack
+    // came late by a random amount, after a blip of plain pulse.
     this.tickCounter = 0;
+    this.samplesPerTick = sampleRate / 50;
     this._dcX = 0;
     this._dcY = 0;
+    this._dcR = Math.exp(-2 * Math.PI * 15 / sampleRate); // ~15 Hz highpass
     this._dcPrimed = false;
+    this._droop = [0, 0];
     // Output warm-up: chip initialisation steps the 6581's DC level several
     // times (volume, filter model setup), and each step through the DC
     // blocker becomes an audible pop — a fresh SID track went off like a
     // -16 dB thump before anyone played a note. Mute-then-ramp the first
     // ~150 ms; nothing musical can be playing that early.
+    this._rampLen = Math.round(sampleRate * 0.05);
     this._warmup = Math.round(sampleRate * 0.15);
-    this.samplesPerTick = Math.round(sampleRate / 50);
 
     this.port.onmessage = (e) => this._handleMessage(e.data);
   }
 
-  // Write to SID chip for voice. channel: 0=osc1, 1=osc3(sub), 2=osc2(sync/ring source)
+  // Register write with change detection (a same-value write is a no-op on
+  // the chip too). Routing/mode/volume changes move the 6581's DC level.
+  _w(chip, addr, value) {
+    value &= 0xFF;
+    const r = this.regs[chip];
+    if (r[addr] === value) return;
+    r[addr] = value;
+    this._idle[chip] = 0;
+    this.sids[chip].poke(addr, value);
+    if (addr === 0x17 || addr === 0x18) this._dcStep();
+  }
+
+  // Write to SID chip for voice. channel: 0=osc1, 1=layer, 2=osc2(sync/ring source)
   _poke(voiceIdx, channel, reg, value) {
-    this.sids[this.voices[voiceIdx].chip].poke(channel * 7 + reg, value);
+    this._w(this.voices[voiceIdx].chip, channel * 7 + reg, value);
   }
 
-  // Write to chip's global registers (filter, volume)
-  _pokeGlobal(voiceIdx, addr, value) {
-    this.sids[this.voices[voiceIdx].chip].poke(addr, value);
+  // The 6581's voices carry a DC offset (reSID's voice_DC), so switching a
+  // voice's filter routing, the filter mode or the volume steps the output
+  // level — a real 6581 thumps here too, and the coupling cap turns the step
+  // into a pop. Routing used to be switched on at the first note after a
+  // preset change, so that note opened with a thump 7x louder than itself
+  // (Laser Harp: -0.9 FS against a +-0.13 note). Registers are now set when
+  // the preset loads; if nothing is sounding, the output is muted while the
+  // step settles. A change during a note is left alone — that click is the
+  // chip's own.
+  _dcStep() {
+    for (let c = 0; c < NUM_CHIPS; c++) {
+      if (this.voices[c].active) return;
+      const vs = this.sids[c].voice;
+      for (let k = 0; k < 3; k++) if (vs[k].envelope.envelope_counter !== 0) return;
+    }
+    this._warmup = Math.max(this._warmup, Math.round(sampleRate * 0.12));
   }
 
-  // Set frequency on a channel from MIDI note
-  _setFreq(voiceIdx, channel, midiNote) {
-    const freq = midiToSidFreq(Math.round(midiNote));
-    this._poke(voiceIdx, channel, 0x00, freq & 0xFF);
-    this._poke(voiceIdx, channel, 0x01, (freq >> 8) & 0xFF);
+  // Frequencies of all three channels, from the voice's note state.
+  _refreshFreqs(vi) {
+    const v = this.voices[vi];
+    if (!v.played) return;
+    const p = this.params, t = v.tbl;
+    const off = (p.pitchBend || 0) * (p.pitchBendRange || 0) + v.glide + v.vib;
+    const note0 = (t.absNote >= 0 ? t.absNote : v.baseNote + t.tableNote) + off;
+    const sweepSt = (p.osc2EnvAmt || 0) * (v.sweep / 255) * 48;
+    const det = p.osc2Detune || 0;
+    let f0, f2;
+    if (p.hardSync || p.ringMod) {
+      // voice[0] = synced slave (what we hear, sweeps change its harmonics),
+      // voice[2] = sync source at the played note (sets the pitch)
+      f0 = midiToSidFreq(note0 + det + sweepSt);
+      f2 = midiToSidFreq(v.baseNote + off);
+    } else {
+      // Plain second oscillator: detune and sweep move osc2 itself.
+      // (They used to act only in sync/ring mode, so with OSC2 on alone the
+      // detune and env-amount knobs did nothing.)
+      f0 = midiToSidFreq(note0);
+      f2 = midiToSidFreq(v.baseNote + off + det + sweepSt);
+    }
+    this._poke(vi, 0, 0x00, f0 & 0xFF); this._poke(vi, 0, 0x01, (f0 >> 8) & 0xFF);
+    this._poke(vi, 2, 0x00, f2 & 0xFF); this._poke(vi, 2, 0x01, (f2 >> 8) & 0xFF);
+    if (p.layerOn) {
+      const f1 = Math.max(0, Math.min(0xFFFF, midiToSidFreq(v.baseNote + (p.layerDetune | 0) + off) + (p.layerFine | 0)));
+      this._poke(vi, 1, 0x00, f1 & 0xFF); this._poke(vi, 1, 0x01, (f1 >> 8) & 0xFF);
+    }
   }
 
   // Set pulse width on a channel
@@ -2171,26 +2348,51 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     this._poke(voiceIdx, channel, 0x03, (pw12 >> 8) & 0x0F);
   }
 
+  // Gate a channel on. The envelope's rate counter is cleared first: that is
+  // what a player's hard restart achieves (ADSR $0000 two frames ahead of
+  // the note). Without it the counter, still running at the RELEASE rate,
+  // is almost always past the new attack period and has to wrap through
+  // 0x7FFF — the SID "ADSR bug" — so EVERY note started 32-35 ms late.
+  // A keyboard can't look two frames ahead, so the result is applied directly.
+  _gateOn(chip, channel, ctrl) {
+    const env = this.sids[chip].voice[channel].envelope;
+    const reg = channel * 7 + 0x04;
+    if (this.regs[chip][reg] & 0x01) this._w(chip, reg, this.regs[chip][reg] & 0xFE);
+    env.rate_counter = 0;
+    this._w(chip, reg, ctrl | 0x01);
+  }
+
+  _gateOff(chip, channel) {
+    const reg = channel * 7 + 0x04;
+    const cur = this.regs[chip][reg];
+    if (cur > 0) this._w(chip, reg, cur & 0xFE);
+  }
+
   _handleMessage(msg) {
     switch (msg.type) {
       case 'noteOn': {
         const vi = msg.voice;
         const v = this.voices[vi];
         if (!v || vi >= NUM_CHIPS) break;
+        const p = this.params;
+
+        // Portamento: frame-stepped slide from the last note played, like a
+        // tracker's tone-portamento.
+        const from = this._lastNote;
+        v.glide = (p.portamento && from !== null && from !== msg.note) ? from - msg.note : 0;
+        v.glideStep = v.glide ? Math.abs(v.glide) / Math.max(1, (p.portamentoTime || 0) * 50) : 0;
+        this._lastNote = msg.note;
+
         v.active = true;
+        v.played = true;
         v.note = msg.note;
         v.velocity = msg.velocity;
         v.baseNote = msg.note;
-
-        const p = this.params;
-
-        const sid = this.sids[vi];
-
-        // === CRITICAL: Clear gates first — ReSID needs 0→1 transition ===
-        sid.poke(0x04, 0x00); // ch0 gate off
-        sid.poke(0x0B, 0x00); // ch1 gate off
-        sid.poke(0x12, 0x00); // ch2 gate off
-        sid.generate(8);      // let ReSID process the gate-off
+        v.tick = 0;
+        v.age = 0;
+        v.vib = 0;
+        // A note should never wait out more than the fade-in of a settle mute.
+        this._warmup = Math.min(this._warmup, this._rampLen);
 
         // === SID SYNC ARCHITECTURE ===
         // voice[0] has sync bit → gets RESET by voice[2]'s MSB transitions
@@ -2200,40 +2402,30 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         // For sync: we HEAR voice[0]. Its pitch appears locked to voice[2]'s rate.
         // Sweeping voice[0]'s frequency changes the harmonic content (laser harp).
 
-        const noteFreq = midiToSidFreq(Math.round(msg.note));
+        // Init osc2 sweep (starts at max, decays to 0) and table note state
+        v.sweep = (p.osc2EnvAmt !== 0) ? 255 : 0;
+        const t = v.tbl;
+        t.wavePtr = 0; t.wavetime = 0; t.waveActive = false;
+        t.pulsePtr = 0; t.pulseActive = false; t.pulsetime = 0;
+        t.tableNote = 0; t.absNote = -1; t.tablePulse = p.pulseWidth;
 
         // === Channel 0: Slave oscillator (what we hear) ===
-        sid.poke(0x05, p.ad);
-        sid.poke(0x06, p.sr);
-        sid.poke(0x02, p.pulseWidth & 0xFF);
-        sid.poke(0x03, (p.pulseWidth >> 8) & 0x0F);
-        if (p.hardSync || p.ringMod) {
-          // With sync: voice[0]'s initial freq = note + detune + sweep start
-          const initSweep = p.osc2EnvAmt * 48;
-          const osc0Freq = midiToSidFreq(msg.note + p.osc2Detune + initSweep);
-          sid.poke(0x00, osc0Freq & 0xFF);
-          sid.poke(0x01, (osc0Freq >> 8) & 0xFF);
-        } else {
-          // No sync: normal note frequency
-          sid.poke(0x00, noteFreq & 0xFF);
-          sid.poke(0x01, (noteFreq >> 8) & 0xFF);
-        }
+        this._poke(vi, 0, 0x05, p.ad);
+        this._poke(vi, 0, 0x06, p.sr);
+        this._setPulse(vi, 0, p.pulseWidth);
 
         // === Channel 2: Sync source (determines pitch, runs silently or audibly) ===
         if (p.osc2On || p.hardSync || p.ringMod) {
-          // Sync source at the PLAYED NOTE frequency (this sets the perceived pitch)
-          sid.poke(0x0E, noteFreq & 0xFF);
-          sid.poke(0x0F, (noteFreq >> 8) & 0xFF);
-          sid.poke(0x10, p.pulseWidth & 0xFF);
-          sid.poke(0x11, (p.pulseWidth >> 8) & 0x0F);
+          this._setPulse(vi, 2, p.pulseWidth);
           if (p.osc2On) {
-            sid.poke(0x13, p.ad);
-            sid.poke(0x14, p.sr);
-            sid.poke(0x12, (p.osc2Waveform & 0xF0) | 0x01);
+            this._poke(vi, 2, 0x05, p.ad);
+            this._poke(vi, 2, 0x06, p.sr);
           } else {
             // Silent: no waveform bits, oscillator still ticks for sync
-            sid.poke(0x12, 0x00);
+            this._w(vi, 0x12, 0x00);
           }
+        } else {
+          this._gateOff(vi, 2);
         }
 
         // === Channel 1: the LAYER oscillator ===
@@ -2243,53 +2435,54 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         // octave doubling (the fat Galway/Hubbard leads), or a noise layer
         // fired WITH a tone drum instead of after it. `layerDelay` (frames)
         // gates it late for flam/echo blips.
+        v.layerPending = 0;
         if (p.layerOn) {
-          const lFreq = midiToSidFreq(msg.note + (p.layerDetune | 0)) + (p.layerFine | 0);
-          sid.poke(0x07, lFreq & 0xFF);
-          sid.poke(0x08, (lFreq >> 8) & 0xFF);
           const lpw = p.layerPW !== undefined ? p.layerPW : p.pulseWidth;
-          sid.poke(0x09, lpw & 0xFF);
-          sid.poke(0x0A, (lpw >> 8) & 0x0F);
-          sid.poke(0x0C, p.layerAd !== undefined ? p.layerAd : p.ad);
-          sid.poke(0x0D, p.layerSr !== undefined ? p.layerSr : p.sr);
-          if ((p.layerDelay | 0) > 0) {
-            v.layerPending = p.layerDelay | 0;
-            v.layerCtrl = ((p.layerWave !== undefined ? p.layerWave : p.waveform) & 0xF0) | 0x01;
-            sid.poke(0x0B, 0x00);
-          } else {
-            v.layerPending = 0;
-            sid.poke(0x0B, ((p.layerWave !== undefined ? p.layerWave : p.waveform) & 0xF0) | 0x01);
-          }
+          this._setPulse(vi, 1, lpw);
+          this._poke(vi, 1, 0x05, p.layerAd !== undefined ? p.layerAd : p.ad);
+          this._poke(vi, 1, 0x06, p.layerSr !== undefined ? p.layerSr : p.sr);
         } else {
-          v.layerPending = 0;
-          sid.poke(0x0B, 0x00);
+          this._gateOff(vi, 1);
         }
 
-        // === Channel 0 control: waveform + gate + sync + ring ===
-        let ctrl = (p.waveform & 0xF0) | 0x01;
+        this._refreshFreqs(vi);
+
+        // Gates on. No gate-off-then-clock is needed first: reSID's envelope
+        // reacts to the 0→1 write itself. (The old code clocked the chip 8
+        // samples in between and threw them away, which skipped that chip's
+        // timeline ahead of the other two.)
+        let ctrl = (p.waveform & 0xF0);
         if (p.hardSync) ctrl |= 0x02;
         if (p.ringMod) ctrl |= 0x04;
-        sid.poke(0x04, ctrl);
+        this._gateOn(vi, 0, ctrl);
+        if (p.osc2On) this._gateOn(vi, 2, p.osc2Waveform & 0xF0);
+        if (p.layerOn) {
+          const lctrl = (p.layerWave !== undefined ? p.layerWave : p.waveform) & 0xF0;
+          if ((p.layerDelay | 0) > 0) {
+            v.layerPending = p.layerDelay | 0;
+            v.layerCtrl = lctrl;
+            this._gateOff(vi, 1);
+          } else {
+            this._gateOn(vi, 1, lctrl);
+          }
+        }
 
-        // Init osc2 sweep (starts at max, decays to 0)
-        v.sweep = (p.osc2EnvAmt !== 0) ? 255 : 0;
-
-        // Filter & volume (filter also sets reg 0x18 with volume)
-        this._updateFilter(vi);
-
-        // Init table state
-        const t = v.tbl;
-        t.wavePtr = 0; t.wavetime = 0; t.waveActive = false;
-        t.pulsePtr = 0; t.pulseActive = false; t.pulseModTicks = 0;
-        t.tableNote = 0; t.tablePulse = p.pulseWidth;
+        // Filter envelope restarts; tables run their first frame NOW (the
+        // note-on frame, as in GT2).
+        this.fltEnvs[vi] = { level: 0, stage: 1, counter: 0 }; // start attack
         if (this.tableEnabled) {
           if (this.tableStartPtrs.wave > 0) { t.wavePtr = this.tableStartPtrs.wave; t.waveActive = true; t.wavetime = 0; }
           if (this.tableStartPtrs.pulse > 0) { t.pulsePtr = this.tableStartPtrs.pulse; t.pulseActive = true; }
-          if (this.tableStartPtrs.filter > 0) { this.gflt.ptr = this.tableStartPtrs.filter; this.gflt.modTicks = 0; }
+          if (this.tableStartPtrs.filter > 0) {
+            this.gflt.ptr = this.tableStartPtrs.filter; this.gflt.modTicks = 0;
+            this._executeFilterTable();
+            for (let c = 0; c < NUM_CHIPS; c++) if (c !== vi) this._updateFilter(c);
+          }
+          this._executeWavetable(vi);
+          this._executePulsetable(vi);
+          this._refreshFreqs(vi);
         }
-
-        // Reset filter envelope
-        this.fltEnvs[vi] = { level: 0, stage: 1, counter: 0 }; // start attack
+        this._updateFilter(vi);
         break;
       }
       case 'noteOff': {
@@ -2297,24 +2490,32 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         const v = this.voices[vi];
         if (!v || vi >= NUM_CHIPS) break;
         v.active = false;
-        const sid = this.sids[vi];
-        // Gate off: keep waveform bits but clear gate
-        sid.poke(0x04, this.params.waveform & 0xF0);
-        sid.poke(0x12, this.params.osc2Waveform & 0xF0);
         v.layerPending = 0;
-        sid.poke(0x0B, this.params.layerOn
-          ? ((this.params.layerWave !== undefined ? this.params.layerWave : this.params.waveform) & 0xF0)
-          : 0x00);
+        // Gate off, keeping everything else the control registers hold. The
+        // old code rewrote them from the patch, which dropped the SYNC and
+        // RING bits for the release (Laser Harp / Ring Bell tails jumped to a
+        // different pitch and timbre on key-up) and brought back a waveform
+        // the wavetable had already silenced (hat: $E0 → noise again).
+        this._gateOff(vi, 0);
+        this._gateOff(vi, 1);
+        this._gateOff(vi, 2);
         this.fltEnvs[vi].stage = 4;
         break;
       }
       case 'param': {
         const { param, value } = msg;
         this.params[param] = value;
+        this._paramsChanged();
         break;
       }
       case 'preset': {
-        if (msg.params) Object.assign(this.params, msg.params);
+        if (msg.params) {
+          const keep = {};
+          for (const k of PERFORMANCE_PARAMS) keep[k] = this.params[k];
+          this.params = Object.assign({}, DEFAULT_PARAMS, msg.params, keep);
+          this._resetFilterTable();
+          this._paramsChanged();
+        }
         break;
       }
       case 'tableData': {
@@ -2325,8 +2526,13 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         }
         break;
       }
-      case 'tableEnabled': { this.tableEnabled = msg.value; break; }
-      case 'tableStartPtrs': { Object.assign(this.tableStartPtrs, msg.ptrs); break; }
+      case 'tableEnabled': { this.tableEnabled = msg.value; this._paramsChanged(); break; }
+      case 'tableStartPtrs': {
+        Object.assign(this.tableStartPtrs, msg.ptrs);
+        this._resetFilterTable();
+        this._paramsChanged();
+        break;
+      }
       case 'chipModel': {
         const model = msg.value === 8580 ? jsSID.chip.model.MOS8580 : jsSID.chip.model.MOS6581;
         for (let i = 0; i < NUM_CHIPS; i++) this.sids[i].set_chip_model(model);
@@ -2335,36 +2541,58 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     }
   }
 
+  // A new filter table starts from the patch's cutoff, not from wherever the
+  // previous preset's table left it (0xFF on a fresh page), which gave the
+  // first frame of Filter Acid a wide-open blip.
+  _resetFilterTable() {
+    const g = this.gflt;
+    g.ptr = 0; g.modTicks = 0; g.modSpeed = 0;
+    g.cutoff8 = this.params.filterCutoff & 0xFF;
+  }
+
+  // Filter/volume registers follow the patch immediately (not at the next
+  // note), and sounding voices follow pitch-bend and detune.
+  _paramsChanged() {
+    for (let c = 0; c < NUM_CHIPS; c++) {
+      this._updateFilter(c);
+      this._refreshFreqs(c);
+    }
+  }
+
   _updateFilter(vi) {
     const p = this.params;
-    const sid = this.sids[vi];
     if (p.filterOn) {
-      const cutoff = Math.max(0, Math.min(0x7FF, Math.round(
-        (this.tableEnabled && this.gflt.ptr > 0 ? this.gflt.cutoff8 : p.filterCutoff) * 0x7FF / 255
-      )));
-      sid.poke(0x15, cutoff & 0x07);
-      sid.poke(0x16, (cutoff >> 3) & 0xFF);
-      sid.poke(0x17, ((p.filterReso & 0x0F) << 4) | 0x07); // route all 3 voices
-      sid.poke(0x18, (p.filterMode & 0x70) | (p.masterVolume & 0x0F));
+      // A preset with a filter table hands it the cutoff, and the cutoff
+      // stays where the table leaves it (GT2 semantics).
+      let c8 = this.tableEnabled && this.tableStartPtrs.filter > 0 ? this.gflt.cutoff8 : p.filterCutoff;
+      if (p.filterVelAmt) c8 += p.filterVelAmt * 255 * (this.voices[vi].velocity || 0) / 127;
+      const fe = this.fltEnvs[vi];
+      if (p.filterEnvAmt) c8 += p.filterEnvAmt * fe.level;
+      // 8-bit cutoff → 11-bit register. The filter envelope used to write its
+      // 8-bit value straight into the 11-bit register — 1/8 of the intended
+      // cutoff — so every preset with filter-env amount sat nearly closed
+      // (Sync Lead at C6 was all but silent).
+      const cutoff = Math.round(Math.max(0, Math.min(255, c8)) * 0x7FF / 255);
+      this._pokeFilter(vi, cutoff, p);
     } else {
-      sid.poke(0x17, 0x00);
-      sid.poke(0x18, (p.masterVolume & 0x0F));
+      this._w(vi, 0x17, 0x00);
+      this._w(vi, 0x18, (p.masterVolume & 0x0F));
     }
+  }
+
+  _pokeFilter(chip, cutoff, p) {
+    // Route only the channels that sound: ch0 always, the layer (ch1) and an
+    // audible osc2 (ch2) when on. A silent channel adds nothing but its DC
+    // offset, so routing all three tripled the level step of switching the
+    // filter on.
+    const route = 0x01 | (p.layerOn ? 0x02 : 0) | (p.osc2On ? 0x04 : 0);
+    this._w(chip, 0x15, cutoff & 0x07);
+    this._w(chip, 0x16, (cutoff >> 3) & 0xFF);
+    this._w(chip, 0x17, ((p.filterReso & 0x0F) << 4) | route);
+    this._w(chip, 0x18, (p.filterMode & 0x70) | (p.masterVolume & 0x0F));
   }
 
   // ─── GT2 Table Execution (50Hz) ─────────────────────────────────────────
-
-  _executeTableTick() {
-    this._executeFilterTable();
-    for (let i = 0; i < NUM_VOICES; i++) {
-      const v = this.voices[i];
-      if (!v.active) continue;
-      this._executeWavetable(i);
-      this._executePulsetable(i);
-    }
-    // Update filter on all active chips
-    for (let c = 0; c < NUM_CHIPS; c++) this._updateFilter(c);
-  }
 
   _executeWavetable(vi) {
     const v = this.voices[vi];
@@ -2382,10 +2610,7 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         if (t.wavetime < left) { t.wavetime++; return; }
         t.wavetime = 0;
         t.wavePtr++;
-        if (right !== 0x80) {
-          t.tableNote = (right < 0x80) ? right : (right & 0x7F);
-          this._setFreq(vi, 0, v.baseNote + t.tableNote);
-        }
+        this._tableNote(t, right);
         this._handleWaveJump(t);
         return;
       }
@@ -2394,10 +2619,7 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
         this._poke(vi, 0, 0x04, left);
         t.wave = left;
         t.wavetime = 0;
-        if (right !== 0x80) {
-          t.tableNote = (right < 0x80) ? right : (right & 0x7F);
-          this._setFreq(vi, 0, v.baseNote + t.tableNote);
-        }
+        this._tableNote(t, right);
         t.wavePtr++;
         this._handleWaveJump(t);
         return;
@@ -2418,6 +2640,15 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     }
   }
 
+  // GT2 wavetable note column: 00-5F up, 60-7F DOWN (-32..-1), 80 = keep,
+  // 81-DF absolute (C#0..). 60-7F used to go UP 96-127 semitones and the
+  // absolute notes were added to the played key.
+  _tableNote(t, right) {
+    if (right === 0x80) return;
+    if (right < 0x80) { t.absNote = -1; t.tableNote = right <= 0x5F ? right : right - 0x80; }
+    else { t.absNote = (right & 0x7F) + 12; t.tableNote = 0; }
+  }
+
   _handleWaveJump(t) {
     const pos = t.wavePtr - 1;
     if (pos < 0 || pos >= 255) return;
@@ -2428,43 +2659,39 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     }
   }
 
+  // Exact port of GT2 gplay.c PULSEEXEC (as in ../sid-synth): the jump is
+  // checked every frame, a modulation step modulates on the frame it loads,
+  // and the pointer advances when its time runs out. The previous version
+  // spent an extra idle frame on every step.
   _executePulsetable(vi) {
-    const v = this.voices[vi];
-    const t = v.tbl;
+    const t = this.voices[vi].tbl;
     if (!t.pulseActive || t.pulsePtr === 0) return;
+    const L = this.tables.ltable[1], R = this.tables.rtable[1];
+    const at = (ptr) => (ptr >= 1 && ptr <= 255) ? ptr - 1 : -1;
 
-    if (t.pulseModTicks > 0) {
-      t.pulseModTicks--;
-      t.tablePulse = (t.tablePulse + t.pulseModSpeed) & 0xFFF;
-      this._setPulse(vi, 0, t.tablePulse);
-      return;
+    let pos = at(t.pulsePtr);
+    if (pos < 0) { t.pulseActive = false; return; }
+    if (L[pos] === 0xFF) {
+      t.pulsePtr = R[pos];
+      pos = at(t.pulsePtr);
+      if (pos < 0) { t.pulseActive = false; return; }
     }
-
-    for (let iter = 0; iter < 10; iter++) {
-      const pos = t.pulsePtr - 1;
-      if (pos < 0 || pos >= 255) { t.pulseActive = false; return; }
-      const left = this.tables.ltable[1][pos];
-      const right = this.tables.rtable[1][pos];
-
-      if (left >= 0x01 && left <= 0x7F) {
-        t.pulseModTicks = left;
-        t.pulseModSpeed = (right & 0x80) ? (right - 256) : right;
+    if (!t.pulsetime) {
+      const left = L[pos];
+      if (left >= 0x80) {
+        // Set pulse (no modulation this frame)
+        t.tablePulse = ((left & 0x0F) << 8) | R[pos];
         t.pulsePtr++;
-        return;
+      } else {
+        t.pulsetime = left;
       }
-      else if (left >= 0x80 && left <= 0xFE) {
-        t.tablePulse = ((left & 0x0F) << 8) | right;
-        this._setPulse(vi, 0, t.tablePulse);
-        t.pulsePtr++;
-        return;
-      }
-      else if (left === 0xFF) {
-        if (right === 0) { t.pulseActive = false; return; }
-        t.pulsePtr = right;
-        continue;
-      }
-      else { t.pulsePtr++; return; }
     }
+    if (t.pulsetime) {
+      const speed = R[pos];
+      t.tablePulse = (t.tablePulse + (speed < 0x80 ? speed : speed - 0x100)) & 0xFFF;
+      if (--t.pulsetime === 0) t.pulsePtr++;
+    }
+    this._setPulse(vi, 0, t.tablePulse);
   }
 
   _executeFilterTable() {
@@ -2512,75 +2739,65 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  // ─── Osc2 Sweep + Filter Envelope (50Hz tick) ──────────────────────────
+  // ─── Per-voice 50 Hz frame: tables, osc2 sweep, glide, filter envelope ──
 
-  _tickEnvelopes() {
+  _voiceTick(i) {
     const p = this.params;
+    const v = this.voices[i];
+    // Delayed layer gate (flam / echo-blip): fires layerDelay frames late.
+    if (v.active && v.layerPending > 0) {
+      if (--v.layerPending === 0) this._gateOn(i, 1, v.layerCtrl);
+    }
+    if (v.active && this.tableEnabled) {
+      this._executeWavetable(i);
+      this._executePulsetable(i);
+    }
 
-    for (let i = 0; i < NUM_VOICES; i++) {
-      const v = this.voices[i];
-      // Delayed layer gate (flam / echo-blip): fires layerDelay frames late.
-      if (v.active && v.layerPending > 0) {
-        if (--v.layerPending === 0) this.sids[i].poke(0x0B, v.layerCtrl);
-      }
-      if (!v.active && v.sweep === 0 && this.fltEnvs[i].stage === 0) continue;
+    // === Osc2 pitch sweep (independent, simple decay) ===
+    if (v.sweep > 0 && (p.osc2On || p.hardSync || p.ringMod)) {
+      // Decay rate: 0=instant drop, 15=very slow
+      // SID decay time table values mapped to per-tick decrements
+      const decayRates = [255, 128, 64, 48, 32, 24, 20, 16, 12, 6, 3, 2, 1.5, 0.5, 0.3, 0.17];
+      const rate = decayRates[Math.min(15, p.osc2SweepSpeed)];
+      v.sweep = Math.max(0, v.sweep - rate);
+    }
+    // === Portamento ===
+    if (v.glide) {
+      v.glide = v.glide > 0 ? Math.max(0, v.glide - v.glideStep) : Math.min(0, v.glide + v.glideStep);
+    }
 
-      // === Osc2 pitch sweep (independent, simple decay) ===
-      if (v.sweep > 0 && (p.osc2On || p.hardSync || p.ringMod)) {
-        // Decay rate: 0=instant drop, 15=very slow
-        // SID decay time table values mapped to per-tick decrements
-        const decayRates = [255, 128, 64, 48, 32, 24, 20, 16, 12, 6, 3, 2, 1.5, 0.5, 0.3, 0.17];
-        const rate = decayRates[Math.min(15, p.osc2SweepSpeed)];
-        v.sweep = Math.max(0, v.sweep - rate);
-
-        // Sweep voice[0]'s frequency (the synced slave) — changes harmonics
-        // Voice[2] (sync source) stays at the played note — locks the pitch
-        const sweepLevel = v.sweep / 255;
-        const envDetune = p.osc2EnvAmt * sweepLevel * 48;
-        const sweepFreq = midiToSidFreq(v.baseNote + p.osc2Detune + envDetune);
-        this.sids[i].poke(0x00, sweepFreq & 0xFF);
-        this.sids[i].poke(0x01, (sweepFreq >> 8) & 0xFF);
-      }
-
-      // === Filter envelope (simple ADSR for cutoff modulation) ===
-      const fe = this.fltEnvs[i];
-      if (fe.stage === 0) continue;
-
+    // === Filter envelope (frame-rate ADSR for cutoff modulation) ===
+    const fe = this.fltEnvs[i];
+    if (fe.stage !== 0) {
       const aNibble = (p.fltAd >> 4) & 0xF;
       const dNibble = p.fltAd & 0xF;
       const sLevel = ((p.fltSr >> 4) & 0xF) * 17;
       const rNibble = p.fltSr & 0xF;
-
-      // Higher SID value = slower. Rate = how much to change per 50Hz tick.
-      const atkRates  = [255, 128, 64, 48, 32, 24, 20, 16, 12, 6, 3, 2, 1.5, 0.5, 0.3, 0.17];
-      const decRates  = [255, 64, 32, 24, 16, 12, 10, 8, 6, 3, 1.5, 1, 0.8, 0.27, 0.16, 0.1];
+      // Per-frame step for a full 0..255 run in the SID's own time for that
+      // nibble. (The old hand-made tables ran 2-10x slower than the chip:
+      // decay 9 took 1.7 s where the SID takes 750 ms.)
+      const step = (ms) => Math.min(255, 255 * 20 / ms);
 
       switch (fe.stage) {
         case 1: // attack
-          fe.level += atkRates[aNibble];
+          fe.level += step(SID_ATTACK_MS[aNibble]);
           if (fe.level >= 255) { fe.level = 255; fe.stage = 2; }
           break;
         case 2: // decay
-          fe.level -= decRates[dNibble];
+          fe.level -= step(SID_DECAY_MS[dNibble]);
           if (fe.level <= sLevel) { fe.level = sLevel; fe.stage = 3; }
           break;
         case 3: fe.level = sLevel; break;
         case 4: // release
-          fe.level -= decRates[rNibble];
+          fe.level -= step(SID_DECAY_MS[rNibble]);
           if (fe.level <= 0) { fe.level = 0; fe.stage = 0; }
           break;
       }
       fe.level = Math.max(0, Math.min(255, fe.level));
-
-      // Apply filter envelope to cutoff
-      if (p.filterEnvAmt !== 0 && p.filterOn) {
-        const envMod = Math.round(p.filterEnvAmt * fe.level);
-        const baseCutoff = this.tableEnabled && this.gflt.ptr > 0 ? this.gflt.cutoff8 : p.filterCutoff;
-        const cutoff = Math.max(0, Math.min(255, baseCutoff + envMod));
-        this.sids[i].poke(0x15, cutoff & 0x07);
-        this.sids[i].poke(0x16, (cutoff >> 3) & 0xFF);
-      }
     }
+
+    this._refreshFreqs(i);
+    this._updateFilter(i);
   }
 
   // ─── Audio Processing ─────────────────────────────────────────────────────
@@ -2591,12 +2808,44 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     const outL = output[0], outR = output[1];
     const blockSize = outL.length;
 
-    // 50Hz table tick
+    // Global 50 Hz frame: the (shared) filter table
     this.tickCounter += blockSize;
     while (this.tickCounter >= this.samplesPerTick) {
       this.tickCounter -= this.samplesPerTick;
-      if (this.tableEnabled) this._executeTableTick();
-      this._tickEnvelopes();
+      if (this.tableEnabled && this.gflt.ptr > 0) {
+        this._executeFilterTable();
+        for (let c = 0; c < NUM_CHIPS; c++) this._updateFilter(c);
+      }
+    }
+    // Per-voice frames, phase-locked to each voice's note-on
+    for (let i = 0; i < NUM_VOICES; i++) {
+      const v = this.voices[i];
+      v.tick += blockSize;
+      while (v.tick >= this.samplesPerTick) {
+        v.tick -= this.samplesPerTick;
+        this._voiceTick(i);
+      }
+    }
+    // Vibrato runs per 128-sample block (~375 Hz), not on the 50 Hz frame:
+    // at 50 Hz a 5.7 Hz vibrato is a 9-step staircase. Galway's Wizball
+    // player ran 4x per frame (CIA timer $11B7) for exactly this smoothness.
+    const vp = this.params;
+    if (vp.vibDepth > 0) {
+      const w = 2 * Math.PI * (vp.vibRate || 0), depth = vp.vibDepth / 100, delay = vp.vibDelay || 0;
+      for (let i = 0; i < NUM_VOICES; i++) {
+        const v = this.voices[i];
+        if (!v.played) continue;
+        v.age += blockSize;
+        const t = v.age / sampleRate - delay;
+        const vib = t > 0 ? depth * Math.sin(w * t) : 0;
+        if (vib !== v.vib) { v.vib = vib; this._refreshFreqs(i); }
+      }
+    } else {
+      // Depth turned to 0 mid-note: drop the offset rather than freeze it.
+      for (let i = 0; i < NUM_VOICES; i++) {
+        const v = this.voices[i];
+        if (v.vib !== 0) { v.vib = 0; this._refreshFreqs(i); }
+      }
     }
 
     // Generate audio from all 3 SID chips and mix.
@@ -2606,11 +2855,28 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     // the other synths in the studio. Full gain with a soft clip on the sum
     // keeps single notes healthy and rounds off the rare loud tutti instead
     // of pre-emptively strangling everything.
-    outL.fill(0); outR.fill(0);
+    if (this._mixBuf.length !== blockSize) { this._mixBuf = new Float32Array(blockSize); this._chipBuf = new Array(blockSize); }
+    const mix = this._mixBuf, buf = this._chipBuf;
+    mix.fill(0);
     for (let c = 0; c < NUM_CHIPS; c++) {
-      const samples = this.sids[c].generate(blockSize);
-      for (let s = 0; s < blockSize; s++) outL[s] += samples[s];
+      if (this._idle[c] >= IDLE_SAMPLES) {
+        const h = this._hold[c];
+        for (let s = 0; s < blockSize; s++) mix[s] += h;
+        continue;
+      }
+      this.sids[c].generateIntoBuffer(blockSize, buf, 0);
+      for (let s = 0; s < blockSize; s++) mix[s] += buf[s];
+      this._hold[c] = buf[blockSize - 1];
+      const vs = this.sids[c].voice;
+      const silent = !this.voices[c].active &&
+        vs[0].envelope.envelope_counter === 0 && vs[1].envelope.envelope_counter === 0 &&
+        vs[2].envelope.envelope_counter === 0;
+      this._idle[c] = silent ? this._idle[c] + blockSize : 0;
     }
+    // SAMPLE_AVERAGE's triangular kernel rolls the top octave off (-1.3 dB
+    // at 10 kHz, -4.5 dB at 19 kHz, on top of the C64's own 16 kHz output
+    // filter). A 3-tap symmetric shelf gives most of it back.
+    const a = 0.14, d = this._droop;
     // DC blocker, then soft clip. A pulse wave's mean level follows its duty
     // cycle, so a PWM sweep rides on a moving DC pedestal — and the gate step
     // adds a thump. The real C64 strips this with its output coupling cap;
@@ -2619,18 +2885,22 @@ class SIDSynthProcessor extends AudioWorkletProcessor {
     if (!this._dcPrimed) {
       // Prime the blocker with the first real sample so the power-on DC level
       // enters as "always was" rather than as a step.
-      this._dcX = outL[0];
+      this._dcX = mix[0];
+      d[0] = d[1] = mix[0];
       this._dcPrimed = true;
     }
+    const R = this._dcR, ramp = this._rampLen;
     for (let s = 0; s < blockSize; s++) {
-      const x = outL[s];
-      const y = x - this._dcX + 0.9979 * this._dcY;
+      const xin = mix[s];
+      const x = (1 + 2 * a) * d[1] - a * (d[0] + xin);
+      d[0] = d[1]; d[1] = xin;
+      const y = x - this._dcX + R * this._dcY;
       this._dcX = x;
       this._dcY = y;
       let v = Math.tanh(y * 1.4);
       if (this._warmup > 0) {
         this._warmup--;
-        const w = this._warmup > 2205 ? 0 : 1 - this._warmup / 2205;
+        const w = this._warmup > ramp ? 0 : 1 - this._warmup / ramp;
         v *= w;                        // mute, then a 50 ms ramp in
       }
       outL[s] = v;

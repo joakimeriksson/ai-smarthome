@@ -112,3 +112,35 @@ def test_view_never_mutates_the_tone(tones):
 def test_synthesised_kinds_are_the_non_pcm_ones():
     assert "PCM" not in SYNTHESISED
     assert "VA" in SYNTHESISED and "SuperSAW" in SYNTHESISED
+
+
+def test_matrix_control_is_complete_and_labelled(tones):
+    """Four controls per partial, four destinations each, labels from the schema."""
+    for t in tones:
+        for p in va_patch(t)["partials"]:
+            assert len(p["matrix"]) == 4
+            for c in p["matrix"]:
+                assert label_of(c["src"]) is not None
+                assert len(c["dst"]) == 4
+                assert all(label_of(d["dst"]) is not None for d in c["dst"])
+                assert all(-63 <= d["sens"] <= 63 for d in c["dst"])
+
+
+def test_matrix_routes_decode(tones):
+    """Hand-built patches route the mod wheel (SYS-CTRL1), not velocity."""
+    def live(t, n):
+        return [(label_of(c["src"]), label_of(d["dst"]), d["sens"])
+                for c in va_patch(t)["partials"][n]["matrix"]
+                for d in c["dst"] if d["dst"]["value"]]
+    assert ("SYS-CTRL1", "CUT", 10) in live(tones[2], 0)          # Laser Sync Harp
+    assert ("SYS-CTRL1", "PIT-LFO1", 13) in live(tones[1], 0)     # JP-6 Rings
+    assert live(tones[0], 0) == []                                 # Test1 (init)
+
+
+def test_filter_mode_is_the_pcms_switch_not_the_tvf_type(tones):
+    """PCMS FILTER_TYPE (TVF/VCF) and PCMT FILTER_TYPE (the TVF's type) share an id."""
+    modes = [[(label_of(p["filter"]["FILTER_MODE"]), label_of(p["filter"]["FILTER_TYPE"]))
+              for p in va_patch(t)["partials"] if p["on"]] for t in tones]
+    assert modes[0] == [("TVF", "LPF")]                          # Test1, INIT-derived
+    assert modes[1][0] == ("TVF", "HPF")                         # JP-6 Rings: a TVF highpass
+    assert all(m == "VCF" for m, _t in modes[2])                 # Laser Sync Harp: all VCF

@@ -11,7 +11,7 @@
  *   node webui/compare/dsp-test.mjs
  */
 
-import { VAVoice, VAOsc, Env, LFO, SCALE } from "../static/va-dsp.js";
+import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV, WAVES, SSAW, STRUCT, LFO_T, lfoHz, lfoPitch, applyMidi } from "../static/va-dsp.js";
 
 const SR = 44100;
 let pass = 0, fail = 0;
@@ -104,6 +104,47 @@ const TAU = Math.PI * 2;
 
   const delayed = new LFO(SR, { form: { value: 1, label: "TRI" }, rate: 650, delay: 500 });
   ok("LFO delay holds output at zero", Math.abs(delayed.tick()) < 1e-9);
+
+  // measured laws (renders/lfo, fit_lfo.py)
+  ok("LFO periods are whole ms: RATE 512 = 992 ms, 704 = 190 ms, 1023 = 8 ms",
+     close(1000 / lfoHz(512), 992, 1e-9) && close(1000 / lfoHz(704), 190, 1e-9) && close(1000 / lfoHz(1023), 8, 1e-9),
+     `${1000 / lfoHz(512)} ${1000 / lfoHz(704)} ${1000 / lfoHz(1023)}`);
+  ok("LFO pitch depth 50 swings +-11.3 semitones, quadratic and signed",
+     close(lfoPitch(50), 11.33, 0.1) && close(lfoPitch(-50), -lfoPitch(50), 1e-9) && close(lfoPitch(100), 48, 0.5),
+     `${lfoPitch(50)} ${lfoPitch(100)}`);
+
+  const run = (cfg, secs) => {
+    const l = new LFO(SR, cfg); l.reset(0);
+    const out = new Float32Array(Math.round(SR * secs));
+    for (let i = 0; i < out.length; i++) out[i] = l.tick();
+    return out;
+  };
+  const hz = lfoHz(640);
+  const sh = run({ form: { value: 7, label: "S&H" }, rate: 640 }, 4.5 / hz);
+  const at = (buf, c) => buf[Math.round((c + 0.5) / hz * SR)];
+  ok("S&H plays Zenology's sequence: 0, -0.171, -0.757, 0.621",
+     [0, -0.171, -0.757, 0.621].every((v, c) => close(at(sh, c), v, 0.005)),
+     [0, 1, 2, 3].map((c) => at(sh, c).toFixed(3)).join(" "));
+  const vs = run({ form: { value: 9, label: "VSIN" }, rate: 640 }, 3 / hz);
+  const peak = (buf, c) => Math.max(...buf.subarray(Math.round(c / hz * SR), Math.round((c + 1) / hz * SR)));
+  ok("VSIN cycle k peaks at 0.75 + 0.25 |random[k]|",
+     close(peak(vs, 0), 0.75, 0.01) && close(peak(vs, 2), 0.75 + 0.25 * 0.757, 0.01),
+     `${peak(vs, 0).toFixed(3)} ${peak(vs, 2).toFixed(3)}`);
+  const fast = [];
+  for (let k = 0; k < 20; k++) {
+    const l = new LFO(SR, { form: { value: 0, label: "SIN" }, rate: 512, rate_detn: 127 }); l.reset(0);
+    fast.push(l.detMul);
+  }
+  ok("RATE_DETN only speeds the LFO up, by at most LFO_T.detn at 127",
+     fast.every((m) => m >= 1 && m <= 1 + LFO_T.detn) && fast.some((m) => m > 1.05),
+     fast.map((m) => m.toFixed(3)).join(" "));
+  // a sine starts at 0 going up; the smoother makes it trail by ~LFO_T.smooth ms
+  const sn = run({ form: { value: 0, label: "SIN" }, rate: 512 }, 1);
+  const q = Math.round(SR / lfoHz(512) / 4);                   // the quarter-cycle peak
+  let pk = 0;
+  for (let i = 1; i < 2 * q; i++) if (sn[i] > sn[pk]) pk = i;
+  ok("LFO output trails its phase by the measured smoothing lag",
+     close((pk - q) / SR * 1000, LFO_T.smooth, 0.3), `peak ${((pk - q) / SR * 1000).toFixed(2)} ms late`);
 }
 
 // --- voice / unison --------------------------------------------------------
@@ -195,6 +236,436 @@ function render(p, note = 57, secs = 0.5) {
   const bright = (s) => magAt(s, 1760) / (magAt(s, 220) + 1e-12);
   ok("closing the filter removes highs", bright(b) < bright(a) * 0.5,
      `open ${bright(a).toFixed(4)} shut ${bright(b).toFixed(4)}`);
+}
+
+// --- saw PW morph (measured against Zenology 2.0.9) ------------------------
+{
+  const hs = (pw) => {
+    const o = new VAOsc(SR); o.form = "SAW"; o.pw = 0.5 + (pw - 64) / 127;
+    const buf = new Float32Array(SR);
+    for (let i = 0; i < SR; i++) buf[i] = o.tick(220);
+    return [1, 2, 3, 4, 5].map((k) => magAt(buf, 220 * k));
+  };
+  const tri = hs(0);
+  ok("SAW at PW 0 is a triangle: no even harmonics", tri[1] / tri[0] < 0.01,
+     `h2/h1 = ${(tri[1]/tri[0]).toFixed(4)}`);
+  ok("SAW at PW 0 is a triangle: h3 ~ 1/9", close(tri[2] / tri[0], 1 / 9, 0.01),
+     `got ${(tri[2]/tri[0]).toFixed(4)}`);
+  const quarter = hs(32);
+  ok("SAW at PW 32 has its null at harmonic 4", quarter[3] / quarter[0] < 0.01,
+     `h4/h1 = ${(quarter[3]/quarter[0]).toFixed(4)}`);
+  const mirror = hs(96);
+  ok("SAW morph is symmetric about PW 64",
+     [1, 2, 4].every((k) => close(mirror[k] / mirror[0], quarter[k] / quarter[0], 0.01)));
+}
+
+// --- matrix control ---------------------------------------------------------
+{
+  const mx = (src, dst, sens) => [
+    { src: { value: 0, label: src }, dst: [
+      { dst: { value: 0, label: dst }, sens },
+      { dst: { value: 0, label: "OFF" }, sens: 0 },
+      { dst: { value: 0, label: "OFF" }, sens: 0 },
+      { dst: { value: 0, label: "OFF" }, sens: 0 }] }];
+  const h2of = (p, vel) => {
+    const n = Math.round(0.4 * SR), L = new Float32Array(n), R = new Float32Array(n);
+    const v = new VAVoice(SR, p); v.noteOn(57, vel); v.process(L, R, n);
+    const seg = L.subarray(SR * 0.1);
+    return { r: magAt(seg, 440) / magAt(seg, 220), v };
+  };
+  const vp = patch();
+  vp.partials[0].matrix = mx("VELOCITY", "PW", -31);
+  ok("VELOCITY->PW: velocity 1 leaves a plain saw", close(h2of(vp, 1).r, 0.5, 0.03),
+     `h2/h1 = ${h2of(vp, 1).r.toFixed(3)}`);
+  ok("VELOCITY->PW: velocity 127 makes a near-triangle", h2of(vp, 127).r < 0.03,
+     `h2/h1 = ${h2of(vp, 127).r.toFixed(3)}`);
+
+  const past = patch();
+  past.partials[0].matrix = mx("VELOCITY", "PW", 63);
+  ok("matrix can push the saw all the way to a triangle", h2of(past, 127).r < 0.005,
+     `h2/h1 = ${h2of(past, 127).r.toFixed(4)}`);
+
+  const wheel = patch();
+  wheel.partials[0].matrix = mx("SYS-CTRL1", "PW", 63);
+  ok("an untouched controller source changes nothing", close(h2of(wheel, 100).r, 0.5, 0.03));
+
+  const odd = patch();
+  odd.partials[0].matrix = mx("VELOCITY", "CHO", 20);
+  const { v } = h2of(odd, 100);
+  ok("unsupported destinations are reported, not dropped",
+     v.stacks[0].partials[0].dsp.unsupported.includes("VELOCITY->CHO"));
+}
+
+// --- VA filter (measured against Zenology 2.0.9, renders/fs + renders/fd) ---
+{
+  // steady-state gain of the Filter at one frequency
+  const gain = (hz, fc, k, poles, amp = 0.01) => {
+    const f = new Filter(SR), n = SR;
+    let peak = 0;
+    for (let i = 0; i < n; i++) {
+      const y = f.process(amp * Math.sin(TAU * hz * i / SR), fc, k, poles);
+      if (i > n / 2) peak = Math.max(peak, Math.abs(y));
+    }
+    return peak / amp;
+  };
+  const db = (g) => 20 * Math.log10(g);
+  for (const [poles, want] of [[2, -12], [3, -18], [4, -24]]) {
+    const oct = db(gain(3200, 100, 0, poles)) - db(gain(1600, 100, 0, poles));
+    ok(`slope tap ${poles} falls ~${want} dB/oct`, close(oct, want, 2), `got ${oct.toFixed(1)}`);
+  }
+  // feedback is always from stage 4, so resonance costs the same passband at every tap
+  const pb = [2, 3, 4].map((p) => db(gain(20, 2000, 2, p)));
+  ok("resonance k=2 costs -9.5 dB passband at every slope",
+     pb.every((v) => close(v, db(1 / 3), 0.3)), pb.map((v) => v.toFixed(2)).join(" "));
+  ok("resonance peaks at the stage cutoff",
+     gain(1000, 1000, 3.5, 4) > gain(700, 1000, 3.5, 4) && gain(1000, 1000, 3.5, 4) > gain(1400, 1000, 3.5, 4));
+  const lo = gain(200, 1000, 0, 4, 0.01), hi = gain(200, 1000, 0, 4, 1);
+  ok("the filter is linear at RESO 0, even at full level", close(lo, hi, 1e-3),
+     `${lo.toFixed(5)} vs ${hi.toFixed(5)}`);
+
+  const at = (m) => SCALE.cutoffHz(512, m);
+  ok("VCF1 at CUTOFF 512 is ~331 Hz", close(at("VCF1"), 331, 3), `${at("VCF1").toFixed(1)}`);
+  ok("models order P5 < VCF1 < JP < MG at CUTOFF 512",
+     at("P5") < at("VCF1") && at("VCF1") < at("JP") && at("JP") < at("MG"));
+  ok("every model has a cutoff law and a resonance curve",
+     ["VCF1", "JP", "MG", "P5"].every((m) => VCF_MODELS[m]?.cut?.length && VCF_MODELS[m]?.k?.length));
+  ok("cutoff keeps falling below the first table point",
+     SCALE.cutoffHz(0, "VCF1") < SCALE.cutoffHz(64, "VCF1") && SCALE.cutoffHz(64, "VCF1") < SCALE.cutoffHz(128, "VCF1"));
+
+  // filter mode: VCF ignores the TVF type (measured - byte-identical in
+  // Zenology); TVF mode applies it (Parameter Guide p.28)
+  const mode = (m) => ({ value: m === "VCF" ? 1 : 0, label: m });
+  const typ = (t) => ({ value: ["OFF", "LPF", "BPF", "HPF"].indexOf(t), label: t });
+  const fpatch = (m, t, extra = {}) => {
+    const p = patch();
+    p.partials[0].filter = { FILTER_MODE: mode(m), FILTER_TYPE: typ(t), CUTOFF: 400, RESO: 300, ...extra };
+    return p;
+  };
+  const same = (x, y) => x.every((v, i) => v === y[i]);
+  ok("VCF mode ignores the TVF filter type",
+     same(render(fpatch("VCF", "LPF")).L, render(fpatch("VCF", "HPF")).L));
+  const seg = (p) => render(p).L.subarray(SR * 0.1, SR * 0.4);
+  const lowShare = (x) => magAt(x, 220) / (magAt(x, 1760) + 1e-12);
+  ok("TVF mode applies the type: HPF keeps far less low end than LPF",
+     lowShare(seg(fpatch("TVF", "HPF"))) < lowShare(seg(fpatch("TVF", "LPF"))) * 0.1);
+  const sl = (v, l) => ({ value: v, label: l });
+  ok("TVF -18 runs as -12 (Parameter Guide)",
+     same(render(fpatch("TVF", "LPF", { FILTER_SLOPE: sl(1, "-18") })).L,
+          render(fpatch("TVF", "LPF", { FILTER_SLOPE: sl(0, "-12") })).L));
+  const lpf2 = (r) => render(fpatch("TVF", "LPF2", { FILTER_TYPE: { value: 5, label: "LPF2" }, RESO: r })).L;
+  ok("TVF LPF2 ignores resonance (Parameter Guide)", same(lpf2(0), lpf2(900)));
+}
+
+// --- TVF (measured against Zenology 2.0.9, renders/tvf) ---------------------
+{
+  // steady-state TVF gain at one frequency, relative to the TVF path gain
+  const tg = (type, hz, fc, reso, poles = 2, amp = 0.01) => {
+    const f = new TvfFilter(SR); let pk = 0;
+    for (let i = 0; i < SR; i++) {
+      const y = f.process(amp * Math.sin(TAU * hz * i / SR), fc, reso, type, poles);
+      if (i > SR / 2) pk = Math.max(pk, Math.abs(y));
+    }
+    return 20 * Math.log10(pk / amp);
+  };
+  const g0 = 20 * Math.log10(TVF.gain);
+  ok("TVF path is ~+1.1 dB over the VCF path", close(g0, 1.16, 0.1), g0.toFixed(2));
+  ok("TVF LPF passes lows at the path gain", close(tg("LPF", 30, 331, 0), g0, 0.3));
+  ok("TVF HPF passes highs at the path gain", close(tg("HPF", 8000, 331, 0), g0, 0.5));
+  ok("TVF LPF -12 falls ~12 dB/oct", close(tg("LPF", 3200, 100, 0) - tg("LPF", 1600, 100, 0), -12, 1.5));
+  ok("TVF LPF -24 falls ~24 dB/oct", close(tg("LPF", 3200, 100, 0, 4) - tg("LPF", 1600, 100, 0, 4), -24, 2));
+  ok("TVF resonance costs no passband level",
+     close(tg("LPF", 30, 331, 896), tg("LPF", 30, 331, 0), 0.3));
+  ok("TVF resonance peaks at the cutoff", tg("LPF", 331, 331, 640) > tg("LPF", 30, 331, 640) + 15);
+  ok("TVF LPF is fully open at the top of the range (RESO 0)",
+     [200, 2000, 12000].every((hz) => close(tg("LPF", hz, 22000, 0), g0, 0.2)));
+  ok("TVF resonance survives near the top (peak at ~7.7 kHz)",
+     tg("LPF", 7700, 22000, 512) > tg("LPF", 1000, 22000, 512) + 10);
+  ok("TVF PKG boosts the cutoff ~4.8 dB at RESO 0",
+     close(tg("PKG", 331, 331, 0) - tg("PKG", 30, 331, 0), 4.8, 1.0));
+  ok("TVF LPF3 stays stable where 1/F < 2", isFinite(tg("LPF3", 1000, 6000, 0)));
+  ok("TVF LPF2 ignores resonance", close(tg("LPF2", 331, 331, 900), tg("LPF2", 331, 331, 0), 1e-6));
+}
+
+// --- VCF-mode highpass and gain correction (renders/vcf-hpf, renders/vcf-gc) -
+{
+  const hg = (hz, fc) => {
+    const h = new HighPass(SR); let pk = 0;
+    for (let i = 0; i < SR; i++) {
+      const y = h.process(Math.sin(TAU * hz * i / SR), fc, 0, 1);
+      if (i > SR / 2) pk = Math.max(pk, Math.abs(y));
+    }
+    return 20 * Math.log10(pk);
+  };
+  ok("VCF HPF is one-pole: -6 dB/oct below its cutoff", close(hg(50, 1000) - hg(25, 1000), 6, 0.5));
+  ok("VCF HPF table and gain correction are present",
+     VCF_EXTRA.hpf?.length >= 8 && close(VCF_EXTRA.gc, 1.18, 0.1));
+}
+
+// --- envelopes (measured against Zenology 2.0.9, renders/aenv, adsr, penv) -
+{
+  const dB = (v) => 20 * Math.log10(Math.max(v, 1e-12));
+  // run an envelope; returns a sampler of its value at time t (s)
+  const runEnv = (stages, opts, secs, offAt = null) => {
+    const e = new Env(SR, stages, opts); e.noteOn();
+    const buf = new Float64Array(Math.round(secs * SR));
+    for (let i = 0; i < buf.length; i++) { if (offAt !== null && i === Math.round(offAt * SR)) e.noteOff(); buf[i] = e.tick(); }
+    return { at: (t) => buf[Math.min(buf.length - 1, Math.round(t * SR))], e };
+  };
+  const hold = { T1: 0, T2: 0, T3: 0, T4: 0, L1: 1023, L2: 1023 };
+  ok("amp, ADSR off: sustain L3 512 sits at the exponential law's -24.9 dB",
+     close(dB(runEnv({ ...hold, L3: 512 }, { amp: true }, 0.5).at(0.4)), -24.9, 0.3));
+  ok("amp, ADSR on: sustain L3 512 is linear, -6.0 dB",
+     close(dB(runEnv({ ...hold, L3: 512 }, { amp: true, adsr: true }, 0.5).at(0.4)), -6.02, 0.1));
+  const a = runEnv({ ...hold, T1: 512, L3: 1023 }, { amp: true }, 2);
+  const ta = ENV.attack.find(([v]) => v === 512)[1];
+  ok("amp attack 512 completes at its measured time (~1.39 s), fast start",
+     a.at(ta * 0.5) > 0.6 && a.at(ta * 0.5) < 0.8 && a.at(ta * 1.02) > 0.999);
+  const r = runEnv({ ...hold, T4: 512, L3: 1023 }, { amp: true }, 3, 0.2);
+  const tr = ENV.time.find(([v]) => v === 512)[1];
+  ok("amp release 512 (ADSR off) ramps the level over the full ~1.65 s",
+     close(dB(r.at(0.2 + tr / 2)), dB((Math.pow(2, 511.5 / ENV.b) - 1) / (Math.pow(2, 1023 / ENV.b) - 1)), 0.5)
+     && r.at(0.2 + tr * 1.01) === 0);
+  const full = runEnv({ ...hold, T4: 256, L3: 1023 }, { amp: true, adsr: true }, 1, 0.2);
+  const half = runEnv({ ...hold, T4: 256, L3: 512 }, { amp: true, adsr: true }, 1, 0.2);
+  const drop = (x, s0) => dB(x.at(0.3)) - dB(x.at(s0));
+  ok("amp, ADSR on: release falls at the same dB rate from half level as from full",
+     close(drop(full, 0.199), drop(half, 0.199), 1.0), `${drop(full, 0.199).toFixed(2)} vs ${drop(half, 0.199).toFixed(2)}`);
+  ok("pitch: level 511 at depth 100 is +60 semitones", close(SCALE.pitchSemis(511, 100), 60, 0.05));
+  ok("pitch: depth 50 is ~11.75 semitones at full level", close(SCALE.pitchSemis(511, 50), 11.75, 0.05));
+  ok("pitch: negative depth mirrors", close(SCALE.pitchSemis(256, -50), -SCALE.pitchSemis(256, 50), 1e-9));
+  const p = runEnv({ T1: 512, T2: 0, T3: 0, T4: 0, L0: 0, L1: 511, L2: 511, L3: 511, L4: 0 }, {}, 2);
+  ok("pitch envelope segments are straight lines over the shared time table",
+     close(p.at(tr / 2) * 1023, 511 / 2, 4) && close(p.at(tr * 1.01) * 1023, 511, 0.5));
+}
+
+// --- oscillator levels and shapes (measured, renders/osc/octaves) -----------
+{
+  const fund = (form, locked = true) => {
+    const o = new VAOsc(SR); o.form = form; o.pw = 0.5; o.pwLocked = locked;
+    const buf = new Float32Array(SR);
+    for (let i = 0; i < SR; i++) buf[i] = o.tick(130.81);
+    return { h: (k) => magAt(buf.subarray(SR / 4), 130.81 * k) };
+  };
+  const dB = (x) => 20 * Math.log10(x);
+  const saw = fund("SAW").h(1);
+  ok("every VA waveform has captured tables", ["SAW", "SQR", "TRI", "SIN", "RAMP", "JUNO", "TRI2", "TRI3", "SIN2"]
+     .every((f) => WAVES.tables?.[f]?.length === 6));
+  for (const [form, want] of [["SQR", 0.14], ["TRI", -0.81], ["SIN", -0.02], ["RAMP", -5.0], ["JUNO", -9.2], ["SIN2", -0.01]]) {
+    const got = dB(fund(form).h(1) / saw);
+    ok(`${form} fundamental sits ${want} dB from SAW's (Zenology's levelling)`, close(got, want, 0.3), got.toFixed(2));
+  }
+  ok("the analytic square (PW moving) keeps the table's level",
+     close(dB(fund("SQR", false).h(1) / fund("SQR").h(1)), 0, 0.3));
+  ok("JUNO's energy is in the 2nd harmonic, as captured", fund("JUNO").h(2) > fund("JUNO").h(1));
+}
+
+// --- SuperSAW (measured against Zenology 2.0.9, renders/ssaw) ---------------
+{
+  const run = (detune, { pw = 0.5, secs = 1, hz = 261.63 } = {}) => {
+    const o = new VAOsc(SR); o.form = "SSAW"; o.pw = pw; o.setDetune(detune); o.reset(0);
+    const b = new Float32Array(Math.round(secs * SR));
+    for (let i = 0; i < b.length; i++) b[i] = o.tick(hz);
+    return b;
+  };
+  ok("SuperSAW has 14 voices with fixed detunes", SSAW.cents?.length === 14 && SSAW.phase?.length === 14);
+  const at = (d) => SSAW.amp[SSAW.detune.indexOf(d)];
+  const outer = (row) => Math.max(...row.slice(7)), inner = (row) => Math.max(...row.slice(0, 7));
+  ok("detune 0 is the inner stack, the outer 15+ dB down", outer(at(0)) < inner(at(0)) * 0.18);
+  ok("detune 127 has the outer stack louder than the inner", outer(at(127)) > inner(at(127)));
+  const a = run(64), b = run(64);
+  ok("every note restarts at the same phases (Zenology's is sample-identical)", a.every((v, i) => v === b[i]));
+  const p0 = run(64, { pw: 0 }), p1 = run(64, { pw: 1 });
+  ok("SuperSAW ignores PW (Zenology: byte-identical)", p0.every((v, i) => v === p1[i]));
+  // the highpass: energy at each voice's exact k-th harmonic, with and without
+  const hz = 1046.5, secs = 4;
+  const render = (hpf) => {
+    const o = new VAOsc(SR); o.form = "SSAW"; o.setDetune(127); o.reset(0);
+    if (!hpf) o.ssawHpf = 0;
+    const b = new Float32Array(secs * SR);
+    for (let i = 0; i < b.length; i++) b[i] = o.tick(hz);
+    return b.subarray(SR / 2);
+  };
+  const withF = render(true), without = render(false);
+  const energy = (buf, k) => SSAW.cents.reduce((e, c) => e + magAt(buf, k * hz * Math.pow(2, c / 1200)) ** 2, 0);
+  const d1 = 10 * Math.log10(energy(withF, 1) / energy(without, 1));
+  const d3 = 10 * Math.log10(energy(withF, 3) / energy(without, 3));
+  ok("the pitch-tracking highpass takes ~3.6 dB off the fundamental at detune 127",
+     close(d1, -3.6, 0.6), `${d1.toFixed(2)} dB`);
+  ok("... and leaves the 3rd harmonic alone", close(d3, 0, 0.3), `${d3.toFixed(2)} dB`);
+}
+
+// --- FAT, square PW, velocity and level laws (measured, renders/gap) --------
+{
+  const osc = (form, { fat = 64, pw = 64, hz = 220, secs = 1 } = {}) => {
+    const o = new VAOsc(SR); o.form = form; o.pw = 0.5 + (pw - 64) / 127; o.setFat(fat); o.reset(0);
+    const b = new Float32Array(Math.round(secs * SR));
+    for (let i = 0; i < b.length; i++) b[i] = o.tick(hz);
+    return b.subarray(SR / 4);
+  };
+  const rms = (b) => Math.sqrt(b.reduce((a, x) => a + x * x, 0) / b.length);
+  const f64 = osc("SAW"), f0 = osc("SAW", { fat: 0 }), f32 = osc("SAW", { fat: 32 });
+  ok("FAT 64 has no energy an octave down", magAt(f64, 110) < magAt(f64, 220) * 0.01);
+  ok("FAT 0 plays a full octave down", magAt(f0, 110) > magAt(f0, 220));
+  ok("FAT changes no level (Zenology: rms constant)", close(rms(f0) / rms(f64), 1, 0.03) && close(rms(f32) / rms(f64), 1, 0.03));
+  ok("FAT 127 equals FAT 0 (both a full octave down)",
+     close(magAt(osc("SAW", { fat: 127 }), 110), magAt(f0, 110), magAt(f0, 110) * 0.05));
+  const q32 = osc("SQR", { pw: 32 });
+  ok("SQR PW 32 is a 25% pulse: harmonic 4 vanishes", magAt(q32, 880) < magAt(q32, 220) * 0.02);
+  const q0 = osc("SQR", { pw: 0 }), q1 = osc("SQR", { pw: 1 });
+  ok("SQR PW 0 and 1 are the same clamped pulse", q0.every((v, i) => Math.abs(v - q1[i]) < 1e-9));
+  ok("SQR narrows DC-free: PW 0 is ~15 dB below PW 64",
+     close(20 * Math.log10(rms(q0) / rms(osc("SQR"))), -15.3, 1.5));
+
+  const tone = (over) => { const p = patch(); Object.assign(p.partials[0].amp, over); return p; };
+  const lvl = (p, vel, common = 127) => {
+    p.common.LEVEL = common;
+    const n = Math.round(0.4 * SR), L = new Float32Array(n), R = new Float32Array(n);
+    const v = new VAVoice(SR, p); v.noteOn(57, vel); v.process(L, R, n);
+    return rms(L.subarray(SR * 0.1));
+  };
+  const dB = (a, b) => 20 * Math.log10(a / b);
+  ok("LEVEL_VSENS 50: velocity 64 is (64/127)^2 of velocity 127",
+     close(dB(lvl(tone({ LEVEL_VSENS: 50 }), 64), lvl(tone({ LEVEL_VSENS: 50 }), 127)), 40 * Math.log10(64 / 127), 0.2));
+  ok("LEVEL_VSENS -50 mutes velocity 127", lvl(tone({ LEVEL_VSENS: -50 }), 127) < 1e-6);
+  ok("LEVEL_VSENS 0 is flat", close(dB(lvl(tone({ LEVEL_VSENS: 0 }), 20), lvl(tone({ LEVEL_VSENS: 0 }), 127)), 0, 0.05));
+  ok("partial LEVEL 64 is (64/127)^2 of 127 (-11.9 dB)",
+     close(dB(lvl(tone({ LEVEL: 64, LEVEL_VSENS: 0 }), 100), lvl(tone({ LEVEL: 127, LEVEL_VSENS: 0 }), 100)), -11.95, 0.1));
+  ok("tone LEVEL 59 is (59/127)^2 of 127 (-13.3 dB)",
+     close(dB(lvl(tone({ LEVEL_VSENS: 0 }), 100, 59), lvl(tone({ LEVEL_VSENS: 0 }), 100, 127)), -13.32, 0.1));
+}
+
+// --- partial structure and WAV_GAIN (measured, renders/struct, renders/gap) --
+{
+  // a two-partial patch: partial 2 a copy of partial 1
+  const pair = (mode, over = {}) => {
+    const p = patch();
+    const p2 = JSON.parse(JSON.stringify(p.partials[0])); p2.index = 2;
+    p.partials.push(p2);
+    const labels = ["OFF", "SYNC", "RING", "XMOD", "XMOD2"];
+    p.structure = { pair12: { value: labels.indexOf(mode), label: mode }, pair34: { value: 0, label: "OFF" },
+                    RING12_LEVEL: 127, RING_OSC1_LEVEL: 0, RING_OSC2_LEVEL: 0, XMOD12_DEPTH: 1200,
+                    XMOD_OSC1_LEVEL: 127, XMOD_OSC2_LEVEL: 0, XMOD2_12_DEPTH: 0,
+                    PTL_PHS_LOCK: { value: 1, label: "ON" }, ...over };
+    return p;
+  };
+  const play = (p, secs = 0.5) => {
+    const n = Math.round(secs * SR), L = new Float32Array(n), R = new Float32Array(n);
+    const v = new VAVoice(SR, p); v.noteOn(57, 100); v.process(L, R, n);
+    return L.subarray(SR * 0.1);
+  };
+  const rms = (b) => Math.sqrt(b.reduce((a, x) => a + x * x, 0) / b.length);
+  const dB = (a, b) => 20 * Math.log10(a / b);
+  const off = rms(play(pair("OFF")));
+  const one = patch(); const single = rms(play(one));
+  ok("two identical phase-locked partials sum to +6 dB", close(dB(off, single), 6.02, 0.1));
+  const sw = pair("SYNC"); sw.partials[1].on = false;
+  ok("SYNC: the modulator is heard even with its switch off (carrier's switch rules)",
+     close(dB(rms(play(sw)), single), 6.02, 1.5));
+  const ring0 = pair("RING", { RING12_LEVEL: 0 });
+  ok("RING: level 0 and no oscillator mix is silent - neither partial is heard directly",
+     rms(play(ring0)) < 1e-9);
+  const r64 = rms(play(pair("RING", { RING12_LEVEL: 64 }))), r127 = rms(play(pair("RING")));
+  ok("RING level is linear: 64 is -5.95 dB", close(dB(r64, r127), 20 * Math.log10(64 / 127), 0.1));
+  const x0 = pair("XMOD", { XMOD_OSC1_LEVEL: 0 });
+  ok("XMOD: OSC1 level 0 is silent - the modulator is not heard directly", rms(play(x0)) < 1e-9);
+  ok("structure constants are fitted", STRUCT.ring > 0.2 && STRUCT.ring < 0.5 && STRUCT.xmod2.length > 3);
+  const g5 = patch(); g5.partials[0].osc.WAV_GAIN = 5;
+  const g2 = patch(); g2.partials[0].osc.WAV_GAIN = 2;
+  ok("WAV_GAIN is 6.02 dB per step on a VA partial", close(dB(rms(play(g5)), rms(play(g2))), 18.06, 0.1));
+}
+
+// --- controllers ------------------------------------------------------------
+{
+  const ctl = {};
+  applyMidi(ctl, [0xb0, 1, 127]); applyMidi(ctl, [0xe0, 0, 0]); applyMidi(ctl, [0xd0, 64]);
+  applyMidi(ctl, [0xb0, 74, 0]);
+  ok("MIDI folds into the matrix's source labels",
+     ctl.CC01 === 1 && ctl.BEND === -1 && close(ctl.AFT, 64 / 127, 1e-9) && ctl.CC74 === 0,
+     JSON.stringify(ctl));
+
+  const sine = (over = {}) => {
+    const p = patch(over);
+    p.partials[0].osc.VA_FORM = { value: 3, label: "SIN" };
+    return p;
+  };
+  const hzOf = (p, setup) => {
+    const v = new VAVoice(SR, p); setup?.(v); v.noteOn(69, 100);
+    const n = SR, l = new Float32Array(n), r = new Float32Array(n);
+    v.process(l, r, n);
+    let up = 0;
+    for (let i = SR / 10 + 1; i < n; i++) if (l[i - 1] < 0 && l[i] >= 0) up++;
+    return up / 0.9;
+  };
+  const bent = hzOf(sine({ common: { ...patch().common, BEND_RANGE_UP: 7 } }), (v) => { v.controllers.BEND = 1; });
+  ok("pitch bend up by BEND_RANGE_UP semitones", close(bent, 440 * 2 ** (7 / 12), 2), `${bent.toFixed(1)} Hz`);
+  const deaf = sine({ common: { ...patch().common, BEND_RANGE_UP: 7 } });
+  deaf.partials[0].pitch.RX_BEND = { value: 0, label: "OFF" };
+  const still = hzOf(deaf, (v) => { v.controllers.BEND = 1; });
+  ok("a partial with Receive Bender OFF ignores the bend", close(still, 440, 2), `${still.toFixed(1)} Hz`);
+
+  // SYS-CTRL1 is the mod wheel (CC01): route it to pitch
+  const wheel = sine();
+  wheel.partials[0].matrix = [{ src: { label: "SYS-CTRL1" },
+    dst: [{ dst: { label: "PCH" }, sens: 63 }, { dst: { label: "OFF" }, sens: 0 }] }];
+  const up = hzOf(wheel, (v) => { v.controllers.CC01 = 1; });
+  const rest = hzOf(wheel);
+  ok("SYS-CTRL1 routes follow the mod wheel (CC01)", up > rest * 1.5 && close(rest, 440, 2),
+     `${rest.toFixed(1)} -> ${up.toFixed(1)} Hz`);
+
+  // hold: a pedalled note keeps sounding past its note-off until pedalUp
+  const held = new VAVoice(SR, patch());
+  held.noteOn(60, 100); held.noteOff(true);
+  const l = new Float32Array(SR), r = new Float32Array(SR);
+  held.process(l, r, SR);
+  const sustained = !held.done;
+  held.pedalUp(); held.process(l, r, SR);
+  ok("the hold pedal sustains a released note until the pedal lifts", sustained && held.done);
+}
+
+// --- partial delay and key / velocity window (renders/pmt) -------------------
+{
+  const withDelay = (mode, time) => {
+    const p = patch();
+    p.partials[0].delay = { DELAY_MODE: { label: mode }, DLY_TIME_SYNC: { value: 0, label: "OFF" }, DLY_TIME: time };
+    return p;
+  };
+  // play: key down for `hold` s, render `secs`; returns 10 ms rms frames
+  const trace = (p, hold, secs, note = 60, vel = 100) => {
+    const v = new VAVoice(SR, p); v.noteOn(note, vel);
+    const n = Math.round(secs * SR), l = new Float32Array(n), r = new Float32Array(n);
+    const h = Math.round(hold * SR);
+    v.process(l.subarray(0, h), r.subarray(0, h), h);
+    v.noteOff();
+    v.process(l.subarray(h), r.subarray(h), n - h);
+    const k = SR / 100, out = [];
+    for (let i = 0; i + k <= n; i += k) {
+      let e = 0; for (let j = i; j < i + k; j++) e += l[j] * l[j];
+      out.push(Math.sqrt(e / k));
+    }
+    return { out, done: v.done };
+  };
+  const firstLoud = (f) => f.findIndex((x) => x > 1e-3) / 100;
+  // DLY_TIME 384 = 0.767 s (measured)
+  const nrm = trace(withDelay("NORMAL", 384), 1.0, 2.5).out;
+  ok("NORMAL: starts after the delay (0.767 s at DLY_TIME 384)", close(firstLoud(nrm), 0.76, 0.015), `${firstLoud(nrm)}`);
+  ok("NORMAL: the note-off is delayed too (still sounding at 1.5 s, key up at 1.0)",
+     nrm[150] > 0.5 * nrm[120], `${nrm[150]} vs ${nrm[120]}`);
+  const hold = trace(withDelay("HOLD", 384), 0.3, 1.5);
+  ok("HOLD: a key released before the delay ends leaves it silent",
+     hold.out.every((x) => x < 1e-6) && hold.done);
+  const ko = trace(withDelay("KEYOFF-NORMAL", 384), 1.0, 3.0).out;
+  ok("KEYOFF-NORMAL: silent while held, starts at note-off + delay", close(firstLoud(ko), 1.76, 0.015), `${firstLoud(ko)}`);
+
+  const win = (lo, up, flo, fup) => {
+    const p = patch();
+    p.partials[0].range = { KRANGE_LO: lo, KRANGE_UP: up, KFADE_LO: flo, KFADE_UP: fup,
+                            VRANGE_LO: 1, VRANGE_UP: 127, VFADE_LO: 0, VFADE_UP: 0 };
+    return p;
+  };
+  const lvl = (p, note) => { const t = trace(p, 0.4, 0.4, note).out.slice(10); return t.reduce((a, b) => a + b) / t.length; };
+  const inside = lvl(win(60, 84, 12, 12), 72), half = lvl(win(60, 84, 12, 12), 54), out = lvl(win(60, 84, 12, 12), 47);
+  ok("key window: 6 keys into a 12-key fade is -12 dB ((1/2)^2), past it silent",
+     close(20 * Math.log10(half / inside), -12.04, 0.2) && out < 1e-9, `${(20 * Math.log10(half / inside)).toFixed(2)} dB`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

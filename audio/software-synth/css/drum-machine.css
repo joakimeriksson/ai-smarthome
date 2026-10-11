@@ -5,6 +5,8 @@
      amber / yellow / white step rows. The colour IS the interface. */
   --chassis: #6f4b2a;         /* wood */
   --chassis-edge: rgba(30, 18, 8, 0.6);
+  --cheek: var(--wood);       /* panel-hw.css end cheeks */
+  --cheek-w: 22px;
   --bg: #cfc7b8;
   --panel-bg: #ded7c9;
   --panel-border: #a89e8c;

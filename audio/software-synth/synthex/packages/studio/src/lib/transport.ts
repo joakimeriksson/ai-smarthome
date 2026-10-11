@@ -8,7 +8,8 @@
 // schedule every step that falls inside a short lookahead window against
 // AudioContext.currentTime, which is sample-accurate.
 
-export type StepHandler = (step: number, time: number) => void
+/** `index` counts steps since play was pressed; `step` wraps at the song's length. */
+export type StepHandler = (step: number, time: number, index: number) => void
 
 const LOOKAHEAD_MS = 25      // how often we wake to schedule
 const SCHEDULE_AHEAD_S = 0.1 // how far ahead we commit steps
@@ -18,7 +19,9 @@ export class Transport {
   /** Swing 0..1 — delays every odd 16th by up to half a step. */
   swing = 0
   stepsPerBeat = 4
+  /** Loop length in steps; `length` (when set) is asked afresh every step. */
   steps = 16
+  length: (() => number) | null = null
   playing = false
   /** Step index most recently scheduled; the UI reads this for the playhead. */
   currentStep = 0
@@ -62,10 +65,10 @@ export class Transport {
   private tick(): void {
     const horizon = this.ctx.currentTime + SCHEDULE_AHEAD_S
     while (this.nextStepTime < horizon) {
-      const step = this.nextStepIndex % this.steps
+      const step = this.nextStepIndex % Math.max(1, this.length ? this.length() : this.steps)
       // Swing: push odd steps later within their slot.
       const swung = step % 2 === 1 ? this.swing * this.secondsPerStep() * 0.5 : 0
-      for (const fn of this.handlers) fn(step, this.nextStepTime + swung)
+      for (const fn of this.handlers) fn(step, this.nextStepTime + swung, this.nextStepIndex)
       this.currentStep = step
       this.nextStepIndex++
       this.nextStepTime += this.secondsPerStep()

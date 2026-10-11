@@ -146,6 +146,11 @@ function normalise(raw, shape, defaults) {
     // tables ARE the sound for those presets — dropping them here left the
     // studio playing a static tone where the page played a sweep.
     ...(p.tables ? { tables: p.tables } : {}),
+    // WaveSynth presets may carry wave sequences — the moving part of Wave
+    // Pad, Digital Dreams, Bell Chime... Without them the studio played the
+    // oscillators' static wave.
+    ...(p.seqA ? { seqA: p.seqA } : {}),
+    ...(p.seqB ? { seqB: p.seqB } : {}),
   }))
 }
 
@@ -350,8 +355,11 @@ const DRUM_PARAMS = [
     options: ['Kick', 'Snare', 'Closed HH', 'Open HH', 'Clap', 'Tom', 'Rim', 'Cowbell',
       'Cymbal', 'Maraca', 'Conga', 'Claves']
       .map((label, i) => ({ value: String(i), label })) },
+  // One range for every voice type (the page narrows it per type, see
+  // TONE_RANGE in js/drum-main.js). It must reach the claves' 2423 Hz: at
+  // max 800 a claves preset was clamped 1.6 octaves down on first touch.
   { param: 'tone',  label: 'Tone',  group: 'Voice', type: 'range', perChannel: true,
-    min: 20, max: 800, step: 1, default: 200 },
+    min: 20, max: 4000, step: 1, default: 200 },
   { param: 'decay', label: 'Decay', group: 'Voice', type: 'range', perChannel: true,
     min: 0.1, max: 1, step: 0.01, default: 0.5 },
   { param: 'color', label: 'Color', group: 'Voice', type: 'range', perChannel: true,

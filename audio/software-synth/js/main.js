@@ -294,6 +294,18 @@ function noteOff(note) {
   updateVoiceDisplay();
 }
 
+// Aftertouch: `value` 0..1 to every held voice (channel pressure) or only
+// the voice holding `note` (polyphonic pressure). A short glide keeps MIDI's
+// 128 steps from zippering the filter.
+function pressure(value, note = null) {
+  if (!started) return;
+  const target = note === null ? null : note + masterTranspose;
+  for (let i = 0; i < NUM_VOICES; i++) {
+    if (!voices[i].active || (target !== null && voices[i].note !== target)) continue;
+    synthNode.port.postMessage({ type: 'pressure', voice: i, value, time: 0.03 });
+  }
+}
+
 // ─── Preset State Tracking ──────────────────────────────────────────────────
 // Shadow object capturing all current synth param values for preset save/export
 let currentParams = {};
@@ -475,22 +487,29 @@ function setupBindings() {
   bindSlider('filter-keytrack', 'filterKeyTrack');
 
   // Amp ADSR
-  bindSlider('amp-a', 'ampAttack', { transform: v => v * v * 5, suffix: 's', decimals: 3 });
-  bindSlider('amp-d', 'ampDecay', { transform: v => v * v * 5, suffix: 's', decimals: 3 });
+  // Envelope sliders are square law up to 15 s (attack) / 35 s (decay) /
+  // 70 s (release), in real seconds: attack to the peak, decay/release to
+  // -60 dB (see Envelope in dsp-lib.js). The maxima were 5/5/10 when the
+  // numbers were one-pole time constants; they were scaled by the same
+  // factors as the presets (x3.04, x6.91), so every slider sits where it did.
+  // Literal numbers, not constants: scripts/sync-synth-data.mjs in the
+  // studio extracts these transforms as standalone code.
+  bindSlider('amp-a', 'ampAttack', { transform: v => v * v * 15, suffix: 's', decimals: 3 });
+  bindSlider('amp-d', 'ampDecay', { transform: v => v * v * 35, suffix: 's', decimals: 3 });
   bindSlider('amp-s', 'ampSustain');
-  bindSlider('amp-r', 'ampRelease', { transform: v => v * v * 10, suffix: 's', decimals: 3 });
+  bindSlider('amp-r', 'ampRelease', { transform: v => v * v * 70, suffix: 's', decimals: 3 });
 
   // Filter ADSR
-  bindSlider('flt-a', 'filterAttack', { transform: v => v * v * 5, suffix: 's', decimals: 3 });
-  bindSlider('flt-d', 'filterDecay', { transform: v => v * v * 5, suffix: 's', decimals: 3 });
+  bindSlider('flt-a', 'filterAttack', { transform: v => v * v * 15, suffix: 's', decimals: 3 });
+  bindSlider('flt-d', 'filterDecay', { transform: v => v * v * 35, suffix: 's', decimals: 3 });
   bindSlider('flt-s', 'filterSustain');
-  bindSlider('flt-r', 'filterRelease', { transform: v => v * v * 10, suffix: 's', decimals: 3 });
+  bindSlider('flt-r', 'filterRelease', { transform: v => v * v * 70, suffix: 's', decimals: 3 });
 
   // Mod ADSR
-  bindSlider('mod-a', 'modAttack', { transform: v => v * v * 5, suffix: 's', decimals: 3 });
-  bindSlider('mod-d', 'modDecay', { transform: v => v * v * 5, suffix: 's', decimals: 3 });
+  bindSlider('mod-a', 'modAttack', { transform: v => v * v * 15, suffix: 's', decimals: 3 });
+  bindSlider('mod-d', 'modDecay', { transform: v => v * v * 35, suffix: 's', decimals: 3 });
   bindSlider('mod-s', 'modSustain');
-  bindSlider('mod-r', 'modRelease', { transform: v => v * v * 10, suffix: 's', decimals: 3 });
+  bindSlider('mod-r', 'modRelease', { transform: v => v * v * 70, suffix: 's', decimals: 3 });
 
   // LFOs
   bindSlider('lfo1-rate', 'lfo1Rate', {
@@ -739,20 +758,20 @@ function getCurrentState() {
     filterEnvAmount: readSlider('filter-env-amt'),
     filterKeyTrack: readSlider('filter-keytrack'),
 
-    ampAttack: readSlider('amp-a', v => v * v * 5),
-    ampDecay: readSlider('amp-d', v => v * v * 5),
+    ampAttack: readSlider('amp-a', v => v * v * 15),
+    ampDecay: readSlider('amp-d', v => v * v * 35),
     ampSustain: readSlider('amp-s'),
-    ampRelease: readSlider('amp-r', v => v * v * 10),
+    ampRelease: readSlider('amp-r', v => v * v * 70),
 
-    filterAttack: readSlider('flt-a', v => v * v * 5),
-    filterDecay: readSlider('flt-d', v => v * v * 5),
+    filterAttack: readSlider('flt-a', v => v * v * 15),
+    filterDecay: readSlider('flt-d', v => v * v * 35),
     filterSustain: readSlider('flt-s'),
-    filterRelease: readSlider('flt-r', v => v * v * 10),
+    filterRelease: readSlider('flt-r', v => v * v * 70),
 
-    modAttack: readSlider('mod-a', v => v * v * 5),
-    modDecay: readSlider('mod-d', v => v * v * 5),
+    modAttack: readSlider('mod-a', v => v * v * 15),
+    modDecay: readSlider('mod-d', v => v * v * 35),
     modSustain: readSlider('mod-s'),
-    modRelease: readSlider('mod-r', v => v * v * 10),
+    modRelease: readSlider('mod-r', v => v * v * 70),
 
     lfo1Rate: readSlider('lfo1-rate', v => 0.01 * Math.pow(5000, v)),
     lfo1Waveform: readSelect('lfo1-wave', true),
@@ -861,8 +880,8 @@ const PRESETS = {
   'Warm Pad': {
     osc1Waveform: 0, osc2Waveform: 0, osc2Level: 0.5, osc2Detune: 7,
     filterCutoff: 2000, filterResonance: 0.2, filterEnvAmount: 0.3,
-    ampAttack: 0.5, ampDecay: 0.5, ampSustain: 0.8, ampRelease: 1.0,
-    filterAttack: 0.3, filterDecay: 0.8, filterSustain: 0.3, filterRelease: 0.8,
+    ampAttack: 1.522, ampDecay: 3.454, ampSustain: 0.8, ampRelease: 6.908,
+    filterAttack: 0.9134, filterDecay: 5.526, filterSustain: 0.3, filterRelease: 5.526,
     driftAmount: 0.5, unisonCount: 4, unisonDetune: 15, unisonSpread: 0.7,
     fx: {
       chorus: { enabled: true, rate: 0.12, depth: 0.55, mix: 0.35 },
@@ -873,8 +892,8 @@ const PRESETS = {
   'Pluck Bass': {
     osc1Waveform: 0, osc2Level: 0, subLevel: 0.4,
     filterCutoff: 800, filterResonance: 0.3, filterEnvAmount: 0.7,
-    ampAttack: 0.001, ampDecay: 0.3, ampSustain: 0.0, ampRelease: 0.1,
-    filterAttack: 0.001, filterDecay: 0.2, filterSustain: 0.0, filterRelease: 0.1,
+    ampAttack: 0.003045, ampDecay: 2.072, ampSustain: 0.0, ampRelease: 0.6908,
+    filterAttack: 0.003045, filterDecay: 1.382, filterSustain: 0.0, filterRelease: 0.6908,
     saturationDrive: 2.0,
     fx: {
       distortion: { enabled: true, drive: 0.15 },
@@ -885,8 +904,8 @@ const PRESETS = {
   'Acid Lead': {
     osc1Waveform: 0, osc2Level: 0,
     filterCutoff: 500, filterResonance: 0.85, filterEnvAmount: 0.8, filterKeyTrack: 0.5,
-    ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.6, ampRelease: 0.1,
-    filterAttack: 0.001, filterDecay: 0.15, filterSustain: 0.1, filterRelease: 0.1,
+    ampAttack: 0.003045, ampDecay: 1.382, ampSustain: 0.6, ampRelease: 0.6908,
+    filterAttack: 0.003045, filterDecay: 1.036, filterSustain: 0.1, filterRelease: 0.6908,
     saturationDrive: 1.5,
     fx: {
       distortion: { enabled: true, drive: 0.25 },
@@ -897,7 +916,7 @@ const PRESETS = {
   'PWM Strings': {
     osc1Waveform: 1, osc2Waveform: 1, osc2Level: 0.5, osc2Detune: 5,
     pulseWidth: 0.3, filterCutoff: 4000, filterResonance: 0.1,
-    ampAttack: 0.4, ampDecay: 0.3, ampSustain: 0.8, ampRelease: 0.6,
+    ampAttack: 1.218, ampDecay: 2.072, ampSustain: 0.8, ampRelease: 4.145,
     driftAmount: 0.4, unisonCount: 2, unisonDetune: 8,
     mod: [{ src: 'lfo1', dst: 'pwm', amount: 0.6 },
           { src: 'off', dst: 'off', amount: 0 },
@@ -912,7 +931,7 @@ const PRESETS = {
 
   'Reso Sweep': {
     osc1Waveform: 0, filterCutoff: 200, filterResonance: 0.7,
-    ampAttack: 0.01, ampDecay: 0.5, ampSustain: 0.5, ampRelease: 0.5,
+    ampAttack: 0.03045, ampDecay: 3.454, ampSustain: 0.5, ampRelease: 3.454,
     mod: [{ src: 'lfo1', dst: 'cutoff', amount: 0.5 },
           { src: 'off', dst: 'off', amount: 0 },
           { src: 'off', dst: 'off', amount: 0 },
@@ -928,9 +947,9 @@ const PRESETS = {
     osc1Waveform: 0, osc2Waveform: 0, osc2Level: 0.8, osc2Octave: 12,
     oscSync: true, filterCutoff: 6000, filterResonance: 0.15,
     filterEnvAmount: 0.5, filterKeyTrack: 0.5,
-    ampAttack: 0.001, ampDecay: 0.4, ampSustain: 0.0, ampRelease: 0.15,
-    filterAttack: 0.001, filterDecay: 0.3, filterSustain: 0.0, filterRelease: 0.15,
-    modAttack: 0.001, modDecay: 0.5, modSustain: 0.0, modRelease: 0.1,
+    ampAttack: 0.003045, ampDecay: 2.763, ampSustain: 0.0, ampRelease: 1.036,
+    filterAttack: 0.003045, filterDecay: 2.072, filterSustain: 0.0, filterRelease: 1.036,
+    modAttack: 0.003045, modDecay: 3.454, modSustain: 0.0, modRelease: 0.6908,
     mod: [{ src: 'modEnv', dst: 'osc2Pitch', amount: 0.7 },
           { src: 'off', dst: 'off', amount: 0 },
           { src: 'off', dst: 'off', amount: 0 },
@@ -945,8 +964,8 @@ const PRESETS = {
   'Deep Sub': {
     osc1Waveform: 0, osc2Waveform: 3, osc2Level: 0.3, osc2Octave: -12,
     subLevel: 0.6, filterCutoff: 400, filterResonance: 0.15, filterEnvAmount: 0.5,
-    ampAttack: 0.005, ampDecay: 0.4, ampSustain: 0.6, ampRelease: 0.2,
-    filterAttack: 0.001, filterDecay: 0.3, filterSustain: 0.2, filterRelease: 0.15,
+    ampAttack: 0.01522, ampDecay: 2.763, ampSustain: 0.6, ampRelease: 1.382,
+    filterAttack: 0.003045, filterDecay: 2.072, filterSustain: 0.2, filterRelease: 1.036,
     saturationDrive: 1.8, monoMode: 'mono', portamento: true, portamentoTime: 0.06,
     fx: {
       distortion: { enabled: true, drive: 0.2 },
@@ -957,8 +976,8 @@ const PRESETS = {
   'Ambient Wash': {
     osc1Waveform: 2, osc2Waveform: 3, osc2Level: 0.4, osc2Detune: 3,
     filterCutoff: 3000, filterResonance: 0.1, filterEnvAmount: -0.2,
-    ampAttack: 1.2, ampDecay: 1.0, ampSustain: 0.7, ampRelease: 2.5,
-    filterAttack: 0.8, filterDecay: 1.5, filterSustain: 0.5, filterRelease: 2.0,
+    ampAttack: 3.653, ampDecay: 6.908, ampSustain: 0.7, ampRelease: 17.27,
+    filterAttack: 2.436, filterDecay: 10.36, filterSustain: 0.5, filterRelease: 13.82,
     driftAmount: 0.6, unisonCount: 6, unisonDetune: 20, unisonSpread: 0.9,
     lfo1Rate: 0.08, lfo1Waveform: 0,
     mod: [{ src: 'lfo1', dst: 'cutoff', amount: 0.15 },
@@ -977,8 +996,8 @@ const PRESETS = {
     osc1Waveform: 1, osc2Waveform: 1, osc2Level: 0.6, osc2Octave: 12,
     pulseWidth: 0.15, filterCutoff: 3500, filterResonance: 0.4, filterEnvAmount: 0.6,
     filterKeyTrack: 0.4,
-    ampAttack: 0.001, ampDecay: 0.15, ampSustain: 0.0, ampRelease: 0.08,
-    filterAttack: 0.001, filterDecay: 0.12, filterSustain: 0.0, filterRelease: 0.08,
+    ampAttack: 0.003045, ampDecay: 1.036, ampSustain: 0.0, ampRelease: 0.5526,
+    filterAttack: 0.003045, filterDecay: 0.8289, filterSustain: 0.0, filterRelease: 0.5526,
     saturationDrive: 1.4,
     fx: {
       distortion: { enabled: true, drive: 0.08 },
@@ -991,8 +1010,8 @@ const PRESETS = {
     osc1Waveform: 0, osc2Waveform: 0, osc2Level: 0.7, osc2Detune: 10,
     filterCutoff: 1200, filterResonance: 0.15, filterEnvAmount: 0.7,
     filterKeyTrack: 0.3,
-    ampAttack: 0.02, ampDecay: 0.2, ampSustain: 0.7, ampRelease: 0.15,
-    filterAttack: 0.02, filterDecay: 0.25, filterSustain: 0.4, filterRelease: 0.15,
+    ampAttack: 0.06089, ampDecay: 1.382, ampSustain: 0.7, ampRelease: 1.036,
+    filterAttack: 0.06089, filterDecay: 1.727, filterSustain: 0.4, filterRelease: 1.036,
     unisonCount: 4, unisonDetune: 12, unisonSpread: 0.5,
     saturationDrive: 1.6, driftAmount: 0.3,
     fx: {
@@ -1005,8 +1024,8 @@ const PRESETS = {
     osc1Waveform: 0, osc2Waveform: 0, osc2Level: 0.8, osc2Detune: 15,
     filterCutoff: 6000, filterResonance: 0.1, filterEnvAmount: 0.2,
     filterKeyTrack: 0.3,
-    ampAttack: 0.005, ampDecay: 0.3, ampSustain: 0.8, ampRelease: 0.2,
-    filterAttack: 0.005, filterDecay: 0.4, filterSustain: 0.6, filterRelease: 0.2,
+    ampAttack: 0.01522, ampDecay: 2.072, ampSustain: 0.8, ampRelease: 1.382,
+    filterAttack: 0.01522, filterDecay: 2.763, filterSustain: 0.6, filterRelease: 1.382,
     unisonCount: 8, unisonDetune: 25, unisonSpread: 0.8,
     driftAmount: 0.2, monoMode: 'mono', portamento: true, portamentoTime: 0.04,
     fx: {
@@ -1020,8 +1039,8 @@ const PRESETS = {
     osc1Waveform: 0, osc2Waveform: 1, osc2Level: 0.5, osc2Octave: 0,
     subLevel: 0.3, pulseWidth: 0.4,
     filterCutoff: 300, filterResonance: 0.6, filterEnvAmount: 0.3,
-    ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.1,
-    filterAttack: 0.001, filterDecay: 0.1, filterSustain: 0.7, filterRelease: 0.1,
+    ampAttack: 0.003045, ampDecay: 1.382, ampSustain: 0.8, ampRelease: 0.6908,
+    filterAttack: 0.003045, filterDecay: 0.6908, filterSustain: 0.7, filterRelease: 0.6908,
     saturationDrive: 2.5, monoMode: 'mono',
     lfo1Rate: 3.0, lfo1Waveform: 0, lfo1Sync: true,
     mod: [{ src: 'lfo1', dst: 'cutoff', amount: 0.7 },
@@ -1038,9 +1057,9 @@ const PRESETS = {
     osc1Waveform: 3, osc2Waveform: 2, osc2Level: 0.6, osc2Octave: 12,
     ringMod: true, crossModAmount: 0.3,
     filterCutoff: 8000, filterResonance: 0.05, filterEnvAmount: -0.3,
-    ampAttack: 0.001, ampDecay: 0.8, ampSustain: 0.0, ampRelease: 1.5,
-    filterAttack: 0.001, filterDecay: 1.0, filterSustain: 0.0, filterRelease: 1.0,
-    modAttack: 0.001, modDecay: 0.6, modSustain: 0.0, modRelease: 0.3,
+    ampAttack: 0.003045, ampDecay: 5.526, ampSustain: 0.0, ampRelease: 10.36,
+    filterAttack: 0.003045, filterDecay: 6.908, filterSustain: 0.0, filterRelease: 6.908,
+    modAttack: 0.003045, modDecay: 4.145, modSustain: 0.0, modRelease: 2.072,
     fx: {
       delay: { enabled: true, time: 0.22, feedback: 0.35, mix: 0.2 },
       reverb: { enabled: true, size: 0.9, damping: 0.3, mix: 0.4 }
@@ -1051,8 +1070,8 @@ const PRESETS = {
     osc1Waveform: 3, osc2Waveform: 2, osc2Level: 0.3, osc2Octave: 12,
     filterCutoff: 3000, filterResonance: 0.1, filterEnvAmount: 0.4,
     filterKeyTrack: 0.5,
-    ampAttack: 0.005, ampDecay: 0.5, ampSustain: 0.3, ampRelease: 0.3,
-    filterAttack: 0.001, filterDecay: 0.4, filterSustain: 0.1, filterRelease: 0.3,
+    ampAttack: 0.01522, ampDecay: 3.454, ampSustain: 0.3, ampRelease: 2.072,
+    filterAttack: 0.003045, filterDecay: 2.763, filterSustain: 0.1, filterRelease: 2.072,
     driftAmount: 0.4,
     fx: {
       chorus: { enabled: true, rate: 0.15, depth: 0.4, mix: 0.25 },
@@ -1064,8 +1083,8 @@ const PRESETS = {
     osc1Waveform: 0, osc2Waveform: 1, osc2Level: 0.4, osc2Detune: 5,
     pulseWidth: 0.35, filterCutoff: 4000, filterResonance: 0.25,
     filterEnvAmount: 0.5, filterKeyTrack: 0.3,
-    ampAttack: 0.001, ampDecay: 0.25, ampSustain: 0.0, ampRelease: 0.3,
-    filterAttack: 0.001, filterDecay: 0.2, filterSustain: 0.0, filterRelease: 0.25,
+    ampAttack: 0.003045, ampDecay: 1.727, ampSustain: 0.0, ampRelease: 2.072,
+    filterAttack: 0.003045, filterDecay: 1.382, filterSustain: 0.0, filterRelease: 1.727,
     driftAmount: 0.3,
     arpEnabled: true, arpBpm: 135, arpDivision: '1/16', arpMode: 'up',
     arpOctaves: 3, arpGate: 0.6, arpSwing: 0,
@@ -1083,9 +1102,9 @@ const PRESET_DEFAULTS = {
   oscSync: false, ringMod: false,
   filterType: 0, filterMode: 0, filterCutoff: 8000, filterResonance: 0,
   filterEnvAmount: 0, filterKeyTrack: 0,
-  ampAttack: 0.01, ampDecay: 0.2, ampSustain: 0.7, ampRelease: 0.3,
-  filterAttack: 0.01, filterDecay: 0.3, filterSustain: 0.3, filterRelease: 0.3,
-  modAttack: 0.01, modDecay: 0.3, modSustain: 0, modRelease: 0.1,
+  ampAttack: 0.03045, ampDecay: 1.382, ampSustain: 0.7, ampRelease: 2.072,
+  filterAttack: 0.03045, filterDecay: 2.072, filterSustain: 0.3, filterRelease: 2.072,
+  modAttack: 0.03045, modDecay: 2.072, modSustain: 0, modRelease: 0.6908,
   lfo1Rate: 2, lfo1Waveform: 0, lfo1Sync: true,
   lfo2Rate: 0.5, lfo2Waveform: 0, lfo2Sync: true,
   driftAmount: 0.3, saturationDrive: 1.0,
@@ -1225,15 +1244,15 @@ function updateUIFromPreset(p) {
   setSlider('filter-keytrack', p.filterKeyTrack);
 
   // ADSR: raw = sqrt(val/maxTime)
-  setSlider('amp-a', Math.sqrt(p.ampAttack / 5));
-  setSlider('amp-d', Math.sqrt(p.ampDecay / 5));
+  setSlider('amp-a', Math.sqrt(p.ampAttack / 15));
+  setSlider('amp-d', Math.sqrt(p.ampDecay / 35));
   setSlider('amp-s', p.ampSustain);
-  setSlider('amp-r', Math.sqrt(p.ampRelease / 10));
+  setSlider('amp-r', Math.sqrt(p.ampRelease / 70));
 
-  setSlider('flt-a', Math.sqrt(p.filterAttack / 5));
-  setSlider('flt-d', Math.sqrt(p.filterDecay / 5));
+  setSlider('flt-a', Math.sqrt(p.filterAttack / 15));
+  setSlider('flt-d', Math.sqrt(p.filterDecay / 35));
   setSlider('flt-s', p.filterSustain);
-  setSlider('flt-r', Math.sqrt(p.filterRelease / 10));
+  setSlider('flt-r', Math.sqrt(p.filterRelease / 70));
 
   // LFO rates: inverse of 0.01 * Math.pow(5000, v) → log(v/0.01) / log(5000)
   if (p.lfo1Rate !== undefined) setSlider('lfo1-rate', Math.log(p.lfo1Rate / 0.01) / Math.log(5000));
@@ -1288,10 +1307,10 @@ function updateUIFromPreset(p) {
   }
 
   // Mod envelope ADSR
-  setSlider('mod-a', Math.sqrt(p.modAttack / 5));
-  setSlider('mod-d', Math.sqrt(p.modDecay / 5));
+  setSlider('mod-a', Math.sqrt(p.modAttack / 15));
+  setSlider('mod-d', Math.sqrt(p.modDecay / 35));
   setSlider('mod-s', p.modSustain);
-  setSlider('mod-r', Math.sqrt(p.modRelease / 10));
+  setSlider('mod-r', Math.sqrt(p.modRelease / 70));
 
   // Arpeggiator
   if (p.arpEnabled !== undefined) {
@@ -1518,6 +1537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     noteOn: (note, vel) => inputNoteOn(note, vel),
     noteOff: (note) => inputNoteOff(note),
     pitchBend: (val) => sendParam('pitchBend', val),
+    pressure: (val, note) => pressure(val, note),
     sustainChange: (on) => {
       sustainPedalOn = on;
       if (!on) {

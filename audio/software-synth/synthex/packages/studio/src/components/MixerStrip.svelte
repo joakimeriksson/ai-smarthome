@@ -1,7 +1,11 @@
 <script lang="ts">
-  // One channel strip: meter, fader, pan, mute/solo, focus, remove.
+  // One channel strip, top to bottom in signal order: the instrument, its
+  // insert effects, the sends to the return buses, meter and fader, pan,
+  // mute/solo.
   import type { Track } from '../lib/track.svelte.ts'
+  import type { Bus } from '../lib/mixer.svelte.ts'
   import { instrumentDef, INSTRUMENTS, type InstrumentKind } from '../lib/instruments.ts'
+  import FxRack from './FxRack.svelte'
 
   interface Props {
     track: Track
@@ -14,8 +18,14 @@
     onswap: (kind: InstrumentKind) => void
     onedit: () => void
     editing: boolean
+    /** Return buses, for the send controls. */
+    buses: Bus[]
+    /** The insert open in the effect editor, if it is on this track. */
+    selectedFx: string | null
+    onfx: (slotId: string) => void
   }
-  let { track, focused, meter, onfocus, onchange, onremove, onroll, onswap, onedit, editing }: Props = $props()
+  let { track, focused, meter, onfocus, onchange, onremove, onroll, onswap, onedit, editing,
+    buses, selectedFx, onfx }: Props = $props()
 
   const def = $derived(instrumentDef(track.kind))
   let rolling = $state(false)
@@ -49,6 +59,30 @@
       {/each}
     </select>
   </div>
+
+  <div class="section">
+    <span class="sec-title">INSERTS</span>
+    <FxRack chain={track.chain} selected={selectedFx} onselect={onfx} />
+  </div>
+
+  {#if buses.length}
+    <div class="section">
+      <span class="sec-title">SENDS</span>
+      {#each buses as bus (bus.id)}
+        {@const send = track.sends[bus.id]}
+        <div class="send" title="Send to return {bus.id} ({bus.name}){send?.pre ? ', pre-fader' : ''}">
+          <span class="bus-id">{bus.id}</span>
+          <input type="range" min="0" max="1" step="0.01" value={send?.level ?? 0}
+            aria-label="Send to {bus.name}"
+            oninput={(e) => { track.setSend(bus.id, Number((e.target as HTMLInputElement).value)); onchange() }}
+            ondblclick={() => { track.setSend(bus.id, 0); onchange() }} />
+          <button class="pre" class:on={send?.pre} aria-label="Pre-fader send to {bus.name}"
+            title="Pre-fader: the send ignores this track's fader"
+            onclick={() => { track.setSend(bus.id, send?.level ?? 0, !send?.pre); onchange() }}>P</button>
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   <div class="meter-row">
     <div class="meter"><div class="fill" style="height:{Math.round(meter * 100)}%"></div></div>
@@ -152,7 +186,26 @@
   .knob-row,
   .btns,
   .edit,
+  .section,
   .meter-row { margin-inline: 0.45rem; }
+
+  .section { display: flex; flex-direction: column; gap: 2px; }
+  .sec-title { font-size: 0.48rem; letter-spacing: 0.18em; color: #6f6f79; }
+  .send { display: grid; grid-template-columns: 0.7rem 1fr 0.95rem; align-items: center; gap: 3px; }
+  .bus-id { font-size: 0.56rem; font-weight: 700; color: #9a9aa4; text-align: center; }
+  .send input { width: 100%; min-width: 0; height: 12px; accent-color: var(--accent); }
+  .pre {
+    height: 13px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 0;
+    border-radius: 2px;
+    color: #5f5f68;
+    font-size: 0.48rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pre.on { background: #6fb7ff; color: #0b0b0e; }
 
   .edit {
     background: rgba(255, 255, 255, 0.06);

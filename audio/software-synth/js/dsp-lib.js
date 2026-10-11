@@ -40,25 +40,37 @@ export function fastTanh(x) {
 // ------------------------------------------------------------------------
 
 
+// The attack aims at 1.05 and stops at 1.0: that takes ln(1.05/0.05) time
+// constants. A fall of 60 dB takes ln(1000).
+export const ENV_ATTACK_TCS = Math.log(21);
+export const ENV_FALL_TCS = Math.log(1000);
+
 export class Envelope {
   constructor(sr) {
     this.sr = sr;
     this.stage = ENV_OFF;
     this.level = 0;
-    this.attack = 0.01;
-    this.decay = 0.2;
+    this.attack = 0.03045;
+    this.decay = 1.382;
     this.sustain = 0.7;
-    this.release = 0.3;
+    this.release = 2.072;
     this.attackCoeff = 0;
     this.decayCoeff = 0;
     this.releaseCoeff = 0;
     this._recalc();
   }
 
+  // Times are what the panels print. attack = seconds to reach the peak;
+  // decay and release = seconds to fall 60 dB of the way (to sustain, to
+  // silence). The curves are one-pole exponentials as before; only the
+  // meaning of the number changed. Until 2026-09-24 each time was the
+  // one-pole TIME CONSTANT, so a "0.5 s" release rang for 3.5 s and a
+  // "0.1 s" attack peaked at 0.3 s. Every preset was converted by exactly
+  // these factors, so they sound the same (verified sample for sample).
   _recalc() {
-    this.attackCoeff = this.attack < 0.001 ? 1 : 1 - Math.exp(-1 / (this.attack * this.sr));
-    this.decayCoeff = this.decay < 0.001 ? 1 : 1 - Math.exp(-1 / (this.decay * this.sr));
-    this.releaseCoeff = this.release < 0.001 ? 1 : 1 - Math.exp(-1 / (this.release * this.sr));
+    this.attackCoeff = this.attack < 0.001 ? 1 : 1 - Math.exp(-ENV_ATTACK_TCS / (this.attack * this.sr));
+    this.decayCoeff = this.decay < 0.001 ? 1 : 1 - Math.exp(-ENV_FALL_TCS / (this.decay * this.sr));
+    this.releaseCoeff = this.release < 0.001 ? 1 : 1 - Math.exp(-ENV_FALL_TCS / (this.release * this.sr));
   }
 
   setParams(a, d, s, r) {
@@ -110,16 +122,100 @@ export class Envelope {
 // ------------------------------------------------------------------------
 
 
+// Halfband lowpass (cutoff at a quarter of the 2x rate) for 2x resampling:
+// 47-tap Kaiser-windowed sinc, beta 8 (~80 dB stopband, passband flat to
+// ~19 kHz at 48 kHz). Only the centre tap and the even taps are nonzero.
+const HB_TAPS = (() => {
+  const N = 47, c = (N - 1) / 2, beta = 8;
+  const i0 = (x) => { let s = 1, t = 1; for (let k = 1; k < 30; k++) { t *= (x / (2 * k)) ** 2; s += t; } return s; };
+  const taps = [];
+  for (let k = 0; k < N; k++) {
+    const n = k - c;
+    const sinc = n === 0 ? 0.5 : Math.sin(Math.PI * n / 2) / (Math.PI * n);
+    const w = i0(beta * Math.sqrt(1 - (n / c) ** 2)) / i0(beta);
+    const h = sinc * w;
+    if (Math.abs(h) > 1e-12) taps.push([k, h]);
+  }
+  const sum = taps.reduce((a, [, h]) => a + h, 0);
+  return { N, idx: Int32Array.from(taps.map(t => t[0])), h: Float64Array.from(taps.map(t => t[1] / sum)) };
+})();
+
+/**
+ * 2x up/down resampling through the halfband above. upsample() gives the two
+ * 2x-rate samples for one input sample; downsample() takes two 2x-rate
+ * samples and returns one. Mirrored circular buffers (each sample written at
+ * i and i+N) keep the newest N contiguous, so the dot product needs no wrap.
+ * Latency: (N-1)/2 samples at the 2x rate each way.
+ */
+export class Halfband2x {
+  constructor() {
+    this._up = new Float64Array(HB_TAPS.N * 2);
+    this._dn = new Float64Array(HB_TAPS.N * 2);
+    this._ui = 0; this._di = 0;
+    this.out = new Float64Array(2);   // upsample() result, reused
+  }
+  reset() { this._up.fill(0); this._dn.fill(0); }
+  /** One input sample -> this.out[0], this.out[1] at 2x (zero-stuffed, x2 gain). */
+  upsample(x) {
+    const N = HB_TAPS.N, idx = HB_TAPS.idx, h = HB_TAPS.h, n = idx.length, buf = this._up;
+    let i = this._ui + 1 === N ? 0 : this._ui + 1;
+    buf[i] = buf[i + N] = x;
+    let top = i + N, acc = 0;
+    for (let j = 0; j < n; j++) acc += h[j] * buf[top - idx[j]];
+    this.out[0] = 2 * acc;
+    i = i + 1 === N ? 0 : i + 1;
+    buf[i] = buf[i + N] = 0;
+    top = i + N; acc = 0;
+    for (let j = 0; j < n; j++) acc += h[j] * buf[top - idx[j]];
+    this.out[1] = 2 * acc;
+    this._ui = i;
+    return this.out;
+  }
+  /** Two 2x-rate samples -> one band-limited sample. */
+  downsample(a, b) {
+    const N = HB_TAPS.N, idx = HB_TAPS.idx, h = HB_TAPS.h, n = idx.length, buf = this._dn;
+    let i = this._di + 1 === N ? 0 : this._di + 1;
+    buf[i] = buf[i + N] = a;
+    i = i + 1 === N ? 0 : i + 1;
+    buf[i] = buf[i + N] = b;
+    this._di = i;
+    const top = i + N;
+    let acc = 0;
+    for (let j = 0; j < n; j++) acc += h[j] * buf[top - idx[j]];
+    return acc;
+  }
+}
+
 export class MoogFilter {
+  // Four one-pole stages with tanh saturation and a saturated feedback path,
+  // run at 2x the sample rate. The ladder itself is unchanged since the
+  // presets were voiced on it; what changed (2026-09-24) is the resampling.
+  // It used to feed each input sample in twice and keep every second output
+  // — no interpolation and no decimation filter — so the saturation's
+  // harmonics folded straight back: a B6 saw through a wide-open filter had
+  // a -45 dBc alias (now -68). Resonance, cutoff tracking and saturation
+  // measure the same as before to 0.1 dB. The resampling is inlined rather
+  // than using Halfband2x below: this runs per voice, and the call through
+  // another object measured ~1.6x slower.
   constructor() {
     this.s = new Float64Array(4); // stages
     this.cutoff = 8000;
     this.resonance = 0;
     this._g = 0;
     this._k = 0;
+    // 2x-rate history for the interpolator (input with zeros stuffed) and
+    // the decimator (ladder output). Mirrored circular buffers: each sample
+    // is written at i and i+N, so the newest N are always contiguous.
+    this._up = new Float64Array(HB_TAPS.N * 2);
+    this._dn = new Float64Array(HB_TAPS.N * 2);
+    this._ui = 0;
+    this._di = 0;
   }
 
-  reset() { this.s.fill(0); }
+  reset() {
+    this.s.fill(0);
+    this._up.fill(0); this._dn.fill(0);
+  }
 
   setParams(cutoff, resonance, sr) {
     // Frequency warping for stability
@@ -128,18 +224,40 @@ export class MoogFilter {
     this._k = resonance * 4.0;
   }
 
-  process(input) {
-    // 2× oversampling
-    for (let os = 0; os < 2; os++) {
-      const inp = os === 0 ? input : input; // same input for both passes
-      const fb = fastTanh(this.s[3] * this._k);
-      const x = inp - fb;
-      this.s[0] += this._g * (fastTanh(x) - fastTanh(this.s[0]));
-      this.s[1] += this._g * (fastTanh(this.s[0]) - fastTanh(this.s[1]));
-      this.s[2] += this._g * (fastTanh(this.s[1]) - fastTanh(this.s[2]));
-      this.s[3] += this._g * (fastTanh(this.s[2]) - fastTanh(this.s[3]));
-    }
+  _hb(buf, pos) {
+    // Dot product of the halfband taps with the newest N samples of buf;
+    // pos + N is the newest sample's index in the mirrored buffer.
+    const { N, idx, h } = HB_TAPS;
+    const top = pos + N;
+    let acc = 0;
+    for (let j = 0; j < idx.length; j++) acc += h[j] * buf[top - idx[j]];
+    return acc;
+  }
+
+  _tick(inp) {
+    const fb = fastTanh(this.s[3] * this._k);
+    const x = inp - fb;
+    this.s[0] += this._g * (fastTanh(x) - fastTanh(this.s[0]));
+    this.s[1] += this._g * (fastTanh(this.s[0]) - fastTanh(this.s[1]));
+    this.s[2] += this._g * (fastTanh(this.s[1]) - fastTanh(this.s[2]));
+    this.s[3] += this._g * (fastTanh(this.s[2]) - fastTanh(this.s[3]));
     return this.s[3];
+  }
+
+  process(input) {
+    const N = HB_TAPS.N;
+    let out = 0;
+    for (let os = 0; os < 2; os++) {
+      // Interpolate: the input, zero-stuffed, through the halfband (x2 gain).
+      this._ui = this._ui + 1 === N ? 0 : this._ui + 1;
+      this._up[this._ui] = this._up[this._ui + N] = os === 0 ? input : 0;
+      const y = this._tick(2 * this._hb(this._up, this._ui));
+      // Decimate: band-limit the ladder output, keep one sample in two.
+      this._di = this._di + 1 === N ? 0 : this._di + 1;
+      this._dn[this._di] = this._dn[this._di + N] = y;
+      if (os === 1) out = this._hb(this._dn, this._di);
+    }
+    return out;
   }
 }
 
@@ -284,6 +402,9 @@ export class StereoDelay {
 }
 
 
+const FREEVERB_FIXED_GAIN = 0.015;
+const FREEVERB_SCALE_WET = 3;
+
 export class Freeverb {
   constructor(sr) {
     this.sr = sr;
@@ -315,7 +436,12 @@ export class Freeverb {
   process(inL, inR) {
     if (!this.enabled) return [inL, inR];
 
-    const input = (inL + inR) * 0.5;
+    // Jezar's Freeverb scales the comb input by fixedgain (0.015) and the
+    // wet output by scalewet (3). Without them the eight parallel combs, at
+    // feedback ~0.92, came out ~26 dB above the dry signal: at mix 0.2 the
+    // tail was 12 dB LOUDER than the note and drove every synth into its
+    // output limiter (measured 2026-09-24 on VA, FM and PM chords).
+    const input = (inL + inR) * 0.5 * FREEVERB_FIXED_GAIN;
     const feedback = this.roomSize * 0.28 + 0.7;
     const damp1 = this.damping * 0.4;
     const damp2 = 1 - damp1;
@@ -354,8 +480,8 @@ export class Freeverb {
       aR.idx = (aR.idx + 1) % aR.len;
     }
 
-    const wet = this.mix;
-    const dry = 1 - wet;
+    const wet = this.mix * FREEVERB_SCALE_WET;
+    const dry = 1 - this.mix;
     return [inL * dry + outL * wet, inR * dry + outR * wet];
   }
 }

@@ -85,6 +85,10 @@ const worklets = [
   'synthex/synthex-voice-processor.js',
   'studio/worklets/synthex-voice-processor.js',
   'studio/worklets/sid-processor.js',
+  // The studio's mixer: without these every insert and return fails to load
+  // and the whole desk is silent (the chains sit in every track's path).
+  'studio/fx/fx-processor.js',
+  'studio/fx/fx-dsp.js',
   'studio/synths/sid.json',
   'js/dsp-lib.js',
 ]

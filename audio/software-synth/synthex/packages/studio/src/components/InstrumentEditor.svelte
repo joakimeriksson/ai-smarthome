@@ -8,7 +8,7 @@
   import { instrumentDef } from '../lib/instruments.ts'
   import {
     loadSynthData, engineValue, sliderPosition, formatValue,
-    type ParamSpec, type SynthData,
+    type ParamSpec, type SynthData, applyPresetEntry,
   } from '../lib/synth-data.ts'
   import { DRUM_CHANNELS, drumChannelName } from '../lib/instruments.ts'
   import type { Track } from '../lib/track.svelte.ts'
@@ -121,26 +121,7 @@
       return
     }
     if (preset.params) {
-      track.loadPreset(preset.name, preset.params, preset.fx ?? {})
-      // SID: the GT2 tables are the animated half of the sound (PWM sweeps,
-      // arps, filter runs) — send them after the params, or clear stale ones.
-      const inst = track.instrument as { post?: (m: Record<string, unknown>) => void }
-      if (inst.post) {
-        const t = preset.tables
-        if (t) {
-          const empty = () => new Array<number>(255).fill(0)
-          const tbls = [t.wtbl, t.ptbl, t.ftbl]
-          tbls.forEach((tbl, i) => inst.post!({
-            type: 'tableData', tableType: i,
-            ltable: tbl ? tbl.lt : empty(), rtable: tbl ? tbl.rt : empty(),
-          }))
-          inst.post({ type: 'tableStartPtrs', ptrs: {
-            wave: t.wavePtr ?? 0, pulse: t.pulsePtr ?? 0, filter: t.filterPtr ?? 0 } })
-          inst.post({ type: 'tableEnabled', value: true })
-        } else if (track.kind === 'sid') {
-          inst.post({ type: 'tableEnabled', value: false })
-        }
-      }
+      applyPresetEntry(track, preset)
       positions = {}     // handles follow the new sound
     }
   }

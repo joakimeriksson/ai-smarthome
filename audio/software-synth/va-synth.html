@@ -9,13 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/synth-base.css">
   <link rel="stylesheet" href="css/va-synth.css">
+  <link rel="stylesheet" href="css/panel-hw.css">
 </head>
 <body>
 <div class="synth-container">
 
   <!-- Header -->
   <div class="synth-header">
-    <h1>VA Synth</h1>
+    <div>
+      <h1>VA Synth</h1>
+      <span class="subtitle">Virtual Analog Polysynth</span>
+    </div>
     <div class="header-controls">
       <select id="preset-select"><option value="">-- Preset --</option></select>
       <button id="save-preset-btn" class="btn btn-small">Save</button>
@@ -211,26 +215,26 @@
 
       <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin-bottom:2px">AMP</div>
       <div class="adsr-group">
-        <div class="control-row"><label>A</label><input type="range" id="amp-a" min="0" max="1" step="0.001" value="0.05"><span class="val" id="amp-a-val"></span></div>
-        <div class="control-row"><label>D</label><input type="range" id="amp-d" min="0" max="1" step="0.001" value="0.2"><span class="val" id="amp-d-val"></span></div>
+        <div class="control-row"><label>A</label><input type="range" id="amp-a" min="0" max="1" step="0.001" value="0.050"><span class="val" id="amp-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="amp-d" min="0" max="1" step="0.001" value="0.199"><span class="val" id="amp-d-val"></span></div>
         <div class="control-row"><label>S</label><input type="range" id="amp-s" min="0" max="1" step="0.01" value="0.7"><span class="val" id="amp-s-val"></span></div>
-        <div class="control-row"><label>R</label><input type="range" id="amp-r" min="0" max="1" step="0.001" value="0.17"><span class="val" id="amp-r-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="amp-r" min="0" max="1" step="0.001" value="0.169"><span class="val" id="amp-r-val"></span></div>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin:6px 0 2px">FILTER</div>
       <div class="adsr-group">
-        <div class="control-row"><label>A</label><input type="range" id="flt-a" min="0" max="1" step="0.001" value="0.05"><span class="val" id="flt-a-val"></span></div>
-        <div class="control-row"><label>D</label><input type="range" id="flt-d" min="0" max="1" step="0.001" value="0.25"><span class="val" id="flt-d-val"></span></div>
+        <div class="control-row"><label>A</label><input type="range" id="flt-a" min="0" max="1" step="0.001" value="0.050"><span class="val" id="flt-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="flt-d" min="0" max="1" step="0.001" value="0.248"><span class="val" id="flt-d-val"></span></div>
         <div class="control-row"><label>S</label><input type="range" id="flt-s" min="0" max="1" step="0.01" value="0.3"><span class="val" id="flt-s-val"></span></div>
-        <div class="control-row"><label>R</label><input type="range" id="flt-r" min="0" max="1" step="0.001" value="0.17"><span class="val" id="flt-r-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="flt-r" min="0" max="1" step="0.001" value="0.169"><span class="val" id="flt-r-val"></span></div>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:var(--accent-dim);margin:6px 0 2px">MOD</div>
       <div class="adsr-group">
-        <div class="control-row"><label>A</label><input type="range" id="mod-a" min="0" max="1" step="0.001" value="0.05"><span class="val" id="mod-a-val"></span></div>
-        <div class="control-row"><label>D</label><input type="range" id="mod-d" min="0" max="1" step="0.001" value="0.25"><span class="val" id="mod-d-val"></span></div>
+        <div class="control-row"><label>A</label><input type="range" id="mod-a" min="0" max="1" step="0.001" value="0.050"><span class="val" id="mod-a-val"></span></div>
+        <div class="control-row"><label>D</label><input type="range" id="mod-d" min="0" max="1" step="0.001" value="0.248"><span class="val" id="mod-d-val"></span></div>
         <div class="control-row"><label>S</label><input type="range" id="mod-s" min="0" max="1" step="0.01" value="0"><span class="val" id="mod-s-val"></span></div>
-        <div class="control-row"><label>R</label><input type="range" id="mod-r" min="0" max="1" step="0.001" value="0.1"><span class="val" id="mod-r-val"></span></div>
+        <div class="control-row"><label>R</label><input type="range" id="mod-r" min="0" max="1" step="0.001" value="0.099"><span class="val" id="mod-r-val"></span></div>
       </div>
     </div>
   </div>
@@ -318,6 +322,7 @@
           <option value="lfo1">LFO 1</option>
           <option value="lfo2">LFO 2</option>
           <option value="modEnv">Mod Env</option>
+          <option value="pressure">Aftertouch</option>
           <option value="velocity">Velocity</option>
           <option value="keyFollow">Key Follow</option>
         </select>
@@ -342,6 +347,7 @@
           <option value="lfo1">LFO 1</option>
           <option value="lfo2">LFO 2</option>
           <option value="modEnv">Mod Env</option>
+          <option value="pressure">Aftertouch</option>
           <option value="velocity">Velocity</option>
           <option value="keyFollow">Key Follow</option>
         </select>
@@ -366,6 +372,7 @@
           <option value="lfo1">LFO 1</option>
           <option value="lfo2">LFO 2</option>
           <option value="modEnv">Mod Env</option>
+          <option value="pressure">Aftertouch</option>
           <option value="velocity">Velocity</option>
           <option value="keyFollow">Key Follow</option>
         </select>
@@ -390,6 +397,7 @@
           <option value="lfo1">LFO 1</option>
           <option value="lfo2">LFO 2</option>
           <option value="modEnv">Mod Env</option>
+          <option value="pressure">Aftertouch</option>
           <option value="velocity">Velocity</option>
           <option value="keyFollow">Key Follow</option>
         </select>
@@ -672,5 +680,6 @@
 <script src="js/keyboard.js"></script>
 <script src="js/main.js"></script>
 <script src="js/ui-enhance.js"></script>
+<script src="js/panel-hw.js"></script>
 </body>
 </html>

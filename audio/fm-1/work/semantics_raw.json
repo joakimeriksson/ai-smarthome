@@ -1,0 +1,8101 @@
+{
+ "r_mov_r_r_18": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      15
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_h_9": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 230,
+  "ops_max": 2
+ },
+ "r_mov_b_r_i_u_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3806,
+  "ops_max": 3
+ },
+ "r_mov_r_lsr_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 135,
+  "ops_max": 3
+ },
+ "pc_r_2_mov_sp": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 3832,
+  "ops_max": 1
+ },
+ "r_mov_r_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1495,
+  "ops_max": 3
+ },
+ "r_mov_r_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "r_mov_r_add_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 20,
+  "ops_max": 3
+ },
+ "r_mov_r_l_r_l_i_usat_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      9,
+      11
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 4
+ },
+ "r_mov_r_lsr_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 3058,
+  "ops_max": 3
+ },
+ "r_mov_r_ltgt_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 22,
+  "ops_max": 3
+ },
+ "r_add_i_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      9,
+      10
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 721,
+  "ops_max": 3
+ },
+ "r_mov_r_r_s": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 437,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_l_i_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      15
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "r_mov_r_5_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "sp_mov_rets_reti": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 1
+ },
+ "r_mov_r_l_r_l_r_h_r_h_rnd_savg": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 16,
+  "ops_max": 5
+ },
+ "r_add_i_mov_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "adj+1",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 104,
+  "ops_max": 3
+ },
+ "r_mov_r_r_c_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 3
+ },
+ "r_mov_r_gtlt_r_sat_v": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "sp_i_mov_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ],
+     [
+      17,
+      24
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 568,
+  "ops_max": 2
+ },
+ "r_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 24356,
+  "ops_max": 2
+ },
+ "if_r_ne_i_goto_i_l6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ],
+     [
+      32,
+      46
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 683,
+  "ops_max": 3
+ },
+ "if_r_ne_i_goto_i_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 199,
+  "ops_max": 3
+ },
+ "r_mov_r_asr_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 17,
+  "ops_max": 3
+ },
+ "r_mov_r_4_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "r_mov_r_gtlt_r_v_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_h_r_i_u_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 638,
+  "ops_max": 3
+ },
+ "r_mov_r_h_11": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 26,
+  "ops_max": 2
+ },
+ "r_mov_r_r_11": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 215,
+  "ops_max": 3
+ },
+ "r_add_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      12
+     ],
+     [
+      3,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4960,
+  "ops_max": 2
+ },
+ "r_mov_r_h_7": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 163,
+  "ops_max": 2
+ },
+ "goto_i_l4": {
+  "slots": [
+   {
+    "kind": "adj+1",
+    "pieces": [
+     [
+      15,
+      31
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 98,
+  "ops_max": 1
+ },
+ "r_mov_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      30
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4678,
+  "ops_max": 2
+ },
+ "r_mov_r_h": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 101,
+  "ops_max": 2
+ },
+ "goto_i_l2": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2642,
+  "ops_max": 1
+ },
+ "if_r_ne_i_goto_i_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      8
+     ],
+     [
+      16,
+      23
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 59,
+  "ops_max": 3
+ },
+ "if_r_eq_i_goto_i_8": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 22,
+  "ops_max": 3
+ },
+ "r_mov_r_2_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 2
+ },
+ "r_mov_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 71,
+  "ops_max": 2
+ },
+ "r_mov_r_l_r_h_i_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      4
+     ],
+     [
+      20,
+      25
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 4
+ },
+ "r_mov_r_add_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      7,
+      8
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1650,
+  "ops_max": 3
+ },
+ "b_r_i_mov_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2670,
+  "ops_max": 3
+ },
+ "r_mov_sp_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      25
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1206,
+  "ops_max": 2
+ },
+ "pc_r_3_mov_sp": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 1
+ },
+ "r_mov_r_lsl_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 56,
+  "ops_max": 3
+ },
+ "if_r_eq_i_goto_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 28,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_r_h_r_h_savg": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      11,
+      14
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_h_r_h_i_usat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      19,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      3
+     ],
+     [
+      7,
+      12
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "sp_mov_rets_rete_reti": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 1
+ },
+ "r_mov_r_h_r_l_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 3
+ },
+ "r_mov_r_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      7,
+      11
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 14672,
+  "ops_max": 3
+ },
+ "r_mov_r_i_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 5110,
+  "ops_max": 3
+ },
+ "call_i_l2": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 1793,
+  "ops_max": 1
+ },
+ "call_i_3": {
+  "slots": [
+   {
+    "kind": "adj+1",
+    "pieces": [
+     [
+      15,
+      31
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 325,
+  "ops_max": 1
+ },
+ "r_mov_r_asr_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 70,
+  "ops_max": 3
+ },
+ "r_mov_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ],
+     [
+      7,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 31643,
+  "ops_max": 2
+ },
+ "if_r_ne_i_goto_i_7": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 35,
+  "ops_max": 3
+ },
+ "r_add_r_l_i_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      9,
+      11
+     ],
+     [
+      0,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_1": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "r_mov_cnum": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3169,
+  "ops_max": 1
+ },
+ "r_mov_r_asr_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 12,
+  "ops_max": 3
+ },
+ "r_mov_i_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ],
+     [
+      6,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 232,
+  "ops_max": 2
+ },
+ "if_r_ne_i_goto_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      25,
+      31
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      6
+     ],
+     [
+      16,
+      23
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2373,
+  "ops_max": 3
+ },
+ "r_mov_r_r_u": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 379,
+  "ops_max": 3
+ },
+ "if_r_ne_i_goto_i_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 151,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_i_ssat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ],
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 10,
+  "ops_max": 4
+ },
+ "r_add_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 5541,
+  "ops_max": 2
+ },
+ "r_mov_h_r_i_u_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1880,
+  "ops_max": 3
+ },
+ "goto_i_3": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 149,
+  "ops_max": 1
+ },
+ "r_mov_r_l_s": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1072,
+  "ops_max": 2
+ },
+ "r_mov_r_r_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1180,
+  "ops_max": 3
+ },
+ "if_r_eq_i_goto_i_l6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ],
+     [
+      32,
+      46
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 59,
+  "ops_max": 3
+ },
+ "if_r_eq_i_goto_i_7": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 142,
+  "ops_max": 3
+ },
+ "r_i_mov_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 451,
+  "ops_max": 3
+ },
+ "r_mov_r_i_lsl_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 166,
+  "ops_max": 4
+ },
+ "r_mov_r_r_17": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 16,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_l_i_ssat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      13
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "r_mov_r_h_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 755,
+  "ops_max": 2
+ },
+ "r_mov_i_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 424,
+  "ops_max": 2
+ },
+ "if_r_ne_i_goto_i_8": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ],
+     [
+      32,
+      46
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 36,
+  "ops_max": 3
+ },
+ "r_mov_r_l_r_l_r_h_r_h_uavg": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 5
+ },
+ "r_mov_r_h_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 382,
+  "ops_max": 2
+ },
+ "b_r_i_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      11
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4907,
+  "ops_max": 3
+ },
+ "r_mov_r_r_12": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 247,
+  "ops_max": 3
+ },
+ "r_mov_r_3_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "if_r_ne_i_goto_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1576,
+  "ops_max": 3
+ },
+ "r_mov_r_r_14": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 22,
+  "ops_max": 3
+ },
+ "r_mov_r_lsl_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 264,
+  "ops_max": 3
+ },
+ "r_i_mov_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      10
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 3
+ },
+ "r_mov_r_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      7,
+      8
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1337,
+  "ops_max": 3
+ },
+ "r_add_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 657,
+  "ops_max": 2
+ },
+ "sp_mov_rets_r_3": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 1
+ },
+ "r_mov_r_h_10": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 94,
+  "ops_max": 2
+ },
+ "r_mov_r_b0_u": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1548,
+  "ops_max": 2
+ },
+ "r_mov_r_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 202,
+  "ops_max": 3
+ },
+ "r_mov_sp_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      12
+     ],
+     [
+      5,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4122,
+  "ops_max": 2
+ },
+ "r_mov_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      47
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 9814,
+  "ops_max": 2
+ },
+ "if_r_eq_i_goto_i_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      25,
+      31
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 254,
+  "ops_max": 3
+ },
+ "r_mov_r_r_c": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 95,
+  "ops_max": 3
+ },
+ "r_mov_r_lsl_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 4691,
+  "ops_max": 3
+ },
+ "if_r_ne_i_goto_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "adj+1",
+    "pieces": [
+     [
+      7,
+      12
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4971,
+  "ops_max": 3
+ },
+ "r_rlsl_i_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2660,
+  "ops_max": 4
+ },
+ "sp_mov_rets_retx_rete_reti": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 1
+ },
+ "r_mov_r_h_r_h_r_h_r_l_ssat_x2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      15
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      15
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      27
+     ],
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 6488,
+  "ops_max": 3
+ },
+ "r_mov_h_r_i_u": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      11
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3764,
+  "ops_max": 3
+ },
+ "call_i_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      12
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 71,
+  "ops_max": 1
+ },
+ "r_mov_r_l_r_l_r_h_r_h_usat_x2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_l_r_h_r_h_r_h_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      15
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      15
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_l_u": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 236,
+  "ops_max": 2
+ },
+ "b_r_i_mov_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 12,
+  "ops_max": 3
+ },
+ "r_mov_r_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "r_mov_r_asr_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 3
+ },
+ "r_mov_r_3_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 2
+ },
+ "if_r_eq_i_goto_i_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ],
+     [
+      32,
+      46
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 981,
+  "ops_max": 3
+ },
+ "r_mov_r_b0_s": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 207,
+  "ops_max": 2
+ },
+ "r_i_mov_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2174,
+  "ops_max": 3
+ },
+ "r_mov_r_ltgt_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      9
+     ],
+     [
+      30,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 3
+ },
+ "r_add_i_mov_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 164,
+  "ops_max": 3
+ },
+ "r_mov_r_lsr_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 131,
+  "ops_max": 3
+ },
+ "if_r_ne_i_goto_i_10": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 12,
+  "ops_max": 3
+ },
+ "r_mov_r_r_7": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 99,
+  "ops_max": 3
+ },
+ "r_mov_r_addr": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      9
+     ],
+     [
+      11,
+      11
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1830,
+  "ops_max": 3
+ },
+ "r_mov_r_5_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "h_r_i_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      12
+     ],
+     [
+      8,
+      11
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2777,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_i_usat_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 4
+ },
+ "r_mov_sp_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      12
+     ],
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 6512,
+  "ops_max": 2
+ },
+ "r_mov_r_gtlt_r_v": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 10,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_i_ssat_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      10
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "sp_mov_rets_retx_reti": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 1
+ },
+ "r_mov_r_h_12": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 39,
+  "ops_max": 2
+ },
+ "if_r_eq_i_goto_i_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      7
+     ],
+     [
+      16,
+      23
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 140,
+  "ops_max": 3
+ },
+ "sti_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2520,
+  "ops_max": 1
+ },
+ "b_r_i_mov_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 536,
+  "ops_max": 3
+ },
+ "r_mov_r_r_16": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      25
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 22,
+  "ops_max": 3
+ },
+ "r_mov_r_r_9": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 307,
+  "ops_max": 3
+ },
+ "r_mov_r_lsl_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 279,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_i_usat_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      16
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "r_mov_r_r_ssat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      17,
+      18
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      17,
+      20
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 3
+ },
+ "r_mov_r_l_s_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 203,
+  "ops_max": 2
+ },
+ "r_mov_r_r_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      7,
+      8
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 663,
+  "ops_max": 3
+ },
+ "r_mov_r_r_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 64,
+  "ops_max": 3
+ },
+ "r_mov_r_l_r_l_i_ssat_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ],
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 4
+ },
+ "r_mov_r_i_8": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1573,
+  "ops_max": 3
+ },
+ "if_r_ne_i_goto_i_9": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ],
+     [
+      16,
+      25
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 15,
+  "ops_max": 3
+ },
+ "pc_r_1_mov_sp": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 788,
+  "ops_max": 1
+ },
+ "r_mov_r_l_r_l_i_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      18
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "sp_mov_rets_l2": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 6,
+  "ops_max": 1
+ },
+ "r_mov_r_h_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 831,
+  "ops_max": 2
+ },
+ "r_mov_r_r_8": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 681,
+  "ops_max": 3
+ },
+ "r_mov_r_2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 72,
+  "ops_max": 2
+ },
+ "r_mov_b_r_i_u_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      29
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 11,
+  "ops_max": 3
+ },
+ "r_mov_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3767,
+  "ops_max": 2
+ },
+ "r_mov_r_r_u_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      26
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 31,
+  "ops_max": 3
+ },
+ "r_add_r_l_i_usat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      9,
+      11
+     ],
+     [
+      0,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "sp_mov_rets": {
+  "slots": [],
+  "pairs": 0,
+  "ops_max": 0
+ },
+ "r_mov_r_add_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 142,
+  "ops_max": 3
+ },
+ "r_mov_r_r_10": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 181,
+  "ops_max": 3
+ },
+ "sp_i_mov_r": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4082,
+  "ops_max": 2
+ },
+ "sp_mov_rets_r_1": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 714,
+  "ops_max": 1
+ },
+ "r_mov_r_l_r_l_r_h_r_h_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 5
+ },
+ "pc_r_4_mov_sp": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 10,
+  "ops_max": 1
+ },
+ "r_mov_r_h_r_h_i_usat_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      9,
+      11
+     ],
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3,
+  "ops_max": 4
+ },
+ "r_mov_r_r_ssat_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "if_r_eq_i_goto_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      12
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 8439,
+  "ops_max": 3
+ },
+ "r_mov_r_rlsl_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3850,
+  "ops_max": 4
+ },
+ "r_mov_r_lsr_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 30,
+  "ops_max": 3
+ },
+ "r_mov_r_asr_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1641,
+  "ops_max": 3
+ },
+ "r_add_r_h_i_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      8
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      13,
+      15
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_l_r_l_r_l_uavg": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      11,
+      14
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_l_u_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1206,
+  "ops_max": 2
+ },
+ "r_mov_sp_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      25
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 676,
+  "ops_max": 2
+ },
+ "r_mov_r_i_lsl_r_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      25
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 6,
+  "ops_max": 4
+ },
+ "r_add_i_mov_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_r_l_r_l_rnd_uavg": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      14
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      11,
+      14
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      11,
+      14
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      13
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      13
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "h_r_i_mov_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 22,
+  "ops_max": 3
+ },
+ "r_mov_b_r_i_u": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      11
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 7986,
+  "ops_max": 3
+ },
+ "r_addr_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      7,
+      9
+     ],
+     [
+      3,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1037,
+  "ops_max": 3
+ },
+ "call_i_l6": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 4028,
+  "ops_max": 1
+ },
+ "r_mov_r_r_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_i_7": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 20,
+  "ops_max": 3
+ },
+ "r_mov_r_h_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 120,
+  "ops_max": 2
+ },
+ "call_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      38
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4010,
+  "ops_max": 1
+ },
+ "r_mov_r_add_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 132,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_r_h_r_h_rnd_savg_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_h_r_h_r_h_r_h_ssat_x2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 10,
+  "ops_max": 5
+ },
+ "r_mov_r_l_r_l_i_ssat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      10
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      15
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 6,
+  "ops_max": 4
+ },
+ "r_mov_h_r_i_u_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 10,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_i_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ],
+     [
+      7,
+      13
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1,
+  "ops_max": 4
+ },
+ "r_mov_r_l_r_l_r_h_r_h_ssat_x2_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_h_r_h_r_h_r_h_rnd_savg_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_h_8": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 508,
+  "ops_max": 2
+ },
+ "r_mov_r_h_r_h_i_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      9,
+      12
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "if_r_ne_i_goto_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      25,
+      31
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 742,
+  "ops_max": 3
+ },
+ "r_mov_r_r_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 377,
+  "ops_max": 3
+ },
+ "r_mov_r_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      7,
+      8
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2169,
+  "ops_max": 3
+ },
+ "rep_i_r": {
+  "slots": [
+   {
+    "kind": "adj-1",
+    "pieces": [
+     [
+      8,
+      8
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1246,
+  "ops_max": 3
+ },
+ "r_mov_r_b0_u_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 226,
+  "ops_max": 2
+ },
+ "r_mov_r_r_15": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 45,
+  "ops_max": 3
+ },
+ "r_mov_r_h_i_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      8
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_b0_s_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 38,
+  "ops_max": 2
+ },
+ "r_mov_r_l_i_usat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      0
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ],
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_mov_r_h_r_h_r_h_r_h_rnd_savg": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      26
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      26
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 5
+ },
+ "goto_i": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 9055,
+  "ops_max": 1
+ },
+ "if_r_eq_i_goto_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1847,
+  "ops_max": 3
+ },
+ "r_mov_r_i_lsl_r_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 65,
+  "ops_max": 4
+ },
+ "r_mov_r_lsl_i_v": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      10,
+      13
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 3
+ },
+ "r_add_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 4022,
+  "ops_max": 2
+ },
+ "r_mov_r_lsllt_i": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 1091,
+  "ops_max": 3
+ },
+ "r_mov_i_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 910,
+  "ops_max": 2
+ },
+ "r_mov_r_i_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      12
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4649,
+  "ops_max": 3
+ },
+ "r_mov_b_r_i_u_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 790,
+  "ops_max": 3
+ },
+ "r_mov_r_i_6": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 199,
+  "ops_max": 3
+ },
+ "rep_i_i": {
+  "slots": [
+   {
+    "kind": "adj-1",
+    "pieces": [
+     [
+      15,
+      15
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "adj-1",
+    "pieces": [
+     [
+      8,
+      12
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 2
+   }
+  ],
+  "pairs": 2091,
+  "ops_max": 3
+ },
+ "r_mov_r_i_5": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      27
+     ],
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1597,
+  "ops_max": 3
+ },
+ "r_mov_i_7": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 92,
+  "ops_max": 2
+ },
+ "r_mov_r_l_r_h_r_h_r_h_ssat_x2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      5,
+      5
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 5
+ },
+ "r_mov_r_h_r_l_i_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      8
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      8
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      7
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "r_mov_r_2_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "r_mov_r_l_r_l_i_usat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      23,
+      24
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ],
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 4
+ },
+ "r_mov_r_h_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 3788,
+  "ops_max": 2
+ },
+ "if_r_eq_i_goto_i_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      25,
+      31
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      6,
+      6
+     ],
+     [
+      16,
+      23
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2700,
+  "ops_max": 3
+ },
+ "sp_mov_rets_r_4": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 10,
+  "ops_max": 1
+ },
+ "r_add_r_brev": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      12,
+      14
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 2
+ },
+ "r_mov_r_r_13": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      3
+     ],
+     [
+      7,
+      8
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 378,
+  "ops_max": 3
+ },
+ "sp_mov_rets_retx_rete": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 1
+ },
+ "r_mov_r_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 44,
+  "ops_max": 2
+ },
+ "r_mov_r_l_r_h_i_ssat_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      7
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      1,
+      1
+     ],
+     [
+      17,
+      21
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "r_mov_r_r_c_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 101,
+  "ops_max": 3
+ },
+ "r_mov_r_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 499,
+  "ops_max": 3
+ },
+ "r_mov_r_lsl_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      19
+     ],
+     [
+      24,
+      24
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 68,
+  "ops_max": 3
+ },
+ "call_i_l4": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 14890,
+  "ops_max": 1
+ },
+ "r_mov_r_i_lsl_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 53,
+  "ops_max": 4
+ },
+ "r_mov_r_i_lsl_r_4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      30
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      2,
+      2
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      26
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 8,
+  "ops_max": 4
+ },
+ "r_mov_r_l_r_l_r_h_r_h_ssat_x2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 4,
+  "ops_max": 5
+ },
+ "h_r_i_mov_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 1316,
+  "ops_max": 3
+ },
+ "sp_mov_rets_r_2": {
+  "slots": [
+   {
+    "kind": "unsolved",
+    "slot": 0
+   }
+  ],
+  "pairs": 2982,
+  "ops_max": 1
+ },
+ "r_i_mov_r": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "adj+1",
+    "pieces": [
+     [
+      14,
+      15
+     ],
+     [
+      8,
+      11
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 6674,
+  "ops_max": 3
+ },
+ "r_mov_r_r_s_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 44,
+  "ops_max": 3
+ },
+ "h_r_i_mov_r_l2": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "unsolved",
+    "slot": 1
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      2
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 473,
+  "ops_max": 3
+ },
+ "r_mov_r_lsr_r_l4": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      29
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      22
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 6,
+  "ops_max": 3
+ },
+ "r_mov_i_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      30
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 817,
+  "ops_max": 2
+ },
+ "r_mov_r_l_r_l_i_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      28,
+      31
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      20,
+      23
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      27
+     ],
+     [
+      1,
+      4
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 18,
+  "ops_max": 4
+ },
+ "r_mov_r_l_r_h_i_ssat": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      4,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      3,
+      6
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      16,
+      22
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ },
+ "r_mov_r_l_r_l_i_ssat_3": {
+  "slots": [
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      0,
+      3
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      8
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      8,
+      8
+     ]
+    ],
+    "mult": null
+   },
+   {
+    "kind": "imm",
+    "pieces": [
+     [
+      24,
+      31
+     ]
+    ],
+    "mult": null
+   }
+  ],
+  "pairs": 2,
+  "ops_max": 4
+ }
+}

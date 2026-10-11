@@ -46,7 +46,12 @@ function sendParam(param, value) {
 const bind = SynthShell.createBinder(sendParam);
 const bindSlider = bind.slider, bindSelect = bind.select, bindCheckbox = bind.checkbox;
 
-function sliderToTime(v) { return 0.001 * Math.pow(10000, parseFloat(v)); }
+// Envelope sliders: 1 ms .. 70 s, logarithmic. The times are real — attack
+// to the peak, decay/release to -60 dB (see Envelope in dsp-lib.js) — and
+// the slow end has to reach the ~10 s decays the converted presets use.
+// (70000 is a literal because the studio's sync script extracts this
+// function as standalone code.)
+function sliderToTime(v) { return 0.001 * Math.pow(70000, parseFloat(v)); }
 function timeFormat(v) { const t = sliderToTime(v); return t >= 1 ? t.toFixed(1)+'s' : Math.round(t*1000)+'ms'; }
 
 // ─── Algorithm Diagrams ─────────────────────────────────────────────────────
@@ -62,7 +67,8 @@ const ALGO_DIAGRAMS = [
   '6  5  4  3  2  1     [additive]',
 ];
 
-const ALGO_CARRIERS = [[0],[0],[0],[0,1,3],[0,1,2,3],[0,1,2,3,4],[0,2,4],[0,1,2,3,4,5]];
+// Must match ALGORITHMS[].carriers in fm-processor.js.
+const ALGO_CARRIERS = [[0],[0],[0],[0,1,3],[0,1,2,4],[0,1,2,3,4],[0,2,4],[0,1,2,3,4,5]];
 
 // ─── Init UI ────────────────────────────────────────────────────────────────
 
@@ -134,7 +140,7 @@ function updateVoiceDisplay() { SynthShell.showVoiceCount('voice-display', pool)
 function op(ratio, fine, level, a, d, s, r, vel) {
   return { on: true, ratio, fine: fine || 1.0, level: level/99, attack: a, decay: d, sustain: s, release: r, velSens: vel !== undefined ? vel : 0.7 };
 }
-function opOff() { return { on: false, ratio: 1, fine: 1, level: 0, attack: 0.01, decay: 0.3, sustain: 0, release: 0.3, velSens: 0 }; }
+function opOff() { return { on: false, ratio: 1, fine: 1, level: 0, attack: 0.03045, decay: 2.072, sustain: 0, release: 2.072, velSens: 0 }; }
 
 // E.Piano 1, Wurlitzer, DX Brass, Strings and Organ are FITTED against real
 // DX7 recordings (soundpacks.com sample pack) by tools/fm-fit — structure from
@@ -142,96 +148,101 @@ function opOff() { return { on: false, ratio: 1, fine: 1, level: 0, attack: 0.01
 // envelope distance. velSens was added after fitting (the pack is single-
 // velocity), so velocity response is convention, not measurement.
 const FACTORY_PRESETS = [
-  { name: 'E.Piano 1', params: { algorithm: 6, feedback: 0.24, ops: [
-    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.001, decay: 1.496, sustain: 0, release: 0.4, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.03, decay: 0.765, sustain: 0.25, release: 0.3, velSens: 0.6 },
-    { on: true, ratio: 1, fine: 1.001, level: 0.315, attack: 0.014, decay: 0.6, sustain: 0, release: 0.4, velSens: 0.3 },
-    { on: true, ratio: 14, fine: 1, level: 0.084, attack: 0.001, decay: 0.003, sustain: 0, release: 0.1, velSens: 0.7 },
-    { on: true, ratio: 1, fine: 0.999, level: 0.21, attack: 0.01, decay: 1.53, sustain: 0.15, release: 0.4, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 0.3, attack: 0.03, decay: 0.51, sustain: 0.25, release: 0.3, velSens: 0.6 }
+  { name: 'E.Piano 1', params: { algorithm: 6, feedback: 0.3, ops: [
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.003045, decay: 10.33, sustain: 0, release: 2.763, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.09134, decay: 5.284, sustain: 0.25, release: 2.072, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1.001, level: 0.315, attack: 0.04262, decay: 4.145, sustain: 0, release: 2.763, velSens: 0.3 },
+    { on: true, ratio: 14, fine: 1, level: 0.08379, attack: 0.003045, decay: 0.0194, sustain: 0, release: 0.6908, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 0.999, level: 0.21, attack: 0.03045, decay: 10.57, sustain: 0.15, release: 2.763, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.3, attack: 0.09134, decay: 3.523, sustain: 0.25, release: 2.072, velSens: 0.6 }
   ], lfoRate: 0, lfoWaveform: 0, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.5, mix: 0.15 } } },
 
   { name: 'E.Piano 2', params: { algorithm: 1, feedback: 0.2, ops: [
-    op(1,1,90, 0.001,1.0,0.2,0.6, 0.3), op(1,1,50, 0.001,0.5,0.0,0.3, 0.7),
-    op(1,1,40, 0.001,0.3,0.0,0.2, 0.8), op(14,1,30, 0.001,0.08,0.0,0.1, 0.95),
-    op(1,1,20, 0.001,0.2,0.0,0.1, 0.5), op(1,1,15, 0.001,0.8,0.0,0.3, 0.5)
+    op(1, 1, 90, 0.003045, 6.908, 0.2, 4.145, 0.3), op(1, 1, 50, 0.003045, 3.454, 0.0, 2.072, 0.7),
+    op(1, 1, 40, 0.003045, 2.072, 0.0, 1.382, 0.8), op(14, 1, 30, 0.003045, 0.5526, 0.0, 0.6908, 0.95),
+    op(1, 1, 20, 0.003045, 1.382, 0.0, 0.6908, 0.5), op(1, 1, 15, 0.003045, 5.526, 0.0, 2.072, 0.5)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { chorus: { enabled: true, rate: 0.3, depth: 0.003, mix: 0.2 } } },
 
   { name: 'Wurlitzer', params: { algorithm: 6, feedback: 0.768, ops: [
-    { on: true, ratio: 1, fine: 1, level: 0.791, attack: 0.0588, decay: 0.432, sustain: 0, release: 0.35, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.0288, decay: 0.595, sustain: 0.086, release: 0.3, velSens: 0.6 },
-    { on: true, ratio: 1, fine: 1, level: 0.274, attack: 0.01, decay: 0.23, sustain: 0, release: 0.35, velSens: 0.3 },
-    { on: true, ratio: 7, fine: 1, level: 0.416, attack: 0.001, decay: 0.051, sustain: 0.115, release: 0.1, velSens: 0.7 },
-    { on: true, ratio: 1, fine: 1, level: 0.245, attack: 0.0037, decay: 0.269, sustain: 0, release: 0.35, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 0.585, attack: 0.014, decay: 0.722, sustain: 0.432, release: 0.3, velSens: 0.6 }
+    { on: true, ratio: 1, fine: 1, level: 0.6724, attack: 0.2506, decay: 2.387, sustain: 0, release: 2.418, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.08772, decay: 4.111, sustain: 0.06912, release: 2.072, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1, level: 0.2744, attack: 0.04263, decay: 1.592, sustain: 0, release: 2.418, velSens: 0.3 },
+    { on: true, ratio: 7, fine: 1, level: 0.416, attack: 0.003045, decay: 0.2818, sustain: 0.08294, release: 0.6908, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 1.002, level: 0.2082, attack: 0.00571, decay: 1.857, sustain: 0, release: 2.418, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.5853, attack: 0.05967, decay: 7.792, sustain: 0.432, release: 2.072, velSens: 0.6 }
   ], lfoRate: 0, lfoWaveform: 0, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.4, mix: 0.12 } } },
   { name: 'FM Bass', params: { algorithm: 6, feedback: 0.15, ops: [
-    op(1,1,90, 0.001,0.2,0.6,0.1, 0.3), op(1,1,50, 0.001,0.12,0.0,0.08, 0.8),
-    op(1,1,85, 0.001,0.3,0.5,0.15, 0.3), op(2,1,40, 0.001,0.08,0.0,0.05, 0.9),
-    op(0.5,1,80, 0.001,0.2,0.7,0.1, 0.2), op(1,1,30, 0.001,0.1,0.0,0.05, 0.7)
+    op(1, 1, 90, 0.003045, 1.382, 0.6, 0.6908, 0.3), op(1, 1, 50, 0.003045, 0.8289, 0.0, 0.5526, 0.8),
+    op(1, 1, 85, 0.003045, 2.072, 0.5, 1.036, 0.3), op(2, 1, 40, 0.003045, 0.5526, 0.0, 0.3454, 0.9),
+    op(0.5, 1, 80, 0.003045, 1.382, 0.7, 0.6908, 0.2), op(1, 1, 30, 0.003045, 0.6908, 0.0, 0.3454, 0.7)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: {} },
 
   { name: 'Slap Bass', params: { algorithm: 0, feedback: 0.3, ops: [
-    op(1,1,90, 0.001,0.12,0.0,0.08, 0.5), op(1,1,55, 0.001,0.06,0.0,0.05, 0.9),
-    op(2,1,45, 0.001,0.04,0.0,0.03, 0.9), op(3,1,35, 0.001,0.03,0.0,0.02, 0.95),
-    op(4,1,25, 0.001,0.02,0.0,0.01, 0.95), op(1,1,20, 0.001,0.05,0.0,0.02, 0.5)
+    op(1, 1, 90, 0.003045, 0.8289, 0.0, 0.5526, 0.5), op(1, 1, 55, 0.003045, 0.4145, 0.0, 0.3454, 0.9),
+    op(2, 1, 45, 0.003045, 0.2763, 0.0, 0.2072, 0.9), op(3, 1, 35, 0.003045, 0.2072, 0.0, 0.1382, 0.95),
+    op(4, 1, 25, 0.003045, 0.1382, 0.0, 0.06908, 0.95), op(1, 1, 20, 0.003045, 0.3454, 0.0, 0.1382, 0.5)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: {} },
 
   { name: 'DX Brass', params: { algorithm: 6, feedback: 0.44, ops: [
-    { on: true, ratio: 1, fine: 1, level: 0.95, attack: 0.084, decay: 0.48, sustain: 0.48, release: 0.15, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.028, decay: 0.18, sustain: 0.264, release: 0.15, velSens: 0.6 },
-    { on: true, ratio: 1, fine: 1.003, level: 0.826, attack: 0.08, decay: 0.48, sustain: 0.8, release: 0.15, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 0.42, attack: 0.2, decay: 0.5, sustain: 0.5, release: 0.15, velSens: 0.7 },
-    { on: true, ratio: 1, fine: 0.997, level: 0.425, attack: 0.05, decay: 0.48, sustain: 0.48, release: 0.15, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 0.55, attack: 0.09, decay: 0.5, sustain: 0.5, release: 0.15, velSens: 0.6 }
+    { on: true, ratio: 1, fine: 0.998, level: 0.8075, attack: 0.2557, decay: 3.316, sustain: 0.576, release: 1.036, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 1, attack: 0.01066, decay: 2.113, sustain: 0.3168, release: 1.036, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1.003, level: 0.826, attack: 0.2436, decay: 5.181, sustain: 0.8, release: 1.036, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.4956, attack: 0.6089, decay: 2.072, sustain: 0.5, release: 1.036, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 0.997, level: 0.425, attack: 0.1522, decay: 3.316, sustain: 0.48, release: 1.036, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.55, attack: 0.1918, decay: 2.072, sustain: 0.5, release: 1.036, velSens: 0.6 }
   ], lfoRate: 0, lfoWaveform: 0, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.4, mix: 0.12 } } },
 
-  { name: 'Warm Pad', params: { algorithm: 3, feedback: 0.1, ops: [
-    op(1,1,85, 0.3,0.5,0.8,0.8, 0.2), op(2,1,30, 0.2,0.6,0.2,0.5, 0.3),
-    op(1,1,80, 0.4,0.6,0.7,0.9, 0.2), op(3,1,25, 0.3,0.5,0.15,0.5, 0.4),
-    op(1,1.01,75, 0.5,0.5,0.75,1.0, 0.2), op(2,1,20, 0.4,0.6,0.1,0.6, 0.3)
+  // Warm Pad is three detuned carrier/modulator pairs (odd ops at ratio 1 and
+  // high level, even ops as quiet modulators). It used to name algorithm 4,
+  // whose routing was broken (OP2 modulated itself, OP5/OP6 were dead), so
+  // what played was a static sine + buzz; with algorithm 4 fixed to the chart
+  // it would be a harsh stack. Algorithm 7 (3 pairs) is the patch as written.
+  { name: 'Warm Pad', params: { algorithm: 6, feedback: 0.1, ops: [
+    op(1, 1, 85, 0.9134, 3.454, 0.8, 5.526, 0.2), op(2, 1, 30, 0.6089, 4.145, 0.2, 3.454, 0.3),
+    op(1, 1, 80, 1.218, 4.145, 0.7, 6.217, 0.2), op(3, 1, 25, 0.9134, 3.454, 0.15, 3.454, 0.4),
+    op(1, 1.01, 75, 1.522, 3.454, 0.75, 6.908, 0.2), op(2, 1, 20, 1.218, 4.145, 0.1, 4.145, 0.3)
   ], lfoRate: 0.3, lfoPitchDepth: 0, lfoAmpDepth: 0.1 },
   fx: { chorus: { enabled: true, rate: 0.2, depth: 0.004, mix: 0.3 }, reverb: { enabled: true, roomSize: 0.85, mix: 0.3 } } },
 
   { name: 'Bright Bell', params: { algorithm: 0, feedback: 0.4, ops: [
-    op(1,1,85, 0.001,2.0,0.0,1.5, 0.3), op(1.41,1,50, 0.001,1.5,0.0,1.0, 0.5),
-    op(2.83,1,40, 0.001,1.2,0.0,0.8, 0.5), op(7.07,1,30, 0.001,0.8,0.0,0.5, 0.6),
-    op(14.1,1,18, 0.001,0.4,0.0,0.3, 0.7), op(1,1,25, 0.001,1.0,0.0,0.5, 0.5)
+    op(1, 1, 85, 0.003045, 13.82, 0.0, 10.36, 0.3), op(1.41, 1, 50, 0.003045, 10.36, 0.0, 6.908, 0.5),
+    op(2.83, 1, 40, 0.003045, 8.289, 0.0, 5.526, 0.5), op(7.07, 1, 30, 0.003045, 5.526, 0.0, 3.454, 0.6),
+    op(14.1, 1, 18, 0.003045, 2.763, 0.0, 2.072, 0.7), op(1, 1, 25, 0.003045, 6.908, 0.0, 3.454, 0.5)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.9, mix: 0.35 } } },
 
   { name: 'Marimba', params: { algorithm: 1, feedback: 0.05, ops: [
-    op(1,1,90, 0.001,0.25,0.0,0.15, 0.4), op(4,1,40, 0.001,0.06,0.0,0.05, 0.8),
-    op(1,1,30, 0.001,0.12,0.0,0.1, 0.5), opOff(), opOff(), opOff()
+    op(1, 1, 90, 0.003045, 1.727, 0.0, 1.036, 0.4), op(4, 1, 40, 0.003045, 0.4145, 0.0, 0.3454, 0.8),
+    op(1, 1, 30, 0.003045, 0.8289, 0.0, 0.6908, 0.5), opOff(), opOff(), opOff()
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.5, mix: 0.2 } } },
 
-  { name: 'Organ', params: { algorithm: 7, feedback: 0.1, ops: [
-    { on: true, ratio: 0.5, fine: 1.004, level: 0.762, attack: 0.004, decay: 0.1, sustain: 1, release: 0.05, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 0.998, level: 0.262, attack: 0.0112, decay: 0.06, sustain: 0.216, release: 0.05, velSens: 0.3 },
-    { on: true, ratio: 1.5, fine: 1, level: 1, attack: 0.008, decay: 0.06, sustain: 0.96, release: 0.05, velSens: 0.3 },
-    { on: true, ratio: 4, fine: 1, level: 0.02, attack: 0.004, decay: 0.022, sustain: 0.23, release: 0.05, velSens: 0.3 },
-    { on: true, ratio: 6, fine: 1.002, level: 0.12, attack: 0.008, decay: 0.136, sustain: 0.311, release: 0.05, velSens: 0.3 },
-    { on: true, ratio: 8, fine: 0.994, level: 0.101, attack: 0.004, decay: 0.036, sustain: 0.922, release: 0.05, velSens: 0.3 }
+  { name: 'Organ', params: { algorithm: 7, feedback: 0.256, ops: [
+    { on: true, ratio: 0.5, fine: 1.004, level: 1, attack: 0.01218, decay: 0.6908, sustain: 1, release: 0.3454, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 0.996, level: 0.2624, attack: 0.0341, decay: 0.2487, sustain: 0.2592, release: 0.3454, velSens: 0.3 },
+    { on: true, ratio: 1.5, fine: 1, level: 1, attack: 0.02436, decay: 0.4145, sustain: 0.96, release: 0.3454, velSens: 0.3 },
+    { on: true, ratio: 4, fine: 1, level: 0.012, attack: 0.01218, decay: 0.4312, sustain: 0.2304, release: 0.3454, velSens: 0.3 },
+    { on: true, ratio: 6, fine: 0.998, level: 0.12, attack: 0.04872, decay: 0.3382, sustain: 0.2488, release: 0.3454, velSens: 0.3 },
+    { on: true, ratio: 8, fine: 0.994, level: 0.1416, attack: 0.02436, decay: 0.4228, sustain: 0.553, release: 0.3454, velSens: 0.3 }
   ], lfoRate: 6.24, lfoWaveform: 0, lfoPitchDepth: 0.015, lfoAmpDepth: 0.27 }, fx: { reverb: { enabled: true, roomSize: 0.3, mix: 0.1 } } },
 
   { name: 'Synth Lead', params: { algorithm: 6, feedback: 0.35, ops: [
-    op(1,1,88, 0.01,0.2,0.8,0.15, 0.4), op(1,1,50, 0.001,0.12,0.3,0.1, 0.7),
-    op(2,1,75, 0.01,0.25,0.7,0.2, 0.4), op(3,1,40, 0.001,0.08,0.2,0.1, 0.8),
-    op(1,0.995,85, 0.01,0.2,0.8,0.15, 0.4), op(2,1,35, 0.001,0.12,0.15,0.1, 0.7)
+    op(1, 1, 88, 0.03045, 1.382, 0.8, 1.036, 0.4), op(1, 1, 50, 0.003045, 0.8289, 0.3, 0.6908, 0.7),
+    op(2, 1, 75, 0.03045, 1.727, 0.7, 1.382, 0.4), op(3, 1, 40, 0.003045, 0.5526, 0.2, 0.6908, 0.8),
+    op(1, 0.995, 85, 0.03045, 1.382, 0.8, 1.036, 0.4), op(2, 1, 35, 0.003045, 0.8289, 0.15, 0.6908, 0.7)
   ], lfoRate: 5, lfoPitchDepth: 0.3, lfoAmpDepth: 0 }, fx: { delay: { enabled: true, timeL: 0.3, feedback: 0.3, mix: 0.15 } } },
 
   { name: 'Strings', params: { algorithm: 6, feedback: 0.5, ops: [
-    { on: true, ratio: 1, fine: 1, level: 0.535, attack: 1.82, decay: 1.2, sustain: 0.9, release: 0.6, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 0.475, attack: 0.0469, decay: 0.36, sustain: 0.553, release: 0.6, velSens: 0.6 },
-    { on: true, ratio: 1, fine: 1.004, level: 0.5, attack: 1.68, decay: 1.2, sustain: 0.9, release: 0.6, velSens: 0.3 },
-    { on: true, ratio: 3, fine: 0.996, level: 0.274, attack: 1.6, decay: 0.9, sustain: 0.5, release: 0.6, velSens: 0.7 },
-    { on: true, ratio: 1, fine: 0.996, level: 0.595, attack: 2.744, decay: 1.2, sustain: 0.9, release: 0.6, velSens: 0.3 },
-    { on: true, ratio: 1, fine: 1, level: 0.42, attack: 0.735, decay: 1.7, sustain: 0.72, release: 0.6, velSens: 0.6 }
-  ], lfoRate: 3.52, lfoWaveform: 0, lfoPitchDepth: 0.03, lfoAmpDepth: 0.225 }, fx: { chorus: { enabled: true, rate: 0.4, depth: 0.004, mix: 0.3 }, reverb: { enabled: true, roomSize: 0.7, mix: 0.25 } } },
+    { on: true, ratio: 1, fine: 1, level: 0.5355, attack: 5.541, decay: 8.289, sustain: 0.9, release: 4.145, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.7804, attack: 0.1427, decay: 2.487, sustain: 0.3539, release: 4.145, velSens: 0.6 },
+    { on: true, ratio: 1, fine: 1.004, level: 0.5898, attack: 5.115, decay: 8.289, sustain: 0.9, release: 4.145, velSens: 0.3 },
+    { on: true, ratio: 3, fine: 0.996, level: 0.2752, attack: 4.871, decay: 6.217, sustain: 0.5, release: 4.145, velSens: 0.7 },
+    { on: true, ratio: 1, fine: 0.996, level: 0.595, attack: 8.354, decay: 8.289, sustain: 0.9, release: 4.145, velSens: 0.3 },
+    { on: true, ratio: 1, fine: 1, level: 0.42, attack: 2.238, decay: 7.044, sustain: 0.432, release: 4.145, velSens: 0.6 }
+  ], lfoRate: 3.52, lfoWaveform: 0, lfoPitchDepth: 0.03, lfoAmpDepth: 0.3375 }, fx: { chorus: { enabled: true, rate: 0.4, depth: 0.004, mix: 0.3 }, reverb: { enabled: true, roomSize: 0.7, mix: 0.25 } } },
 
   { name: 'Tubular Bell', params: { algorithm: 6, feedback: 0.15, ops: [
-    op(1,1,80, 0.001,3.0,0.0,2.0, 0.2), op(3.5,1,40, 0.001,0.8,0.0,0.5, 0.5),
-    op(2.76,1,70, 0.001,2.5,0.0,1.5, 0.2), op(5.4,1,35, 0.001,0.6,0.0,0.4, 0.5),
-    op(7.1,1,55, 0.001,1.8,0.0,1.0, 0.3), op(11,1,28, 0.001,0.5,0.0,0.3, 0.6)
+    op(1, 1, 80, 0.003045, 20.72, 0.0, 13.82, 0.2), op(3.5, 1, 40, 0.003045, 5.526, 0.0, 3.454, 0.5),
+    op(2.76, 1, 70, 0.003045, 17.27, 0.0, 10.36, 0.2), op(5.4, 1, 35, 0.003045, 4.145, 0.0, 2.763, 0.5),
+    op(7.1, 1, 55, 0.003045, 12.43, 0.0, 6.908, 0.3), op(11, 1, 28, 0.003045, 3.454, 0.0, 2.072, 0.6)
   ], lfoRate: 4, lfoPitchDepth: 0, lfoAmpDepth: 0 }, fx: { reverb: { enabled: true, roomSize: 0.9, mix: 0.4 } } },
 ];
 
@@ -268,7 +279,7 @@ function updateUIFromPreset(preset) {
     set(`op${i}-level`, Math.round((op.level || 0) * 99));
     set(`op${i}-velsens`, op.velSens || 0);
     // ADSR — convert time to slider (inverse of sliderToTime)
-    const timeToSlider = t => Math.log(t / 0.001) / Math.log(10000);
+    const timeToSlider = t => Math.log(t / 0.001) / Math.log(70000);
     set(`op${i}-a`, timeToSlider(op.attack || 0.01));
     set(`op${i}-d`, timeToSlider(op.decay || 0.3));
     set(`op${i}-s`, op.sustain || 0);

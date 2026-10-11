@@ -240,8 +240,13 @@ function freqFormat(v) {
 }
 
 // Map 0-1 slider to time (1ms to 10s logarithmic)
+// Envelope sliders: 1 ms .. 70 s, logarithmic. The times are real — attack
+// to the peak, decay/release to -60 dB (see Envelope in dsp-lib.js) — and
+// the slow end has to reach the ~10 s decays the converted presets use.
+// (70000 is a literal because the studio's sync script extracts this
+// function as standalone code.)
 function sliderToTime(v) {
-  return 0.001 * Math.pow(10000, parseFloat(v));
+  return 0.001 * Math.pow(70000, parseFloat(v));
 }
 
 function timeFormat(v) {
@@ -408,6 +413,13 @@ function initUI() {
 
 // ─── Presets ────────────────────────────────────────────────────────────────
 
+// masterVolume of Wave Pad, Digital Dreams, Ambient Drift, Organ Sweep and Ice Crystal
+// re-levelled 2026-09-24. They were set while the reverb's wet path ran
+// ~28 dB hot (dsp-lib Freeverb lacked Freeverb's input/wet gains; fixed
+// there) and was being flattened by the master tanh, so their
+// real levels spread over 11 dB once that was fixed. Now within ~5 dB
+// (single note, C4, vel 100, with FX: -19..-25 dB RMS), and a 6-note
+// chord at velocity 127 no longer reaches the output ceiling.
 const FACTORY_PRESETS = [
   {
     name: 'Wave Pad',
@@ -417,10 +429,10 @@ const FACTORY_PRESETS = [
       oscBDetune: 0, oscBOctave: 0, abMix: 0,
       filterType: 0, filterMode: 0, filterCutoff: 4000, filterResonance: 0.1,
       filterEnvAmount: 0.2, filterKeyTrack: 0.3,
-      ampA: 0.1, ampD: 0.3, ampS: 0.8, ampR: 0.5,
-      fltA: 0.05, fltD: 0.4, fltS: 0.3, fltR: 0.4,
-      waveA: 0.01, waveD: 0.5, waveS: 0, waveR: 0.5, waveEnvAmt: 0,
-      masterVolume: 0.7
+      ampA: 0.3045, ampD: 2.072, ampS: 0.8, ampR: 3.454,
+      fltA: 0.1522, fltD: 2.763, fltS: 0.3, fltR: 2.763,
+      waveA: 0.03045, waveD: 3.454, waveS: 0, waveR: 3.454, waveEnvAmt: 0,
+      masterVolume: 0.55
     },
     seqA: {
       steps: [
@@ -441,10 +453,10 @@ const FACTORY_PRESETS = [
       oscBDetune: 7, oscBOctave: 12, abMix: 0.3,
       filterType: 0, filterMode: 0, filterCutoff: 3000, filterResonance: 0.2,
       filterEnvAmount: 0.4, filterKeyTrack: 0.5,
-      ampA: 0.01, ampD: 0.3, ampS: 0.6, ampR: 0.8,
-      fltA: 0.01, fltD: 0.5, fltS: 0.2, fltR: 0.5,
-      waveA: 0.01, waveD: 0.5, waveS: 0, waveR: 0.5, waveEnvAmt: 0,
-      masterVolume: 0.6
+      ampA: 0.03045, ampD: 2.072, ampS: 0.6, ampR: 5.526,
+      fltA: 0.03045, fltD: 3.454, fltS: 0.2, fltR: 3.454,
+      waveA: 0.03045, waveD: 3.454, waveS: 0, waveR: 3.454, waveEnvAmt: 0,
+      masterVolume: 1.0
     },
     seqA: {
       steps: [
@@ -465,9 +477,9 @@ const FACTORY_PRESETS = [
       oscBDetune: 0, oscBOctave: 0, abMix: 0,
       filterType: 0, filterMode: 0, filterCutoff: 5000, filterResonance: 0.15,
       filterEnvAmount: 0.1, filterKeyTrack: 0.3,
-      ampA: 0.08, ampD: 0.4, ampS: 0.7, ampR: 0.6,
-      fltA: 0.05, fltD: 0.5, fltS: 0.4, fltR: 0.4,
-      waveA: 0.01, waveD: 0.5, waveS: 0, waveR: 0.5, waveEnvAmt: 0,
+      ampA: 0.2436, ampD: 2.763, ampS: 0.7, ampR: 4.145,
+      fltA: 0.1522, fltD: 3.454, fltS: 0.4, fltR: 2.763,
+      waveA: 0.03045, waveD: 3.454, waveS: 0, waveR: 3.454, waveEnvAmt: 0,
       masterVolume: 0.7
     },
     seqA: {
@@ -489,9 +501,9 @@ const FACTORY_PRESETS = [
       oscBDetune: 0, oscBOctave: 12, abMix: 0.2,
       filterType: 1, filterMode: 0, filterCutoff: 6000, filterResonance: 0.1,
       filterEnvAmount: 0.3, filterKeyTrack: 0.5,
-      ampA: 0.001, ampD: 0.8, ampS: 0.0, ampR: 1.0,
-      fltA: 0.001, fltD: 0.6, fltS: 0.1, fltR: 0.6,
-      waveA: 0.01, waveD: 0.5, waveS: 0, waveR: 0.5, waveEnvAmt: 0,
+      ampA: 0.003045, ampD: 5.526, ampS: 0.0, ampR: 6.908,
+      fltA: 0.003045, fltD: 4.145, fltS: 0.1, fltR: 4.145,
+      waveA: 0.03045, waveD: 3.454, waveS: 0, waveR: 3.454, waveEnvAmt: 0,
       masterVolume: 0.6
     },
     seqA: {
@@ -512,10 +524,10 @@ const FACTORY_PRESETS = [
       oscBDetune: 5, oscBOctave: 0, abMix: 0.4,
       filterType: 0, filterMode: 0, filterCutoff: 2000, filterResonance: 0.2,
       filterEnvAmount: 0.3, filterKeyTrack: 0.2,
-      ampA: 0.3, ampD: 0.5, ampS: 0.8, ampR: 1.5,
-      fltA: 0.2, fltD: 0.8, fltS: 0.2, fltR: 0.8,
-      waveA: 0.5, waveD: 2.0, waveS: 0, waveR: 2.0, waveEnvAmt: 0.6,
-      masterVolume: 0.7
+      ampA: 0.9134, ampD: 3.454, ampS: 0.8, ampR: 10.36,
+      fltA: 0.6089, fltD: 5.526, fltS: 0.2, fltR: 5.526,
+      waveA: 1.522, waveD: 13.82, waveS: 0, waveR: 13.82, waveEnvAmt: 0.6,
+      masterVolume: 1.0
     },
     fx: {
       chorus: { enabled: true, rate: 0.15, depth: 0.005, mix: 0.4 },
@@ -531,10 +543,10 @@ const FACTORY_PRESETS = [
       oscBDetune: 0, oscBOctave: 0, abMix: 0,
       filterType: 0, filterMode: 0, filterCutoff: 6000, filterResonance: 0.05,
       filterEnvAmount: 0.0, filterKeyTrack: 0.5,
-      ampA: 0.01, ampD: 0.1, ampS: 0.9, ampR: 0.15,
-      fltA: 0.01, fltD: 0.2, fltS: 0.5, fltR: 0.2,
-      waveA: 0.5, waveD: 1.0, waveS: 0.5, waveR: 0.5, waveEnvAmt: 0.3,
-      masterVolume: 0.65
+      ampA: 0.03045, ampD: 0.6908, ampS: 0.9, ampR: 1.036,
+      fltA: 0.03045, fltD: 1.382, fltS: 0.5, fltR: 1.382,
+      waveA: 1.522, waveD: 6.908, waveS: 0.5, waveR: 3.454, waveEnvAmt: 0.3,
+      masterVolume: 0.55
     },
     fx: { chorus: { enabled: true, rate: 0.8, depth: 0.003, mix: 0.2 }, reverb: { enabled: true, roomSize: 0.6, damping: 0.5, mix: 0.15 } }
   },
@@ -546,10 +558,10 @@ const FACTORY_PRESETS = [
       oscBDetune: 3, oscBOctave: 12, abMix: 0.3,
       filterType: 1, filterMode: 0, filterCutoff: 8000, filterResonance: 0.3,
       filterEnvAmount: -0.3, filterKeyTrack: 0.6,
-      ampA: 0.001, ampD: 0.5, ampS: 0.3, ampR: 1.2,
-      fltA: 0.001, fltD: 0.3, fltS: 0.5, fltR: 0.5,
-      waveA: 0.3, waveD: 1.5, waveS: 0, waveR: 1.0, waveEnvAmt: -0.5,
-      masterVolume: 0.55
+      ampA: 0.003045, ampD: 3.454, ampS: 0.3, ampR: 8.289,
+      fltA: 0.003045, fltD: 2.072, fltS: 0.5, fltR: 3.454,
+      waveA: 0.9134, waveD: 10.36, waveS: 0, waveR: 6.908, waveEnvAmt: -0.5,
+      masterVolume: 0.7
     },
     fx: {
       delay: { enabled: true, timeL: 0.25, feedback: 0.4, mix: 0.25 },
@@ -564,9 +576,9 @@ const FACTORY_PRESETS = [
       oscBDetune: 0, oscBOctave: 0, abMix: 0.3,
       filterType: 0, filterMode: 0, filterCutoff: 800, filterResonance: 0.4,
       filterEnvAmount: 0.6, filterKeyTrack: 0.1,
-      ampA: 0.001, ampD: 0.15, ampS: 0.8, ampR: 0.1,
-      fltA: 0.001, fltD: 0.2, fltS: 0.2, fltR: 0.1,
-      waveA: 0.01, waveD: 0.5, waveS: 0, waveR: 0.5, waveEnvAmt: 0,
+      ampA: 0.003045, ampD: 1.036, ampS: 0.8, ampR: 0.6908,
+      fltA: 0.003045, fltD: 1.382, fltS: 0.2, fltR: 0.6908,
+      waveA: 0.03045, waveD: 3.454, waveS: 0, waveR: 3.454, waveEnvAmt: 0,
       masterVolume: 0.7
     },
     seqA: {
@@ -588,9 +600,9 @@ const FACTORY_PRESETS = [
       oscBDetune: 7, oscBOctave: 12, abMix: 0.4,
       filterType: 0, filterMode: 0, filterCutoff: 3000, filterResonance: 0.15,
       filterEnvAmount: 0.2, filterKeyTrack: 0.3,
-      ampA: 0.2, ampD: 0.5, ampS: 0.7, ampR: 2.0,
-      fltA: 0.1, fltD: 0.6, fltS: 0.3, fltR: 1.0,
-      waveA: 0.5, waveD: 2.0, waveS: 0.5, waveR: 2.0, waveEnvAmt: 0.4,
+      ampA: 0.6089, ampD: 3.454, ampS: 0.7, ampR: 13.82,
+      fltA: 0.3045, fltD: 4.145, fltS: 0.3, fltR: 6.908,
+      waveA: 1.522, waveD: 13.82, waveS: 0.5, waveR: 13.82, waveEnvAmt: 0.4,
       masterVolume: 0.6
     },
     seqA: {
@@ -616,9 +628,9 @@ const FACTORY_PRESETS = [
       oscBDetune: 0, oscBOctave: 0, abMix: 0,
       filterType: 0, filterMode: 0, filterCutoff: 2500, filterResonance: 0.3,
       filterEnvAmount: 0.5, filterKeyTrack: 0.5,
-      ampA: 0.001, ampD: 0.1, ampS: 0.8, ampR: 0.15,
-      fltA: 0.001, fltD: 0.3, fltS: 0.3, fltR: 0.2,
-      waveA: 0.01, waveD: 0.8, waveS: 0, waveR: 0.3, waveEnvAmt: 0.7,
+      ampA: 0.003045, ampD: 0.6908, ampS: 0.8, ampR: 1.036,
+      fltA: 0.003045, fltD: 2.072, fltS: 0.3, fltR: 1.382,
+      waveA: 0.03045, waveD: 5.526, waveS: 0, waveR: 2.072, waveEnvAmt: 0.7,
       portamento: true, portamentoTime: 0.08,
       masterVolume: 0.65
     },
@@ -707,7 +719,7 @@ function updateUIFromPreset(preset) {
   if (p.filterMode !== undefined) setSelect('filter-mode', p.filterMode);
 
   // Envelopes — reverse log time mapping
-  const timeToSlider = (t) => Math.log(t / 0.001) / Math.log(10000);
+  const timeToSlider = (t) => Math.log(t / 0.001) / Math.log(70000);
   if (p.ampA !== undefined) set('amp-a', timeToSlider(p.ampA));
   if (p.ampD !== undefined) set('amp-d', timeToSlider(p.ampD));
   if (p.ampS !== undefined) set('amp-s', p.ampS);

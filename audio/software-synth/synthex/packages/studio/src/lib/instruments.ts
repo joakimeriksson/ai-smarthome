@@ -45,7 +45,7 @@ export const INSTRUMENTS: InstrumentDef[] = [
     chassis: '#33291e', ink: '#efe6d6', accent: '#e8842a', polyphony: 8 },
   { kind: 'pm',      name: 'PM Synth',   subtitle: 'Karplus-Strong',
     chassis: '#e8e2d6', ink: '#3a322a', accent: '#c47a3f', polyphony: 8 },
-  { kind: 'drum',    name: 'Drums',      subtitle: '808/909 Machine',
+  { kind: 'drum',    name: 'Drums',      subtitle: 'TR-808 Model',
     chassis: '#ded7c9', ink: '#4a3a28', accent: '#e8531f', polyphony: 8, percussion: true },
   { kind: 'synthex', name: 'Synthex',    subtitle: 'Elka Synthex tribute',
     chassis: '#17161a', ink: '#e8e2d8', accent: '#d65a1c', polyphony: 8 },
@@ -80,6 +80,13 @@ export interface Instrument {
   readonly output: AudioNode
   noteOn(note: number, velocity: number): void
   noteOff(note: number): void
+  /**
+   * Key pressure (aftertouch) on a held note: glide to `value` (0..1) over
+   * `seconds`. Optional — only engines with a pressure source (VA) act on it.
+   */
+  pressure?(note: number, value: number, seconds: number): void
+  /** One held note's pitch: glide to `semitones` over `seconds` (VA only). */
+  bend?(note: number, semitones: number, seconds: number): void
   allNotesOff(): void
   setParam(param: string, value: number | string | boolean): void
   dispose(): void
@@ -181,6 +188,18 @@ class WorkletInstrument implements Instrument {
     this.node.port.postMessage({ type: 'noteOff', voice })
   }
 
+  pressure(note: number, value: number, seconds: number): void {
+    const voice = this.noteToVoice.get(note)
+    if (voice === undefined) return
+    this.node.port.postMessage({ type: 'pressure', voice, value, time: seconds })
+  }
+
+  bend(note: number, semitones: number, seconds: number): void {
+    const voice = this.noteToVoice.get(note)
+    if (voice === undefined) return
+    this.node.port.postMessage({ type: 'bend', voice, value: semitones, time: seconds })
+  }
+
   allNotesOff(): void {
     for (let v = 0; v < this.polyphony; v++) {
       this.node.port.postMessage({ type: 'noteOff', voice: v })
@@ -194,8 +213,9 @@ class WorkletInstrument implements Instrument {
   }
 
   /** Push a whole preset (same shape the standalone pages send). */
-  loadPreset(params: Record<string, unknown>, fx: Record<string, unknown> = {}): void {
-    this.node.port.postMessage({ type: 'preset', params, fx })
+  loadPreset(params: Record<string, unknown>, fx: Record<string, unknown> = {},
+    extras: Record<string, unknown> = {}): void {
+    this.node.port.postMessage({ type: 'preset', params, fx, ...extras })
   }
 
   /** Raw processor message — for protocol beyond params (SID's GT2 tables). */

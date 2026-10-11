@@ -1,0 +1,22 @@
+{
+ "class_stats": {
+  "classes": 1067,
+  "solved": 206,
+  "partial": 266,
+  "unsolved": 391,
+  "no_slots": 204,
+  "conflict_or_gaps": 54
+ },
+ "slot_total": {
+  "reg": 21144,
+  "imm": 11489,
+  "blk": 389,
+  "himm": 874
+ },
+ "slot_solved": {
+  "reg": 746,
+  "imm": 116,
+  "blk": 8,
+  "himm": 2
+ }
+}

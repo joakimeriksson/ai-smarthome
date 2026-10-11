@@ -16,11 +16,17 @@ export interface KeyHandlers {
   onOctave?(octave: number): void
   /** Space toggles the transport. */
   onTransport?(): void
+  /** Shift + 1-8, held: a performance pad (0-7) goes down, then up. */
+  onPad?(pad: number, down: boolean): void
 }
+
+const PAD_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8']
 
 export class ComputerKeys {
   octave = 4
   private readonly held = new Set<string>()
+  /** The key holding a pad down, so its release ends it whatever Shift does. */
+  private padKey: string | null = null
 
   constructor(private readonly h: KeyHandlers) {}
 
@@ -59,6 +65,14 @@ export class ComputerKeys {
       this.h.onOctave?.(this.octave)
       return
     }
+    const pad = PAD_KEYS.indexOf(e.code)
+    if (e.shiftKey && pad >= 0) {
+      e.preventDefault()
+      if (e.repeat) return
+      this.padKey = e.code
+      this.h.onPad?.(pad, true)
+      return
+    }
     const semi = LAYOUT[e.code]
     if (semi === undefined || e.repeat || this.held.has(e.code)) return
     this.held.add(e.code)
@@ -66,6 +80,11 @@ export class ComputerKeys {
   }
 
   private up(e: KeyboardEvent): void {
+    if (this.padKey === e.code) {
+      this.padKey = null
+      this.h.onPad?.(PAD_KEYS.indexOf(e.code), false)
+      return
+    }
     const semi = LAYOUT[e.code]
     if (semi === undefined || !this.held.has(e.code)) return
     this.held.delete(e.code)

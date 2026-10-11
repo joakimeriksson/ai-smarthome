@@ -7,6 +7,8 @@
      it is this synth's signature rather than another orange accent. */
   --chassis: #6a4526;         /* wood cheeks */
   --chassis-edge: rgba(28, 16, 6, 0.7);
+  --cheek: var(--wood);       /* panel-hw.css end cheeks */
+  --cheek-w: 22px;
   --bg: #211e1b;
   --panel-bg: #2f2b27;
   --panel-border: #4b443c;

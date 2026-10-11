@@ -9,6 +9,10 @@
 import { PRESETS as SYNTHEX_PRESETS, MEMORIES, type Patch } from '@synthex/engine'
 import type { InstrumentKind } from './instruments.ts'
 
+// Applying a preset to a track lives in preset-apply.ts (no runtime imports,
+// so the offline song renderer can use the same code as the app).
+export { presetExtras, applyPresetEntry } from './preset-apply.ts'
+
 export interface ParamOption { value: string; label: string }
 
 export interface ParamSpec {
@@ -55,7 +59,17 @@ export interface PresetEntry {
     ptbl?: { lt: number[]; rt: number[] } | null
     ftbl?: { lt: number[]; rt: number[] } | null
   }
+  /** WaveSynth: wave sequences for oscillators A and B. */
+  seqA?: WaveSequence
+  seqB?: WaveSequence
 }
+
+export interface WaveSequence {
+  steps: { wave: number; duration: number; crossfade: number }[]
+  loopMode?: number
+  speed?: number
+}
+
 
 export interface SynthData {
   kind: InstrumentKind

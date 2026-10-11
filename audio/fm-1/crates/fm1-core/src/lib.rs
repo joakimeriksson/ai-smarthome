@@ -121,6 +121,12 @@ pub struct Cpu {
     pub pred_skips: Vec<(u32, u32)>,
     /// Condition flag set by `testset` (see its arm for the assumed sense).
     pub cc: bool,
+    /// Arithmetic flags in `psr`'s low bits (F_N | F_C | F_Z | F_V), set by the add / subtract
+    /// forms and read by `+ c`, `- !c` and `psr`: clang's 64-bit add / subtract / compare
+    /// sequences (and so compiler-rt's soft double) need them. Which forms set them on the real
+    /// core is a hardware-probe item; every add / subtract here does, which is what compiled
+    /// code (a producer right before its consumer) needs.
+    pub flags: u32,
     /// Plain-storage special registers: icfg, reti, retx, rete, sspn, psr.
     pub sreg_store: [u32; 7],
     /// Dual-issue pair in flight: an instruction printed with a trailing `#`
@@ -241,13 +247,23 @@ impl Cpu {
             return Ok(slot);
         }
         self.decodes += 1;
-        let insn = match fm1_isa::decode_win_cached(win, pc) {
+        // the add / subtract-with-carry family before the table: its corpus classes fit only
+        // the registers the corpora used (see carry_op_raw)
+        let decoded = match carry_op_raw(win) {
+            Some(entry) => Ok(fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry }),
+            None => fm1_isa::decode_win_cached(win, pc),
+        };
+        let insn = match decoded {
             Ok(i) => i,
             // 64-bit pair ops the corpora never showed (e.g. `r3_r2 >>>= 39`)
             // share one raw layout; decode them without a table class
-            Err(_) if matches!((win >> 8) & 0xff, 0xe1 | 0xf1) && matches!(win & 0xff, 0xd0 | 0xd8 | 0xf8 | 0xf6) => {
+            Err(_) if matches!((win >> 8) & 0xff, 0xe1 | 0xf1) && matches!(win & 0xff, 0xd0 | 0xd8 | 0xf8 | 0xfc | 0xf6) => {
                 fm1_isa::Instruction { addr: pc, raw: win, entry: &PAIR_OP_RAW }
             }
+            // `d9 e8` / `d1 e8 <mask>`: push / pop of rets and a register mask; the table's
+            // classes match only the masks the corpora used (libm's sin pops {rets, r11-r8, r6-r4})
+            Err(_) if win & 0xffff == 0xe8d9 => fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry: &RETS_PUSH_MASK_CRAW },
+            Err(_) if win & 0xffff == 0xe8d1 => fm1_isa::Instruction { addr: pc, raw: win & 0xffff_ffff, entry: &RETS_POP_MASK_CRAW },
             Err(e) => return Err(CoreError::Decode(e)),
         };
         let alu4 = if insn.entry.len == 4 { decode_alu4(insn.raw) } else { None };
@@ -274,7 +290,8 @@ impl Cpu {
         let pre = Pre { route, fast, alu4, bittest, pair_head, syntax };
         let fast = fast.map(Fast::specialise);
         // (a predicated block without an else part is a conditional jump: no careful path)
-        let careful = pair_head || matches!(fast, Some(Fast::IfBlk { has_else: true, .. }));
+        let careful = pair_head || matches!(fast, Some(Fast::IfBlk { has_else: true, .. }))
+            || (fast.is_some() && is_flag_producer(syntax) && next_reads_flags(bus, pc + insn.entry.len as u32));
         self.icache[slot] = Line { pc, len: insn.entry.len, pair_head, careful, fast };
         self.icache_x[slot] = Some(LineX { win, entry: insn.entry, pre });
         Ok(slot)
@@ -592,12 +609,28 @@ impl Cpu {
             // os_mutex_pend while bit 9 read 0). Writes keep their own bit 9 out of it.
             let active = self.irq_levels.iter().fold(0u32, |m, &p| m | 1 << p);
             (self.sreg_store[0] & !0x2ff) | active | if self.ie { 0x200 } else { 0 }
+        } else if n == "psr" {
+            (self.sreg_store[5] & !0xf) | self.flags
         } else {
             self.sreg_store[Self::sreg_index(n)]
         }
     }
     fn set_sreg(&mut self, n: &str, v: u32) {
+        if n == "psr" {
+            self.flags = v & 0xf;
+        }
         self.sreg_store[Self::sreg_index(n)] = v;
+    }
+
+    /// `alu` for the micro-ops, setting the flags on add / subtract.
+    #[inline]
+    fn alu_f(&mut self, op: Op, a: u32, b: u32) -> u32 {
+        match op {
+            Op::Add => { let (r, f) = add_flags(a, b, 0); self.flags = f; r }
+            Op::Sub => { let (r, f) = add_flags(a, !b, 1); self.flags = f; r }
+            Op::RSub => { let (r, f) = add_flags(b, !a, 1); self.flags = f; r }
+            _ => alu(op, a, b),
+        }
     }
 
     /// Execute a precomputed micro-op: the same semantics as the matching
@@ -612,10 +645,10 @@ impl Cpu {
             Fast::FOp { d, a, b, op } => {
                 self.regs[(d & 15) as usize] = fpu(op, self.regs[(a & 15) as usize], self.regs[(b & 15) as usize])
             }
-            Fast::Alu3 { d, a, b, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(a & 15) as usize], self.regs[(b & 15) as usize]),
-            Fast::Alu3I { d, a, v, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(a & 15) as usize], v),
-            Fast::Alu2 { d, b, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(d & 15) as usize], self.regs[(b & 15) as usize]),
-            Fast::Alu2I { d, v, op } => self.regs[(d & 15) as usize] = alu(op, self.regs[(d & 15) as usize], v),
+            Fast::Alu3 { d, a, b, op } => self.regs[(d & 15) as usize] = self.alu_f(op, self.regs[(a & 15) as usize], self.regs[(b & 15) as usize]),
+            Fast::Alu3I { d, a, v, op } => self.regs[(d & 15) as usize] = self.alu_f(op, self.regs[(a & 15) as usize], v),
+            Fast::Alu2 { d, b, op } => self.regs[(d & 15) as usize] = self.alu_f(op, self.regs[(d & 15) as usize], self.regs[(b & 15) as usize]),
+            Fast::Alu2I { d, v, op } => self.regs[(d & 15) as usize] = self.alu_f(op, self.regs[(d & 15) as usize], v),
             Fast::Ld { d, b, off, w, signed } => {
                 let a = base(self, b).wrapping_add(off);
                 self.regs[(d & 15) as usize] = match (w, signed) {
@@ -653,7 +686,7 @@ impl Cpu {
             Fast::Rts => return Some(self.rets),
             Fast::A4 { d, s, op, rk, rv } => {
                 let rhs = match rk { 0 => self.regs[(rv & 15) as usize], 1 => rv, _ => 1u32 << (self.regs[(rv & 15) as usize] & 31) };
-                self.regs[(d & 15) as usize] = alu(op, self.regs[(s & 15) as usize], rhs);
+                self.regs[(d & 15) as usize] = self.alu_f(op, self.regs[(s & 15) as usize], rhs);
             }
             Fast::BitBr { r, mk, ne, mv, target } => {
                 let mask = match mk { 0 => self.regs[(mv & 15) as usize], 1 => mv, _ => 1u32 << (self.regs[(mv & 15) as usize] & 31) };
@@ -736,7 +769,9 @@ impl Cpu {
                 bus.write32(a, self.regs[(s & 15) as usize]);
             }
             Fast::AddRI { d, s, v } => {
-                self.regs[(d & 15) as usize] = self.regs[(s & 15) as usize].wrapping_add(v);
+                let (r, f) = add_flags(self.regs[(s & 15) as usize], v, 0);
+                self.flags = f;
+                self.regs[(d & 15) as usize] = r;
             }
             Fast::ShlI { d, s, n } => {
                 self.regs[(d & 15) as usize] = self.regs[(s & 15) as usize] << (n & 31);
@@ -1275,9 +1310,8 @@ impl Cpu {
         }
 
         // ---- special registers ------------------------------------------------
-        // psr reads as 0 (no flags modelled yet); icfg/reti/retx/rete are
-        // plain storage. `c` (carry) is assumed clear in the add/sub-with-
-        // carry forms — a hardware-probe item.
+        // psr's low bits are the arithmetic flags (`Cpu::flags`, set by add / subtract,
+        // read by `+ c` / `- !c`); icfg/reti/retx/rete are plain storage.
         let sreg_get = |cpu: &Self, n: &str| -> Option<u32> {
             Some(match n {
                 "rets" => cpu.rets,
@@ -1359,8 +1393,20 @@ impl Cpu {
             "R = abs(R)" => { let d = r(self, 0)?; self.regs[d] = (self.regs[r(self, 1)?] as i32).wrapping_abs() as u32; return Ok(Some(None)); }
             "R = clz(R)" => { let d = r(self, 0)?; self.regs[d] = self.regs[r(self, 1)?].leading_zeros(); return Ok(Some(None)); }
             "R = rev8(R)" => { let d = r(self, 0)?; self.regs[d] = self.regs[r(self, 1)?].swap_bytes(); return Ok(Some(None)); }
-            "R = R + R + c" => { let d = r(self, 0)?; self.regs[d] = self.regs[r(self, 1)?].wrapping_add(self.regs[r(self, 2)?]); return Ok(Some(None)); }
-            "R = R - R - !c" => { let d = r(self, 0)?; self.regs[d] = self.regs[r(self, 1)?].wrapping_sub(self.regs[r(self, 2)?]).wrapping_sub(1); return Ok(Some(None)); }
+            "R = R + R + c" => {
+                let d = r(self, 0)?;
+                let (v, f) = add_flags(self.regs[r(self, 1)?], self.regs[r(self, 2)?], (self.flags & F_C != 0) as u32);
+                self.regs[d] = v;
+                self.flags = f;
+                return Ok(Some(None));
+            }
+            "R = R - R - !c" => {
+                let d = r(self, 0)?;
+                let (v, f) = add_flags(self.regs[r(self, 1)?], !self.regs[r(self, 2)?], (self.flags & F_C != 0) as u32);
+                self.regs[d] = v;
+                self.flags = f;
+                return Ok(Some(None));
+            }
             "R = R + R (ssat)" => {
                 let d = r(self, 0)?;
                 self.regs[d] = (self.regs[r(self, 1)?] as i32).saturating_add(self.regs[r(self, 2)?] as i32) as u32;
@@ -1406,8 +1452,8 @@ impl Cpu {
                 let a = self.regs[r(self, 1)?];
                 let b = v(self, 2)?;
                 self.regs[d] = match &s[6..7] {
-                    "+" => a.wrapping_add(b),
-                    "-" => a.wrapping_sub(b),
+                    "+" => self.alu_f(Op::Add, a, b),
+                    "-" => self.alu_f(Op::Sub, a, b),
                     "&" => a & b,
                     "|" => a | b,
                     "^" => a ^ b,
@@ -1416,7 +1462,8 @@ impl Cpu {
             }
             "R = #h - R" | "R = #i - R" => {
                 let d = r(self, 0)?;
-                self.regs[d] = v(self, 1)?.wrapping_sub(self.regs[r(self, 2)?]);
+                let (a, b) = (v(self, 1)?, self.regs[r(self, 2)?]);
+                self.regs[d] = self.alu_f(Op::Sub, a, b);
             }
             "R = R + R" | "R = R - R" | "R = R & R" | "R = R | R" | "R = R ^ R" | "R = R * R"
             | "R = R / R (s)" | "R = R / R (u)" | "R = R % R (s)" | "R = R % R (u)" => {
@@ -1424,8 +1471,8 @@ impl Cpu {
                 let a = self.regs[r(self, 1)?];
                 let b = self.regs[r(self, 2)?];
                 self.regs[d] = match &s[6..7] {
-                    "+" => a.wrapping_add(b),
-                    "-" => a.wrapping_sub(b),
+                    "+" => self.alu_f(Op::Add, a, b),
+                    "-" => self.alu_f(Op::Sub, a, b),
                     "&" => a & b,
                     "|" => a | b,
                     "^" => a ^ b,
@@ -1442,8 +1489,8 @@ impl Cpu {
                 let b = if s.ends_with('R') { self.regs[r(self, 1)?] } else { v(self, 1)? };
                 let a = self.regs[d];
                 self.regs[d] = match &s[2..3] {
-                    "+" => a.wrapping_add(b),
-                    "-" => a.wrapping_sub(b),
+                    "+" => self.alu_f(Op::Add, a, b),
+                    "-" => self.alu_f(Op::Sub, a, b),
                     "|" => a | b,
                     "&" => a & b,
                     "^" => a ^ b,
@@ -1623,7 +1670,7 @@ impl Cpu {
                     Op::Sar => ((x as i32) >> (rhs & 31)) as u32,
                 };
                 match a.dst {
-                    Dst::Reg(d) => self.regs[d] = apply(lhs),
+                    Dst::Reg(d) => self.regs[d] = if matches!(a.op, Op::Add | Op::Sub | Op::RSub) { self.alu_f(a.op, lhs, rhs) } else { apply(lhs) },
                     Dst::Mem(off) => {
                         let addr = (self.regs[a.src] as i64 + off as i64) as u32;
                         let cur = bus.read32(addr);
@@ -1990,6 +2037,8 @@ impl Cpu {
                 //   `d8 e1`: rP <<=|>>=|>>>= rN — op = bits(16,17), n = r[bits(24,27)] & 63
                 //   `f8 e1`: rP = rA * rB (u|s) — a = bits(20,23), b = bits(24,27),
                 //            pair = bits(29,31), signed = bit28
+                //   `fc e1`: rP += rA * rB (u|s) — the fields of `f8` (compiler-rt's
+                //            wide multiply; not in the corpora)
                 //   `f6 e1`: rP = rQ / rB (u|s) — q = bits(21,23), b = bits(24,27),
                 //            pair = bits(29,31), signed = bit28
                 let raw = insn.raw;
@@ -2011,10 +2060,13 @@ impl Cpu {
                         self.regs[lo] = y as u32;
                         self.regs[hi] = (y >> 32) as u32;
                     }
-                    0xf8 => {
+                    0xf8 | 0xfc => {
                         let a = self.regs[((raw >> 20) & 0xf) as usize];
                         let b = self.regs[((raw >> 24) & 0xf) as usize];
-                        let y = if signed { (a as i32 as i64).wrapping_mul(b as i32 as i64) as u64 } else { (a as u64) * (b as u64) };
+                        let mut y = if signed { (a as i32 as i64).wrapping_mul(b as i32 as i64) as u64 } else { (a as u64) * (b as u64) };
+                        if raw & 0xff == 0xfc {
+                            y = y.wrapping_add((self.regs[hi] as u64) << 32 | self.regs[lo] as u64);
+                        }
                         self.regs[lo] = y as u32;
                         self.regs[hi] = (y >> 32) as u32;
                     }
@@ -2091,6 +2143,19 @@ impl Cpu {
                     let v = if r < 0 { self.rets } else { self.regs[r as usize] };
                     bus.write32(self.sp, v);
                 }
+            }
+            27 if insn.entry.len == 4 => {
+                // `d1 e8 <mask>`: {rets, registers of mask} = [sp++], the registers from
+                // the lowest up, then rets (the inverse of `d9 e8`)
+                let mask = ((insn.raw >> 16) & 0xffff) as u32;
+                for r in 0..16 {
+                    if mask >> r & 1 != 0 {
+                        self.regs[r] = bus.read32(self.sp);
+                        self.sp = self.sp.wrapping_add(4);
+                    }
+                }
+                self.rets = bus.read32(self.sp);
+                self.sp = self.sp.wrapping_add(4);
             }
             27 => {
                 // `{rets, rN..rB} = [sp++]` (3n 04): like the pc pops but the
@@ -2240,6 +2305,50 @@ static PAIR_OP_RAW: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
     samples: &[],
     slots: &[],
 };
+
+/// `b8 e0` / `b8 f0` (the dual-issue `#` form) with bits(16,19) = 0: `rD = rA + rB + c`,
+/// 2: `rD = rA - rB - !c`; rD = bits(28,31), rA = bits(20,23), rB = bits(24,27) (objdump of
+/// clang's 64-bit add / subtract). The table's classes for these were fitted on the few
+/// register combinations the corpora showed (`r_mov_r_r_c_l4` matches odd registers only,
+/// `r_mov_r_r_c_3` needs bit 31): soft-double code (compiler-rt) hit both gaps.
+fn carry_op_raw(win: u64) -> Option<&'static fm1_isa::IsaEntry> {
+    if win & 0xff != 0xb8 {
+        return None;
+    }
+    let pair = match (win >> 8) & 0xff { 0xe0 => false, 0xf0 => true, _ => return None };
+    match ((win >> 16) & 0xf, pair) {
+        (0, false) => Some(&ADC_CRAW),
+        (0, true) => Some(&ADC_PAIR_CRAW),
+        (2, false) => Some(&SBC_CRAW),
+        (2, true) => Some(&SBC_PAIR_CRAW),
+        _ => None,
+    }
+}
+const CARRY_SLOTS: &[fm1_isa::SlotSpec] = &[
+    fm1_isa::SlotSpec { kind: fm1_isa::SlotKind::Imm, pieces: &[(28, 31)], mult: 0, adj: 0, hi: 0, lo: 0 },
+    fm1_isa::SlotSpec { kind: fm1_isa::SlotKind::Imm, pieces: &[(20, 23)], mult: 0, adj: 0, hi: 0, lo: 0 },
+    fm1_isa::SlotSpec { kind: fm1_isa::SlotKind::Imm, pieces: &[(24, 27)], mult: 0, adj: 0, hi: 0, lo: 0 },
+];
+macro_rules! carry_entry {
+    ($id:ident, $name:expr, $syntax:expr) => {
+        static $id: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
+            name: $name, syntax: $syntax, len: 4, count: 0, mask: 0, match_: 0, group: "alu",
+            alt: &[], samples: &[], slots: CARRY_SLOTS,
+        };
+    };
+}
+carry_entry!(ADC_CRAW, "adc_craw", "R = R + R + c");
+static RETS_PUSH_MASK_CRAW: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
+    name: "sp_mov_rets_mask_craw", syntax: "[--sp] = {rets, R*4}", len: 4, count: 0, mask: 0, match_: 0,
+    group: "stack", alt: &[], samples: &[], slots: &[],
+};
+static RETS_POP_MASK_CRAW: fm1_isa::IsaEntry = fm1_isa::IsaEntry {
+    name: "rets_mask_mov_sp_craw", syntax: "{rets, R*4} = [sp++]", len: 4, count: 0, mask: 0, match_: 0,
+    group: "stack", alt: &[], samples: &[], slots: &[],
+};
+carry_entry!(ADC_PAIR_CRAW, "adc_pair_craw", "R = R + R + c #");
+carry_entry!(SBC_CRAW, "sbc_craw", "R = R - R - !c");
+carry_entry!(SBC_PAIR_CRAW, "sbc_pair_craw", "R = R - R - !c #");
 
 fn sreg_get_named(cpu: &Cpu, n: &str) -> u32 {
     match n {
@@ -2827,6 +2936,57 @@ mod tests {
     }
 
     #[test]
+    fn carry_flags_64bit_add_sub() {
+        // clang's 64-bit add / subtract (compiler-rt's soft double depends on them):
+        //   `24 1c` r4 = r2 + r0 ; `b8 e0 20 46` r4 = r2 + r6 + c (even registers: not in the corpora)
+        //   `84 1e` r4 = r0 - r2 ; `b8 e0 12 53` r5 = r1 - r3 - !c ; `64 e0 00 05` r0 = psr
+        let mut mem = vec![0u8; 0x100];
+        mem[..18].copy_from_slice(&[0x24, 0x1c, 0xb8, 0xe0, 0x20, 0x46, 0x84, 0x1e, 0xb8, 0xe0, 0x12, 0x53,
+                                     0x84, 0x1e, 0x64, 0xe0, 0x00, 0x05]);
+        let mut ram = FlatRam::new(mem);
+        let mut cpu = Cpu::new(0);
+        cpu.regs[2] = 0xffff_ffff;
+        cpu.regs[0] = 1;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(cpu.regs[4], 0);
+        assert!(cpu.flags & F_C != 0, "carry out of the low word");
+        cpu.regs[2] = 5;
+        cpu.regs[6] = 7;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(cpu.regs[4], 13, "5 + 7 + carry");
+        // 0x1_00000000 - 0x0_00000001: borrow out of the low word
+        cpu.regs[0] = 0;
+        cpu.regs[2] = 1;
+        cpu.step(&mut ram).unwrap();
+        cpu.regs[1] = 1;
+        cpu.regs[3] = 0;
+        cpu.step(&mut ram).unwrap();
+        assert_eq!((cpu.regs[4], cpu.regs[5]), (0xffff_ffff, 0), "high word takes the borrow");
+        // equal low words: no borrow, and psr shows C set (no borrow) for an unsigned >=
+        cpu.regs[0] = 9;
+        cpu.regs[2] = 9;
+        cpu.step(&mut ram).unwrap();
+        cpu.step(&mut ram).unwrap();
+        assert_eq!(cpu.regs[0] & (F_C | F_Z), F_C | F_Z);
+    }
+
+    #[test]
+    fn pair_multiply_accumulate() {
+        // `fc e1 30 07` r1_r0 += r3 * r7 (u) (compiler-rt's wide multiply)
+        let mut mem = vec![0u8; 0x100];
+        mem[..4].copy_from_slice(&[0xfc, 0xe1, 0x30, 0x07]);
+        let mut ram = FlatRam::new(mem);
+        let mut cpu = Cpu::new(0);
+        cpu.regs[0] = 0xffff_ffff;
+        cpu.regs[1] = 1;
+        cpu.regs[3] = 0x1_0000;
+        cpu.regs[7] = 0x1_0001;
+        cpu.step(&mut ram).unwrap();
+        let want = 0x1_ffff_ffffu64 + 0x1_0000u64 * 0x1_0001;
+        assert_eq!((cpu.regs[0], cpu.regs[1]), (want as u32, (want >> 32) as u32));
+    }
+
+    #[test]
     fn pair_store_and_load() {
         // `50 ec 35 40` d[r3+4] = r5_r4 ; `50 ec 00 20` r3_r2 = d[r0+0]
         let mut mem = vec![0u8; 0x100];
@@ -3066,6 +3226,28 @@ thread_local! {
 
 /// The printed syntax with the sign of `-#i` folded into the slot and the
 /// dual-issue ` #` stripped, memoised per class.
+/// Add / subtract shapes that set the flags (`Cpu::flags`).
+fn is_flag_producer(s: &str) -> bool {
+    s.starts_with("R = R + ") || s.starts_with("R = R - ") || s.starts_with("R += ") || s.starts_with("R -= ")
+        || s.starts_with("R = #h - ") || s.starts_with("R = #i - ")
+}
+
+/// Does the instruction at pc read the flags (`+ c`, `- !c`, a `psr` read)? A producer right
+/// before one stays off the JIT (which does not model the flags) on the careful path.
+fn next_reads_flags<B: Bus>(bus: &mut B, pc: u32) -> bool {
+    let win = (bus.read32(pc + 4) as u64) << 32 | bus.read32(pc) as u64;
+    if carry_op_raw(win).is_some() {
+        return true;
+    }
+    match fm1_isa::decode_win_cached(win, pc) {
+        Ok(i) => {
+            let s = i.entry.syntax;
+            s.contains("+ c") || s.contains("- !c") || s.contains("= psr") || s.contains("psr,") || s.contains("{psr")
+        }
+        Err(_) => false,
+    }
+}
+
 fn canon_syntax(e: &'static fm1_isa::IsaEntry) -> &'static str {
     let key = e as *const _ as usize;
     if let Some(s) = CANON.with(|c| c.borrow().get(&key).copied()) {
@@ -3208,15 +3390,16 @@ fn route_of(insn: &Instruction, alu4: &Option<Alu4>, bittest: &Option<BitTest>) 
             _ if insn.entry.len == 4 && insn.raw & 0xff == 0xd8
                 && matches!((insn.raw >> 8) & 0xff, 0xec | 0xed | 0xee) => 20,
             _ if insn.entry.len == 4 && matches!((insn.raw >> 8) & 0xff, 0xe1 | 0xf1)
-                && matches!(insn.raw & 0xff, 0xd0 | 0xd8 | 0xf8 | 0xf6)
+                && matches!(insn.raw & 0xff, 0xd0 | 0xd8 | 0xf8 | 0xfc | 0xf6)
                 && insn.entry.syntax.starts_with('r') && has(insn.entry.syntax, "_r") => 21,
             _ if insn.entry.len == 4 && (insn.raw & 0xffff) == 0xe070 || (insn.raw & 0xffff) == 0xf070 => 22,
             "testset_b_r" | "testset_r" => 23,
             "ifeq_goto_i" | "ifne_goto_i" => 24,
             "if_ret_eq_i_goto_i" | "if_ret_ne_i_goto_i" => 25,
             "sp_mov_rets_r_1" | "sp_mov_rets_r_2" | "sp_mov_rets_r_3"
-            | "sp_mov_rets_r_4" => 26,
-            "rets_r_1_mov_sp" | "rets_r_2_mov_sp" | "rets_r_3_mov_sp" => 27,
+            | "sp_mov_rets_r_4" | "sp_mov_rets_r_6" | "sp_mov_rets_r_7" | "sp_mov_rets_mask_craw" => 26,
+            "rets_r_1_mov_sp" | "rets_r_2_mov_sp" | "rets_r_3_mov_sp"
+            | "rets_r_4_mov_sp" | "rets_r_6_mov_sp" | "rets_r_8_mov_sp" | "rets_mask_mov_sp_craw" => 27,
             "pc_r_1_mov_sp" | "pc_r_2_mov_sp" | "pc_r_3_mov_sp"
             | "pc_r_4_mov_sp" | "pc_r_mov_sp" => 28,
             "rep_i_r" | "rep_i_i" => 29,
@@ -3335,6 +3518,22 @@ enum Fast {
 
 #[derive(Clone, Copy, Debug)]
 enum RmwOp { Mov, Or, And, Xor, Add, Sub }
+
+/// `psr` flag bits, as compiled code reads them: `slt` tests N ^ V (bits 0 and 3), `ult` C
+/// (bit 1, set = no borrow, as on ARM); Z (bit 2) is assumed.
+pub const F_N: u32 = 1;
+pub const F_C: u32 = 2;
+pub const F_Z: u32 = 4;
+pub const F_V: u32 = 8;
+
+/// a + b + cin with the flags (subtract: a + !b + 1, with borrow: a + !b + C)
+#[inline]
+fn add_flags(a: u32, b: u32, cin: u32) -> (u32, u32) {
+    let w = a as u64 + b as u64 + cin as u64;
+    let r = w as u32;
+    let f = (r >> 31) * F_N | ((w >> 32) as u32) * F_C | ((r == 0) as u32) * F_Z | (((a ^ r) & (b ^ r)) >> 31) * F_V;
+    (r, f)
+}
 
 #[inline]
 fn alu(op: Op, a: u32, b: u32) -> u32 {

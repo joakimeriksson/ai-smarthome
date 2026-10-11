@@ -367,6 +367,29 @@ when it reproduces every (raw, value) example the solver kept for it.
 - Both pair and extract bugs were found with `probes/x0x/d909.c`: X0X's own 909 code built
   for the device (its flags) and natively, compared word for word (`reference/fm1-x0x`).
 
+### Flags, carry and soft double (2026-10-11)
+
+Found by running reSID 0.16 on the emulator (a SID study, `audio/fm1-sid`): its `double` math (compiler-rt
+`__muldf3` / `__divdf3`, libm `sin`) came out wrong, so its sampling setup and filter
+coefficients did. Probes `probes/softfloat/*.c` (`run.sh`; 64-bit add / sub / compare /
+shift / multiply, soft double) compare the emulator with the host.
+
+- **Flags** (`Cpu::flags`, psr bits 0..3): N, C (set = no borrow, as on ARM), Z (assumed),
+  V. clang's 64-bit code reads them right after the low-word add / subtract: `R = R + R + c`,
+  `R = R - R - !c`, and `rX = psr` then `slt` = N ^ V (bits 0, 3) / `ult` = !C (bit 1).
+  psr used to read 0 and the carry forms assumed C clear, so every 64-bit add lost its
+  carry and every 64-bit subtract borrowed. Every add / subtract form now sets the flags
+  (which ones do on the real core is a probe item; compiled code only reads them right after
+  the producer). A producer followed by a flag reader takes the careful path (the JIT does
+  not model flags).
+- **`b8 e0` / `b8 f0` add / subtract with carry**: rD = bits(28,31), rA = bits(20,23),
+  rB = bits(24,27), op bits(16,19) 0 `+ c`, 2 `- !c`; f0 = the dual-issue form. The mined
+  classes fitted only the corpus registers (`r_mov_r_r_c_l4` odd registers only,
+  `r_mov_r_r_c_3` with bit 31 set); `carry_op_raw` decodes the family before the table.
+- **`fc e1` 64-bit multiply-accumulate** `rP += rA * rB (u|s)`: the fields of `f8 e1`.
+- **`d1 e8 <mask>` / `d9 e8 <mask>`**: pop / push of rets and a register mask for any mask
+  (libm's `sin` pops `{rets, r11-r8, r6-r4}`; the classes matched only the corpus masks).
+
 ### Remaining exec gaps (known, traced)
 
 - goto/if branch-offset fields: printed = word offset (delta = 2*printed)

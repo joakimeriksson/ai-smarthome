@@ -6,8 +6,11 @@
  * Built on Felucca's hardware layer (ext/Felucca/firmware/hal, crt0.S, fm1_vec.S, fm1_isr.S;
  * GPL-3.0-only), so this firmware is GPL-3.0-only too.
  *
- * Keys: PRESETS / SELECT encoder or OCT- / OCT+ = tune, PLAY = pause, EDIT = engine (reSID /
- * own), FX = 6581 / 8580. Hold OCT- and OCT+ for 3 s: the USB update mode (UBOOT).
+ * Two modes, HOME switches. PLAYER: PRESETS / SELECT encoder or OCT- / OCT+ = tune, PLAY =
+ * pause. SYNTH: the note keys play fm1-sid's instrument driver (src/sidsynth.c) on the same
+ * chip, PRESETS / SELECT = patch, OCT- / OCT+ = octave, KNOB1..4 = cutoff, resonance, attack,
+ * release, PLAY = all notes off. Both: EDIT = engine (reSID / own), FX = 6581 / 8580. Hold
+ * OCT- and OCT+ for 3 s: the USB update mode (UBOOT).
  *
  * Timing: the main loop runs the play routine up to three frames ahead and queues its SID
  * writes with their C64 cycle; the audio interrupt (ALNK0, 128 frames a half buffer) clocks
@@ -26,6 +29,7 @@
 #include "fm1_input.h"
 #include "sid.h"
 #include "psid.h"
+#include "sidsynth.h"
 
 void *memset(void *d, int c, unsigned long n) { unsigned char *p = d; while (n--) *p++ = (unsigned char)c; return d; }
 void *memcpy(void *d, const void *s, unsigned long n) { unsigned char *p = d; const unsigned char *q = s; while (n--) *p++ = *q++; return d; }
@@ -43,7 +47,8 @@ int memcmp(const void *a, const void *b, unsigned long n)
 /* ------------------------------------------------------------------------- the tunes --- */
 /* A tune pack appended to the image (tools/sidpack.py, or the web page): "SIDPACK1", u32
  * count, u32 start (bits 0-15 the first entry, bit 16 the own model instead of reSID, bits
- * 17-18 the chip for every tune: 0 the tune's header, 1 6581, 2 8580), then per entry u32
+ * 17-18 the chip for every tune: 0 the tune's header, 1 6581, 2 8580, bit 19 start in the
+ * synth mode), then per entry u32
  * offset (from the pack), length, song (0: the tune's start song); little-endian. Without one:
  * the firmware's own tune (tools/housetune.py). */
 extern const uint8_t _pack[];
@@ -115,6 +120,22 @@ static volatile uint32_t isr_ticks, isr_halves;
 static uint32_t play_idx, played_ms;
 static volatile uint32_t ms;
 
+/* the synth mode: fm1-sid's driver writes into the same event queue, from the audio ISR */
+static volatile uint8_t mode;               /* 0 the tune player, 1 the synth */
+static sidsyn_t syn;
+static uint32_t patch;                      /* SID_PATCHES index */
+static int32_t octave;                      /* -2..2 */
+static int32_t knob[4];                     /* cutoff offset, resonance, attack, release */
+static uint8_t key_note[27];                /* the note each held key started */
+enum { CMD_ON, CMD_OFF, CMD_PATCH, CMD_ALLOFF };
+typedef struct { uint8_t op, arg; } cmd_t;
+#define NCMD 64u
+static cmd_t cmdq[NCMD];
+static volatile uint32_t cmd_head, cmd_tail;   /* main loop writes head, the audio ISR tail */
+static uint32_t syn_next;                   /* the cycle of the driver's next frame */
+static uint32_t syn_held;                   /* the note keys down at the last look */
+#define HALF_CYC 2860u                      /* SID cycles in a 128-frame half buffer, rounded up */
+
 /* ------------------------------------------------------------------- the play routine --- */
 static void on_write(void *user, uint32_t cycle, uint32_t reg, uint32_t val)
 {
@@ -130,10 +151,78 @@ static void on_write(void *user, uint32_t cycle, uint32_t reg, uint32_t val)
 
 static void generate(void)
 {
-    while (running && gen_cyc - play_cyc < 3u * PSID_PAL_FRAME && ev_head - ev_tail < NEV - 600u) {
+    while (running && !mode && gen_cyc - play_cyc < 3u * PSID_PAL_FRAME && ev_head - ev_tail < NEV - 600u) {
         call_base = gen_cyc;
         psid_play(P);
         gen_cyc += psid_period(P);
+    }
+}
+
+/* ------------------------------------------------------------------------ the synth --- */
+static void syn_write(void *user, uint32_t chip, uint32_t reg, uint32_t val)
+{
+    (void)chip;
+    on_write(user, 0, reg, val);            /* at call_base */
+}
+
+static uint32_t syn_env(void *user, uint32_t chip, uint32_t voice)
+{
+    uint8_t e[3];
+    (void)user;
+    (void)chip;
+    if (engine)
+        return own.v[voice].env;
+    rs_env(e);
+    return e[voice];
+}
+
+/* the knobs over the patch's own values */
+static void syn_knobs(void)
+{
+    const sid_patch_t *b = &SID_PATCHES[patch];
+    int32_t r = (int32_t)b->res + knob[1], a = (int32_t)(b->ad >> 4) + knob[2], rl = (int32_t)(b->sr & 15u) + knob[3];
+    syn.cut_ofs = knob[0] * 16;
+    syn.p.res = (uint8_t)(r < 0 ? 0 : r > 15 ? 15 : r);
+    syn.p.ad = (uint8_t)((a < 0 ? 0 : a > 15 ? 15 : a) << 4 | (b->ad & 15u));
+    syn.p.sr = (uint8_t)((b->sr & 0xF0u) | (uint32_t)(rl < 0 ? 0 : rl > 15 ? 15 : rl));
+    syn.transpose = 0;
+}
+
+static void syn_cmd(uint32_t op, uint32_t arg)
+{
+    uint32_t h = cmd_head;
+    if (h - cmd_tail >= NCMD)
+        return;
+    cmdq[h % NCMD].op = (uint8_t)op;
+    cmdq[h % NCMD].arg = (uint8_t)arg;
+    cmd_head = h + 1;
+}
+
+/* in the audio ISR, before a half is rendered: the keys now, then the driver frames that fall
+ * in this half, each at its own cycle */
+static void syn_step(void)
+{
+    uint32_t t;
+    call_base = play_cyc;
+    while ((t = cmd_tail) != cmd_head) {
+        const cmd_t *c = &cmdq[t % NCMD];
+        if (c->op == CMD_ON)
+            sidsyn_note_on(&syn, c->arg);
+        else if (c->op == CMD_OFF)
+            sidsyn_note_off(&syn, c->arg);
+        else if (c->op == CMD_PATCH) {
+            sidsyn_set_patch(&syn, &SID_PATCHES[c->arg]);
+            syn_knobs();
+        } else
+            sidsyn_all_off(&syn);
+        cmd_tail = t + 1;
+    }
+    if ((int32_t)(syn_next - play_cyc) < -(int32_t)PSID_PAL_FRAME)
+        syn_next = play_cyc;                /* (after a pause) */
+    while ((int32_t)(syn_next - (play_cyc + HALF_CYC)) < 0) {
+        call_base = syn_next;
+        sidsyn_tick(&syn);
+        syn_next += PSID_PAL_FRAME;
     }
 }
 
@@ -208,6 +297,8 @@ void fm1_alnk0_irq(void)
         int32_t *o = &abuf[fm1_audio_free_half() * HALF_WORDS];
         static short s[HALF_FRAMES];
         if (running) {
+            if (mode)
+                syn_step();
             if (engine)
                 render_own(s);
             else
@@ -413,21 +504,41 @@ static void draw(void)
     fill(0, 0, 240, 14, C_LBLUE);
     text(2, 1, "FM-1 SID", C_WHITE);
     text(240 - 8 * 13 - 2, 1, engine ? "fm1-sid model" : "  reSID  0.16", C_YELLOW);
-    /* tune */
-    text(2, 17, info->name, C_WHITE);
-    p = cat(line, info->author);
-    text(2, 30, line, C_CYAN);
-    p = cat(line, "Tune ");
-    p = fmt_u(p, play_idx + 1u, 1);
-    p = cat(p, "/");
-    p = fmt_u(p, ntunes, 1);
-    p = cat(p, "  ");
-    p = fmt_u(p, played_ms / 60000u, 1);
-    p = cat(p, ":");
-    p = fmt_u(p, played_ms / 1000u % 60u, 2);
-    p = cat(p, model ? "  8580" : "  6581");
-    p = cat(p, running ? "" : "  PAUSE");
-    text(2, 43, line, C_LGREEN);
+    if (mode) {                            /* the patch, the knobs, the octave */
+        static const char *const KN[4] = {"CUT", "RES", "A", "R"};
+        int x = 2;
+        text(text(2, 17, "SYNTH ", C_ORANGE), 17, SID_PATCHES[patch].name, C_WHITE);
+        for (i = 0; i < 4; i++) {
+            int32_t k = knob[i];
+            p = cat(line, KN[i]);
+            p = cat(p, k < 0 ? "-" : "+");
+            p = fmt_u(p, (uint32_t)(k < 0 ? -k : k), 1);
+            x = text(x, 30, line, C_CYAN) + 8;
+        }
+        p = cat(line, "Patch ");
+        p = fmt_u(p, patch + 1u, 1);
+        p = cat(p, "/");
+        p = fmt_u(p, SID_NPATCHES, 1);
+        p = cat(p, octave < 0 ? " Oct-" : " Oct+");
+        p = fmt_u(p, (uint32_t)(octave < 0 ? -octave : octave), 1);
+        p = cat(p, model ? " 8580" : " 6581");
+        text(2, 43, line, C_LGREEN);
+    } else {                               /* the tune */
+        text(2, 17, info->name, C_WHITE);
+        p = cat(line, info->author);
+        text(2, 30, line, C_CYAN);
+        p = cat(line, "Tune ");
+        p = fmt_u(p, play_idx + 1u, 1);
+        p = cat(p, "/");
+        p = fmt_u(p, ntunes, 1);
+        p = cat(p, "  ");
+        p = fmt_u(p, played_ms / 60000u, 1);
+        p = cat(p, ":");
+        p = fmt_u(p, played_ms / 1000u % 60u, 2);
+        p = cat(p, model ? "  8580" : "  6581");
+        p = cat(p, running ? "" : "  PAUSE");
+        text(2, 43, line, C_LGREEN);
+    }
     /* CPU: the audio ISR's share of its period */
     load = isr_halves ? isr_ticks / isr_halves * 100u / (HALF_FRAMES * 544u) : 0;
     isr_ticks = isr_halves = 0;            /* the next frame shows the last 40 ms */
@@ -502,6 +613,7 @@ static void start(uint32_t idx, int header)
     uint32_t t, i, song;
     running = 0;
     fm1_delay_ms(4);                        /* the ISR finishes the half it is in */
+    mode = 0;
     play_idx = idx % ntunes;
     if (psid_load(P, tune_ptr[play_idx], tune_len[play_idx], on_write, 0))
         psid_load(P, HOUSE, sizeof HOUSE, on_write, 0);   /* not a PSID: play ours instead */
@@ -524,6 +636,73 @@ static void start(uint32_t idx, int header)
     running = 1;
 }
 
+/* the synth mode: the chip fresh, the patch, the knobs */
+static void start_synth(void)
+{
+    uint32_t i;
+    running = 0;
+    fm1_delay_ms(4);
+    mode = 1;
+    if (engine)
+        sid_init(&own, model ? SID_8580 : SID_6581, SID_CLOCK_PAL, FS_HZ);
+    else
+        rs_init(model, 985248.0, 24000000.0 / 544.0);
+    for (i = 0; i < 32; i++)
+        regs[i] = 0;
+    for (i = 0; i < 27; i++)
+        key_note[i] = 0;
+    syn_held = 0;                           /* keys held across the switch sound */
+    (void)fm1_input_note_edges();           /* (the player's, unheard) */
+    ev_head = ev_tail = 0;
+    cmd_head = cmd_tail = 0;
+    play_cyc = 0;
+    cyc_frac = 0;
+    sidsyn_init(&syn, 1, model ? SID_8580 : SID_6581, FS_HZ);
+    syn.write = syn_write;
+    syn.env = syn_env;
+    call_base = 0;
+    sidsyn_set_patch(&syn, &SID_PATCHES[patch]);   /* (the ISR is not running the synth yet) */
+    syn_knobs();
+    syn_next = PSID_PAL_FRAME;
+    running = 1;
+}
+
+/* the synth mode's controls; e: button press edges */
+static void synth_keys(uint32_t e)
+{
+    uint32_t cur = fm1_in.notes, held = syn_held, taps = fm1_input_note_edges() & ~cur & ~held, i;
+    int32_t step = fm1_enc_take(6) + fm1_enc_take(0);
+    for (i = 0; i < 27; i++) {
+        uint32_t bit = 1u << i;
+        if ((cur & ~held & bit) || (taps & bit)) {   /* a press (a tap: pressed and gone again) */
+            int32_t n = 53 + (int32_t)i + 12 * octave;
+            key_note[i] = (uint8_t)n;
+            syn_cmd(CMD_ON, (uint32_t)n);
+        }
+        if ((held & ~cur & bit) || (taps & bit))
+            syn_cmd(CMD_OFF, key_note[i]);
+    }
+    syn_held = cur;
+    if (step) {
+        patch = (patch + SID_NPATCHES * 8u + (uint32_t)step) % SID_NPATCHES;
+        knob[0] = knob[1] = knob[2] = knob[3] = 0;
+        syn_cmd(CMD_PATCH, patch);
+    }
+    if (e & (1u << 1) && octave < 2) octave++;
+    if (e & (1u << 0) && octave > -2) octave--;
+    if (e & (1u << 12))
+        syn_cmd(CMD_ALLOFF, 0);
+    for (i = 0; i < 4; i++) {
+        int32_t d = fm1_enc_take(2 + i), lim = i ? 15 : 64;
+        if (!d)
+            continue;
+        knob[i] += d;
+        if (knob[i] > lim) knob[i] = lim;
+        if (knob[i] < -lim) knob[i] = -lim;
+        syn_knobs();
+    }
+}
+
 /* ----------------------------------------------------------------------------- main --- */
 static void fm1_main(void)
 {
@@ -536,6 +715,8 @@ static void fm1_main(void)
     load_pack();
     engine = pack_flags & 1u;
     start(first_tune, 1);
+    if (pack_flags & 8u)
+        start_synth();
     for (;;) {
         uint32_t rel, e, now;
         int32_t step;
@@ -546,21 +727,32 @@ static void fm1_main(void)
             played_ms += now - last_ms;
         last_ms = now;
         e = fm1_input_edges(&rel);
-        step = fm1_enc_take(6) + fm1_enc_take(0);
-        if (e & (1u << 1)) step++;
-        if (e & (1u << 0)) step--;
-        if (step) {
-            start((play_idx + ntunes * 8u + (uint32_t)step) % ntunes, 1);
+        if (e & (1u << 8)) {                /* HOME: the player <-> the synth */
+            if (mode)
+                start(play_idx, 0);
+            else
+                start_synth();
+            e &= ~(1u << 8);
         }
-        if (e & (1u << 12))
-            running = !running;
+        if (mode) {
+            synth_keys(e);
+        } else {
+            step = fm1_enc_take(6) + fm1_enc_take(0);
+            if (e & (1u << 1)) step++;
+            if (e & (1u << 0)) step--;
+            if (step) {
+                start((play_idx + ntunes * 8u + (uint32_t)step) % ntunes, 1);
+            }
+            if (e & (1u << 12))
+                running = !running;
+        }
         if (e & (1u << 6)) {
             engine = !engine;
-            start(play_idx, 0);
+            if (mode) start_synth(); else start(play_idx, 0);
         }
         if (e & (1u << 2)) {
             model = !model;
-            start(play_idx, 0);
+            if (mode) start_synth(); else start(play_idx, 0);
         }
         /* OCT- and OCT+ held 3 s: the USB update mode */
         if ((fm1_in.buttons & 3u) == 3u) {

@@ -72,20 +72,33 @@ static uint32_t note_reg(int32_t pitch)
     return a > 0xFFFFu ? 0xFFFFu : a;
 }
 
+/* a register write to chip c: ours, or the caller's engine */
+static void cw(sidsyn_t *y, uint32_t c, uint32_t reg, uint32_t val)
+{
+    if (y->write)
+        y->write(y->user, c, reg, val);
+    else
+        sid_write(&y->chip[c], reg, val);
+}
+
+static uint32_t venv(const sidsyn_t *y, const syn_voice_t *v)
+{
+    return y->env ? y->env(y->user, v->chip, v->idx) : y->chip[v->chip].v[v->idx].env;
+}
+
 static void wr(sidsyn_t *y, const syn_voice_t *v, uint32_t r, uint32_t val)
 {
-    sid_write(&y->chip[v->chip], v->idx * 7u + r, val);
+    cw(y, v->chip, v->idx * 7u + r, val);
 }
 
 static void chip_filter(sidsyn_t *y, uint32_t c)
 {
-    sid_t *s = &y->chip[c];
     int32_t fc = y->cut[c] + y->cut_ofs;
     fc = fc < 0 ? 0 : fc > 2047 ? 2047 : fc;
-    sid_write(s, SID_FC_LO, (uint32_t)fc & 7u);
-    sid_write(s, SID_FC_HI, (uint32_t)fc >> 3);
-    sid_write(s, SID_RES_FILT, (uint32_t)y->p.res << 4 | (y->p.filter ? 7u : 0u));
-    sid_write(s, SID_MODE_VOL, y->p.filter | y->vol);
+    cw(y, c, SID_FC_LO, (uint32_t)fc & 7u);
+    cw(y, c, SID_FC_HI, (uint32_t)fc >> 3);
+    cw(y, c, SID_RES_FILT, (uint32_t)y->p.res << 4 | (y->p.filter ? 7u : 0u));
+    cw(y, c, SID_MODE_VOL, y->p.filter | y->vol);
 }
 
 /* the voice's pitch, pulse width and control byte from its state */
@@ -109,11 +122,10 @@ static void voice_regs(sidsyn_t *y, syn_voice_t *v)
         v->ctrl = (uint8_t)ctrl;
     }
     if (p->mod) {                                     /* voice 3: the silent sync / ring source */
-        sid_t *s = &y->chip[v->chip];
         fr = note_reg(((int32_t)v->note + y->transpose + p->mod_note) * 256);
-        sid_write(s, 14 + SID_FREQ_LO, fr & 0xFFu);
-        sid_write(s, 14 + SID_FREQ_HI, fr >> 8);
-        sid_write(s, 14 + SID_CTRL, SID_TRI);
+        cw(y, v->chip, 14 + SID_FREQ_LO, fr & 0xFFu);
+        cw(y, v->chip, 14 + SID_FREQ_HI, fr >> 8);
+        cw(y, v->chip, 14 + SID_CTRL, SID_TRI);
     }
 }
 
@@ -152,7 +164,7 @@ void sidsyn_set_patch(sidsyn_t *y, const sid_patch_t *p)
     }
     for (c = 0; c < y->nchips; c++) {
         for (i = 0; i < 3; i++)
-            sid_write(&y->chip[c], i * 7u + SID_CTRL, 0);
+            cw(y, c, i * 7u + SID_CTRL, 0);
         y->cut[c] = p->cutoff;
         chip_filter(y, c);
     }
@@ -175,6 +187,9 @@ void sidsyn_init(sidsyn_t *y, uint32_t nchips, sid_model_t model, uint32_t fs)
     y->cut_ofs = 0;
     y->transpose = 0;
     y->vol = 15;
+    y->write = 0;
+    y->env = 0;
+    y->user = 0;
     for (c = 0; c < nchips; c++)
         sid_init(&y->chip[c], model, SID_CLOCK_PAL, fs);
     sidsyn_set_patch(y, &SID_PATCHES[0]);
@@ -195,7 +210,7 @@ void sidsyn_note_on(sidsyn_t *y, uint32_t note)
         if (!v->busy)
             score = 0x7FFFFFFFu - v->age;
         else if (!v->held)
-            score = 0x40000000u - (uint32_t)y->chip[v->chip].v[v->idx].env * 0x100000u - (v->age & 0xFFFFFu);
+            score = 0x40000000u - venv(y, v) * 0x100000u - (v->age & 0xFFFFFu);
         else
             score = 0x100000u - (v->age & 0xFFFFFu);
         if (!best || score > best_score) {
@@ -208,7 +223,7 @@ void sidsyn_note_on(sidsyn_t *y, uint32_t note)
     best->note = (uint8_t)note;
     best->held = 1;
     best->age = ++y->clock_age;
-    if (y->p.hr && best->busy && y->chip[best->chip].v[best->idx].env) {
+    if (y->p.hr && best->busy && venv(y, best)) {
         best->hr_left = y->p.hr;                      /* hard restart: silence it for a frame first */
         wr(y, best, SID_AD, 0);
         wr(y, best, SID_SR, 0);
@@ -286,7 +301,7 @@ static void tick(sidsyn_t *y)
         if (v->frame >= p->vib_delay)
             v->vib += p->vib_speed;
         voice_regs(y, v);
-        if (!v->held && !y->chip[v->chip].v[v->idx].env)
+        if (!v->held && !venv(y, v))
             v->busy = 0;
     }
     for (c = 0; c < y->nchips; c++) {
@@ -299,6 +314,11 @@ static void tick(sidsyn_t *y)
             y->cut[c] = p->cut_hi;
         chip_filter(y, c);
     }
+}
+
+void sidsyn_tick(sidsyn_t *y)
+{
+    tick(y);
 }
 
 void sidsyn_render(sidsyn_t *y, int32_t *out, uint32_t n)

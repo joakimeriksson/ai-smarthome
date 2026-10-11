@@ -100,6 +100,15 @@
   .subtune .ib:disabled { opacity: .35; cursor: default; }
   .subtune output { min-width: 4.5em; text-align: center; }
   .controls { display: grid; gap: 12px; }
+  .modes { margin-bottom: 18px; }
+  body.synth .only-player, body:not(.synth) .only-synth { display: none !important; }
+  .synth-ctl { margin-top: 4px; }
+  .hint-keys { color: var(--dim); font-size: 13.5px; margin: 0 0 12px; }
+  .knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .kn { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: #101118; font-size: 13px; color: var(--dim); }
+  .kn span { flex: 1; }
+  .kn .ib { width: 28px; height: 28px; font-size: 16px; line-height: 1; }
+  .kn output { min-width: 2.6em; text-align: center; font-family: var(--mono); color: var(--ink); }
   .seg { display: flex; background: #101118; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
   .seg button { flex: 1; border: 0; background: none; border-radius: 7px; padding: 7px 8px; cursor: pointer; color: var(--dim); font-size: 13px; white-space: nowrap; }
   .seg button[aria-pressed="true"] { background: var(--c64-deep); color: #fff; box-shadow: inset 0 0 0 1px var(--c64); }
@@ -225,7 +234,8 @@
     <h1>Commodore 64 music,<br>on a <em>pocket FM synth</em>.</h1>
     <p class="lede">Every tune runs its own 6502 code, and reSID makes the sound: all of it on the FM-1’s
       CPU, in a firmware written for it. Here the whole synth is emulated in your browser. Press
-      Power, then turn the knobs, or pick a tune from the 61,000 in the High Voltage SID Collection.</p>
+      Power, then pick a tune from the 61,000 in the High Voltage SID Collection, or switch to the
+      synth and play its SID instruments from the keys or a MIDI keyboard.</p>
   </section>
 
   <section class="deck" aria-label="The emulated FM-1">
@@ -241,17 +251,33 @@
 
   <section class="console">
     <article class="card now" aria-label="Now playing">
-      <div class="np-head"><span class="label">Now playing</span><span id="np-chip" class="chip-badge" title="The SID chip the firmware emulates now"></span></div>
+      <div class="seg modes" role="group" aria-label="Mode">
+        <button type="button" data-mode="0" aria-pressed="true">Tune player</button>
+        <button type="button" data-mode="1" aria-pressed="false">SID synth</button>
+      </div>
+      <div class="np-head"><span class="label only-player">Now playing</span><span class="label only-synth">Instrument</span><span id="np-chip" class="chip-badge" title="The SID chip the firmware emulates now"></span></div>
       <h2 id="np-title"></h2>
       <p id="np-author"></p>
       <canvas id="scope" aria-hidden="true"></canvas>
-      <div class="progress"><div id="np-bar"></div></div>
-      <div class="times"><span id="np-time">0:00 / –:––</span><a id="np-src" target="_blank" rel="noopener"></a></div>
+      <div class="only-player">
+        <div class="progress"><div id="np-bar"></div></div>
+        <div class="times"><span id="np-time">0:00 / –:––</span><a id="np-src" target="_blank" rel="noopener"></a></div>
+      </div>
+      <div class="only-synth synth-ctl">
+        <p class="hint-keys">Play the FM-1’s keys, your computer’s <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> … <kbd>;</kbd> <kbd>'</kbd> (C4–F5), or a MIDI keyboard.</p>
+        <div class="knobs">
+          <div class="kn"><span>Octave</span><button class="ib" id="oct-dn" type="button" aria-label="Octave down">−</button><output id="np-oct">+0</output><button class="ib" id="oct-up" type="button" aria-label="Octave up">+</button></div>
+          <div class="kn"><span>Cutoff</span><button class="ib" type="button" data-knob="0" data-d="-4" aria-label="Cutoff down">−</button><output id="knob0">±0</output><button class="ib" type="button" data-knob="0" data-d="4" aria-label="Cutoff up">+</button></div>
+          <div class="kn"><span>Resonance</span><button class="ib" type="button" data-knob="1" data-d="-1" aria-label="Resonance down">−</button><output id="knob1">±0</output><button class="ib" type="button" data-knob="1" data-d="1" aria-label="Resonance up">+</button></div>
+          <div class="kn"><span>Attack</span><button class="ib" type="button" data-knob="2" data-d="-1" aria-label="Attack down">−</button><output id="knob2">±0</output><button class="ib" type="button" data-knob="2" data-d="1" aria-label="Attack up">+</button></div>
+          <div class="kn"><span>Release</span><button class="ib" type="button" data-knob="3" data-d="-1" aria-label="Release down">−</button><output id="knob3">±0</output><button class="ib" type="button" data-knob="3" data-d="1" aria-label="Release up">+</button></div>
+        </div>
+      </div>
       <div class="transport">
         <button class="ib" id="prev" type="button" aria-label="Previous tune"><svg viewBox="0 0 24 24"><path d="M6 5h2.4v14H6zM20 5.5v13L9.6 12z"/></svg></button>
-        <button class="ib paused" id="play" type="button" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L20 12z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 4.5h4v15H6zM14 4.5h4v15h-4z"/></svg></button>
+        <button class="ib paused only-player" id="play" type="button" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L20 12z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 4.5h4v15H6zM14 4.5h4v15h-4z"/></svg></button>
         <button class="ib" id="next" type="button" aria-label="Next tune"><svg viewBox="0 0 24 24"><path d="M15.6 5H18v14h-2.4zM4 5.5v13L14.4 12z"/></svg></button>
-        <div class="subtune" title="Songs in this file">
+        <div class="subtune only-player" title="Songs in this file">
           song
           <button class="ib" id="song-prev" type="button" aria-label="Previous song in this file"><svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"  fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
           <output id="np-song">1 / 1</output>
@@ -270,16 +296,17 @@
         </div>
         <div class="row2">
           <label>Volume <input type="range" id="vol" min="0" max="1.5" step="0.01" value="0.8"></label>
-          <label><input type="checkbox" id="advance" checked> Next tune at the end</label>
+          <label class="only-player"><input type="checkbox" id="advance" checked> Next tune at the end</label>
         </div>
       </div>
-      <div id="np-tags" class="tags" title="Measured from the tune's register stream"></div>
+      <div id="np-tags" class="tags only-player" title="Measured from the tune's register stream"></div>
     </article>
 
     <section class="card library" aria-label="Tunes">
       <div role="tablist" aria-label="Where tunes come from">
         <button role="tab" id="tab-list" aria-controls="pane-list" aria-selected="true" type="button">Playlist</button>
         <button role="tab" id="tab-hvsc" aria-controls="pane-hvsc" aria-selected="false" tabindex="-1" type="button">All of HVSC<small id="count">61,157</small></button>
+        <button role="tab" id="tab-synth" aria-controls="pane-synth" aria-selected="false" tabindex="-1" type="button">Instruments</button>
         <button role="tab" id="tab-files" aria-controls="pane-files" aria-selected="false" tabindex="-1" type="button">Your files</button>
       </div>
       <div id="pane-list" role="tabpanel" aria-labelledby="tab-list">
@@ -293,6 +320,16 @@
         </div>
         <p class="hint">The index and every tune come straight from <a href="https://www.hvsc.c64.org/" target="_blank" rel="noopener">hvsc.c64.org</a> when you ask for them. PSID tunes play; RSID tunes need a whole C64 and do not yet.</p>
         <ul class="list" id="results"></ul>
+      </div>
+      <div id="pane-synth" role="tabpanel" aria-labelledby="tab-synth" hidden>
+        <div class="searchbar">
+          <button class="btn" id="midi" type="button">Connect a MIDI keyboard</button>
+          <span class="hint" id="midi-state">Web MIDI: Chrome, Edge, Firefox</span>
+        </div>
+        <p class="hint">fm1-sid’s own instrument driver, the way C64 music drivers play the chip: per-frame wave
+          tables, pulse and filter sweeps, vibrato, hard restart. Three voices share one SID and its filter.
+          The knobs: KNOB1 cutoff, KNOB2 resonance, KNOB3 attack, KNOB4 release.</p>
+        <ol class="list" id="patches"></ol>
       </div>
       <div id="pane-files" role="tabpanel" aria-labelledby="tab-files" hidden>
         <label class="drop">
@@ -331,9 +368,11 @@
     <h2 class="sec">Controls</h2>
     <p class="sub">The firmware reads the FM-1’s own controls; the buttons above press them for you.</p>
     <div class="ctl-grid">
-      <div><h3>On the FM-1</h3><p><b>PRESETS</b> or <b>SELECT</b> knob, <b>OCT−</b> / <b>OCT+</b>: tune. <b>PLAY</b>: pause. <b>EDIT</b>: reSID or the own model. <b>FX</b>: 6581 or 8580. Drag a knob up or down, or scroll over it.</p></div>
-      <div><h3>Keyboard</h3><p><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>N</kbd> <kbd>P</kbd>: tune · <kbd>Space</kbd>: pause · <kbd>5</kbd>: EDIT · <kbd>1</kbd>: FX · <kbd>Z</kbd> <kbd>X</kbd>: OCT− / OCT+</p></div>
-      <div><h3>Links</h3><p>The address bar follows the tune: copy it to send someone straight to it. <code>?t=</code> takes any HVSC path.</p></div>
+      <div><h3>On the FM-1</h3><p><b>HOME</b>: tune player or SID synth. Player: <b>PRESETS</b> / <b>SELECT</b>, <b>OCT−</b> / <b>OCT+</b>: tune; <b>PLAY</b>: pause.
+        Synth: the keys play; <b>PRESETS</b> / <b>SELECT</b>: instrument; <b>OCT±</b>: octave; <b>KNOB1–4</b>: cutoff, resonance, attack, release; <b>PLAY</b>: all notes off.
+        Both: <b>EDIT</b>: reSID or the own model; <b>FX</b>: 6581 or 8580.</p></div>
+      <div><h3>Keyboard</h3><p><kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> … <kbd>'</kbd>: the note keys · <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>N</kbd> <kbd>P</kbd>: tune or instrument · <kbd>7</kbd>: HOME · <kbd>Space</kbd>: PLAY · <kbd>5</kbd>: EDIT · <kbd>1</kbd>: FX · <kbd>Z</kbd> <kbd>X</kbd>: OCT− / OCT+</p></div>
+      <div><h3>Links</h3><p>The address bar follows the tune: copy it to send someone straight to it. <code>?t=</code> takes any HVSC path, <code>?mode=synth</code> starts on the synth.</p></div>
     </div>
   </section>
 

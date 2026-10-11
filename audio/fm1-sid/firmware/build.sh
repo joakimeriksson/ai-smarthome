@@ -22,8 +22,9 @@ $CC -c $F/hal/fm1_vec.S -o $O/fm1_vec.o
 $CC -c $F/hal/fm1_isr.S -o $O/fm1_isr.o
 $CC $CF -I$F/hal -Isrc -Iplayer -I$O -c firmware/main.c -o $O/main.o
 $CC $CF -c src/sid.c -o $O/own_sid.o
+$CC $CF -Isrc -c src/sidsynth.c -o $O/sidsynth.o
 $CC $CF -Iext/chips -c player/psid.c -o $O/psid.o
-OBJS="$O/crt0.o $O/fm1_vec.o $O/fm1_isr.o $O/main.o $O/own_sid.o $O/psid.o"
+OBJS="$O/crt0.o $O/fm1_vec.o $O/fm1_isr.o $O/main.o $O/own_sid.o $O/sidsynth.o $O/psid.o"
 for f in sid voice wave envelope filter extfilt pot wave6581_PST wave6581_PS_ wave6581_P_T wave6581__ST \
          wave8580_PST wave8580_PS_ wave8580_P_T wave8580__ST; do
     $CXX $CF -fno-exceptions -fno-rtti -w -Iext/resid-0.16 -c ext/resid-0.16/$f.cc -o $O/$f.o

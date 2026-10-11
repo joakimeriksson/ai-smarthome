@@ -121,6 +121,14 @@ chip drawn on the LCD.
   an oscilloscope and the CPU load.
 - Keys: PRESETS / SELECT encoder or OCT− / OCT+ = tune, PLAY = pause, EDIT = engine (reSID /
   own model), FX = 6581 / 8580. Hold OCT− and OCT+ for 3 s for the USB update mode.
+- **Synth mode** (HOME switches): the 27 note keys play `src/sidsynth.c`'s 12 instruments on
+  the same chip and engine. The driver's register writes go into the same cycle-stamped
+  queue as a tune's: `sidsynth` has an optional write / envelope hook for another engine
+  (`sidsyn_t.write`, `.env`, `sidsyn_tick`; without it nothing changes, same bench hash). Its
+  50 Hz frames run in the audio interrupt, each at its own cycle, and key presses reach it
+  through a small command queue at the start of the next half buffer (2.9 ms). PRESETS /
+  SELECT pick the instrument, OCT- / OCT+ the octave, KNOB1-4 cutoff, resonance, attack and
+  release; PLAY sends all notes off. Pack flag bit 3 boots straight into it.
 - The tunes ride after the firmware in flash as a **tune pack** (`firmware/main.c` reads it at
   the image's end, `_pack` in `firmware/app.ld`): "SIDPACK1", a count, the first entry and two
   flags (own model; chip 6581 / 8580 for every tune), then offset, length and song per entry.
@@ -164,13 +172,17 @@ pack the page builds from its playlist, and around it a player:
   playlist, and the machine reboots on the new pack. "Surprise me" draws a random PSID tune.
   hvsc.c64.org sends `Access-Control-Allow-Origin: *`; no tune is hosted with the page.
 - **Your files**: .sid files dropped on the page or picked join the playlist, locally.
+- **SID synth**: the page's mode switch (HOME on the panel) turns the FM-1 into the synth; the
+  Instruments tab lists the 12 patches, the computer keyboard (A W S E D ... ; ') and a MIDI
+  keyboard over Web MIDI play the note keys (MIDI notes fold into the keys' range), and the
+  octave and the four knobs have buttons. `?mode=synth` starts there.
 - The page mirrors the firmware's state from the keys it sends (tune, engine, chip, pause), so
   its buttons and the panel's knobs stay in step; it moves to the next tune at the end of the
   HVSC song length. The address follows the tune: `?t=MUSICIANS/H/Hubbard_Rob/Sanxion.sid&s=2`.
 - `scripts/build-pages.mjs` (entry `fm1-sid`) puts the page and the fm-1 build's
   `fm1_web.wasm` together; `.github/workflows/pages.yml` runs `web/smoke.mjs` on the result:
   the wasm must boot the firmware with a pack of the own tune (no network) to sound and a
-  screen. With an fm1-core that lacks PR #31 this check fails (the CPU halts), so merge PR #31
+  screen, and in the synth mode stay silent until a key goes down, then sound. With an fm1-core that lacks PR #31 this check fails (the CPU halts), so merge PR #31
   first.
 - Headless Chromium on this cloud machine runs it at 0.9-1.0x real time; a desktop browser has
   room to spare. The emulator skips idle time, so the work per second does not depend on the

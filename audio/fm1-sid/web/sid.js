@@ -9,7 +9,11 @@ import { buildPack, bootImage, sidInfo } from "./pack.js";
 
 const HVSC = "https://www.hvsc.c64.org/download/C64Music/";
 const MHZ = 240;                       // the FM-1's clock; idle time is skipped, not emulated
-const KEY = { OCTDN: 0, OCTUP: 1, FX: 2, EDIT: 6, PLAY: 12 };
+const KEY = { OCTDN: 0, OCTUP: 1, FX: 2, EDIT: 6, HOME: 8, PLAY: 12 };
+// fm1-sid's instruments (src/sidsynth.c SID_PATCHES), in the firmware's order
+const PATCHES = ["Saw Lead", "PWM Bass", "Major Chord", "Minor Chord", "Sync Lead", "Ring Bell",
+  "Kick", "Snare", "Hat", "Reso Pad", "P&S Organ", "BP Sweep"];
+const KNOBS = ["Cutoff", "Resonance", "Attack", "Release"];
 const ENC_TUNE = 6;                    // PRESETS (SELECT, 0, steps tunes too)
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -36,6 +40,8 @@ const st = {
   elapsed: 0,                          // emulated seconds into the tune, without pauses
   lastMs: null,                        // the machine's clock at the last frame
   booted: false,
+  mode: 0,                             // 0 the tune player, 1 the synth (HOME switches)
+  patch: 0, octave: 0, knob: [0, 0, 0, 0],
 };
 let node = null, ac = null, gain = null, analyser = null, frame = null, bootSeq = 0;
 let packed = [];                       // the entries in the running image, in pack order
@@ -79,9 +85,13 @@ function setKey(id, on) {
   down[id] = on ? 1 : 0;
   send({ type: "key", id, down: on });
   if (!on || !st.booted) return;
-  if (id === KEY.PLAY) st.paused = !st.paused;
+  if (id === KEY.HOME) { st.mode ^= 1; restarted(); showList(); pickTab($(st.mode ? "tab-synth" : "tab-list")); }
   else if (id === KEY.EDIT) { st.engine ^= 1; store("fm1sid.engine", st.engine); restarted(); }
   else if (id === KEY.FX) { st.model = st.model === "6581" ? "8580" : "6581"; restarted(); }
+  else if (st.mode) {
+    if (id === KEY.OCTUP) st.octave = Math.min(2, st.octave + 1);
+    else if (id === KEY.OCTDN) st.octave = Math.max(-2, st.octave - 1);
+  } else if (id === KEY.PLAY) st.paused = !st.paused;
   else if (id === KEY.OCTUP) stepped(1);
   else if (id === KEY.OCTDN) stepped(-1);
   showNow();
@@ -89,7 +99,17 @@ function setKey(id, on) {
 function tap(id) { setKey(id, true); setTimeout(() => setKey(id, false), 90); }
 function turnMachine(enc, clicks) {
   send({ type: "enc", enc, clicks });
-  if (st.booted && (enc === 6 || enc === 0)) stepped(clicks);
+  if (!st.booted) return;
+  if (st.mode && (enc === 6 || enc === 0)) {
+    st.patch = ((st.patch + clicks) % PATCHES.length + PATCHES.length) % PATCHES.length;
+    st.knob = [0, 0, 0, 0];
+    showList();
+    showNow();
+  } else if (st.mode && enc >= 2 && enc <= 5) {
+    const k = enc - 2, lim = k ? 15 : 64;
+    st.knob[k] = Math.max(-lim, Math.min(lim, st.knob[k] + clicks));
+    showNow();
+  } else if (enc === 6 || enc === 0) stepped(clicks);
 }
 function turn(i, clicks) {           // a panel knob (i: the panel's numbering)
   encClicks[i] += clicks;
@@ -161,8 +181,8 @@ function keyId(k) {
 }
 addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e) || !node) return;
-  if (e.key === "n" || e.key === "N") { e.preventDefault(); go(st.idx + 1); return; }
-  if (e.key === "p" || e.key === "P") { e.preventDefault(); go(st.idx - 1); return; }
+  if (e.key === "n" || e.key === "N") { e.preventDefault(); $("next").click(); return; }
+  if (e.key === "p" || e.key === "P") { e.preventDefault(); $("prev").click(); return; }
   if (ENC_KEYS[e.key]) { e.preventDefault(); turn(...ENC_KEYS[e.key]); return; }
   const id = keyId(e.key);
   if (id < 0 || e.repeat) return;
@@ -207,7 +227,10 @@ async function boot(first) {
     }
   }
   st.idx = Math.max(0, packed.indexOf(want));
-  image = bootImage(base, buildPack(packed, st.idx, st.engine | st.chip << 1));
+  image = bootImage(base, buildPack(packed, st.idx, st.engine | st.chip << 1 | (st.mode ? 8 : 0)));
+  st.patch = 0;                                      // (the firmware starts on these)
+  st.octave = 0;
+  st.knob = [0, 0, 0, 0];
   st.model = modelOf(packed[st.idx]);
   st.booted = false;
   restarted();
@@ -229,6 +252,11 @@ function go(i) {
   if (!node) { start(i); return; }
   const k = packed.indexOf(e);
   if (k < 0 || !st.booted) { boot(i); return; }
+  if (st.mode) {                       // the player first, then the tune
+    tap(KEY.HOME);
+    setTimeout(() => go(i), 250);
+    return;
+  }
   let d = k - st.idx;
   const n = packed.length;
   if (d > n / 2) d -= n;
@@ -237,6 +265,69 @@ function go(i) {
   else { turnMachine(ENC_TUNE, 1); turnMachine(ENC_TUNE, -1); }   // the same one: from the top
 }
 const current = () => packed[st.idx];
+
+// an instrument: the synth mode first (HOME), then PRESETS to the patch
+function pickPatch(n) {
+  if (!node) { st.mode = 1; start(initial).then(() => setTimeout(() => pickPatch(n), 1200)); return; }
+  if (!st.booted) return;
+  if (!st.mode) { tap(KEY.HOME); setTimeout(() => pickPatch(n), 250); return; }
+  let d = n - st.patch;
+  if (d > 6) d -= 12;
+  if (d < -6) d += 12;
+  if (d) turnMachine(ENC_TUNE, d);
+}
+function setMode(m) {
+  if (m === st.mode) return;
+  if (!node) { st.mode = m; showList(); showNow(); return; }
+  if (st.booted) tap(KEY.HOME);
+}
+function knobBy(k, d) { if (node && st.booted && st.mode) turnMachine(2 + k, d); }
+
+// a MIDI keyboard: notes onto the FM-1's 27 keys (F3..G5 plus the octave), folded into range
+let midi = null;
+const midiKeys = new Map();            // MIDI note -> the key id it pressed
+function midiNote(note, on) {
+  if (on) {
+    if (!st.mode) setMode(1);
+    let id = note - 39 - 12 * st.octave;
+    while (id < 14) id += 12;
+    while (id > 40) id -= 12;
+    if (midiKeys.has(note)) setKey(midiKeys.get(note), false);
+    midiKeys.set(note, id);
+    setKey(id, true);
+  } else if (midiKeys.has(note)) {
+    setKey(midiKeys.get(note), false);
+    midiKeys.delete(note);
+  }
+}
+async function connectMidi() {
+  const b = $("midi");
+  if (!navigator.requestMIDIAccess) { toast("This browser has no Web MIDI (Chrome, Edge and Firefox do)."); return; }
+  try {
+    midi = await navigator.requestMIDIAccess();
+  } catch (err) {
+    toast(`MIDI: ${err.message}`);
+    return;
+  }
+  const hook = () => {
+    const names = [];
+    for (const input of midi.inputs.values()) {
+      names.push(input.name);
+      input.onmidimessage = (ev) => {
+        const [st0, n, v] = ev.data;
+        const t = st0 & 0xf0;
+        if (t === 0x90 && v) midiNote(n, true);
+        else if (t === 0x80 || t === 0x90) midiNote(n, false);
+      };
+    }
+    $("midi-state").textContent = names.length ? `listening to ${names.join(", ")}` : "no MIDI input found: plug one in";
+  };
+  midi.onstatechange = hook;
+  hook();
+  b.textContent = "MIDI connected";
+  b.disabled = true;
+  if (!node) start(initial);
+}
 
 // a tune from HVSC (search, random, a link) or a file: into the playlist, then play it
 async function add(entry) {
@@ -404,12 +495,13 @@ function tagChips(tags) {
 }
 
 function showList() {
+  showPatches();
   const ul = $("playlist");
   const playing = current();
   ul.replaceChildren(...list.map((e, i) => {
     const li = el("li");
     const b = el("button", "row");
-    if (e === playing && node) b.classList.add("on");
+    if (e === playing && node && !st.mode) b.classList.add("on");
     if (e.failed) b.classList.add("failed");
     const n = el("span", "n");
     n.append(el("span", "num", String(i + 1).padStart(2, "0")), eq());
@@ -425,6 +517,26 @@ function showList() {
     return li;
   }));
 }
+function showPatches() {
+  const ul = $("patches");
+  ul.replaceChildren(...PATCHES.map((name, i) => {
+    const li = el("li");
+    const b = el("button", "row");
+    if (st.mode && node && i === st.patch) b.classList.add("on");
+    const n = el("span", "n");
+    n.append(el("span", "num", String(i + 1).padStart(2, "0")), eq());
+    b.append(n, el("span", "t", name), el("span", "a", PATCH_NOTES[i]));
+    b.addEventListener("click", () => pickPatch(i));
+    li.append(b);
+    return li;
+  }));
+}
+const PATCH_NOTES = ["sawtooth into a resonant low-pass, delayed vibrato", "pulse-width sweep, a closing low-pass",
+  "pulse arpeggio 0 4 7 on every key", "pulse arpeggio 0 3 7 on every key",
+  "saw hard-synced to the note, sweeping up · two voices a note", "triangle ring-modulated by a voice 19 semitones up · two voices a note",
+  "noise click, pulse, a falling triangle", "noise and pulse", "noise through a high-pass",
+  "slow saw, resonant low-pass opening", "pulse and saw at once", "saw through a band-pass at full resonance, sweeping"];
+
 function eq() {
   const s = el("span", "eq");
   s.setAttribute("aria-hidden", "true");
@@ -433,6 +545,20 @@ function eq() {
 }
 
 function showNow() {
+  document.body.classList.toggle("synth", st.mode === 1);
+  for (const b of document.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", String(Number(b.dataset.mode) === st.mode));
+  if (st.mode) {
+    $("np-title").textContent = PATCHES[st.patch];
+    $("np-author").textContent = `fm1-sid instrument ${st.patch + 1} of ${PATCHES.length} · three voices on one SID`;
+    $("np-chip").textContent = node ? st.model : "";
+    $("np-oct").textContent = `${st.octave >= 0 ? "+" : "−"}${Math.abs(st.octave)}`;
+    st.knob.forEach((v, k) => { $(`knob${k}`).textContent = `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v)}`; });
+    for (const b of document.querySelectorAll("[data-engine]")) b.setAttribute("aria-pressed", String(Number(b.dataset.engine) === st.engine));
+    for (const b of document.querySelectorAll("[data-chip]")) b.setAttribute("aria-pressed", String(Number(b.dataset.chip) === st.chip));
+    document.title = node ? `${PATCHES[st.patch]} · FM-1 SID synth` : "FM-1 SID";
+    if (node) history.replaceState(null, "", "?mode=synth");
+    return;
+  }
   const e = current() || list[0];
   if (!e) return;
   $("np-title").textContent = e.title || "";
@@ -517,7 +643,7 @@ async function start(first) {
     st.lastMs = m.ms;
     showTime();
     const e = current();
-    if (e?.length && st.elapsed > e.length + 0.4 && !st.paused && $("advance").checked) go(st.idx + 1 < packed.length ? list.indexOf(packed[st.idx + 1]) : 0);
+    if (e?.length && st.elapsed > e.length + 0.4 && !st.paused && !st.mode && $("advance").checked) go(st.idx + 1 < packed.length ? list.indexOf(packed[st.idx + 1]) : 0);
     const now = performance.now();
     if (!last || now - last.t > 1000) {
       if (last) {
@@ -545,8 +671,8 @@ async function start(first) {
 // ------------------------------------------------------------------------------ wiring
 $("power").addEventListener("click", () => start(initial));
 $("play").addEventListener("click", () => (node ? tap(KEY.PLAY) : start(initial)));
-$("next").addEventListener("click", () => go(st.idx + 1 < packed.length ? list.indexOf(packed[st.idx + 1]) : list.indexOf(current()) + 1));
-$("prev").addEventListener("click", () => go(Math.max(0, list.indexOf(current())) - 1));
+$("next").addEventListener("click", () => st.mode ? pickPatch((st.patch + 1) % PATCHES.length) : go(st.idx + 1 < packed.length ? list.indexOf(packed[st.idx + 1]) : list.indexOf(current()) + 1));
+$("prev").addEventListener("click", () => st.mode ? pickPatch((st.patch + PATCHES.length - 1) % PATCHES.length) : go(Math.max(0, list.indexOf(current())) - 1));
 $("song-prev").addEventListener("click", () => setSong(-1));
 $("song-next").addEventListener("click", () => setSong(1));
 for (const b of document.querySelectorAll("[data-engine]")) {
@@ -597,6 +723,11 @@ $("search").addEventListener("input", (e) => {
   searchTimer = setTimeout(() => search(e.target.value), 160);
 });
 $("random").addEventListener("click", surprise);
+for (const b of document.querySelectorAll("[data-mode]")) b.addEventListener("click", () => setMode(Number(b.dataset.mode)));
+$("oct-dn").addEventListener("click", () => node ? tap(KEY.OCTDN) : null);
+$("oct-up").addEventListener("click", () => node ? tap(KEY.OCTUP) : null);
+for (const b of document.querySelectorAll("[data-knob]")) b.addEventListener("click", () => knobBy(Number(b.dataset.knob), Number(b.dataset.d)));
+$("midi").addEventListener("click", connectMidi);
 
 // your own .sid files: the picker or a drop anywhere on the page
 async function openFiles(files) {
@@ -641,6 +772,7 @@ if (params.get("t")) {
   initial = Math.max(0, i);
 }
 st.idx = initial;
+if (params.get("mode") === "synth") { st.mode = 1; pickTab($("tab-synth")); }
 packed = list.slice();
 showList();
 showNow();

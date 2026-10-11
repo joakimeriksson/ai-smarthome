@@ -33,3 +33,27 @@ if (x.fm1_halted()) fail("the CPU halted");
 if (real < 3 * 44100) fail("too few audio frames");
 if (rms < 0.01) fail("silent (an fm1-core without the flags / carry decoding gives this)");
 if (colours < 6) fail("the screen is not drawn");
+
+// the synth mode (pack flag): silent until a key is down, then a note
+{
+  const img = bootImage(base, buildPack([{ bytes: house, song: 0 }], 0, 8));
+  const { instance } = await WebAssembly.instantiate(readFileSync(new URL("fm1_web.wasm", dir)), {});
+  const y = instance.exports;
+  const q = y.fm1_alloc(img.length);
+  new Uint8Array(y.memory.buffer, q, img.length).set(img);
+  y.fm1_boot(q, img.length, 0x02000120, 240);
+  const level = (secs) => {
+    let s = 0, m = 0;
+    for (let i = 0; i < secs * 44100; i += 128) {
+      y.fm1_render(128, 240e6 * 0.02);
+      for (const v of new Float32Array(y.memory.buffer, y.fm1_out_l(), 128)) { s += v * v; m++; }
+    }
+    return Math.sqrt(s / m);
+  };
+  const quiet = level(1);
+  y.fm1_key(21, 1);                       // C4
+  const note = level(0.6);
+  y.fm1_key(21, 0);
+  console.log(`synth: ${quiet.toFixed(4)} before a key, ${note.toFixed(4)} with C4 down`);
+  if (quiet > 0.002 || note < 0.01) fail("the synth mode does not play the keys");
+}

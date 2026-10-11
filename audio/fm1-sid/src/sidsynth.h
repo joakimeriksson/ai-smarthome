@@ -67,6 +67,13 @@ typedef struct {
     int32_t cut_ofs;             /* knob offset to the cutoff */
     int32_t transpose;           /* semitones */
     uint8_t vol;
+    /* optional, set after sidsyn_init: another SID engine plays the notes. Every register
+     * write goes to write() instead of chip[], and env() reports a voice's envelope level
+     * (0..255) for the voice allocation. The caller then runs sidsyn_tick at the frame rate
+     * instead of sidsyn_render. */
+    void (*write)(void *user, uint32_t chip, uint32_t reg, uint32_t val);
+    uint32_t (*env)(void *user, uint32_t chip, uint32_t voice);
+    void *user;
 } sidsyn_t;
 
 void sidsyn_init(sidsyn_t *y, uint32_t nchips, sid_model_t model, uint32_t fs);
@@ -74,6 +81,8 @@ void sidsyn_set_patch(sidsyn_t *y, const sid_patch_t *p);
 void sidsyn_note_on(sidsyn_t *y, uint32_t note);
 void sidsyn_note_off(sidsyn_t *y, uint32_t note);
 void sidsyn_all_off(sidsyn_t *y);
+/* one frame of the driver (tables, sweeps, LFOs -> register writes); sidsyn_render runs it */
+void sidsyn_tick(sidsyn_t *y);
 /* n mono samples, ~Q15 (the chips mixed and scaled down for headroom) */
 void sidsyn_render(sidsyn_t *y, int32_t *out, uint32_t n);
 

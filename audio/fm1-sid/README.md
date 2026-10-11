@@ -67,6 +67,20 @@ Next quality step that fits: reSID 0.16 fast at 2x the output rate with a half-b
 decimator (about 2x the cost, ~16 % of a core per chip) to push most aliasing out of the
 audible band; to be measured.
 
+### Real C64 tunes
+
+`host/sidplay.c` is a small PSID player: a 6502 (official opcodes, decimal mode, the common
+undocumented ones), 64 KB RAM with the $01 banking, CIA 1 timer A for CIA-timed tunes and the
+SID registers. It runs a tune's init and play routines and logs every SID write with its
+C64 cycle (sidlog v2); `host/replay.cc` then plays that log on every engine, each clocked to
+the cycle of each write. RSID tunes (which need a whole C64) are refused.
+`tools/tunes.sh` fetches seven tunes from HVSC (Hubbard, Tel, Daglish, Galway, Jammer; the
+tunes and renders stay in `build/`, they are not part of the repo), and renders each with
+`sidplayfp` (full C64 emulation, reSIDfp) as a reference when it is installed.
+`tools/refcheck.py` aligns ours with the reference: the tempo holds (the offset stays within a
+few ms over 30 s) and the log-spectra correlate 0.76-0.86 with our reSIDfp replay; the rest is
+engine settings (filter curve) and the play routine's call time within the frame.
+
 ### Emulator fixes found on the way (`../fm-1`, PR #31)
 
 reSID's `double` setup came out wrong on the emulator; tracing it found four gaps in
@@ -123,6 +137,9 @@ tools/fetch_ext.sh        fetch reSID 0.16, reSID 1.0, reSIDfp into ext/ (GPL, n
 tools/compare.sh          record every demo piece, replay on every engine -> build/cmp/
 tools/listen.py,          level-matched MP3s, spectrograms and the A/B page -> build/listen/
   listen.html
+host/sidplay.c            6502 + PSID player: a tune's SID writes, cycle-exact (sidlog v2)
+tools/tunes.sh,           HVSC tunes on every engine + sidplayfp reference; alignment check
+  refcheck.py
 ```
 
 ```sh

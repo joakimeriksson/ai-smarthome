@@ -6,6 +6,7 @@
 // r10-resample (reSID 1.0), rfp-decimate, rfp-resample (reSIDfp). Writes OUTPREFIX.<engine>.wav
 // and prints the host cost per second of audio. Every chip is clocked to the cycle of each
 // write (sample * clock / fs), so all engines get the same input.
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -18,19 +19,21 @@ extern "C" {
 #include "engines.h"
 
 struct Ev { uint32_t pos; uint8_t chip, reg, val, pad; };
-struct Log { uint32_t model, fs, clock, chips, samples, nev, mix; std::vector<Ev> ev; };
+// v1 (host/demo.c record): pos = output sample; v2 (host/sidplay.c): pos = C64 cycle
+struct Log { uint32_t model, fs, clock, chips, samples, nev, mix; bool cycles; std::vector<Ev> ev; };
 
 static Log load(const char *path)
 {
     Log l;
     char magic[8];
     FILE *f = fopen(path, "rb");
-    if (!f || fread(magic, 1, 8, f) != 8 || memcmp(magic, "SIDLOG1", 8)) {
+    if (!f || fread(magic, 1, 8, f) != 8 || (memcmp(magic, "SIDLOG1", 8) && memcmp(magic, "SIDLOG2", 8))) {
         fprintf(stderr, "%s: not a sidlog\n", path);
         exit(1);
     }
     uint32_t h[7];
     if (fread(h, 4, 7, f) != 7) exit(1);
+    l.cycles = magic[6] == '2';
     l.model = h[0]; l.fs = h[1]; l.clock = h[2]; l.chips = h[3]; l.samples = h[4]; l.nev = h[5]; l.mix = h[6];
     l.ev.resize(l.nev);
     if (fread(l.ev.data(), 8, l.nev, f) != l.nev) exit(1);
@@ -69,6 +72,8 @@ static const Eng ENGINES[] = {
 };
 
 static uint64_t cyc_of(const Log &l, uint32_t pos) { return (uint64_t)pos * l.clock / l.fs; }
+static uint64_t ev_cyc(const Log &l, const Ev &v) { return l.cycles ? v.pos : cyc_of(l, v.pos); }
+static uint32_t ev_sample(const Log &l, const Ev &v) { return l.cycles ? (uint32_t)((uint64_t)v.pos * l.fs / l.clock) : v.pos; }
 
 // one chip's samples on a reSID-family engine
 static std::vector<int32_t> run_chip(const Log &l, const Eng &e, uint32_t chip)
@@ -87,7 +92,7 @@ static std::vector<int32_t> run_chip(const Log &l, const Eng &e, uint32_t chip)
     };
     for (const Ev &v : l.ev) {
         if (v.chip != chip) continue;
-        clock_to(cyc_of(l, v.pos));
+        clock_to(ev_cyc(l, v));
         e.wr(s, v.reg, v.val);
     }
     clock_to(cyc_of(l, l.samples) + 64);
@@ -105,7 +110,8 @@ static std::vector<int32_t> run_own(const Log &l, uint32_t chip)
     uint32_t pos = 0;
     for (const Ev &v : l.ev) {
         if (v.chip != chip) continue;
-        if (v.pos > pos) { sid_render(&s, &out[pos], v.pos - pos); pos = v.pos; }
+        uint32_t at = std::min(ev_sample(l, v), l.samples);
+        if (at > pos) { sid_render(&s, &out[pos], at - pos); pos = at; }
         sid_write(&s, v.reg, v.val);
     }
     if (l.samples > pos) sid_render(&s, &out[pos], l.samples - pos);

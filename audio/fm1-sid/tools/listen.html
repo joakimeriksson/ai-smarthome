@@ -61,6 +61,9 @@ td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
 @media (max-width: 640px) { .console { grid-template-columns: minmax(0, 1fr); } }
 .pieces { display: flex; flex-direction: column; gap: 2px; }
 @media (max-width: 640px) { .pieces { flex-direction: row; flex-wrap: wrap; gap: 6px; } }
+.group { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 10px 4px; }
+.group:first-child { padding-top: 2px; }
+@media (max-width: 640px) { .group { flex-basis: 100%; padding: 8px 0 0; } }
 .piece { all: unset; cursor: pointer; padding: 7px 10px; border-radius: 6px; font-size: 14px; line-height: 1.3; color: var(--ink); }
 @media (max-width: 640px) { .piece { border: 1px solid var(--line); } }
 .piece:hover { background: var(--accent-soft); }
@@ -114,7 +117,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
 
   <section aria-labelledby="listen-h">
     <h2 id="listen-h">Lyssna</h2>
-    <p class="muted">Välj ett stycke och byt motor medan det spelar. Positionen följer med, så du jämför samma ögonblick. Tangenterna 1–5 byter motor och mellanslag startar eller pausar. Blindläget blandar ordningen och döljer namnen.</p>
+    <p class="muted">Välj ett stycke och byt motor medan det spelar. Positionen följer med, så du jämför samma ögonblick. Siffertangenterna byter motor och mellanslag startar eller pausar. Blindläget blandar ordningen och döljer namnen.</p>
+    <p class="muted">C64-låtarna är riktiga spelrutiner: låtens 6502-kod körs i en 6502-emulator som loggar varje SID-skrivning med sin C64-cykel, och samma logg spelas på alla motorer. Referensen är samma låt i sidplayfp, som emulerar en hel C64 med reSIDfp. Den låter något annorlunda än vår reSIDfp-rad eftersom filterinställningar och spelrutinens anropstider skiljer sig. 30 sekunder per låt.</p>
     <div class="console">
       <nav class="pieces" id="pieces" aria-label="Stycken"></nav>
       <div class="deck">
@@ -165,8 +169,17 @@ const ENGINES = [
 const EXTRA_ROWS = [
   { name: "reSID 0.16 interpolate", fm1: 5562, core: 102.2, ram: "17 KB RAM + 128 KB tabeller", host: 27.9, verdict: ["för tung", "v-bad"] },
 ];
+const REF = { id: "ref", name: "sidplayfp (hel C64, reSIDfp)", ref: true };
+/* [id, title, note, spectrogram, sidplayfp reference, group] */
 const PIECES = [
-  ["song_6581", "Låt, 4 chip (6581)", "Bas, ackord-arpeggio, sync-lead och trummor: fyra SID-chip mixade."],
+  ["tune_commando", "Commando", "Rob Hubbard, 1985 (6581). Puls-lead, filtrerad bas, trummor ur brus.", false, true, "C64-låtar (HVSC)"],
+  ["tune_monty", "Monty on the Run", "Rob Hubbard, 1985 (6581). Snabba arpeggion och vibrato.", false, true],
+  ["tune_delta", "Delta", "Rob Hubbard, 1987 (6581). Långa filtersvep.", false, true],
+  ["tune_cybernoid2", "Cybernoid II", "Jeroen Tel, 1988 (6581). Hårt filtrerad, mycket resonans.", false, true],
+  ["tune_lastninja", "The Last Ninja", "Ben Daglish, 1987 (6581). Mjuka pads genom 6581-filtret.", false, true],
+  ["tune_wizball", "Wizball", "Martin Galway, 1987 (6581). Galways egen drivrutin, låt 2.", false, true],
+  ["tune_altdisco", "Alt Disco", "Jammer, 2015 (8580). Modern låt skriven för 8580.", false, true],
+  ["song_6581", "Låt, 4 chip (6581)", "Bas, ackord-arpeggio, sync-lead och trummor: fyra SID-chip mixade.", false, false, "fm1-sid-patchar"],
   ["song_8580", "Låt, 4 chip (8580)", "Samma registerström på 8580."],
   ["hichord_8580", "Högt ackord (8580)", "Ackordet två oktaver upp. Här hörs aliasing tydligast.", true],
   ["patch04_6581", "SYNC LEAD (6581)", "Hard sync med tonhöjdssvep.", true],
@@ -182,6 +195,8 @@ const PIECES = [
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
 let piece = 0, engine = 0, order = ENGINES.map((_, i) => i), blind = false, revealed = false;
+/* the engines of the current piece: the five, plus the sidplayfp reference for the C64 tunes */
+const engs = () => (PIECES[piece][4] ? ENGINES.concat([REF]) : ENGINES);
 
 function fmt(t) { if (!isFinite(t)) t = 0; const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + String(s).padStart(2, "0"); }
 
@@ -208,31 +223,37 @@ function costRows() {
 }
 
 function renderPieces() {
-  $("pieces").replaceChildren(...PIECES.map((p, i) => {
+  const items = [];
+  PIECES.forEach((p, i) => {
+    if (p[5]) {
+      const h = document.createElement("div"); h.className = "group"; h.textContent = p[5];
+      items.push(h);
+    }
     const b = document.createElement("button");
     b.className = "piece"; b.type = "button"; b.textContent = p[1];
     b.setAttribute("aria-pressed", String(i === piece));
     b.addEventListener("click", () => selectPiece(i));
-    return b;
-  }));
+    items.push(b);
+  });
+  $("pieces").replaceChildren(...items);
 }
 
 function engineLabel(slot) {
-  const e = ENGINES[order[slot]];
-  if (blind && !revealed) return "Motor " + "ABCDE"[slot];
+  const e = engs()[order[slot]];
+  if (blind && !revealed) return "Motor " + "ABCDEF"[slot];
   return e.name;
 }
 
 function renderEngines() {
   $("engines").replaceChildren(...order.map((ei, slot) => {
-    const e = ENGINES[ei];
+    const e = engs()[ei];
     const b = document.createElement("button");
     b.className = "eng"; b.type = "button";
     b.setAttribute("aria-pressed", String(ei === engine));
     const k = document.createElement("span"); k.className = "key"; k.textContent = slot + 1;
     const n = document.createElement("span"); n.className = "name"; n.textContent = engineLabel(slot);
     const c = document.createElement("span"); c.className = "cost";
-    c.textContent = blind && !revealed ? "" : (e.fm1 != null ? e.core.toLocaleString("sv-SE", { minimumFractionDigits: 1 }) + " % av FM-1" : e.verdict[0]);
+    c.textContent = blind && !revealed ? "" : e.ref ? "referens" : (e.fm1 != null ? e.core.toLocaleString("sv-SE", { minimumFractionDigits: 1 }) + " % av FM-1" : e.verdict[0]);
     b.append(k, n, c);
     b.addEventListener("click", () => selectEngine(ei));
     return b;
@@ -247,7 +268,7 @@ function renderSpectro() {
   const figs = order.map((ei, slot) => {
     const f = document.createElement("figure");
     const img = document.createElement("img");
-    img.src = p[0] + "__" + ENGINES[ei].id + ".png"; img.alt = "Spektrogram, " + engineLabel(slot); img.loading = "lazy"; img.width = 640; img.height = 220;
+    img.src = p[0] + "__" + engs()[ei].id + ".png"; img.alt = "Spektrogram, " + engineLabel(slot); img.loading = "lazy"; img.width = 640; img.height = 220;
     const cap = document.createElement("figcaption"); cap.textContent = engineLabel(slot);
     f.append(cap, img);
     return f;
@@ -259,7 +280,7 @@ function renderSpectro() {
 
 function load(keepTime) {
   const t = keepTime ? audio.currentTime : 0, playing = !audio.paused;
-  audio.src = PIECES[piece][0] + "__" + ENGINES[engine].id + ".mp3";
+  audio.src = PIECES[piece][0] + "__" + engs()[engine].id + ".mp3";
   audio.addEventListener("loadedmetadata", function once() {
     audio.removeEventListener("loadedmetadata", once);
     try { audio.currentTime = Math.min(t, audio.duration || t); } catch (e) {}
@@ -270,15 +291,16 @@ function load(keepTime) {
 
 function selectPiece(i) {
   piece = i;
+  if (engine >= engs().length) engine = 0;
+  if (blind) shuffle(); else order = engs().map((_, k) => k);
   $("piece-title").textContent = PIECES[i][1];
   $("piece-note").textContent = PIECES[i][2];
-  if (blind) shuffle();
   renderPieces(); renderEngines(); load(false);
 }
 function selectEngine(ei) { engine = ei; renderEngines(); load(true); }
 
 function shuffle() {
-  order = ENGINES.map((_, i) => i);
+  order = engs().map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
   revealed = false;
 }
@@ -297,14 +319,14 @@ $("progress").addEventListener("click", (ev) => {
 });
 $("blind").addEventListener("change", (ev) => {
   blind = ev.target.checked;
-  if (blind) shuffle(); else { order = ENGINES.map((_, i) => i); }
+  if (blind) shuffle(); else { order = engs().map((_, i) => i); }
   $("reveal").hidden = !blind;
   renderEngines();
 });
 $("reveal").addEventListener("click", () => { revealed = true; renderEngines(); });
 document.addEventListener("keydown", (ev) => {
   if (ev.target.closest("input")) return;
-  if (ev.key >= "1" && ev.key <= "5") { selectEngine(order[+ev.key - 1]); ev.preventDefault(); }
+  if (ev.key >= "1" && ev.key <= String(order.length)) { selectEngine(order[+ev.key - 1]); ev.preventDefault(); }
   else if (ev.key === " ") { $("play").click(); ev.preventDefault(); }
 });
 

@@ -7,6 +7,7 @@ pieces where aliasing shows, and the page (tools/listen.html). Output: build/lis
 SPDX-License-Identifier: BSD-2-Clause"""
 import json
 import subprocess
+import sys
 import wave
 from pathlib import Path
 
@@ -24,6 +25,17 @@ ENGINES = [
     ("r016-resample", "reSID 0.16 resample"),
     ("r10-resample", "reSID 1.0 resample"),
     ("rfp-resample", "reSIDfp resample"),
+]
+# C64 tunes from HVSC (tools/tunes.sh): their 6502 code's register stream on every engine,
+# plus sidplayfp's full-C64 render (reSIDfp) as a reference ("ref", aligned to ours)
+TUNES = [
+    ("tune_commando", "Commando – Rob Hubbard (1985)", "6581. Klassisk Hubbard: puls-lead, filtrerad bas, trummor ur brus."),
+    ("tune_monty", "Monty on the Run – Rob Hubbard (1985)", "6581. Snabba arpeggion och vibrato."),
+    ("tune_delta", "Delta – Rob Hubbard (1987)", "6581. Långa filtersvep."),
+    ("tune_cybernoid2", "Cybernoid II – Jeroen Tel (1988)", "6581. Hårt filtrerad, mycket resonans."),
+    ("tune_lastninja", "The Last Ninja – Ben Daglish (1987)", "6581. Mjuka pads genom 6581-filtret."),
+    ("tune_wizball", "Wizball – Martin Galway (1987)", "6581. Galways egen drivrutin, låt 2."),
+    ("tune_altdisco", "Alt Disco – Jammer (2015)", "8580. Modern låt skriven för 8580."),
 ]
 PIECES = [
     ("song_6581", "Låt, 4 chip (6581)", "bas, ackord-arpeggio, sync-lead, trummor"),
@@ -79,14 +91,30 @@ def host_cost():
     return {k: sum(v) / len(v) for k, v in cost.items()}
 
 
+def aligned_ref(stem, n):
+    """sidplayfp's render of a tune, cut to line up with ours (n samples)"""
+    sys.path.insert(0, str(ROOT / "tools"))
+    from refcheck import align
+    ref = read(ROOT / "build" / "tunes" / f"{stem[5:]}.ref.wav")
+    ours = read(CMP / f"{stem}.rfp-resample.wav")
+    lag = align(ref, ours)
+    y = ref[lag:lag + n]
+    return np.pad(y, (0, n - len(y)))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     manifest = {"engines": [{"id": e, "label": l} for e, l in ENGINES], "pieces": [], "host_ms": host_cost()}
-    for stem, label, note in PIECES:
+    for stem, label, note in TUNES + PIECES:
         item = {"id": stem, "label": label, "note": note, "files": {}, "spectro": {}}
-        for eng, _ in ENGINES:
-            src = CMP / f"{stem}.{eng}.wav"
-            x = read(src)
+        engines = list(ENGINES)
+        if stem.startswith("tune_") and (ROOT / "build" / "tunes" / f"{stem[5:]}.ref.wav").exists():
+            engines.append(("ref", "sidplayfp"))
+        for eng, _ in engines:
+            if eng == "ref":
+                x = aligned_ref(stem, len(read(CMP / f"{stem}.own.wav")))
+            else:
+                x = read(CMP / f"{stem}.{eng}.wav")
             rms = np.sqrt(np.mean(x ** 2)) or 1e-9
             g = TARGET_RMS / rms
             if np.max(np.abs(x)) * g > PEAK_MAX:
@@ -100,7 +128,7 @@ def main():
                 w.writeframes((y * 32767).astype("<i2").tobytes())
             mp3 = f"{stem}__{eng}.mp3"
             subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(tmp),
-                            "-codec:a", "libmp3lame", "-b:a", "160k", str(OUT / mp3)], check=True)
+                            "-codec:a", "libmp3lame", "-b:a", "128k" if stem.startswith("tune_") else "160k", str(OUT / mp3)], check=True)
             item["files"][eng] = mp3
             if stem in SPECTRO:
                 png = f"{stem}__{eng}.png"

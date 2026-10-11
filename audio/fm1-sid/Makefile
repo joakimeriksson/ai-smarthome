@@ -67,5 +67,9 @@ build/sid_record: $(SRC) src/sid.h src/sidsynth.h fm1/workload.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) -DSID_LOG -o $@ $(SRC)
 
+build/sidplay: host/sidplay.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -o $@ $<
+
 compare: build/sid_record build/sid_replay
 	tools/compare.sh

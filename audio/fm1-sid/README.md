@@ -148,9 +148,17 @@ chip drawn on the LCD.
   its output matches host reSID fed the same stream (correlation 0.984). It needs PR #31's
   emulator fixes; on master the CPU halts.
 
+- `tools/fwsc.py` packs it as an FM-1 update package, `web/sidplayer.fwsc`: Felucca's update
+  loader (built here) and `tools/fm1pkg_make.py`, with three Apache-2.0 files of JieLi's AC79
+  SDK (`tools/fetch_ext.sh` fetches them into `ext/ac79sdk` and checks Felucca's hashes; the
+  page ships `web/LICENSES/Apache-2.0.txt`). The app is the image with an empty pack: its own
+  tune and the synth. `../fm-1/web/fwsc.js` unpacks exactly that app from it, and the
+  emulator boots it like the community packages. Not tried on a real FM-1 yet.
+
 ```sh
 tools/fetch_ext.sh                            # engines, m6502.h, Felucca
 firmware/build.sh                             # build/fw/sidplayer*.bin, web/sidplayer.bin
+tools/fwsc.py                                 # web/sidplayer.fwsc, the update package
 tools/sidpack.py build/fw/my_xip.bin --xip --first 1 A.sid B.sid:3   # a firmware with tunes
 ../fm-1/target/release/fm1-emu --bin build/fw/my_xip.bin --entry 0x02000120 \
     --ms 3000 --wav build/fw/out.wav --keys "t:PRESET:+1,t:EDIT" --snap 2500  # LCD -> work/
@@ -243,6 +251,7 @@ firmware/main.c,          the FM-1 SID player: 6502 + reSID 0.16 / own model, LC
   resid_glue.cc, app.ld,  (GPL-3.0-only, on Felucca's HAL); tunes from a pack after the image
   gen_assets.py, build.sh
 tools/sidpack.py          a firmware image with a tune pack
+tools/fwsc.py             the firmware as an FM-1 update package (web/sidplayer.fwsc)
 tools/housetune.py        the firmware's own tune, Pocket Sync (PSID)
 web/                      the player page (GitHub Pages): panel, playlist, HVSC search, files
 tools/picks.py            web/tunes.json: the picks with HVSC lengths and measured tags

@@ -88,4 +88,7 @@ firmware:
 webpage: firmware
 	tools/webpage.sh
 
-.PHONY: compare firmware webpage
+fwsc: firmware
+	tools/fwsc.py
+
+.PHONY: compare firmware webpage fwsc

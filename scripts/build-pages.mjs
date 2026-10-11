@@ -11,7 +11,7 @@
 //   - Built apps must be told their base path; Vite bakes it into asset URLs.
 
 import { cp, mkdir, rm, readFile, writeFile, readdir } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, cpSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -111,6 +111,25 @@ const DEMOS = [
     build: (out, base) => {
       const dist = resolve(ROOT, 'audio/fm-1/web/dist')
       run('bash', ['web/build.sh', dist], resolve(ROOT, 'audio/fm-1'))
+      return dist
+    },
+  },
+  {
+    slug: 'fm1-sid',
+    title: 'FM-1 SID Player',
+    blurb: 'Commodore 64 music on the FM-1: each tune\'s own 6502 code and reSID running ' +
+           'on the synth\'s CPU, emulated in the browser, with all of HVSC to pick from.',
+    src: 'audio/fm1-sid/web',
+    accent: '#7869c4',            // the C64's light blue
+    // The page (static) plus the FM-1 emulator's wasm, from the fm-1 demo's build above or
+    // its own when that one was left out with --only.
+    build: () => {
+      const dist = resolve(ROOT, 'audio/fm1-sid/build/pages')
+      const fm1 = resolve(ROOT, 'audio/fm-1/web/dist')
+      if (!existsSync(resolve(fm1, 'fm1_web.wasm'))) run('bash', ['web/build.sh', fm1], resolve(ROOT, 'audio/fm-1'))
+      rmSync(dist, { recursive: true, force: true })
+      cpSync(resolve(ROOT, 'audio/fm1-sid/web'), dist, { recursive: true, filter: (p) => !p.endsWith('smoke.mjs') })
+      cpSync(resolve(fm1, 'fm1_web.wasm'), resolve(dist, 'fm1_web.wasm'))
       return dist
     },
   },

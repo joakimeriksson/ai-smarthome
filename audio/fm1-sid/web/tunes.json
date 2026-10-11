@@ -1,0 +1,378 @@
+{
+ "source": "https://www.hvsc.c64.org/download/C64Music/",
+ "picks": [
+  {
+   "path": "MUSICIANS/G/Galway_Martin/Wizball.sid",
+   "song": 7,
+   "songs": 9,
+   "title": "Wizball",
+   "author": "Martin Galway",
+   "released": "1987 Ocean",
+   "length": 135.4,
+   "tags": [
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.0,
+    "ring": 0.0,
+    "cutoff_per_s": 370.5,
+    "pw_per_s": 152.0
+   }
+  },
+  {
+   "path": "MUSICIANS/G/Galway_Martin/Rolands_Ratrace.sid",
+   "song": 1,
+   "songs": 20,
+   "title": "Roland's Ratrace",
+   "author": "Martin Galway",
+   "released": "1985 Ocean",
+   "length": 85.0,
+   "tags": [
+    "sync"
+   ],
+   "measured": {
+    "sync": 0.084,
+    "ring": 0.0,
+    "cutoff_per_s": 0.0,
+    "pw_per_s": 11.4
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Sanxion.sid",
+   "song": 1,
+   "songs": 2,
+   "title": "Sanxion",
+   "author": "Rob Hubbard",
+   "released": "1986 Thalamus",
+   "length": 334.0,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.162,
+    "ring": 0.204,
+    "cutoff_per_s": 14.4,
+    "pw_per_s": 89.8
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Sanxion.sid",
+   "song": 2,
+   "songs": 2,
+   "title": "Sanxion",
+   "author": "Rob Hubbard",
+   "released": "1986 Thalamus",
+   "length": 186.0,
+   "tags": [
+    "sync",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.057,
+    "ring": 0.026,
+    "cutoff_per_s": 39.9,
+    "pw_per_s": 188.8
+   }
+  },
+  {
+   "path": "MUSICIANS/G/Galway_Martin/Wizball.sid",
+   "song": 4,
+   "songs": 9,
+   "title": "Wizball",
+   "author": "Martin Galway",
+   "released": "1987 Ocean",
+   "length": 214.9,
+   "tags": [
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.0,
+    "ring": 0.0,
+    "cutoff_per_s": 266.7,
+    "pw_per_s": 420.6
+   }
+  },
+  {
+   "path": "MUSICIANS/O/Ouwehand_Reyn/Contaxia.sid",
+   "song": 1,
+   "songs": 1,
+   "title": "Contaxia",
+   "author": "Reyn Ouwehand",
+   "released": "1989 Reyn Ouwehand",
+   "length": 227.0,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.17,
+    "ring": 0.337,
+    "cutoff_per_s": 35.2,
+    "pw_per_s": 185.3
+   }
+  },
+  {
+   "path": "MUSICIANS/T/Tel_Jeroen/Cybernoid_II.sid",
+   "song": 1,
+   "songs": 2,
+   "title": "Cybernoid II",
+   "author": "Jeroen Tel",
+   "released": "1988 Hewson",
+   "length": 346.0,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.057,
+    "ring": 0.09,
+    "cutoff_per_s": 44.2,
+    "pw_per_s": 149.7
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Monty_on_the_Run.sid",
+   "song": 1,
+   "songs": 19,
+   "title": "Monty on the Run",
+   "author": "Rob Hubbard",
+   "released": "1985 Gremlin Graphics",
+   "length": 350.0,
+   "tags": [],
+   "measured": {
+    "sync": 0.0,
+    "ring": 0.0,
+    "cutoff_per_s": 0.0,
+    "pw_per_s": 19.7
+   }
+  },
+  {
+   "path": "MUSICIANS/D/Daglish_Ben/Last_Ninja.sid",
+   "song": 1,
+   "songs": 11,
+   "title": "The Last Ninja",
+   "author": "Ben Daglish & Anthony Lees",
+   "released": "1987 System 3",
+   "length": 292.0,
+   "tags": [
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.043,
+    "ring": 0.085,
+    "cutoff_per_s": 30.1,
+    "pw_per_s": 141.4
+   }
+  },
+  {
+   "path": "MUSICIANS/F/Follin_Tim/Raw_Recruit.sid",
+   "song": 1,
+   "songs": 2,
+   "title": "Raw Recruit",
+   "author": "Tim Follin",
+   "released": "1988 Mastertronic",
+   "length": 110.0,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.216,
+    "ring": 0.07,
+    "cutoff_per_s": 83.6,
+    "pw_per_s": 150.8
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Delta.sid",
+   "song": 1,
+   "songs": 13,
+   "title": "Delta",
+   "author": "Rob Hubbard",
+   "released": "1987 Thalamus",
+   "length": 682.0,
+   "tags": [
+    "sync",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.6,
+    "ring": 0.0,
+    "cutoff_per_s": 40.0,
+    "pw_per_s": 74.0
+   }
+  },
+  {
+   "path": "MUSICIANS/T/Tel_Jeroen/Thats_the_Way_It_Is_main.sid",
+   "song": 1,
+   "songs": 2,
+   "title": "That's the Way It Is (main)",
+   "author": "Jeroen Tel",
+   "released": "1988 Scoop Designs",
+   "length": 427.1,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.226,
+    "ring": 0.23,
+    "cutoff_per_s": 37.6,
+    "pw_per_s": 119.1
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Commando.sid",
+   "song": 1,
+   "songs": 19,
+   "title": "Commando",
+   "author": "Rob Hubbard",
+   "released": "1985 Elite",
+   "length": 235.6,
+   "tags": [
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.024,
+    "ring": 0.008,
+    "cutoff_per_s": 0.0,
+    "pw_per_s": 97.9
+   }
+  },
+  {
+   "path": "MUSICIANS/D/Daglish_Ben/Killer-Ring.sid",
+   "song": 1,
+   "songs": 1,
+   "title": "Killer-Ring",
+   "author": "Ben Daglish",
+   "released": "1987 Ariolasoft/Reakt\u00f6r Software",
+   "length": 215.0,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.365,
+    "ring": 0.294,
+    "cutoff_per_s": 100.0,
+    "pw_per_s": 180.3
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Lightforce.sid",
+   "song": 1,
+   "songs": 1,
+   "title": "Lightforce",
+   "author": "Rob Hubbard",
+   "released": "1986 Faster Than Light (FTL)",
+   "length": 433.5,
+   "tags": [
+    "sync",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.284,
+    "ring": 0.0,
+    "cutoff_per_s": 43.2,
+    "pw_per_s": 119.1
+   }
+  },
+  {
+   "path": "MUSICIANS/O/Ouwehand_Reyn/Bad_Blood-City.sid",
+   "song": 1,
+   "songs": 1,
+   "title": "Bad Blood - City",
+   "author": "Reyn Ouwehand",
+   "released": "1990 Maniacs of Noise",
+   "length": 104.0,
+   "tags": [
+    "sync",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.33,
+    "ring": 0.0,
+    "cutoff_per_s": 44.9,
+    "pw_per_s": 140.9
+   }
+  },
+  {
+   "path": "MUSICIANS/G/Galway_Martin/Wizball.sid",
+   "song": 9,
+   "songs": 9,
+   "title": "Wizball",
+   "author": "Martin Galway",
+   "released": "1987 Ocean",
+   "length": 66.5,
+   "tags": [
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.0,
+    "ring": 0.375,
+    "cutoff_per_s": 245.3,
+    "pw_per_s": 37.5
+   }
+  },
+  {
+   "path": "MUSICIANS/H/Hubbard_Rob/Pandora.sid",
+   "song": 1,
+   "songs": 1,
+   "title": "Pandora",
+   "author": "Rob Hubbard",
+   "released": "1988 PSI Soft Design/Firebird",
+   "length": 150.0,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "measured": {
+    "sync": 0.188,
+    "ring": 0.226,
+    "cutoff_per_s": 53.7,
+    "pw_per_s": 93.8
+   }
+  },
+  {
+   "file": "house.sid",
+   "song": 1,
+   "songs": 1,
+   "title": "Pocket Sync",
+   "author": "fm1-sid",
+   "released": "2026 ai-smarthome",
+   "length": 30.7,
+   "tags": [
+    "sync",
+    "ring",
+    "filter",
+    "pwm"
+   ],
+   "note": "the firmware's own tune (tools/housetune.py), served with this page"
+  }
+ ]
+}

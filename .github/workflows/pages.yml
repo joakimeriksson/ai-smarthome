@@ -17,6 +17,7 @@ on:
       - 'audio/fm-1/crates/**'
       - 'audio/fm-1/web/**'
       - 'audio/fm-1/Cargo.*'
+      - 'audio/fm1-sid/web/**'
       - 'scripts/build-pages.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -72,6 +73,11 @@ jobs:
       - name: Test the FM-1 emulator build
         working-directory: audio/fm-1
         run: node web/smoke.mjs ../../_site/fm-1
+
+      # The SID player's page: its wasm boots the player firmware with the page's own tune
+      # pack (no network) to sound and a screen.
+      - name: Test the FM-1 SID player build
+        run: node audio/fm1-sid/web/smoke.mjs _site/fm1-sid
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

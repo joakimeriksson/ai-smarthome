@@ -129,6 +129,16 @@ chip drawn on the LCD.
   through a small command queue at the start of the next half buffer (2.9 ms). PRESETS /
   SELECT pick the instrument, OCT- / OCT+ the octave, KNOB1-4 cutoff, resonance, attack and
   release; PLAY sends all notes off. Pack flag bit 3 boots straight into it.
+- **Step sequencer** in the synth mode: three tracks of 16 steps, each a `sidsynth` part on
+  its own SID voice with its own patch (`sidsyn_set_voice`; track 3 starts as a drum kit
+  where a note's pitch class picks kick, snare or hat). The tracks share the chip's one filter
+  the way C64 music does: routing bits merge, cutoff, resonance and mode come from the first
+  track whose patch has a filter; sync and ring take the voice before as their source. Steps
+  fire in the audio interrupt at their own cycle, between the driver's 50 Hz frames. SEQ shows
+  the pattern on the LCD, PLAY runs it, REC records (running: to the nearest step; stopped: at
+  the cursor, which SELECT moves), SCL / ENV / LFO pick track 1-3, PRESETS its patch,
+  ALGORITHM the tempo, GLO clears a step, ARP a track. It starts with a demo pattern; nothing
+  is saved yet (flash storage is the next step).
 - The tunes ride after the firmware in flash as a **tune pack** (`firmware/main.c` reads it at
   the image's end, `_pack` in `firmware/app.ld`): "SIDPACK1", a count, the first entry and two
   flags (own model; chip 6581 / 8580 for every tune), then offset, length and song per entry.

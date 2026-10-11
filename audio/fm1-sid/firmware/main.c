@@ -9,7 +9,9 @@
  * Two modes, HOME switches. PLAYER: PRESETS / SELECT encoder or OCT- / OCT+ = tune, PLAY =
  * pause. SYNTH: the note keys play fm1-sid's instrument driver (src/sidsynth.c) on the same
  * chip, PRESETS / SELECT = patch, OCT- / OCT+ = octave, KNOB1..4 = cutoff, resonance, attack,
- * release, PLAY = all notes off. Both: EDIT = engine (reSID / own), FX = 6581 / 8580. Hold
+ * release. Its step sequencer: SEQ = its page, PLAY = run / stop, REC = record, SCL / ENV / LFO =
+ * track 1 / 2 / 3 (PRESETS then picks the track's patch), ALGORITHM = tempo, GLO = clear the step,
+ * ARP = clear the track. Both: EDIT = engine (reSID / own), FX = 6581 / 8580. Hold
  * OCT- and OCT+ for 3 s: the USB update mode (UBOOT).
  *
  * Timing: the main loop runs the play routine up to three frames ahead and queues its SID
@@ -120,21 +122,48 @@ static volatile uint32_t isr_ticks, isr_halves;
 static uint32_t play_idx, played_ms;
 static volatile uint32_t ms;
 
-/* the synth mode: fm1-sid's driver writes into the same event queue, from the audio ISR */
+/* the synth mode: fm1-sid's driver writes into the same event queue, from the audio ISR. Four
+ * driver instances: 0..2 the sequencer's tracks, each a part on its own SID voice with its own
+ * patch, and 3 the polyphonic synth on all three voices (the keys while the tracks are idle). */
 static volatile uint8_t mode;               /* 0 the tune player, 1 the synth */
-static sidsyn_t syn;
-static uint32_t patch;                      /* SID_PATCHES index */
+static sidsyn_t inst[4];
+#define POLY 3u
+static uint32_t patch;                      /* the polyphonic synth's SID_PATCHES index */
 static int32_t octave;                      /* -2..2 */
-static int32_t knob[4];                     /* cutoff offset, resonance, attack, release */
+static int32_t knob[4];                     /* its knobs: cutoff offset, resonance, attack, release */
 static uint8_t key_note[27];                /* the note each held key started */
-enum { CMD_ON, CMD_OFF, CMD_PATCH, CMD_ALLOFF };
-typedef struct { uint8_t op, arg; } cmd_t;
+enum { CMD_ON, CMD_OFF, CMD_PATCH, CMD_ALLOFF, CMD_PARTS, CMD_SEQ };
+typedef struct { uint8_t op, arg, tgt; } cmd_t;
 #define NCMD 64u
 static cmd_t cmdq[NCMD];
 static volatile uint32_t cmd_head, cmd_tail;   /* main loop writes head, the audio ISR tail */
 static uint32_t syn_next;                   /* the cycle of the driver's next frame */
 static uint32_t syn_held;                   /* the note keys down at the last look */
 #define HALF_CYC 2860u                      /* SID cycles in a 128-frame half buffer, rounded up */
+
+/* the step sequencer: three tracks of 16 steps, a MIDI note or 0 (rest) each. A track plays its
+ * own patch on its own voice; KIT is a drum kit: a note's pitch class picks the drum (C..D#
+ * kick, E..G snare, G#..B hat). Steps fire in the audio ISR at their own cycle. */
+#define NTRK 3u
+#define NSTEP 16u
+#define KIT 12u                             /* (SID_NPATCHES: the patch after the last) */
+static uint8_t pat[NTRK][NSTEP] = {
+    {45, 0, 45, 57, 0, 45, 0, 55, 45, 0, 57, 0, 43, 0, 45, 48},     /* PWM BASS */
+    {69, 0, 0, 0, 72, 0, 71, 0, 69, 0, 0, 0, 64, 0, 67, 0},        /* SAW LEAD */
+    {48, 0, 57, 0, 52, 0, 57, 0, 48, 48, 57, 0, 52, 0, 57, 57},    /* KIT: kick, hat, snare */
+};
+static uint8_t trk_patch[NTRK] = {1, 0, KIT};
+static int32_t trk_knob[NTRK][4];
+static uint32_t sel;                        /* the track the keys and knobs work on */
+static volatile uint8_t seq_on, rec, seq_view, parts;   /* parts: the tracks own the voices */
+static volatile uint32_t seq_pos;           /* the step sounding */
+static volatile uint32_t seq_next;          /* ISR: the cycle of the next step */
+static uint32_t seq_frac, cursor;
+static volatile uint32_t bpm = 120;
+static uint8_t trk_on[NTRK], live[NTRK], kit_cur[NTRK];   /* ISR: each track's note, keys held, kit drum */
+static uint8_t f_route[4], f_res[4];        /* each instance's filter routing and resonance */
+static uint8_t parts_req, seq_req;          /* main loop: what it asked the ISR for */
+static uint8_t key_tgt[27];                 /* the instance each held key plays */
 
 /* ------------------------------------------------------------------- the play routine --- */
 static void on_write(void *user, uint32_t cycle, uint32_t reg, uint32_t val)
@@ -159,10 +188,33 @@ static void generate(void)
 }
 
 /* ------------------------------------------------------------------------ the synth --- */
+/* the track whose patch has the filter: the chip has one, the first such track sets it */
+static uint32_t filter_owner(void)
+{
+    uint32_t t;
+    for (t = 0; t < NTRK; t++)
+        if (inst[t].p.filter)
+            return t;
+    return POLY;
+}
+
+/* an instance's register write into the queue (at call_base). The tracks share the chip's one
+ * filter: their routing bits merge, cutoff, resonance and mode are the owner's. */
 static void syn_write(void *user, uint32_t chip, uint32_t reg, uint32_t val)
 {
+    uint32_t i = (uint32_t)(uintptr_t)user, own_;
     (void)chip;
-    on_write(user, 0, reg, val);            /* at call_base */
+    if (i < NTRK && reg >= 0x15u && reg <= 0x18u) {
+        own_ = filter_owner();
+        if (reg == 0x17u) {
+            f_route[i] = (uint8_t)(val & 7u);
+            f_res[i] = (uint8_t)(val >> 4);
+            val = (own_ < NTRK ? (uint32_t)f_res[own_] << 4 : 0u) | f_route[0] | f_route[1] | f_route[2];
+        } else if (i != own_ && !(own_ == POLY && reg == 0x18u)) {
+            return;
+        }
+    }
+    on_write(0, 0, reg, val);
 }
 
 static uint32_t syn_env(void *user, uint32_t chip, uint32_t voice)
@@ -176,53 +228,168 @@ static uint32_t syn_env(void *user, uint32_t chip, uint32_t voice)
     return e[voice];
 }
 
-/* the knobs over the patch's own values */
-static void syn_knobs(void)
+/* knobs k over patch b, into instance y */
+static void apply_knobs(sidsyn_t *y, const sid_patch_t *b, const int32_t *k)
 {
-    const sid_patch_t *b = &SID_PATCHES[patch];
-    int32_t r = (int32_t)b->res + knob[1], a = (int32_t)(b->ad >> 4) + knob[2], rl = (int32_t)(b->sr & 15u) + knob[3];
-    syn.cut_ofs = knob[0] * 16;
-    syn.p.res = (uint8_t)(r < 0 ? 0 : r > 15 ? 15 : r);
-    syn.p.ad = (uint8_t)((a < 0 ? 0 : a > 15 ? 15 : a) << 4 | (b->ad & 15u));
-    syn.p.sr = (uint8_t)((b->sr & 0xF0u) | (uint32_t)(rl < 0 ? 0 : rl > 15 ? 15 : rl));
-    syn.transpose = 0;
+    int32_t r = (int32_t)b->res + k[1], a = (int32_t)(b->ad >> 4) + k[2], rl = (int32_t)(b->sr & 15u) + k[3];
+    y->cut_ofs = k[0] * 16;
+    y->p.res = (uint8_t)(r < 0 ? 0 : r > 15 ? 15 : r);
+    y->p.ad = (uint8_t)((a < 0 ? 0 : a > 15 ? 15 : a) << 4 | (b->ad & 15u));
+    y->p.sr = (uint8_t)((b->sr & 0xF0u) | (uint32_t)(rl < 0 ? 0 : rl > 15 ? 15 : rl));
+    y->transpose = 0;
 }
 
-static void syn_cmd(uint32_t op, uint32_t arg)
+/* the drum of a kit note (6 KICK, 7 SNARE, 8 HAT) */
+static uint32_t kit_drum(uint32_t note) { uint32_t c = note % 12u; return c < 4u ? 6u : c < 8u ? 7u : 8u; }
+
+static const sid_patch_t *base_patch(uint32_t i)
+{
+    if (i == POLY)
+        return &SID_PATCHES[patch];
+    return &SID_PATCHES[trk_patch[i] == KIT ? kit_cur[i] : trk_patch[i]];
+}
+
+static void syn_knobs(uint32_t i) { apply_knobs(&inst[i], base_patch(i), i == POLY ? knob : trk_knob[i]); }
+
+/* (ISR) an instance's patch from the settings */
+static void load_patch(uint32_t i)
+{
+    if (i < NTRK && trk_patch[i] == KIT && kit_cur[i] < 6u)
+        kit_cur[i] = 6;
+    sidsyn_set_patch(&inst[i], base_patch(i));
+    syn_knobs(i);
+    if (i < NTRK)
+        trk_on[i] = 0;
+}
+
+/* (ISR) track t plays note (0: stops) */
+static void trk_note(uint32_t t, uint32_t note)
+{
+    if (trk_on[t]) {
+        sidsyn_note_off(&inst[t], trk_on[t]);
+        trk_on[t] = 0;
+    }
+    if (!note)
+        return;
+    if (trk_patch[t] == KIT) {
+        uint32_t d = kit_drum(note);
+        if (d != kit_cur[t]) {
+            kit_cur[t] = (uint8_t)d;
+            sidsyn_set_patch(&inst[t], &SID_PATCHES[d]);
+            syn_knobs(t);
+        }
+        note = 48;                          /* the drums are tuned for C3 */
+    }
+    sidsyn_note_on(&inst[t], note);
+    trk_on[t] = (uint8_t)note;
+}
+
+/* (ISR) the next step */
+static void seq_fire(void)
+{
+    uint32_t t, s = (seq_pos + 1u) % NSTEP;
+    seq_pos = s;
+    for (t = 0; t < NTRK; t++) {
+        if (pat[t][s])
+            trk_note(t, pat[t][s]);
+        else if (!live[t])
+            trk_note(t, 0);
+    }
+}
+
+static uint32_t step_q8(void) { return (uint32_t)((14778720ull << 8) / bpm); }   /* PAL cycles a 16th, Q8 */
+
+static void syn_cmd(uint32_t op, uint32_t arg, uint32_t tgt)
 {
     uint32_t h = cmd_head;
     if (h - cmd_tail >= NCMD)
         return;
     cmdq[h % NCMD].op = (uint8_t)op;
     cmdq[h % NCMD].arg = (uint8_t)arg;
+    cmdq[h % NCMD].tgt = (uint8_t)tgt;
     cmd_head = h + 1;
 }
 
-/* in the audio ISR, before a half is rendered: the keys now, then the driver frames that fall
- * in this half, each at its own cycle */
+/* in the audio ISR, before a half is rendered: the keys now, then the sequencer steps and the
+ * driver frames that fall in this half, in time order, each at its own cycle */
 static void syn_step(void)
 {
-    uint32_t t;
+    uint32_t t, i;
     call_base = play_cyc;
     while ((t = cmd_tail) != cmd_head) {
         const cmd_t *c = &cmdq[t % NCMD];
-        if (c->op == CMD_ON)
-            sidsyn_note_on(&syn, c->arg);
-        else if (c->op == CMD_OFF)
-            sidsyn_note_off(&syn, c->arg);
-        else if (c->op == CMD_PATCH) {
-            sidsyn_set_patch(&syn, &SID_PATCHES[c->arg]);
-            syn_knobs();
-        } else
-            sidsyn_all_off(&syn);
+        uint32_t g = c->tgt;
+        if (c->op == CMD_ON) {
+            if (g == POLY)
+                sidsyn_note_on(&inst[POLY], c->arg);
+            else {
+                live[g] = 1;
+                trk_note(g, c->arg);
+            }
+        } else if (c->op == CMD_OFF) {
+            if (g == POLY)
+                sidsyn_note_off(&inst[POLY], c->arg);
+            else {
+                live[g] = 0;
+                if (trk_on[g] && (trk_patch[g] == KIT || trk_on[g] == c->arg))
+                    trk_note(g, 0);
+            }
+        } else if (c->op == CMD_PATCH) {
+            load_patch(g);
+        } else if (c->op == CMD_PARTS) {    /* the voices to the tracks, or back to the poly synth */
+            if (c->arg) {
+                sidsyn_all_off(&inst[POLY]);
+                for (i = 0; i < NTRK; i++)
+                    load_patch(i);
+            } else {
+                for (i = 0; i < NTRK; i++)
+                    trk_note(i, 0);
+                load_patch(POLY);
+            }
+            parts = c->arg;
+        } else if (c->op == CMD_SEQ) {
+            seq_on = c->arg;
+            if (c->arg) {
+                seq_pos = NSTEP - 1u;
+                seq_next = play_cyc;
+                seq_frac = 0;
+            } else {
+                for (i = 0; i < NTRK; i++)
+                    if (!live[i])
+                        trk_note(i, 0);
+            }
+        } else {
+            sidsyn_all_off(&inst[POLY]);
+            for (i = 0; i < NTRK; i++)
+                trk_note(i, 0);
+        }
         cmd_tail = t + 1;
     }
     if ((int32_t)(syn_next - play_cyc) < -(int32_t)PSID_PAL_FRAME)
         syn_next = play_cyc;                /* (after a pause) */
-    while ((int32_t)(syn_next - (play_cyc + HALF_CYC)) < 0) {
-        call_base = syn_next;
-        sidsyn_tick(&syn);
-        syn_next += PSID_PAL_FRAME;
+    if (seq_on && (int32_t)(seq_next - play_cyc) < -(int32_t)PSID_PAL_FRAME)
+        seq_next = play_cyc;
+    for (;;) {
+        uint32_t lim = play_cyc + HALF_CYC;
+        int step = seq_on && (int32_t)(seq_next - lim) < 0;
+        int frame = (int32_t)(syn_next - lim) < 0;
+        if (step && (!frame || (int32_t)(seq_next - syn_next) <= 0)) {
+            uint32_t q = step_q8() + seq_frac;
+            call_base = seq_next;
+            seq_fire();
+            seq_next += q >> 8;
+            seq_frac = q & 255u;
+        } else if (frame) {
+            call_base = syn_next;
+            if (parts)
+                for (i = 0; i < NTRK; i++)
+                    sidsyn_tick(&inst[i]);
+            else
+                sidsyn_tick(&inst[POLY]);
+            syn_next += PSID_PAL_FRAME;
+        } else {
+            break;
+        }
     }
 }
 
@@ -408,6 +575,7 @@ static void lcd_frame(void)
 #define C_DGREY  RGB(0x44, 0x44, 0x44)
 #define C_DARK   RGB(0x20, 0x18, 0x4c)
 #define C_ORANGE RGB(0xD8, 0x8C, 0x3C)
+#define C_DARK2  RGB(0x30, 0x26, 0x6a)
 
 static void fill(int x, int y, int w, int h, uint16_t c)
 {
@@ -487,6 +655,93 @@ static void badge(int x, int y, const char *s, int on, uint16_t c)
     text(x, y, s, on ? C_BLUE : C_DGREY);
 }
 
+static const char *trk_name(uint32_t t)
+{
+    return trk_patch[t] == KIT ? "DRUM KIT" : SID_PATCHES[trk_patch[t]].name;
+}
+
+static char *midi_name(char *p, uint32_t n)
+{
+    static const char *const N[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};
+    uint32_t o = n / 12u;
+    p = cat(p, N[n % 12u]);
+    *p++ = (char)('0' + (o ? (o - 1u > 9u ? 9u : o - 1u) : 0u));
+    *p = 0;
+    return p;
+}
+
+/* the sequencer's page: three tracks of 16 steps (a note's height in its cell is its pitch;
+ * the kit shows K / S / H), the step playing or the cursor, that step's notes, the knobs */
+static void draw_seq(void)
+{
+    static const uint16_t TC[3] = {C_LGREEN, C_CYAN, C_YELLOW};
+    static const char *const DRUM[3] = {"K", "S", "H"};
+    static const char *const KN[4] = {"CUT", "RES", "A", "R"};
+    char line[64], *p;
+    uint32_t t, s, at = seq_req ? seq_pos : cursor;
+    int x;
+    p = cat(line, "SEQ ");
+    p = fmt_u(p, bpm, 1);
+    cat(p, " BPM");
+    x = text(2, 17, line, C_WHITE) + 8;
+    x = text(x, 17, seq_req ? "PLAY" : "STOP", seq_req ? C_LGREEN : C_GREY) + 10;
+    if (rec)
+        badge(x, 17, "REC", 1, C_LRED);
+    p = cat(line, octave < 0 ? "Oct-" : "Oct+");
+    fmt_u(p, (uint32_t)(octave < 0 ? -octave : octave), 1);
+    text(240 - 8 * 5 - 2, 17, line, C_GREY);
+    for (t = 0; t < NTRK; t++) {
+        int y = 32 + (int)t * 40;
+        line[0] = t == sel ? '>' : ' ';
+        line[1] = (char)('1' + t);
+        line[2] = ' ';
+        line[3] = 0;
+        cat(line + 3, trk_name(t));
+        text(2, y, line, t == sel ? C_WHITE : C_GREY);
+        for (s = 0; s < NSTEP; s++) {
+            int cx = (int)s * 15, cy = y + 14;
+            uint32_t n = pat[t][s];
+            fill(cx, cy, 14, 22, s % 4u ? C_DARK : C_DARK2);
+            if (n && trk_patch[t] == KIT) {
+                fill(cx + 1, cy + 3, 12, 16, TC[t]);
+                text(cx + 3, cy + 5, DRUM[kit_drum(n) - 6u], C_BLUE);
+            } else if (n) {
+                int py = cy + 19 - (int)((n % 24u) * 15u / 24u);
+                fill(cx + 2, py - 3, 10, 4, TC[t]);
+            }
+            if (seq_req && s == seq_pos) {
+                fill(cx, cy, 14, 1, C_WHITE);
+                fill(cx, cy + 21, 14, 1, C_WHITE);
+            }
+            if (!seq_req && t == sel && s == cursor)
+                fill(cx, cy + 19, 14, 3, C_ORANGE);
+        }
+    }
+    p = cat(line, "STEP ");
+    p = fmt_u(p, at + 1u, 2);
+    for (t = 0; t < NTRK; t++) {
+        uint32_t n = pat[t][at];
+        p = cat(p, "  ");
+        if (!n)
+            p = cat(p, "---");
+        else if (trk_patch[t] == KIT)
+            p = cat(p, kit_drum(n) == 6u ? "KCK" : kit_drum(n) == 7u ? "SNR" : "HAT");
+        else
+            p = midi_name(p, n);
+    }
+    text(2, 154, line, C_WHITE);
+    x = 2;
+    for (t = 0; t < 4; t++) {
+        int32_t k = trk_knob[sel][t];
+        p = cat(line, KN[t]);
+        p = cat(p, k < 0 ? "-" : "+");
+        fmt_u(p, (uint32_t)(k < 0 ? -k : k), 1);
+        x = text(x, 168, line, C_CYAN) + 8;
+    }
+    text(2, 182, rec ? (seq_req ? "REC: keys land on the beat" : "REC: keys fill the cursor") :
+                       "PLAY run  REC record  GLO clr", C_GREY);
+}
+
 static void draw(void)
 {
     static const char *const WAVES[4] = {"T", "S", "P", "N"};
@@ -504,21 +759,34 @@ static void draw(void)
     fill(0, 0, 240, 14, C_LBLUE);
     text(2, 1, "FM-1 SID", C_WHITE);
     text(240 - 8 * 13 - 2, 1, engine ? "fm1-sid model" : "  reSID  0.16", C_YELLOW);
-    if (mode) {                            /* the patch, the knobs, the octave */
+    if (mode && seq_view) {
+        /* (the sequencer's page draws its own lines) */
+    } else if (mode) {                     /* the patch, the knobs, the octave */
         static const char *const KN[4] = {"CUT", "RES", "A", "R"};
         int x = 2;
-        text(text(2, 17, "SYNTH ", C_ORANGE), 17, SID_PATCHES[patch].name, C_WHITE);
+        const int32_t *kn = parts_req ? trk_knob[sel] : knob;
+        if (parts_req) {
+            line[0] = 'T'; line[1] = 'R'; line[2] = 'K'; line[3] = (char)('1' + sel); line[4] = ' '; line[5] = 0;
+            text(text(2, 17, line, C_ORANGE), 17, trk_name(sel), C_WHITE);
+        } else {
+            text(text(2, 17, "SYNTH ", C_ORANGE), 17, SID_PATCHES[patch].name, C_WHITE);
+        }
         for (i = 0; i < 4; i++) {
-            int32_t k = knob[i];
+            int32_t k = kn[i];
             p = cat(line, KN[i]);
             p = cat(p, k < 0 ? "-" : "+");
             p = fmt_u(p, (uint32_t)(k < 0 ? -k : k), 1);
             x = text(x, 30, line, C_CYAN) + 8;
         }
-        p = cat(line, "Patch ");
-        p = fmt_u(p, patch + 1u, 1);
-        p = cat(p, "/");
-        p = fmt_u(p, SID_NPATCHES, 1);
+        if (parts_req) {
+            p = cat(line, seq_req ? "Seq " : "Stop ");
+            p = fmt_u(p, bpm, 1);
+        } else {
+            p = cat(line, "Patch ");
+            p = fmt_u(p, patch + 1u, 1);
+            p = cat(p, "/");
+            p = fmt_u(p, SID_NPATCHES, 1);
+        }
         p = cat(p, octave < 0 ? " Oct-" : " Oct+");
         p = fmt_u(p, (uint32_t)(octave < 0 ? -octave : octave), 1);
         p = cat(p, model ? " 8580" : " 6581");
@@ -545,7 +813,11 @@ static void draw(void)
     p = cat(line, "CPU ");
     p = fmt_u(p, load, 1);
     cat(p, "%");
-    text(240 - 8 * 8, 43, line, C_GREY);
+    if (!(mode && seq_view))
+        text(240 - 8 * 8, 43, line, C_GREY);
+    if (mode && seq_view) {
+        draw_seq();
+    } else {
     /* voices */
     for (i = 0; i < 3; i++) {
         int y = 58 + (int)i * 36, w;
@@ -582,6 +854,7 @@ static void draw(void)
         bar(30, y + 16, 140, 7, fc, 2047, C_CYAN);
         text(176, y + 14, "RES", C_GREY);
         bar(202, y + 16, 36, 7, regs[0x17] >> 4, 15, C_ORANGE);
+    }
     }
     /* scope: the last 240 samples (every other one), scaled to the window's peak */
     {
@@ -636,7 +909,9 @@ static void start(uint32_t idx, int header)
     running = 1;
 }
 
-/* the synth mode: the chip fresh, the patch, the knobs */
+/* the synth mode: the chip fresh, the four driver instances, the patches and knobs; the
+ * sequencer's pattern, view and state carry over (an engine or chip change keeps it going) */
+
 static void start_synth(void)
 {
     uint32_t i;
@@ -657,49 +932,117 @@ static void start_synth(void)
     cmd_head = cmd_tail = 0;
     play_cyc = 0;
     cyc_frac = 0;
-    sidsyn_init(&syn, 1, model ? SID_8580 : SID_6581, FS_HZ);
-    syn.write = syn_write;
-    syn.env = syn_env;
     call_base = 0;
-    sidsyn_set_patch(&syn, &SID_PATCHES[patch]);   /* (the ISR is not running the synth yet) */
-    syn_knobs();
+    for (i = 0; i <= POLY; i++) {
+        sidsyn_init(&inst[i], 1, model ? SID_8580 : SID_6581, FS_HZ);
+        inst[i].write = syn_write;
+        inst[i].env = syn_env;
+        inst[i].user = (void *)(uintptr_t)i;
+        if (i < NTRK) {
+            sidsyn_set_voice(&inst[i], (int)i);
+            trk_on[i] = live[i] = 0;
+        }
+    }
+    seq_on = 0;
+    parts_req = parts = (uint8_t)(seq_view || seq_req || rec);
+    if (parts)                              /* (the ISR is not running the synth yet) */
+        for (i = 0; i < NTRK; i++)
+            load_patch(i);
+    else
+        load_patch(POLY);
     syn_next = PSID_PAL_FRAME;
     running = 1;
+    if (seq_req)
+        syn_cmd(CMD_SEQ, 1, 0);
+}
+
+/* a key's note into the selected track: at the nearest step while it runs, else at the cursor,
+ * which then moves on */
+static void record(uint32_t n)
+{
+    uint32_t s;
+    if (seq_req) {
+        uint32_t len = step_q8() >> 8, left = seq_next - play_cyc;
+        s = left > len / 2u ? seq_pos : (seq_pos + 1u) % NSTEP;
+    } else {
+        s = cursor;
+        cursor = (cursor + 1u) % NSTEP;
+    }
+    pat[sel][s] = (uint8_t)n;
 }
 
 /* the synth mode's controls; e: button press edges */
 static void synth_keys(uint32_t e)
 {
-    uint32_t cur = fm1_in.notes, held = syn_held, taps = fm1_input_note_edges() & ~cur & ~held, i;
-    int32_t step = fm1_enc_take(6) + fm1_enc_take(0);
+    uint32_t cur = fm1_in.notes, held = syn_held, taps = fm1_input_note_edges() & ~cur & ~held, i, tgt;
+    int32_t pre = fm1_enc_take(6), sl = fm1_enc_take(0), al = fm1_enc_take(1);
+    uint8_t want;
+    if (e & (1u << 11))                     /* SEQ: the sequencer's page */
+        seq_view = !seq_view;
+    if (e & (1u << 12)) {                   /* PLAY: run / stop */
+        seq_req = !seq_req;
+        if (seq_req)
+            cursor = 0;
+    }
+    if (e & (1u << 13))                     /* REC */
+        rec = !rec;
+    for (i = 0; i < NTRK; i++)              /* SCL ENV LFO: track 1 2 3 */
+        if (e & (1u << (3 + i)))
+            sel = i;
+    if (e & (1u << 7))                      /* GLO: clear the step */
+        pat[sel][seq_req ? seq_pos : cursor] = 0;
+    if (e & (1u << 10))                     /* ARP: clear the track */
+        for (i = 0; i < NSTEP; i++)
+            pat[sel][i] = 0;
+    want = (uint8_t)(seq_view || seq_req || rec);
+    if (want != parts_req) {
+        parts_req = want;
+        syn_cmd(CMD_PARTS, want, 0);
+    }
+    if (e & (1u << 12))
+        syn_cmd(CMD_SEQ, seq_req, 0);
+    tgt = parts_req ? sel : POLY;
     for (i = 0; i < 27; i++) {
         uint32_t bit = 1u << i;
         if ((cur & ~held & bit) || (taps & bit)) {   /* a press (a tap: pressed and gone again) */
             int32_t n = 53 + (int32_t)i + 12 * octave;
             key_note[i] = (uint8_t)n;
-            syn_cmd(CMD_ON, (uint32_t)n);
+            key_tgt[i] = (uint8_t)tgt;
+            syn_cmd(CMD_ON, (uint32_t)n, tgt);
+            if (rec && tgt < NTRK)
+                record((uint32_t)n);
         }
         if ((held & ~cur & bit) || (taps & bit))
-            syn_cmd(CMD_OFF, key_note[i]);
+            syn_cmd(CMD_OFF, key_note[i], key_tgt[i]);
     }
     syn_held = cur;
-    if (step) {
-        patch = (patch + SID_NPATCHES * 8u + (uint32_t)step) % SID_NPATCHES;
+    if (seq_view && sl && !seq_req)         /* SELECT on the sequencer's page: the cursor */
+        cursor = (cursor + NSTEP * 8u + (uint32_t)sl) % NSTEP;
+    else
+        pre += sl;
+    if (pre && parts_req) {                 /* PRESETS: the track's patch (or the drum kit) */
+        trk_patch[sel] = (uint8_t)((trk_patch[sel] + (KIT + 1u) * 8u + (uint32_t)pre) % (KIT + 1u));
+        trk_knob[sel][0] = trk_knob[sel][1] = trk_knob[sel][2] = trk_knob[sel][3] = 0;
+        syn_cmd(CMD_PATCH, 0, sel);
+    } else if (pre) {                       /* PRESETS: the polyphonic synth's patch */
+        patch = (patch + SID_NPATCHES * 8u + (uint32_t)pre) % SID_NPATCHES;
         knob[0] = knob[1] = knob[2] = knob[3] = 0;
-        syn_cmd(CMD_PATCH, patch);
+        syn_cmd(CMD_PATCH, 0, POLY);
+    }
+    if (al) {                               /* ALGORITHM: the tempo */
+        int32_t b = (int32_t)bpm + 2 * al;
+        bpm = (uint32_t)(b < 40 ? 40 : b > 240 ? 240 : b);
     }
     if (e & (1u << 1) && octave < 2) octave++;
     if (e & (1u << 0) && octave > -2) octave--;
-    if (e & (1u << 12))
-        syn_cmd(CMD_ALLOFF, 0);
     for (i = 0; i < 4; i++) {
-        int32_t d = fm1_enc_take(2 + i), lim = i ? 15 : 64;
+        int32_t d = fm1_enc_take(2 + i), lim = i ? 15 : 64, *k = parts_req ? trk_knob[sel] : knob;
         if (!d)
             continue;
-        knob[i] += d;
-        if (knob[i] > lim) knob[i] = lim;
-        if (knob[i] < -lim) knob[i] = -lim;
-        syn_knobs();
+        k[i] += d;
+        if (k[i] > lim) k[i] = lim;
+        if (k[i] < -lim) k[i] = -lim;
+        syn_knobs(parts_req ? sel : POLY);
     }
 }
 

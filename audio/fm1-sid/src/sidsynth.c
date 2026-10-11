@@ -97,7 +97,7 @@ static void chip_filter(sidsyn_t *y, uint32_t c)
     fc = fc < 0 ? 0 : fc > 2047 ? 2047 : fc;
     cw(y, c, SID_FC_LO, (uint32_t)fc & 7u);
     cw(y, c, SID_FC_HI, (uint32_t)fc >> 3);
-    cw(y, c, SID_RES_FILT, (uint32_t)y->p.res << 4 | (y->p.filter ? 7u : 0u));
+    cw(y, c, SID_RES_FILT, (uint32_t)y->p.res << 4 | (y->p.filter ? (y->voice >= 0 ? 1u << y->voice : 7u) : 0u));
     cw(y, c, SID_MODE_VOL, y->p.filter | y->vol);
 }
 
@@ -121,7 +121,7 @@ static void voice_regs(sidsyn_t *y, syn_voice_t *v)
         wr(y, v, SID_CTRL, ctrl);
         v->ctrl = (uint8_t)ctrl;
     }
-    if (p->mod) {                                     /* voice 3: the silent sync / ring source */
+    if (p->mod && y->voice < 0) {                     /* voice 3: the silent sync / ring source */
         fr = note_reg(((int32_t)v->note + y->transpose + p->mod_note) * 256);
         cw(y, v->chip, 14 + SID_FREQ_LO, fr & 0xFFu);
         cw(y, v->chip, 14 + SID_FREQ_HI, fr >> 8);
@@ -154,17 +154,18 @@ void sidsyn_set_patch(sidsyn_t *y, const sid_patch_t *p)
     uint32_t i, c;
     sidsyn_all_off(y);
     y->p = *p;
-    y->nslots = p->mod ? y->nchips : y->nchips * 3u;
+    y->nslots = y->voice >= 0 ? 1u : p->mod ? y->nchips : y->nchips * 3u;
     for (i = 0; i < y->nslots; i++) {
         syn_voice_t *v = &y->v[i];
-        v->chip = (uint8_t)(p->mod ? i : i / 3u);
-        v->idx = (uint8_t)(p->mod ? 0u : i % 3u);
+        v->chip = (uint8_t)(y->voice >= 0 ? 0u : p->mod ? i : i / 3u);
+        v->idx = (uint8_t)(y->voice >= 0 ? (uint32_t)y->voice : p->mod ? 0u : i % 3u);
         v->busy = v->held = v->hr_left = 0;
         v->ctrl = 0;
     }
     for (c = 0; c < y->nchips; c++) {
         for (i = 0; i < 3; i++)
-            cw(y, c, i * 7u + SID_CTRL, 0);
+            if (y->voice < 0 || (int)i == y->voice)
+                cw(y, c, i * 7u + SID_CTRL, 0);
         y->cut[c] = p->cutoff;
         chip_filter(y, c);
     }
@@ -187,12 +188,21 @@ void sidsyn_init(sidsyn_t *y, uint32_t nchips, sid_model_t model, uint32_t fs)
     y->cut_ofs = 0;
     y->transpose = 0;
     y->vol = 15;
+    y->voice = -1;
     y->write = 0;
     y->env = 0;
     y->user = 0;
     for (c = 0; c < nchips; c++)
         sid_init(&y->chip[c], model, SID_CLOCK_PAL, fs);
     sidsyn_set_patch(y, &SID_PATCHES[0]);
+}
+
+void sidsyn_set_voice(sidsyn_t *y, int voice)
+{
+    sid_patch_t p = y->p;
+    sidsyn_all_off(y);
+    y->voice = (int8_t)(voice < 0 || voice > 2 ? -1 : voice);
+    sidsyn_set_patch(y, &p);
 }
 
 void sidsyn_note_on(sidsyn_t *y, uint32_t note)

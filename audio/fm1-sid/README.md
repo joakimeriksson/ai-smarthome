@@ -19,9 +19,10 @@ instruktioner per sampel (8 % av en kärna per chip), ger bit för bit samma lju
 som på datorn och har uppmätta vågformstabeller och filterkurvor från riktiga chip. Den
 egna modellen är billigare men sämre. reSIDs högkvalitetslägen (resample, utan aliasing)
 klockar chipet cykel för cykel och kostar 1–7 kärnor; reSID 1.0 och reSIDfp ryms inte alls i
-FM-1:ans ~512 KB RAM (17–21 MB tabeller). Synthlagret (`sidsynth`) är det som är nytt här och
-behålls ovanpå reSID. På vägen hittades och lagades fyra fel i FM-1-emulatorn (64-bitars
-carry, flaggor, multiply-accumulate och push/pop-masker), som gjorde all `double`-räkning fel.
+FM-1 (8–21 MB filtertabeller per chipmodell, mot 1 MB flash totalt). Synthlagret (`sidsynth`) är det som är nytt här och
+behålls ovanpå reSID. På vägen hittades fyra fel i FM-1-emulatorn (64-bitars carry, flaggor,
+multiply-accumulate och push/pop-masker) som gjorde all `double`-räkning fel; fixarna ligger
+i PR #31.
 
 ## Short answer
 
@@ -40,15 +41,18 @@ for pi32v2 (`fm1/bench_resid.cc`, `fm1/run_resid.py`).
 
 | engine | FM-1 instr / sample | of a 240 MHz core | RAM | host ms per s of audio | verdict |
 |---|---:|---:|---|---:|---|
-| own (`src/sid.c`) | 316 | 5.8 % | ~33 KB (combined-wave tables) | 2.4 | fits, lowest fidelity |
-| reSID 0.16 fast | 440 | 8.1 % | 17 KB + 128 KB wave tables (can be `const`) | 3.1 | **fits: use this** |
-| reSID 0.16 interpolate | 5,562 | 102 % | 17 KB + 128 KB | 27.9 | too heavy |
-| reSID 0.16 resample | 39,226 | 721 % | 167 KB + 128 KB | 133 | far too heavy |
-| reSID 1.0 resample | – | – | 17 MB static filter tables | 117 | does not fit |
-| reSIDfp resample | – | – | 21 MB (6581 filter model), `std::thread` | 72 | does not fit |
+| own (`src/sid.c`) | 316 | 5.8 % | ~1 KB RAM + 32 KB tables | 2.4 | fits, lowest fidelity |
+| reSID 0.16 fast | 440 | 8.1 % | 17 KB RAM + 128 KB tables | 3.1 | **fits: use this** |
+| reSID 0.16 interpolate | 5,562 | 102 % | 17 KB RAM + 128 KB tables | 27.9 | too heavy |
+| reSID 0.16 resample | 39,226 | 721 % | 167 KB RAM + 128 KB tables | 133 | far too heavy |
+| reSID 1.0 resample | – | – | 8.3 MB of filter tables per chip model | 117 | does not fit |
+| reSIDfp resample | – | – | ~21 MB of filter tables per chip model, `std::thread` | 72 | does not fit |
 
 Per SID chip (3 voices + filter), 44.1 kHz. Host: one core of an Intel Xeon at 2.1 GHz.
-FM-1 outputs equal the host's bit for bit for every row with a number.
+FM-1 outputs equal the host's bit for bit for every row with a number. Tables are constant
+after init, so they can live in flash (XIP) instead of RAM: reSID 0.16's 128 KB of wave
+tables and the own model's 32 KB fit easily. The FM-1 has 1 MB of flash in all (~568 KB for
+the app), so the 8-21 MB filter tables of reSID 1.0 and reSIDfp do not fit there either.
 
 What the listening shows (`tools/compare.sh`, `tools/listen.py`, level-matched to -20 dBFS):
 
@@ -63,15 +67,16 @@ Next quality step that fits: reSID 0.16 fast at 2x the output rate with a half-b
 decimator (about 2x the cost, ~16 % of a core per chip) to push most aliasing out of the
 audible band; to be measured.
 
-### Emulator fixes found on the way (`../fm-1`)
+### Emulator fixes found on the way (`../fm-1`, PR #31)
 
 reSID's `double` setup came out wrong on the emulator; tracing it found four gaps in
-`fm1-core` (details in `../fm-1/docs/isa-notes.md`, probes in `fm1/probes/`, `run.sh`):
-no arithmetic flags (64-bit add lost its carry, 64-bit subtract always borrowed, 64-bit
-compares read psr = 0), the add / subtract-with-carry classes fitted to the corpus registers
-only, the 64-bit multiply-accumulate `fc e1`, and rets + register-mask push / pop for masks
-the corpora never had. With those fixed, compiler-rt's soft double and libm's `sin` agree with
-the host and reSID is bit-exact on the emulator.
+`fm1-core`: no arithmetic flags (64-bit add lost its carry, 64-bit subtract always
+borrowed, 64-bit compares read psr = 0), the add / subtract-with-carry classes fitted to the
+corpus registers only, the 64-bit multiply-accumulate `fc e1`, and rets + register-mask
+push / pop for masks the corpora never had. The fixes, their probes and notes are in
+[PR #31](https://github.com/joakimeriksson/ai-smarthome/pull/31) (branch
+`fm-1-flags-carry`). Until it is merged, `fm1/run_resid.py` needs an `fm1-emu` built from
+that branch; `fm1/run.py` (the own model, integer only) runs on either.
 
 ## Measured (own model)
 
@@ -112,7 +117,6 @@ fm1/bench.c, crt0.S,      bare-metal pi32v2 program for the emulator
 fm1/run.py                build + run on the emulated FM-1 + compare + report
 fm1/bench_resid.cc,       reSID 0.16 replaying the workload's register stream on the FM-1
   bench_resid.ld, build_resid.sh, run_resid.py, sidlog2h.py
-fm1/probes/               64-bit / soft-double probes for the emulator fixes (run.sh)
 host/replay.cc,           one register stream on every engine (own, reSID 0.16 / 1.0, reSIDfp)
   engines.h, eng_*.cc
 tools/fetch_ext.sh        fetch reSID 0.16, reSID 1.0, reSIDfp into ext/ (GPL, not in the repo)

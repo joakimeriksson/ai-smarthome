@@ -103,10 +103,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
 
   <section aria-labelledby="cost-h">
     <h2 id="cost-h">Vad det kostar på FM-1</h2>
-    <p class="muted">Instruktioner per utsampel för ett SID-chip (3 röster och filter), uppmätt i <span class="mono">fm1-emu</span>. Andelen räknar en instruktion per cykel vid 240 MHz. Ljudet från FM-1-bygget är bit för bit identiskt med värddatorns för alla rader med ett mätvärde.</p>
+    <p class="muted">Instruktioner per utsampel för ett SID-chip (3 röster och filter), uppmätt i <span class="mono">fm1-emu</span>. Andelen räknar en instruktion per cykel vid 240 MHz. Ljudet från FM-1-bygget är bit för bit identiskt med värddatorns för alla rader med ett mätvärde. Tabellerna kan ligga i flash, men FM-1 har bara 1 MB flash totalt.</p>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Motor</th><th>Instr / sampel</th><th>Av en kärna</th><th>RAM</th><th>Värd, ms per s ljud</th><th>På FM-1</th></tr></thead>
+        <thead><tr><th>Motor</th><th>Instr / sampel</th><th>Av en kärna</th><th>Minne</th><th>Värd, ms per s ljud</th><th>På FM-1</th></tr></thead>
         <tbody id="cost-body"></tbody>
       </table>
     </div>
@@ -156,14 +156,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
 
 <script>
 const ENGINES = [
-  { id: "own", name: "Egen (fm1-sid)", fm1: 316, core: 5.8, ram: "≈ 33 KB", host: 2.4, verdict: ["ryms", "v-ok"] },
-  { id: "r016-fast", name: "reSID 0.16 fast", fm1: 440, core: 8.1, ram: "17 KB + 128 KB tabeller", host: 3.1, verdict: ["ryms", "v-ok"] },
-  { id: "r016-resample", name: "reSID 0.16 resample", fm1: 39226, core: 720.8, ram: "167 KB + 128 KB tabeller", host: 133, verdict: ["7 kärnor", "v-bad"] },
-  { id: "r10-resample", name: "reSID 1.0 resample", fm1: null, fm1txt: "–", core: null, coretxt: "–", ram: "17 MB statiska tabeller", host: 117, verdict: ["ryms inte", "v-bad"] },
-  { id: "rfp-resample", name: "reSIDfp resample", fm1: null, fm1txt: "–", core: null, coretxt: "–", ram: "21 MB (6581-filtret), std::thread", host: 72, verdict: ["ryms inte", "v-bad"] },
+  { id: "own", name: "Egen (fm1-sid)", fm1: 316, core: 5.8, ram: "1 KB RAM + 32 KB tabeller", host: 2.4, verdict: ["ryms", "v-ok"] },
+  { id: "r016-fast", name: "reSID 0.16 fast", fm1: 440, core: 8.1, ram: "17 KB RAM + 128 KB tabeller", host: 3.1, verdict: ["ryms", "v-ok"] },
+  { id: "r016-resample", name: "reSID 0.16 resample", fm1: 39226, core: 720.8, ram: "167 KB RAM + 128 KB tabeller", host: 133, verdict: ["7 kärnor", "v-bad"] },
+  { id: "r10-resample", name: "reSID 1.0 resample", fm1: null, fm1txt: "–", core: null, coretxt: "–", ram: "8,3 MB tabeller per chipmodell", host: 117, verdict: ["ryms inte", "v-bad"] },
+  { id: "rfp-resample", name: "reSIDfp resample", fm1: null, fm1txt: "–", core: null, coretxt: "–", ram: "≈ 21 MB tabeller per chipmodell, std::thread", host: 72, verdict: ["ryms inte", "v-bad"] },
 ];
 const EXTRA_ROWS = [
-  { name: "reSID 0.16 interpolate", fm1: 5562, core: 102.2, ram: "17 KB + 128 KB tabeller", host: 27.9, verdict: ["för tung", "v-bad"] },
+  { name: "reSID 0.16 interpolate", fm1: 5562, core: 102.2, ram: "17 KB RAM + 128 KB tabeller", host: 27.9, verdict: ["för tung", "v-bad"] },
 ];
 const PIECES = [
   ["song_6581", "Låt, 4 chip (6581)", "Bas, ackord-arpeggio, sync-lead och trummor: fyra SID-chip mixade."],

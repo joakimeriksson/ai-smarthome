@@ -1,5 +1,5 @@
 {
-  "note": "Community firmwares for the M-VAVE FM-1 (list: fm1-editor.com/firmware). The web page fetches each package from its author's site (when the version moved on: the package the installer page names now) and unpacks it with web/fwsc.js; tools/fetch_firmwares.mjs does the same into reference/firmwares/<id>.xip.bin for fm1-live. All load at 0x02000120.",
+  "note": "Community firmwares for the M-VAVE FM-1 (list: fm1-editor.com/firmware), plus this repository's FM-1 SID (audio/fm1-sid). The web page fetches each package from its author's site (when the version moved on: the package the installer page names now) and unpacks it with web/fwsc.js; tools/fetch_firmwares.mjs does the same into reference/firmwares/<id>.xip.bin for fm1-live. All load at 0x02000120.",
   "default": "felucca",
   "firmwares": [
     { "id": "felucca", "name": "Felucca", "version": "1.5.1", "author": "hugelton", "license": "GPL-3.0",
@@ -62,6 +62,10 @@
       "repo": "https://github.com/hericdk/fm1-quest",
       "package": "https://hericdk.github.io/fm1-quest/firmware/fm1-quest-15.fwsc",
       "installer": "https://hericdk.github.io/fm1-quest/webapp/installer/" },
+    { "id": "sid", "name": "FM-1 SID", "version": "0.1", "author": "joakimeriksson", "license": "GPL-3.0",
+      "about": "A SID chip on the FM-1: reSID 0.16 and a 6502 run C64 tunes, its own tune plays at boot. HOME turns it into a SID synth: the keys play 12 instruments, KNOB1-4 are cutoff, resonance, attack, release. Built in this repository (audio/fm1-sid), not on fm1-editor.com's list; its own page plays all of HVSC: joakimeriksson.github.io/ai-smarthome/fm1-sid/",
+      "repo": "https://github.com/joakimeriksson/ai-smarthome/tree/master/audio/fm1-sid",
+      "package": "https://joakimeriksson.github.io/ai-smarthome/fm1-sid/sidplayer.fwsc" },
     { "id": "sloop", "name": "SLOOP", "version": "2.5", "author": "isod89", "license": "GPL-3.0",
       "about": "A live groovebox: four looping tracks.",
       "repo": "https://github.com/isod89/sloop-fm1",

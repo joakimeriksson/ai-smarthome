@@ -265,7 +265,7 @@ addEventListener("keyup", (e) => {
 });
 
 // ---------------------------------------------------------------- audio: start on a click
-let ac = null, last = null, bootSeq = 0;
+let ac = null, last = null, bootSeq = 0, booting = 0;
 
 // (re)boot the machine in the audio thread with the selected firmware and clock
 async function boot() {
@@ -282,10 +282,14 @@ async function boot() {
   if (seq !== bootSeq) return;                     // another choice came in meanwhile
   loadedUrl = got.url;
   showFirmware();
-  down.fill(0);                                    // nothing held across a reboot
+  down.fill(0);                                    // nothing held or turned across a reboot
+  holds.fill(0);
+  pointers.clear();
+  encClicks.fill(0);
   frame = null;
   last = null;
-  node.port.postMessage({ type: "boot", wasm: wasm.slice(0), package: got.bytes.slice().buffer,
+  booting = seq;                                   // (frames of the old machine still on their way)
+  node.port.postMessage({ type: "boot", seq, wasm: wasm.slice(0), package: got.bytes.slice().buffer,
     syx: bank ? bank.slice().buffer : null, mhz });
   status.textContent = `booting ${f.name}…`;
 }
@@ -303,7 +307,11 @@ startBtn.addEventListener("click", async () => {
       status.textContent = `${fw.name}: ${m.message}`;
       return;
     }
-    if (m.type !== "frame") return;
+    if (m.type === "booted") {
+      if (m.seq === bootSeq) booting = 0;
+      return;
+    }
+    if (m.type !== "frame" || booting) return;
     frame = m;
     const now = performance.now();
     if (!last || now - last.t > 1000) {

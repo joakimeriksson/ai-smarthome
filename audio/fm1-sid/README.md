@@ -6,26 +6,74 @@ on the **MOS 6581 / 8580 SID**, the Commodore 64's sound chip?
 
 ## Summary (svenska)
 
-**Ja, det går, och med god marginal.** I katalogen finns en egen, registernivå-modell av
-SID-chipet (6581 och 8580) i heltals-C, och ett synthlager ovanpå som spelar den som C64-musik
-gör (50 Hz-ramar, vågformstabeller, PWM- och filtersvep, sync/ring, hard restart). Samma kod
-kompileras med JieLis verktygskedja för FM-1:ans pi32v2-CPU och körs i FM-1-emulatorn i
-`../fm-1`. Den ger **bit för bit samma ljud** som på värddatorn och kostar **~320 instruktioner
-per sampel och SID-chip** (3 röster + filter) vid 44,1 kHz, alltså **~6 % av en
-240 MHz-kärna per chip**. Fyra chip (12 röster) ryms på ~25 %. Rekommenderad väg vidare: en
-ny SID-motor i Felucca (GPL-firmware som redan har UI, sequencer, MIDI och installation),
-därefter ev. en egen firmware och en `.sid`-spelare (6502-emulering är billig i
-sammanhanget).
+**Ja, det går.** Två saker är utredda:
+
+1. **Egen SID-modell** (`src/sid.c`, heltals-C) plus ett synthlager som spelar chipet som
+   C64-musik gör (`src/sidsynth.c`: 50 Hz-ramar, vågformstabeller, PWM- och filtersvep,
+   sync/ring, hard restart). ~320 instruktioner per sampel och chip på FM-1, ~6 % av en kärna.
+2. **Jämförelse med de färdiga motorerna** reSID 0.16, reSID 1.0 och reSIDfp: samma
+   registerström genom alla, kostnad uppmätt på emulerad FM-1, ljud nivåmatchat för lyssning.
+
+Slutsats: **reSID 0.16 i "fast"-läge är rätt chipmotor för FM-1.** Den kostar 440
+instruktioner per sampel (8 % av en kärna per chip), ger bit för bit samma ljud på FM-1
+som på datorn och har uppmätta vågformstabeller och filterkurvor från riktiga chip. Den
+egna modellen är billigare men sämre. reSIDs högkvalitetslägen (resample, utan aliasing)
+klockar chipet cykel för cykel och kostar 1–7 kärnor; reSID 1.0 och reSIDfp ryms inte alls i
+FM-1:ans ~512 KB RAM (17–21 MB tabeller). Synthlagret (`sidsynth`) är det som är nytt här och
+behålls ovanpå reSID. På vägen hittades och lagades fyra fel i FM-1-emulatorn (64-bitars
+carry, flaggor, multiply-accumulate och push/pop-masker), som gjorde all `double`-räkning fel.
 
 ## Short answer
 
-Yes. The SID model in `src/` runs on the FM-1's CPU (built with the vendor toolchain, run in
-the `fm1-emu` emulator) bit-identical to the host build, at about **320 instructions per
-sample per SID chip** — three voices, envelopes, the filter and the instrument driver —
-which is **~6 % of one 240 MHz core per chip**. CPU is not the constraint; the work is in
-the instrument design and the firmware integration.
+Yes. A SID chip costs **~8 % of one 240 MHz core with reSID 0.16 (fast mode)** and ~6 % with
+the model written here, measured on the emulated FM-1 and bit-identical to the host builds.
+**Use reSID 0.16 for the chip** (real combined-waveform tables, measured filter curves, years
+of use in VICE / sidplay); keep `sidsynth` (the instrument driver) on top. The high-quality,
+alias-free modes of reSID and the newer engines do not fit the FM-1 (see the comparison).
 
-## Measured
+## Engine comparison: own model, reSID 0.16, reSID 1.0, reSIDfp
+
+The demo pieces' register streams are recorded (`host/demo.c record`: every write with its
+sample position) and replayed on every engine, each clocked to the exact cycle of each write
+(`host/replay.cc`). On the FM-1 the bench workload's stream replays through reSID 0.16 built
+for pi32v2 (`fm1/bench_resid.cc`, `fm1/run_resid.py`).
+
+| engine | FM-1 instr / sample | of a 240 MHz core | RAM | host ms per s of audio | verdict |
+|---|---:|---:|---|---:|---|
+| own (`src/sid.c`) | 316 | 5.8 % | ~33 KB (combined-wave tables) | 2.4 | fits, lowest fidelity |
+| reSID 0.16 fast | 440 | 8.1 % | 17 KB + 128 KB wave tables (can be `const`) | 3.1 | **fits: use this** |
+| reSID 0.16 interpolate | 5,562 | 102 % | 17 KB + 128 KB | 27.9 | too heavy |
+| reSID 0.16 resample | 39,226 | 721 % | 167 KB + 128 KB | 133 | far too heavy |
+| reSID 1.0 resample | – | – | 17 MB static filter tables | 117 | does not fit |
+| reSIDfp resample | – | – | 21 MB (6581 filter model), `std::thread` | 72 | does not fit |
+
+Per SID chip (3 voices + filter), 44.1 kHz. Host: one core of an Intel Xeon at 2.1 GHz.
+FM-1 outputs equal the host's bit for bit for every row with a number.
+
+What the listening shows (`tools/compare.sh`, `tools/listen.py`, level-matched to -20 dBFS):
+
+- **Aliasing**: the own model and reSID fast both sample the waveforms at 44.1 kHz; high notes
+  get folded partials (spectrograms of the high chord: a dense floor between the harmonics).
+  The resample modes are clean, at 15–90x the cost.
+- **6581 filter**: reSID 1.0 / reSIDfp model its non-linearity; reSID 0.16 has the measured
+  cutoff curve without distortion; the own model has an approximate curve.
+- **Combined waveforms**: reSID plays tables sampled from real chips; the own model guesses.
+
+Next quality step that fits: reSID 0.16 fast at 2x the output rate with a half-band
+decimator (about 2x the cost, ~16 % of a core per chip) to push most aliasing out of the
+audible band; to be measured.
+
+### Emulator fixes found on the way (`../fm-1`)
+
+reSID's `double` setup came out wrong on the emulator; tracing it found four gaps in
+`fm1-core` (details in `../fm-1/docs/isa-notes.md`, probes in `fm1/probes/`, `run.sh`):
+no arithmetic flags (64-bit add lost its carry, 64-bit subtract always borrowed, 64-bit
+compares read psr = 0), the add / subtract-with-carry classes fitted to the corpus registers
+only, the 64-bit multiply-accumulate `fc e1`, and rets + register-mask push / pop for masks
+the corpora never had. With those fixed, compiler-rt's soft double and libm's `sin` agree with
+the host and reSID is bit-exact on the emulator.
+
+## Measured (own model)
 
 `fm1/run.py` builds the bench (`fm1/bench.c` + `fm1/workload.h`: a held chord on every
 voice, SAW LEAD patch with the filter and vibrato, a chord change halfway, rendered in
@@ -62,6 +110,15 @@ fm1/workload.h            the bench workload (shared by host and FM-1 builds)
 fm1/bench.c, crt0.S,      bare-metal pi32v2 program for the emulator
   bench.ld, build.sh
 fm1/run.py                build + run on the emulated FM-1 + compare + report
+fm1/bench_resid.cc,       reSID 0.16 replaying the workload's register stream on the FM-1
+  bench_resid.ld, build_resid.sh, run_resid.py, sidlog2h.py
+fm1/probes/               64-bit / soft-double probes for the emulator fixes (run.sh)
+host/replay.cc,           one register stream on every engine (own, reSID 0.16 / 1.0, reSIDfp)
+  engines.h, eng_*.cc
+tools/fetch_ext.sh        fetch reSID 0.16, reSID 1.0, reSIDfp into ext/ (GPL, not in the repo)
+tools/compare.sh          record every demo piece, replay on every engine -> build/cmp/
+tools/listen.py,          level-matched MP3s, spectrograms and the A/B page -> build/listen/
+  listen.html
 ```
 
 ```sh
@@ -69,6 +126,8 @@ make test                 # self tests
 make wav                  # build/patch_*.wav (every patch, 8580) and build/song_{6581,8580}.wav
 make bench                # host timing
 fm1/run.py [chips...]     # the FM-1 measurement (needs the toolchain and ../fm-1's emulator)
+tools/fetch_ext.sh && make build/sid_record build/sid_replay && tools/compare.sh && tools/listen.py
+fm1/run_resid.py [0 1 2]  # reSID 0.16 fast / interpolate / resample on the FM-1 (after compare.sh)
 ```
 
 `fm1/run.py` needs `../fm-1/target/release/fm1-emu` (`cargo build --release -p fm1-emu` in
@@ -171,21 +230,22 @@ takes any length).
 
 ## Limits and open questions
 
-- **Aliasing.** The model computes the raw waveforms at 44.1 kHz; the real chip outputs at
-  ~1 MHz and the analogue path filters it. High notes on saw / pulse / noise alias more than
-  the real chip. Remedies: polyBLEP on saw / pulse edges (Felucca's TRIO engine does this) or
-  2x oversampling of the oscillators; both fit the budget. Not done yet.
-- **Combined waveforms** are modelled, not measured. Real tables (as sampled from chips by
-  the reSID authors) are GPL; measuring our own needs a real C64 / SID.
-- **6581 filter**: approximate cutoff curve, no distortion model.
+- **Aliasing** (own model and reSID fast alike): the waveforms are sampled at 44.1 kHz,
+  while the real chip runs at ~1 MHz into an analogue filter. The alias-free reSID modes cost
+  1-7 cores. In between: reSID fast at 2x rate + a half-band decimator, or polyBLEP edges
+  in the own model; to be measured.
+- **Licence**: reSID is GPL-2.0-or-later, so a firmware using it is GPL (as Felucca is).
+  The own model stays BSD.
+- **6581 filter distortion** is only in reSID 1.0 / reSIDfp, which do not fit.
 - **Cycles, not instructions**: confirm on hardware once the FM-1 arrives (the emulator does
-  not model cycle timing yet).
-- The FM-1 itself has not been tested with this code — only its emulator.
+  not model cycle timing; reSID's integer code and the own model run mostly single-cycle ops).
+- The FM-1 itself has not run this code, only its emulator (which needed four fixes for it).
 
 ## Next steps
 
-1. polyBLEP / oversampling for the oscillators; measure the cost on the emulator.
-2. Felucca engine (path A): `eng_sid.c`, build Felucca with the toolchain, play it in
+1. reSID 0.16 (fast) as the chip under `sidsynth`; its wave tables as `const` in flash.
+2. Measure reSID fast at 88.2 kHz + half-band decimation against the alias-free modes.
+3. Felucca engine (path A): `eng_sid.c`, build Felucca with the toolchain, play it in
    `fm1-live` and the web emulator.
-3. On the real FM-1 when it arrives: cycle cost, sound check against a real C64.
-4. Optional: the 6502 + PSID player (path C), a tracker UI (path B).
+4. On the real FM-1 when it arrives: cycle cost, sound check against a real C64.
+5. Optional: the 6502 + PSID player (path C), a tracker UI (path B).

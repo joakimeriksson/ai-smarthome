@@ -353,8 +353,117 @@ static int wavs(const char *dir)
 }
 
 /* ---------------------------------------------------------------------------------------- */
-/* the bench workload (shared with fm1/bench.c): one chip, three voices + filter, 1 s */
+/* the bench workload (shared with fm1/bench.c): one chip, three voices + filter, 0.25 s */
 #include "../fm1/workload.h"
+
+#ifdef SID_LOG
+/* ---------------------------------------------------------------------------------------- */
+/* record: the register stream of every demo piece, for host/replay.cc to play on reSID,
+ * reSID 1.0 and reSIDfp. File (little-endian): "SIDLOG1\0", then u32 model, fs, clock,
+ * chips, samples, events, mix (Q8 per chip), then per event u32 sample, u8 chip, reg, val, 0.
+ * Each chip keeps its own sample count: a write at sample k lands before that chip's
+ * sample k, wherever the demo renders it from. */
+#define LOG_MAX 400000
+static struct { const sid_t *s; uint32_t pos; } lchip[8];
+static uint32_t lnchips;
+static struct { uint32_t pos; uint8_t chip, reg, val, pad; } lev[LOG_MAX];
+static uint32_t lnev;
+
+static uint32_t lchip_of(const sid_t *s)
+{
+    uint32_t i;
+    for (i = 0; i < lnchips; i++)
+        if (lchip[i].s == s)
+            return i;
+    fprintf(stderr, "record: unknown chip\n");
+    exit(1);
+}
+static void log_init(const sid_t *s)
+{
+    uint32_t i;
+    for (i = 0; i < lnchips; i++)
+        if (lchip[i].s == s) {
+            lchip[i].pos = 0;
+            return;
+        }
+    lchip[lnchips].s = s;
+    lchip[lnchips++].pos = 0;
+}
+static void log_write(const sid_t *s, uint32_t reg, uint32_t val)
+{
+    uint32_t c = lchip_of(s);
+    if (lnev >= LOG_MAX) {
+        fprintf(stderr, "record: log full\n");
+        exit(1);
+    }
+    lev[lnev].pos = lchip[c].pos;
+    lev[lnev].chip = (uint8_t)c;
+    lev[lnev].reg = (uint8_t)reg;
+    lev[lnev].val = (uint8_t)val;
+    lev[lnev++].pad = 0;
+}
+static void log_render(const sid_t *s, uint32_t n) { lchip[lchip_of(s)].pos += n; }
+
+static void log_save(const char *path, uint32_t model, uint32_t samples, uint32_t mix)
+{
+    FILE *f = fopen(path, "wb");
+    uint32_t h[7] = {model, FS, SID_CLOCK_PAL, lnchips, samples, lnev, mix};
+    if (!f) {
+        perror(path);
+        exit(1);
+    }
+    fwrite("SIDLOG1", 1, 8, f);
+    fwrite(h, 4, 7, f);
+    fwrite(lev, 8, lnev, f);
+    fclose(f);
+    printf("  %s (%u chips, %u writes)\n", path, lnchips, lnev);
+}
+
+static int record(const char *dir)
+{
+    static int32_t buf[FS * 40];
+    static sidsyn_t y;
+    char path[512];
+    uint32_t p, n, m;
+    sid_log_init = log_init;
+    sid_log_write = log_write;
+    sid_log_render = log_render;
+    printf("recording to %s/\n", dir);
+    for (m = 0; m < 2; m++) {
+        const char *mn = m ? "8580" : "6581";
+        for (p = 0; p <= SID_NPATCHES; p++) {
+            const sid_patch_t *pt = &SID_PATCHES[p < SID_NPATCHES ? p : 2];
+            lnchips = lnev = 0;
+            sidsyn_init(&y, 1, (sid_model_t)m, FS);
+            sidsyn_set_patch(&y, pt);
+            if (p == SID_NPATCHES)
+                y.transpose = 24;                  /* HI CHORD: two octaves up, where aliasing shows */
+            n = phrase(&y, buf, p >= 6 && p <= 8);
+            if (p < SID_NPATCHES)
+                snprintf(path, sizeof path, "%s/patch%02u_%s.sidlog", dir, p, mn);
+            else
+                snprintf(path, sizeof path, "%s/hichord_%s.sidlog", dir, mn);
+            log_save(path, m, n, 256);
+            snprintf(path + strlen(path) - 7, 16, ".own.wav");
+            write_wav(path, buf, n);
+        }
+        if (!m) {                                  /* the FM-1 bench workload (fm1/workload.h, 6581) */
+            lnchips = lnev = 0;
+            wl_run(buf, WL_SAMPLES);
+            snprintf(path, sizeof path, "%s/workload.sidlog", dir);
+            log_save(path, 0, WL_SAMPLES, 256);
+        }
+        lnchips = lnev = 0;
+        n = song((sid_model_t)m, buf);
+        snprintf(path, sizeof path, "%s/song_%s.sidlog", dir, mn);
+        log_save(path, m, n, 160);
+        snprintf(path + strlen(path) - 7, 16, ".own.wav");
+        write_wav(path, buf, n);
+    }
+    return 0;
+}
+#endif
+
 
 static int hash(void)
 {
@@ -401,6 +510,10 @@ int main(int argc, char **argv)
         return hash();
     if (!strcmp(cmd, "bench"))
         return bench();
+#ifdef SID_LOG
+    if (!strcmp(cmd, "record"))
+        return record(argc > 2 ? argv[2] : "build/cmp");
+#endif
     fprintf(stderr, "usage: %s test | wav [dir] | hash | bench\n", argv[0]);
     return 2;
 }

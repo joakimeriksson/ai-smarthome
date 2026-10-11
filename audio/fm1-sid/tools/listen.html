@@ -1,0 +1,313 @@
+<title>SID-motorer på FM-1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; a cost table up top, then a listening console where the
+   engine rows switch the same audio position (A/B), spectrograms under the two pieces
+   where aliasing shows. Palette: the C64's two blues, desaturated, with a phosphor amber. */
+:root {
+  --bg: #eef0f7;
+  --surface: #ffffff;
+  --ink: #1b1d33;
+  --muted: #5a5f80;
+  --line: #d3d6e6;
+  --accent: #3e31a2;          /* the C64 border blue */
+  --accent-soft: #e2def8;
+  --amber: #a85d00;
+  --ok: #1d6b45;
+  --bad: #9c2b2b;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141529; --surface: #1d1f38; --ink: #e6e7f5; --muted: #9da1c4; --line: #33365a;
+    --accent: #9d93f0; --accent-soft: #2c2a5c; --amber: #f0a64a; --ok: #6fd3a0; --bad: #f08a8a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141529; --surface: #1d1f38; --ink: #e6e7f5; --muted: #9da1c4; --line: #33365a;
+  --accent: #9d93f0; --accent-soft: #2c2a5c; --amber: #f0a64a; --ok: #6fd3a0; --bad: #f08a8a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 500 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 800 clamp(30px, 6vw, 46px)/1.02 var(--display); font-stretch: 112%; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font: 600 20px/1.2 var(--display); font-stretch: 112%; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 66ch; }
+.lede { font-size: 17px; color: var(--ink); }
+.muted { color: var(--muted); }
+section { display: grid; gap: 14px; }
+code, .mono { font-family: var(--mono); font-size: .92em; }
+
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 12px/1.3 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.verdict { display: inline-block; font: 500 12px/1 var(--mono); padding: 4px 7px; border-radius: 4px; white-space: nowrap; }
+.v-ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+.v-bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 13%, transparent); }
+.v-mid { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
+
+.console { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 640px) { .console { grid-template-columns: minmax(0, 1fr); } }
+.pieces { display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 640px) { .pieces { flex-direction: row; flex-wrap: wrap; gap: 6px; } }
+.piece { all: unset; cursor: pointer; padding: 7px 10px; border-radius: 6px; font-size: 14px; line-height: 1.3; color: var(--ink); }
+@media (max-width: 640px) { .piece { border: 1px solid var(--line); } }
+.piece:hover { background: var(--accent-soft); }
+.piece[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.piece:focus-visible, .eng:focus-visible, button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.deck { display: grid; gap: 12px; min-width: 0; }
+.deck-head { display: grid; gap: 4px; }
+.deck-title { font: 600 18px/1.25 var(--display); font-stretch: 112%; }
+.engines { display: grid; gap: 6px; }
+.eng { all: unset; cursor: pointer; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+       padding: 9px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.eng:hover { border-color: var(--accent); }
+.eng[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.eng .key { font: 500 12px/1 var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 4px 0; text-align: center; }
+.eng .name { font-weight: 500; overflow-wrap: anywhere; }
+.eng .cost { font: 400 12px/1.2 var(--mono); color: var(--muted); text-align: right; }
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+button.btn { font: 500 14px/1 var(--body); padding: 9px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; }
+button.btn.ghost { background: transparent; color: var(--accent); }
+.progress { flex: 1 1 160px; min-width: 120px; height: 6px; border-radius: 3px; background: var(--line); position: relative; cursor: pointer; }
+.progress > i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; background: var(--accent); }
+.time { font: 400 12px/1 var(--mono); color: var(--muted); min-width: 84px; text-align: right; }
+label.blind { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+.spectro { display: grid; gap: 8px; }
+.spectro figure { margin: 0; display: grid; gap: 4px; }
+.spectro img { width: 100%; height: auto; border-radius: 4px; border: 1px solid var(--line); display: block; }
+.spectro figcaption { font: 400 12px/1.3 var(--mono); color: var(--muted); }
+.spectro .axis { font: 400 11px/1 var(--mono); color: var(--muted); display: flex; justify-content: space-between; }
+ul.notes { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 70ch; }
+footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">M-VAVE FM-1 · pi32v2 240 MHz · PAL 985 248 Hz → 44,1 kHz</div>
+    <h1>SID-motorer på FM-1</h1>
+    <p class="lede">Samma registerström, alltså exakt samma skrivningar till $D400–$D418 på samma cykel, spelad genom fem SID-motorer. Kostnaden är mätt på den emulerade FM-1:an och ljudet är nivåmatchat.</p>
+  </header>
+
+  <section aria-labelledby="cost-h">
+    <h2 id="cost-h">Vad det kostar på FM-1</h2>
+    <p class="muted">Instruktioner per utsampel för ett SID-chip (3 röster och filter), uppmätt i <span class="mono">fm1-emu</span>. Andelen räknar en instruktion per cykel vid 240 MHz. Ljudet från FM-1-bygget är bit för bit identiskt med värddatorns för alla rader med ett mätvärde.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Motor</th><th>Instr / sampel</th><th>Av en kärna</th><th>RAM</th><th>Värd, ms per s ljud</th><th>På FM-1</th></tr></thead>
+        <tbody id="cost-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="listen-h">
+    <h2 id="listen-h">Lyssna</h2>
+    <p class="muted">Välj ett stycke och byt motor medan det spelar. Positionen följer med, så du jämför samma ögonblick. Tangenterna 1–5 byter motor och mellanslag startar eller pausar. Blindläget blandar ordningen och döljer namnen.</p>
+    <div class="console">
+      <nav class="pieces" id="pieces" aria-label="Stycken"></nav>
+      <div class="deck">
+        <div class="deck-head">
+          <div class="deck-title" id="piece-title"></div>
+          <div class="muted" id="piece-note"></div>
+        </div>
+        <div class="engines" id="engines" role="group" aria-label="Motor"></div>
+        <div class="transport">
+          <button class="btn" id="play" type="button">Spela</button>
+          <div class="progress" id="progress" aria-label="Position"><i></i></div>
+          <span class="time" id="time">0:00 / 0:00</span>
+        </div>
+        <div class="transport">
+          <label class="blind"><input type="checkbox" id="blind"> Blindläge</label>
+          <button class="btn ghost" id="reveal" type="button" hidden>Visa namnen</button>
+        </div>
+        <div class="spectro" id="spectro" hidden></div>
+      </div>
+    </div>
+    <audio id="audio" preload="auto"></audio>
+  </section>
+
+  <section aria-labelledby="hear-h">
+    <h2 id="hear-h">Vad du hör</h2>
+    <ul class="notes">
+      <li><b>Aliasing.</b> Egen och reSID «fast» räknar vågformerna direkt vid 44,1 kHz. Ackordet två oktaver upp får då speglade deltoner, syns som diagonala linjer i spektrogrammet. Resample-lägena filtrerar ner från ~1 MHz och är rena, men de klockar chipet cykel för cykel och kostar därefter.</li>
+      <li><b>Filtret.</b> reSID 1.0 och reSIDfp modellerar 6581-filtrets olinjäritet (distorsion, “smutsigt” bandpass). Egen och reSID 0.16 har ett linjärt filter med ungefärlig kurva, och skillnaden hörs mest i BP SWEEP och RESO PAD.</li>
+      <li><b>Kombinerade vågformer.</b> P&amp;S ORGAN använder puls+såg. reSID-familjen spelar uppmätta tabeller från riktiga chip, medan den egna motorn använder en modell.</li>
+      <li><b>Nivåer.</b> Varje fil är normerad till −20 dBFS RMS med topp under −1 dBFS, så skillnaden i hur hög motorn själv låter är borttagen.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Instrumentdrivern (fm1-sid) skriver registren 50 gånger i sekunden. Inspelaren loggar varje skrivning med sampelposition, och varje motor klockas fram till exakt den cykeln innan skrivningen.</p>
+    <p>reSID 0.16 och 1.0: Dag Lem. reSIDfp: Dag Lem, Antti Lankila, Leandro Nini. Alla tre är GPL-2.0-or-later och hämtas till <span class="mono">ext/</span>, de ingår inte i repot.</p>
+  </footer>
+</div>
+
+<script>
+const ENGINES = [
+  { id: "own", name: "Egen (fm1-sid)", fm1: 316, core: 5.8, ram: "≈ 33 KB", host: 2.4, verdict: ["ryms", "v-ok"] },
+  { id: "r016-fast", name: "reSID 0.16 fast", fm1: 440, core: 8.1, ram: "17 KB + 128 KB tabeller", host: 3.1, verdict: ["ryms", "v-ok"] },
+  { id: "r016-resample", name: "reSID 0.16 resample", fm1: 39226, core: 720.8, ram: "167 KB + 128 KB tabeller", host: 133, verdict: ["7 kärnor", "v-bad"] },
+  { id: "r10-resample", name: "reSID 1.0 resample", fm1: null, fm1txt: "–", core: null, coretxt: "–", ram: "17 MB statiska tabeller", host: 117, verdict: ["ryms inte", "v-bad"] },
+  { id: "rfp-resample", name: "reSIDfp resample", fm1: null, fm1txt: "–", core: null, coretxt: "–", ram: "21 MB (6581-filtret), std::thread", host: 72, verdict: ["ryms inte", "v-bad"] },
+];
+const EXTRA_ROWS = [
+  { name: "reSID 0.16 interpolate", fm1: 5562, core: 102.2, ram: "17 KB + 128 KB tabeller", host: 27.9, verdict: ["för tung", "v-bad"] },
+];
+const PIECES = [
+  ["song_6581", "Låt, 4 chip (6581)", "Bas, ackord-arpeggio, sync-lead och trummor: fyra SID-chip mixade."],
+  ["song_8580", "Låt, 4 chip (8580)", "Samma registerström på 8580."],
+  ["hichord_8580", "Högt ackord (8580)", "Ackordet två oktaver upp. Här hörs aliasing tydligast.", true],
+  ["patch04_6581", "SYNC LEAD (6581)", "Hard sync med tonhöjdssvep.", true],
+  ["patch01_6581", "PWM BASS (6581)", "Pulsbreddssvep genom resonant lågpass."],
+  ["patch09_8580", "RESO PAD (8580)", "Långsamt filtersvep med hög resonans."],
+  ["patch11_6581", "BP SWEEP (6581)", "Bandpass med maxresonans."],
+  ["patch10_8580", "P&S ORGAN (8580)", "Kombinerad vågform puls+såg."],
+  ["patch10_6581", "P&S ORGAN (6581)", "Kombinerad vågform puls+såg."],
+  ["patch06_6581", "KICK (6581)", "Vågtabell: brus, puls, sedan triangel nedåt."],
+  ["patch07_6581", "SNARE (6581)", "Vågtabell: brus och puls."],
+];
+
+const $ = (id) => document.getElementById(id);
+const audio = $("audio");
+let piece = 0, engine = 0, order = ENGINES.map((_, i) => i), blind = false, revealed = false;
+
+function fmt(t) { if (!isFinite(t)) t = 0; const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + String(s).padStart(2, "0"); }
+
+function costRows() {
+  const rows = [];
+  const add = (e) => {
+    const tr = document.createElement("tr");
+    const cells = [
+      e.name,
+      e.fm1 != null ? e.fm1.toLocaleString("sv-SE") : e.fm1txt,
+      e.core != null ? e.core.toLocaleString("sv-SE", { minimumFractionDigits: 1 }) + " %" : e.coretxt,
+      e.ram,
+      e.host.toLocaleString("sv-SE", { maximumFractionDigits: 1 }),
+    ];
+    cells.forEach((c, i) => { const td = document.createElement("td"); td.textContent = c; if (i === 1 || i === 2 || i === 4) td.className = "num"; tr.appendChild(td); });
+    const td = document.createElement("td"); const span = document.createElement("span");
+    span.className = "verdict " + e.verdict[1]; span.textContent = e.verdict[0]; td.appendChild(span); tr.appendChild(td);
+    rows.push(tr);
+  };
+  ENGINES.slice(0, 2).forEach(add);
+  EXTRA_ROWS.forEach(add);
+  ENGINES.slice(2).forEach(add);
+  $("cost-body").replaceChildren(...rows);
+}
+
+function renderPieces() {
+  $("pieces").replaceChildren(...PIECES.map((p, i) => {
+    const b = document.createElement("button");
+    b.className = "piece"; b.type = "button"; b.textContent = p[1];
+    b.setAttribute("aria-pressed", String(i === piece));
+    b.addEventListener("click", () => selectPiece(i));
+    return b;
+  }));
+}
+
+function engineLabel(slot) {
+  const e = ENGINES[order[slot]];
+  if (blind && !revealed) return "Motor " + "ABCDE"[slot];
+  return e.name;
+}
+
+function renderEngines() {
+  $("engines").replaceChildren(...order.map((ei, slot) => {
+    const e = ENGINES[ei];
+    const b = document.createElement("button");
+    b.className = "eng"; b.type = "button";
+    b.setAttribute("aria-pressed", String(ei === engine));
+    const k = document.createElement("span"); k.className = "key"; k.textContent = slot + 1;
+    const n = document.createElement("span"); n.className = "name"; n.textContent = engineLabel(slot);
+    const c = document.createElement("span"); c.className = "cost";
+    c.textContent = blind && !revealed ? "" : (e.fm1 != null ? e.core.toLocaleString("sv-SE", { minimumFractionDigits: 1 }) + " % av FM-1" : e.verdict[0]);
+    b.append(k, n, c);
+    b.addEventListener("click", () => selectEngine(ei));
+    return b;
+  }));
+  renderSpectro();
+}
+
+function renderSpectro() {
+  const p = PIECES[piece], box = $("spectro");
+  if (!p[3]) { box.hidden = true; box.replaceChildren(); return; }
+  box.hidden = false;
+  const figs = order.map((ei, slot) => {
+    const f = document.createElement("figure");
+    const img = document.createElement("img");
+    img.src = p[0] + "__" + ENGINES[ei].id + ".png"; img.alt = "Spektrogram, " + engineLabel(slot); img.loading = "lazy"; img.width = 640; img.height = 220;
+    const cap = document.createElement("figcaption"); cap.textContent = engineLabel(slot);
+    f.append(cap, img);
+    return f;
+  });
+  const axis = document.createElement("div"); axis.className = "axis";
+  axis.innerHTML = "<span>0 s</span><span>tid →</span><span>uppåt: 0 → 22 kHz</span>";
+  box.replaceChildren(...figs, axis);
+}
+
+function load(keepTime) {
+  const t = keepTime ? audio.currentTime : 0, playing = !audio.paused;
+  audio.src = PIECES[piece][0] + "__" + ENGINES[engine].id + ".mp3";
+  audio.addEventListener("loadedmetadata", function once() {
+    audio.removeEventListener("loadedmetadata", once);
+    try { audio.currentTime = Math.min(t, audio.duration || t); } catch (e) {}
+    if (playing) audio.play().catch(() => {});
+  });
+  audio.load();
+}
+
+function selectPiece(i) {
+  piece = i;
+  $("piece-title").textContent = PIECES[i][1];
+  $("piece-note").textContent = PIECES[i][2];
+  if (blind) shuffle();
+  renderPieces(); renderEngines(); load(false);
+}
+function selectEngine(ei) { engine = ei; renderEngines(); load(true); }
+
+function shuffle() {
+  order = ENGINES.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  revealed = false;
+}
+
+$("play").addEventListener("click", () => { audio.paused ? audio.play().catch(() => {}) : audio.pause(); });
+audio.addEventListener("play", () => { $("play").textContent = "Paus"; });
+audio.addEventListener("pause", () => { $("play").textContent = "Spela"; });
+audio.addEventListener("timeupdate", () => {
+  const d = audio.duration || 0;
+  $("progress").firstElementChild.style.width = d ? (100 * audio.currentTime / d) + "%" : "0";
+  $("time").textContent = fmt(audio.currentTime) + " / " + fmt(d);
+});
+$("progress").addEventListener("click", (ev) => {
+  const r = ev.currentTarget.getBoundingClientRect();
+  if (audio.duration) audio.currentTime = audio.duration * (ev.clientX - r.left) / r.width;
+});
+$("blind").addEventListener("change", (ev) => {
+  blind = ev.target.checked;
+  if (blind) shuffle(); else { order = ENGINES.map((_, i) => i); }
+  $("reveal").hidden = !blind;
+  renderEngines();
+});
+$("reveal").addEventListener("click", () => { revealed = true; renderEngines(); });
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.closest("input")) return;
+  if (ev.key >= "1" && ev.key <= "5") { selectEngine(order[+ev.key - 1]); ev.preventDefault(); }
+  else if (ev.key === " ") { $("play").click(); ev.preventDefault(); }
+});
+
+costRows();
+selectPiece(0);
+</script>

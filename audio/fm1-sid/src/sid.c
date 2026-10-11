@@ -4,6 +4,12 @@
 
 enum { ENV_ATTACK, ENV_DECAY, ENV_RELEASE };
 
+#ifdef SID_LOG
+void (*sid_log_init)(const sid_t *s);
+void (*sid_log_write)(const sid_t *s, uint32_t reg, uint32_t val);
+void (*sid_log_render)(const sid_t *s, uint32_t n);
+#endif
+
 /* cycles between envelope steps, per 4-bit rate (attack; decay and release use the same
  * periods and divide them further with the exponential counter) */
 static const uint16_t RATE[16] = {9, 32, 63, 95, 149, 220, 267, 313,
@@ -174,12 +180,20 @@ void sid_init(sid_t *s, sid_model_t model, uint32_t clock_hz, uint32_t fs)
     if (!comb_ready[model])
         comb_build(model);
     sid_reset(s);
+#ifdef SID_LOG
+    if (sid_log_init)
+        sid_log_init(s);
+#endif
 }
 
 void sid_write(sid_t *s, uint32_t reg, uint32_t val)
 {
     reg &= 0x1Fu;
     val &= 0xFFu;
+#ifdef SID_LOG
+    if (sid_log_write)
+        sid_log_write(s, reg, val);
+#endif
     s->reg[reg] = (uint8_t)val;
     if (reg < 21) {
         sid_voice_t *v = &s->v[reg / 7u];
@@ -344,6 +358,10 @@ static void render(sid_t *s, int32_t *out, uint32_t n, int add)
     uint32_t mute3 = (s->mode_vol & SID_3OFF) && !(filt & 4u);
     uint32_t mode = s->mode_vol & 0x70u;
     int32_t zero = s->voice_zero;
+#ifdef SID_LOG
+    if (sid_log_render)
+        sid_log_render(s, n);
+#endif
     if (!filt)
         s->ic1 = s->ic2 = 0;
     for (i = 0; i < n; i++) {

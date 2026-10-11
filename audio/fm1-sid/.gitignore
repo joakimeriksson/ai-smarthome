@@ -1,1 +1,3 @@
 build/
+ext/
+__pycache__/

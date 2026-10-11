@@ -99,4 +99,12 @@ void sid_render(sid_t *s, int32_t *out, uint32_t n);
 /* like sid_render, but adds into out (several chips into one buffer) */
 void sid_render_add(sid_t *s, int32_t *out, uint32_t n);
 
+#ifdef SID_LOG
+/* host builds only: see every write and every render, to record the register stream
+ * (host/record.c) and play it on other SID engines (host/replay.cc) */
+extern void (*sid_log_init)(const sid_t *s);
+extern void (*sid_log_write)(const sid_t *s, uint32_t reg, uint32_t val);
+extern void (*sid_log_render)(const sid_t *s, uint32_t n);
+#endif
+
 #endif

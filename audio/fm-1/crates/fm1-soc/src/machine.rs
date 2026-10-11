@@ -58,6 +58,12 @@ impl Bus for Core1Bus<'_> {
     fn hw_lock(&mut self, core: u32, set: bool) -> bool {
         self.soc.hw_lock(core, set)
     }
+    fn irq_window(&mut self) {
+        // (cpu1's loop looks at its interrupts before every run; a short stretch ends soon)
+        if self.soc.periph.any_pending() {
+            self.budget = self.budget.min(1);
+        }
+    }
     fn next_tick_due(&self) -> bool {
         self.budget <= 1
     }

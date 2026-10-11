@@ -78,6 +78,9 @@ pub trait Bus {
     }
     /// `idle` on `core`: it waits for an interrupt (a bus with a clock may skip ahead).
     fn idle(&mut self, _core: u32) {}
+    /// Interrupts may have just been unmasked (`sti`, `icfg = R`): with one pending, the run
+    /// loop must look before the next instruction, as it does after a slow-path instruction.
+    fn irq_window(&mut self) {}
 }
 
 /// The RAM from `pc` to its end, when the bus can show it (its JIT memory map), and pc is in it.
@@ -817,7 +820,34 @@ impl Cpu {
                 let d = (d & 15) as usize;
                 self.regs[d] = (self.regs[d] & !(mask << p)) | ((src & mask) << p);
             }
-            Fast::SetIe { on } => self.ie = on,
+            Fast::SetIe { on } => {
+                self.ie = on;
+                if on {
+                    bus.irq_window();
+                }
+            }
+            Fast::IcfgRd { d } => self.regs[(d & 15) as usize] = self.sregs("icfg"),
+            Fast::IcfgWr { s } => {
+                self.sreg_store[0] = self.regs[(s & 15) as usize];
+                bus.irq_window();
+            }
+            Fast::BlockMove { base, mask, store, post } => {
+                let base = (base & 15) as usize;
+                let mut addr = self.regs[base];
+                for i in 0..16usize {
+                    if mask >> i & 1 != 0 {
+                        if store {
+                            bus.write32(addr, self.regs[i]);
+                        } else {
+                            self.regs[i] = bus.read32(addr);
+                        }
+                        addr = addr.wrapping_add(4);
+                    }
+                }
+                if post {
+                    self.regs[base] = addr;
+                }
+            }
             Fast::BrIEq { a, v, target } => {
                 if self.regs[(a & 15) as usize] == v {
                     return Some(target);
@@ -3640,6 +3670,11 @@ enum Fast {
     BitIns { d: u8, s: u8, p: u8, l: u8 },
     /// `sti` / `cli`
     SetIe { on: bool },
+    /// `R = icfg` / `icfg = R`
+    IcfgRd { d: u8 },
+    IcfgWr { s: u8 },
+    /// `{regs} = [R+]` / `[R+] = {regs}` (and `[R++]`: the base moves past the block)
+    BlockMove { base: u8, mask: u16, store: bool, post: bool },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -3966,8 +4001,25 @@ fn fast_of(insn: &Instruction, s: &'static str) -> Option<Fast> {
             return Some(Fast::BitExt { d: r(0)?, s: r(1)?, p: v(2)? as u8 & 31, l: v(3)? as u8 & 31, signed: s.contains("sextra") });
         }
         "R <= insert(R, p:#i, l:#i)" => return Some(Fast::BitIns { d: r(0)?, s: r(1)?, p: v(2)? as u8 & 31, l: v(3)? as u8 & 31 }),
-        // (not `sti`: on the slow path the run loop takes a pending interrupt right after it)
         "cli" => return Some(Fast::SetIe { on: false }),
+        "sti" => return Some(Fast::SetIe { on: true }),
+        "R = icfg" => return Some(Fast::IcfgRd { d: r(0)? }),
+        "icfg = R" => return Some(Fast::IcfgWr { s: r(0)? }),
+        // arithmetic shift by an immediate below 32 (exec_syntax fills larger counts with the sign)
+        "R = R >>> #i" if insn.entry.len == 4 && v(2).map_or(false, |n| n < 32) => {
+            return Some(Fast::SarI { d: r(0)?, s: r(1)?, n: v(2)? as u8 });
+        }
+        _ if insn.entry.len == 4 && (insn.raw >> 8) & 0xff == 0xeb
+            && ((s.starts_with('{') && s.contains("} = [R+")) || (s.starts_with("[R+") && s.contains("] = {"))) =>
+        {
+            // block moves (exec_syntax's `00 eb` / `20 eb` arm): base bits 0-3, mask bits 16-31
+            return Some(Fast::BlockMove {
+                base: (insn.raw & 0xf) as u8,
+                mask: (insn.raw >> 16) as u16,
+                store: s.starts_with('['),
+                post: s.contains("[R++]"),
+            });
+        }
         _ => {}
     }
     // sub-word extracts

@@ -345,6 +345,12 @@ impl Soc {
 }
 
 impl Bus for Soc {
+    fn irq_window(&mut self) {
+        if self.periph.any_pending() {
+            self.periph.next_due = 0;
+        }
+    }
+
     fn idle(&mut self, core: u32) {
         if core == 0 {
             self.periph.idle();

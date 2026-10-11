@@ -179,49 +179,55 @@ function setPot(v) {
 }
 
 // pointer: keys and buttons held while pressed (drag across keys: glissando), knobs dragged
-// up / down or scrolled, MASTER as a pot
+// up / down or scrolled, MASTER as a pot. Every pointer on its own, so on a touch screen
+// several fingers play a chord, or hold a key while one turns a knob.
 const at = (e) => {
   const r = canvas.getBoundingClientRect();
   return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)];
 };
-let grab = -1, lastY = 0, acc = 0, mouseHeld = -1;
+const holds = new Uint8Array(41);          // pointers holding each key / button
+function press(id) { if (holds[id]++ === 0) setKey(id, true); }
+function unpress(id) { if (holds[id] && --holds[id] === 0) setKey(id, false); }
+const pointers = new Map();                // pointerId -> { grab, lastY, acc, held }
 canvas.addEventListener("pointerdown", (e) => {
   const [x, y] = at(e);
-  grab = ui.panel_hit(x, y);
-  lastY = y;
-  acc = 0;
+  const p = { grab: ui.panel_hit(x, y), lastY: y, acc: 0, held: -1 };
+  pointers.set(e.pointerId, p);
   canvas.setPointerCapture(e.pointerId);
-  if (grab >= 100) {
-    mouseHeld = grab - 100;
-    setKey(mouseHeld, true);
+  if (p.grab >= 100) {
+    p.held = p.grab - 100;
+    press(p.held);
   }
 });
 canvas.addEventListener("pointermove", (e) => {
-  if (grab < 0) return;
+  const p = pointers.get(e.pointerId);
+  if (!p || p.grab < 0) return;
   const [x, y] = at(e);
-  if (grab >= 100 && mouseHeld >= 14) {
+  if (p.grab >= 100 && p.held >= 14) {
     const h = ui.panel_hit(x, y);              // glissando over the note keys
-    if (h >= 114 && h - 100 !== mouseHeld) {
-      setKey(mouseHeld, false);
-      mouseHeld = h - 100;
-      setKey(mouseHeld, true);
+    if (h >= 114 && h - 100 !== p.held) {
+      unpress(p.held);
+      p.held = h - 100;
+      press(p.held);
     }
-  } else if (grab >= 0 && grab < 7) {
-    acc += lastY - y;
-    while (acc >= 12) { acc -= 12; turn(grab, 1); }
-    while (acc <= -12) { acc += 12; turn(grab, -1); }
-  } else if (grab === 7) {
-    setPot(pot + (lastY - y) * 4);
+  } else if (p.grab >= 0 && p.grab < 7) {
+    p.acc += p.lastY - y;
+    while (p.acc >= 12) { p.acc -= 12; turn(p.grab, 1); }
+    while (p.acc <= -12) { p.acc += 12; turn(p.grab, -1); }
+  } else if (p.grab === 7) {
+    setPot(pot + (p.lastY - y) * 4);
   }
-  lastY = y;
+  p.lastY = y;
 });
-const release = () => {
-  if (mouseHeld >= 0) setKey(mouseHeld, false);
-  mouseHeld = -1;
-  grab = -1;
+const release = (e) => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  if (p.held >= 0) unpress(p.held);
+  pointers.delete(e.pointerId);
 };
 canvas.addEventListener("pointerup", release);
 canvas.addEventListener("pointercancel", release);
+canvas.addEventListener("lostpointercapture", release);
 let wheelAcc = 0;
 canvas.addEventListener("wheel", (e) => {
   const [x, y] = at(e);
@@ -311,4 +317,6 @@ startBtn.addEventListener("click", async () => {
   await boot();
   await ac.resume();
   startBtn.hidden = true;
+  // a phone on its side: the synth fills the screen, so bring all of it into view
+  if (matchMedia("(orientation: landscape) and (max-height: 560px)").matches) canvas.scrollIntoView({ block: "center" });
 });

@@ -11,7 +11,7 @@
 //   - Built apps must be told their base path; Vite bakes it into asset URLs.
 
 import { cp, mkdir, rm, readFile, writeFile, readdir } from 'node:fs/promises'
-import { existsSync, cpSync, rmSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -101,37 +101,25 @@ const DEMOS = [
   // The tracker outgrew this repository and lives in its own now, deploying
   // itself on every push. It stays on this page because it belongs on it -
   // but as a link, so there is no copy of it here to drift.
+  // The FM-1 emulator and its SID player moved to their own repository (2026-10-12) and
+  // deploy from there; their old addresses here forward to the new ones (REDIRECTS).
   {
     slug: 'fm-1',
     title: 'M-VAVE FM-1 Emulator',
     blurb: 'The FM-1 pocket synth\'s pi32v2 CPU, screen and audio in WebAssembly, ' +
            'running the community firmwares from their authors\' own sites, and M-VAVE\'s own from a copy you download.',
-    src: 'audio/fm-1',
+    external: 'https://joakimeriksson.github.io/fm1-emu/',
+    repo: 'https://github.com/joakimeriksson/fm1-emu',
     accent: '#f2a33a',            // the emulator page's amber
-    build: (out, base) => {
-      const dist = resolve(ROOT, 'audio/fm-1/web/dist')
-      run('bash', ['web/build.sh', dist], resolve(ROOT, 'audio/fm-1'))
-      return dist
-    },
   },
   {
     slug: 'fm1-sid',
     title: 'FM-1 SID Player',
     blurb: 'Commodore 64 music on the FM-1: each tune\'s own 6502 code and reSID running ' +
            'on the synth\'s CPU, emulated in the browser, with all of HVSC to pick from.',
-    src: 'audio/fm1-sid/web',
+    external: 'https://joakimeriksson.github.io/fm1-emu/fm1-sid/',
+    repo: 'https://github.com/joakimeriksson/fm1-emu',
     accent: '#7869c4',            // the C64's light blue
-    // The page (static) plus the FM-1 emulator's wasm, from the fm-1 demo's build above or
-    // its own when that one was left out with --only.
-    build: () => {
-      const dist = resolve(ROOT, 'audio/fm1-sid/build/pages')
-      const fm1 = resolve(ROOT, 'audio/fm-1/web/dist')
-      if (!existsSync(resolve(fm1, 'fm1_web.wasm'))) run('bash', ['web/build.sh', fm1], resolve(ROOT, 'audio/fm-1'))
-      rmSync(dist, { recursive: true, force: true })
-      cpSync(resolve(ROOT, 'audio/fm1-sid/web'), dist, { recursive: true, filter: (p) => !p.endsWith('smoke.mjs') })
-      cpSync(resolve(fm1, 'fm1_web.wasm'), resolve(dist, 'fm1_web.wasm'))
-      return dist
-    },
   },
   // The tracker outgrew this repository and lives in its own now, deploying
   // itself on every push. It stays on this page because it belongs on it -
@@ -154,6 +142,15 @@ const DEMOS = [
     accent: '#ffb02e',            // candle yellow
   },
 ]
+
+/**
+ * Pages that moved away: { folder on this site: new address }. Each folder gets a page
+ * that forwards there, keeping the query and hash (?fw=, ?t=), so old links still work.
+ */
+const REDIRECTS = {
+  'fm-1': 'https://joakimeriksson.github.io/fm1-emu/',
+  'fm1-sid': 'https://joakimeriksson.github.io/fm1-emu/fm1-sid/',
+}
 
 function run(cmd, args, cwd) {
   const r = spawnSync(cmd, args, { cwd, stdio: 'inherit' })
@@ -214,6 +211,19 @@ for (const demo of DEMOS) {
 
   published.push({ ...demo, href: `${base}${demo.entry ?? ''}` })
   console.log(`[pages] ${demo.slug} -> ${demo.href ?? base}`)
+}
+
+for (const [slug, to] of Object.entries(REDIRECTS)) {
+  await mkdir(resolve(OUT, slug), { recursive: true })
+  await writeFile(resolve(OUT, slug, 'index.html'), `<!doctype html>
+<meta charset="utf-8">
+<title>Moved</title>
+<link rel="canonical" href="${to}">
+<meta http-equiv="refresh" content="0; url=${to}">
+<script>location.replace(${JSON.stringify(to)} + location.search + location.hash)</script>
+<p>This page moved to <a href="${to}">${to}</a>.</p>
+`)
+  console.log(`[pages] ${slug}/ -> ${to} (redirect)`)
 }
 
 // Jekyll would otherwise swallow any path starting with an underscore.

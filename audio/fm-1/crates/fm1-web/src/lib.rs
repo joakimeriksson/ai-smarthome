@@ -207,6 +207,14 @@ pub extern "C" fn fm1_enc(enc: u32, clicks: i32) {
     }
 }
 
+/// One MIDI byte into the MIDI IN jack (UART1, 31250 baud: bytes queue up a byte time apart).
+#[no_mangle]
+pub extern "C" fn fm1_midi(b: u32) {
+    if let Some(m) = machine() {
+        m.soc.periph.apply(&Action::Midi { b: b as u8 });
+    }
+}
+
 /// The MASTER pot, 0..1023.
 #[no_mangle]
 pub extern "C" fn fm1_pot(v: u32) {

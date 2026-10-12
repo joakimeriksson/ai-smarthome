@@ -23,6 +23,13 @@
 //! * the OS tick block at `0x1EEF0EC` (stock firmware): b[+0] bit 0 enable, bit 6 written =
 //!   acknowledge, bit 7 read = pending; `+4` the count (written: restart), `+8` the period
 //!   (`os_start`: clk/100, 10 ms); IRQ 3 (FM-1-RE docs/io/02-rtos.md);
+//! * UART1 `0x12100` (MIDI IN, the TRS jack): bytes from `Action::Midi` arrive one per
+//!   31250-baud byte time (320 us) and are DMA'd into the ring RXSADR..RXEADR. CON0 (the JieLi
+//!   layout, SDK uart driver + Felucca hal/fm1_uart.h): bit 0 on, 2/3/5 TX/RX/timeout IE, 6 RX
+//!   DMA, written bit 7 latches the bytes received since the last latch into HRXCNT (+0x28),
+//!   written bits 10/12/13 clear the timeout / RX / TX pendings (bits 11/14/15). RX pending =
+//!   RXCNT bytes since the last latch, timeout = OTCNT UART clocks (48 MHz) of silence after a
+//!   byte; IRQ 20. A TX DMA (TXCNT written) finishes at once: no TX pin on the board;
 //! * the key/encoder matrix: 11 columns from two 74HC595s (PA4 SER, PA3
 //!   SRCLK, PA1 RCLK, MSB first, a low bit selects the column), rows PA0,
 //!   PA5-PA8, PB7 with pull-ups (low = closed).
@@ -42,6 +49,38 @@ pub const IRQ_OS_TICK: u8 = 3;
 pub const IRQ_SPI1: u8 = 16;
 pub const IRQ_SARADC: u8 = 24;
 pub const IRQ_SPI2: u8 = 37;
+pub const IRQ_UART1: u8 = 20;
+/// The UART's clock (CLK_CON1 selects PLL48M; OTCNT counts it).
+const UART_HZ: u64 = 48_000_000;
+/// Bits per MIDI byte on the wire (start, 8 data, stop) and the baud rate.
+const MIDI_BYTE_BITS: u64 = 10;
+const MIDI_BAUD: u64 = 31_250;
+/// The most MIDI bytes waiting behind the jack (about a second at 31250 baud).
+const MIDI_QUEUE_MAX: usize = 3125;
+
+/// UART1's receive side (see the module notes).
+#[derive(Default)]
+struct Uart {
+    con0: u32,
+    rxsadr: u32,
+    rxeadr: u32,
+    rxcnt: u32,
+    otcnt: u32,
+    hrxcnt: u32,
+    /// Bytes DMA'd since the last RDC latch.
+    since: u32,
+    /// The DMA's next write offset into the ring.
+    wr: u32,
+    rpnd: bool,
+    otpnd: bool,
+    tpnd: bool,
+    /// Bytes on their way in, the cycle the next one has arrived, and when the timeout fires.
+    q: VecDeque<u8>,
+    next: u64,
+    ot_next: u64,
+    /// Bytes dropped: arrived with the UART off or without a ring, or past the queue's cap.
+    dropped: u64,
+}
 
 /// The JL_TIMER prescaler table: CON bits 4-7 index it (the stock firmware's own copy at
 /// 0x0204F8C0 reads the same).
@@ -151,6 +190,9 @@ pub struct Periph {
     pub spi2_pending: bool,
     spi2_next: u64,
     tmr: [Tmr; 4],
+    uart: Uart,
+    /// The UART's interrupt condition (enabled and pending), kept for `any_pending`.
+    uart_irq: bool,
     // key matrix
     sr_shift: u16,
     sr_latched: u16,
@@ -176,6 +218,8 @@ pub enum Action {
     Enc { enc: u8, clicks: i32 },
     /// Set ADC channel `ch` to `value` (0..1023).
     Adc { ch: u8, value: u16 },
+    /// One MIDI byte into the MIDI IN jack (UART1); it arrives a byte time after the one before.
+    Midi { b: u8 },
 }
 
 impl Default for Periph {
@@ -225,6 +269,8 @@ impl Default for Periph {
             spi2_pending: false,
             spi2_next: u64::MAX,
             tmr: [Tmr { next: u64::MAX, ..Default::default() }; 4],
+            uart: Uart { next: u64::MAX, ot_next: u64::MAX, ..Default::default() },
+            uart_irq: false,
             sr_shift: 0xffff,
             sr_latched: 0xffff,
             pa_out: 0,
@@ -242,11 +288,13 @@ impl Default for Periph {
 }
 
 /// What the cycle advance found due; the caller moves the audio half out
-/// of RAM because the peripheral block has no bus of its own.
+/// of RAM (and a received UART byte into it) because the peripheral block has no bus of its own.
 #[derive(Debug, Default)]
 pub struct Due {
     /// A half buffer finished playing: (RAM address, words).
     pub audio_half: Option<(u32, u32)>,
+    /// A UART byte the RX DMA wrote: (address, byte).
+    pub uart_rx: Option<(u32, u8)>,
     pub actions: Vec<Action>,
 }
 
@@ -295,6 +343,7 @@ impl Periph {
     /// The next cycle at which something timed happens.
     fn next_event(&self) -> u64 {
         let mut n = self.t5_next.min(self.alnk_next).min(self.tick_next).min(self.spi2_next);
+        n = n.min(self.uart.next).min(self.uart.ot_next);
         for t in &self.tmr {
             n = n.min(t.next);
         }
@@ -356,6 +405,16 @@ impl Periph {
             self.alnk_next += self.half_period();
             self.audio_halves += 1;
         }
+        if self.cycles >= self.uart.next {
+            due.uart_rx = self.uart_receive();
+        }
+        if self.cycles >= self.uart.ot_next {
+            self.uart.ot_next = u64::MAX;
+            if self.uart.con0 & 1 != 0 {
+                self.uart.otpnd = true;
+                self.uart_update();
+            }
+        }
         for i in 0..7 {
             if self.enc_pending[i] != 0 && self.cycles >= self.enc_next[i] {
                 let s = self.enc_state[i] as i32;
@@ -398,7 +457,63 @@ impl Periph {
                     self.adc_value[ch as usize] = value.min(1023);
                 }
             }
+            Action::Midi { b } => {
+                // a USB keyboard can send faster than the 31250-baud jack takes it: past a
+                // second's worth of backlog the bytes are dropped rather than played late
+                if self.uart.q.len() >= MIDI_QUEUE_MAX {
+                    self.uart.dropped += 1;
+                    return;
+                }
+                if self.uart.q.is_empty() {
+                    self.uart.next = self.uart.next.min(self.cycles + self.midi_byte_time());
+                }
+                self.uart.q.push_back(b);
+            }
         }
+    }
+
+    // ---- UART1 (MIDI IN) ------------------------------------------------------
+
+    fn midi_byte_time(&self) -> u64 {
+        (self.hz * MIDI_BYTE_BITS / MIDI_BAUD).max(1)
+    }
+
+    /// The next queued byte has arrived: where the RX DMA writes it (None: dropped).
+    fn uart_receive(&mut self) -> Option<(u32, u8)> {
+        let b = self.uart.q.pop_front()?;
+        self.uart.next = if self.uart.q.is_empty() { u64::MAX } else { self.cycles + self.midi_byte_time() };
+        let u = &mut self.uart;
+        let len = u.rxeadr.wrapping_sub(u.rxsadr);
+        if u.con0 & 0x41 != 0x41 || len == 0 || len > 0x10000 {
+            u.dropped += 1;
+            return None;
+        }
+        let at = u.rxsadr + u.wr % len;
+        u.wr = (u.wr + 1) % len;
+        u.since += 1;
+        if u.rxcnt != 0 && u.since >= u.rxcnt {
+            u.rpnd = true;
+        }
+        // the timeout: OTCNT UART clocks after the last byte (at least a byte time)
+        let ot = (u.otcnt as u64 * self.hz / UART_HZ).max(self.midi_byte_time());
+        self.uart.ot_next = self.cycles + ot;
+        self.uart_update();
+        Some((at, b))
+    }
+
+    fn uart_update(&mut self) {
+        let u = &self.uart;
+        self.uart_irq = (u.con0 & 0x08 != 0 && u.rpnd) || (u.con0 & 0x20 != 0 && u.otpnd) || (u.con0 & 0x04 != 0 && u.tpnd);
+    }
+
+    /// MIDI bytes waiting to arrive (the queue behind the jack).
+    pub fn midi_queued(&self) -> usize {
+        self.uart.q.len()
+    }
+
+    /// MIDI bytes dropped (no receiver set up: the UART off or no DMA ring; or a full queue).
+    pub fn midi_dropped(&self) -> u64 {
+        self.uart.dropped
     }
 
     /// One cycle; true when something timed is due (call `advance(0)`).
@@ -423,7 +538,7 @@ impl Periph {
     #[inline(always)]
     pub fn any_pending(&self) -> bool {
         self.t5_pending || self.alnk_pend & 0xf0 != 0 || self.ilat != 0 || self.tick_pending || self.spi1_pending
-            || self.tmr.iter().any(|t| t.pending) || self.adc_irq || self.spi2_pending
+            || self.tmr.iter().any(|t| t.pending) || self.adc_irq || self.spi2_pending || self.uart_irq
     }
 
     /// The highest-priority source cpu0 has enabled and that is pending: (irq, prio).
@@ -462,6 +577,9 @@ impl Periph {
         }
         if self.spi2_pending {
             consider(IRQ_SPI2);
+        }
+        if self.uart_irq {
+            consider(IRQ_UART1);
         }
         for i in 0..4 {
             if self.tmr[i].pending {
@@ -569,6 +687,15 @@ impl Periph {
                 }
             }
             0x1eef0f4 => self.tick_prd,
+            0x12100 => {
+                let u = &self.uart;
+                u.con0 | (u.otpnd as u32) << 11 | (u.rpnd as u32) << 14 | (u.tpnd as u32) << 15
+            }
+            0x1211c => self.uart.rxsadr,
+            0x12120 => self.uart.rxeadr,
+            0x12124 => self.uart.rxcnt,
+            0x12110 => self.uart.otcnt,
+            0x12128 => self.uart.hrxcnt,
             0x50004 => self.pa_in(),
             0x50044 => self.pb_in(),
             _ => return None,
@@ -674,6 +801,38 @@ impl Periph {
             0x1eef0f4 => self.tick_prd = v,
             0x1eef1a0 => self.ilat |= v,
             0x1eef1a4 => self.ilat &= !v,
+            0x12100 => {
+                let u = &mut self.uart;
+                if v & 0x80 != 0 {
+                    u.hrxcnt = u.since;
+                    u.since = 0;
+                }
+                if v & 0x400 != 0 {
+                    u.otpnd = false;
+                }
+                if v & 0x1000 != 0 {
+                    u.rpnd = false;
+                }
+                if v & 0x2000 != 0 {
+                    u.tpnd = false;
+                }
+                u.con0 = v & 0xffff & !0xfc80;
+                self.uart_update();
+            }
+            // the ring's start resets the DMA's write position
+            0x1211c => {
+                self.uart.rxsadr = v;
+                self.uart.wr = 0;
+            }
+            0x12120 => self.uart.rxeadr = v,
+            0x12124 => self.uart.rxcnt = v & 0xffff,
+            0x12110 => self.uart.otcnt = v,
+            // TX DMA count: sent at once (MIDI thru has no pin here)
+            0x12118 => {
+                self.uart.tpnd = true;
+                self.uart_update();
+                return false;
+            }
             0x50000 => {
                 self.led_credit();
                 self.pa_write(v);
@@ -873,4 +1032,64 @@ fn note_name(n: &str) -> Option<u8> {
     let midi = (oct + 1) * 12 + base + acc;
     let k = midi - 53; // F3 = MIDI 53
     (0..27).contains(&k).then_some(k as u8)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Advance to `cycle`, collecting the bytes the UART's DMA wrote.
+    fn run_to(p: &mut Periph, cycle: u64, got: &mut Vec<(u32, u8)>) {
+        while p.cycles < cycle {
+            let step = p.next_event().min(cycle).max(p.cycles + 1) - p.cycles;
+            if let Some(w) = p.advance(step).uart_rx {
+                got.push(w);
+            }
+        }
+    }
+
+    #[test]
+    fn uart_midi_in_dma_latch_and_timeout() {
+        let mut p = Periph::default();
+        // Felucca's set-up (hal/fm1_uart.h) with a 4-byte ring, plus the RX and timeout IRQs
+        p.write(0x1211c, 0x1000);
+        p.write(0x12120, 0x1004);
+        p.write(0x12124, 4);
+        p.write(0x12110, 48_000); // 1 ms of silence
+        p.write(0x12100, 0x40 | 0x08 | 0x20 | 1);
+        for b in [0x90, 0x3c, 0x64, 0x80, 0x3c] {
+            p.apply(&Action::Midi { b });
+        }
+        let byte = p.midi_byte_time();
+        let mut got = Vec::new();
+        run_to(&mut p, 3 * byte, &mut got);
+        assert_eq!(got, [(0x1000, 0x90), (0x1001, 0x3c), (0x1002, 0x64)]); // a byte time apart
+        assert!(p.pending_irq_for(0).is_none() && !p.any_pending()); // IRQ 20 not enabled yet
+        p.icfg[(IRQ_UART1 >> 3) as usize] |= 1 << ((IRQ_UART1 & 7) * 4);
+        run_to(&mut p, 5 * byte, &mut got);
+        assert_eq!(got[3..], [(0x1003, 0x80), (0x1000, 0x3c)]); // the ring wraps
+        assert_eq!(p.read(0x12100).unwrap() & 0x4000, 0x4000); // RXCNT (4) bytes: RX pending
+        assert_eq!(p.pending_irq_for(0).map(|(n, _)| n), Some(IRQ_UART1));
+        // the handler's acknowledge: latch the count, clear the pending
+        let con = p.read(0x12100).unwrap();
+        p.write(0x12100, con | 0x80);
+        let con = p.read(0x12100).unwrap();
+        p.write(0x12100, con | 0x1000);
+        assert_eq!(p.read(0x12128), Some(5));
+        assert!(p.pending_irq_for(0).is_none());
+        // a millisecond of silence after the last byte: the timeout
+        let ms = p.hz / 1000;
+        run_to(&mut p, 5 * byte + ms + 1, &mut got);
+        assert_eq!(p.read(0x12100).unwrap() & 0x800, 0x800);
+        assert_eq!(p.pending_irq_for(0).map(|(n, _)| n), Some(IRQ_UART1));
+        let con = p.read(0x12100).unwrap();
+        p.write(0x12100, con | 0x80 | 0x400);
+        assert_eq!(p.read(0x12128), Some(0));
+        assert!(p.pending_irq_for(0).is_none());
+        // with the UART off a byte is dropped
+        p.write(0x12100, 0);
+        p.apply(&Action::Midi { b: 0xf8 });
+        run_to(&mut p, 7 * byte + ms, &mut got);
+        assert_eq!((got.len(), p.midi_dropped()), (5, 1));
+    }
 }

@@ -44,6 +44,7 @@ class Fm1 extends AudioWorkletProcessor {
         if (m.type === "key") this.x.fm1_key(m.id, m.down ? 1 : 0);
         else if (m.type === "enc") this.x.fm1_enc(m.enc, m.clicks);
         else if (m.type === "pot") this.x.fm1_pot(m.value);
+        else if (m.type === "midi") for (const b of m.bytes) this.x.fm1_midi(b);
       }
     };
   }

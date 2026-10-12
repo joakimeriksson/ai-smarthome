@@ -326,6 +326,73 @@ addEventListener("keyup", (e) => {
   if (id >= 0) setKey(id, false);
 });
 
+// ---------------------------------------------------------------- MIDI in (Web MIDI)
+// The chosen input(s) play the synth through its MIDI IN jack (UART1 at 31250 baud in the
+// emulator). Access is asked for only once an input is picked (Chrome asks the visitor), and on
+// Start when one was picked on an earlier visit. Channel: channel messages rewritten to one
+// channel (0 = as sent).
+const midiSel = document.getElementById("midi");
+const midiChSel = document.getElementById("midich");
+const midiAct = document.getElementById("midiact");
+let midi = null, midiAsked = null, midiActOff = 0;
+let midiCh = Number(stored("fm1.midich") || 0);
+for (let c = 1; c <= 16; c++) midiChSel.add(new Option(String(c), c));
+midiChSel.value = midiCh;
+const midiWant = () => stored("fm1.midi") || "";
+if (!navigator.requestMIDIAccess) {
+  midiSel.disabled = midiChSel.disabled = true;
+  document.getElementById("midiin").title = "this browser has no Web MIDI (Chrome, Edge and Firefox do)";
+}
+function midiMessage(e) {
+  const d = e.data;
+  if (!d.length || !node) return;
+  const bytes = Array.from(d);
+  if (midiCh && bytes[0] >= 0x80 && bytes[0] < 0xf0) bytes[0] = (bytes[0] & 0xf0) | (midiCh - 1);
+  send({ type: "midi", bytes });
+  if (bytes[0] < 0xf8) {
+    midiAct.classList.add("on");
+    clearTimeout(midiActOff);
+    midiActOff = setTimeout(() => midiAct.classList.remove("on"), 120);
+  }
+}
+// listen to the wanted inputs only; the list follows devices coming and going
+function midiConnect() {
+  if (!midi) return;
+  const want = midiSel.value;
+  const names = [...midi.inputs.values()].map((i) => i.name);
+  for (const o of [...midiSel.options]) if (o.value !== "" && o.value !== "*" && !names.includes(o.value)) o.remove();
+  for (const n of names) if (![...midiSel.options].some((o) => o.value === n)) midiSel.add(new Option(n, n));
+  if ([...midiSel.options].some((o) => o.value === want)) midiSel.value = want;
+  for (const input of midi.inputs.values())
+    input.onmidimessage = want === "*" || want === input.name ? midiMessage : null;
+}
+async function midiOpen() {
+  if (midi || !navigator.requestMIDIAccess) return midiConnect();
+  midiAsked ||= navigator.requestMIDIAccess().then((m) => {
+    midi = m;
+    midi.onstatechange = midiConnect;
+  }, () => {
+    midiAsked = null;
+    midiSel.value = "";
+    status.textContent = "MIDI: access was not given";
+  });
+  await midiAsked;
+  midiConnect();
+}
+{
+  const want = midiWant();
+  if (want && want !== "*") midiSel.add(new Option(want, want));
+  midiSel.value = want;
+}
+midiSel.addEventListener("change", () => {
+  store("fm1.midi", midiSel.value);
+  if (midiSel.value) midiOpen(); else midiConnect();
+});
+midiChSel.addEventListener("change", () => {
+  midiCh = Number(midiChSel.value);
+  store("fm1.midich", midiCh);
+});
+
 // ---------------------------------------------------------------- audio: start on a click
 let ac = null, last = null, bootSeq = 0, booting = 0;
 
@@ -390,6 +457,7 @@ startBtn.addEventListener("click", async () => {
     }
   };
   await boot();
+  if (midiSel.value) midiOpen();                  // (an input picked on an earlier visit)
   await ac.resume();
   startBtn.hidden = true;
   // a phone on its side: the synth fills the screen, so bring all of it into view

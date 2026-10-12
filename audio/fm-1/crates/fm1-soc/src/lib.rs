@@ -163,6 +163,9 @@ impl Soc {
     /// bits — Felucca writes Q15 << 7, audio.c OUT_SHIFT — so >> 8 to i16).
     pub fn advance(&mut self, n: u64) {
         let due = self.periph.advance(n);
+        if let Some((at, b)) = due.uart_rx {
+            self.write8(at, b);
+        }
         if let Some((adr, words)) = due.audio_half {
             if self.audio_trace {
                 eprintln!("half {} ms {}", self.periph.ms(), self.periph.cycles);
@@ -495,7 +498,7 @@ impl Soc {
                     _ => v,
                 }
             }
-            Region::Iomap | Region::Usb | Region::Uart1 | Region::Clk => self.sfr_get(addr),
+            Region::Iomap | Region::Usb | Region::Clk => self.sfr_get(addr),
             // JL_ANA (analog: WLA, DAC trim). 0x11978 is the DAC trim measurement after the
             // strobe at the same word: bit 5 = conversion done, bits 8-15 = the value (mid
             // scale here), bit 18 = "this trim step is right". With these the stock
@@ -515,7 +518,7 @@ impl Soc {
             Region::Bt => {
                 if addr == 0x2fc44 { BT_WINDOW_BASE } else { 0 }
             }
-            Region::Gpio | Region::Adc | Region::Alnk | Region::Irqc2 => {
+            Region::Gpio | Region::Adc | Region::Alnk | Region::Irqc2 | Region::Uart1 => {
                 match self.periph.read(addr) {
                     Some(v) => v,
                     None => self.sfr_get(addr),
@@ -631,7 +634,11 @@ impl Soc {
                 self.sfr_set(addr, value)
             }
             Region::Usb => self.sfr_set(addr, value),
-            Region::Uart1 => self.sfr_set(addr, value),
+            Region::Uart1 => {
+                if !self.periph.write(addr, value) {
+                    self.sfr_set(addr, value);
+                }
+            }
             Region::Adc => {
                 if !self.periph.write(addr, value) {
                     self.sfr_set(addr, value);

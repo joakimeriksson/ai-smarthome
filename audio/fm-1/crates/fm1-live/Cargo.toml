@@ -10,3 +10,4 @@ fm1-core = { path = "../fm1-core" }
 fm1-soc = { path = "../fm1-soc" }
 minifb = "0.28"
 cpal = "0.15"
+midir = "0.10"

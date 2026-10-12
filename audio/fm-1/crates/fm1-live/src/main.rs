@@ -15,6 +15,10 @@
 //! Z / X = OCT- / OCT+, Space = PLAY, R = REC, 1..0 = FX SCL ENV LFO EDIT
 //! GLO HOME SAVE ARP SEQ, Left/Right = SELECT, Up/Down = PRESETS,
 //! , / . = ALGORITHM, Esc quits.
+//!
+//! MIDI: every MIDI input of this computer plays the synth through its MIDI IN jack
+//! (`--midi none` turns that off, `--midi NAME` takes the inputs whose name contains NAME);
+//! `--midi-ch N` sends channel messages to channel N (M-VAVE's firmware listens on 2).
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use fm1_core::{Bus, Cpu};
@@ -49,6 +53,10 @@ struct Opts {
     fwsc: Option<String>,
     /// a DX7 32-voice bank for the stock firmware's slots 1-32
     syx: Option<String>,
+    /// MIDI inputs to play from: "all", "none", or part of an input's name
+    midi: String,
+    /// channel messages sent to this channel (1-16; 0 = as sent)
+    midi_ch: u8,
 }
 
 /// The firmware catalog web/firmwares.json as (id, name, version, image path): each image is
@@ -74,7 +82,7 @@ fn catalog() -> Vec<(String, String, String, String)> {
 fn parse() -> Option<Opts> {
     let a: Vec<String> = std::env::args().collect();
     let mut o = Opts { bin: "work/felucca_xip.bin".into(), entry: 0x0200_0120, mhz: 240, bench: None, shot: None,
-                       name: "Felucca".into(), fwsc: None, syx: None };
+                       name: "Felucca".into(), fwsc: None, syx: None, midi: "all".into(), midi_ch: 0 };
     let mut i = 1;
     while i < a.len() {
         match a[i].as_str() {
@@ -102,6 +110,8 @@ fn parse() -> Option<Opts> {
                 o.name = "M-VAVE stock firmware".into();
             }
             "--syx" => o.syx = Some(a.get(i + 1)?.clone()),
+            "--midi" => o.midi = a.get(i + 1)?.clone(),
+            "--midi-ch" => o.midi_ch = a.get(i + 1)?.parse().ok().filter(|c| *c <= 16)?,
             "--entry" => o.entry = u32::from_str_radix(a.get(i + 1)?.trim_start_matches("0x"), 16).ok()?,
             "--mhz" => o.mhz = a.get(i + 1)?.parse().ok()?,
             "--bench" => o.bench = Some(a.get(i + 1)?.parse().ok()?),
@@ -380,11 +390,23 @@ fn start_audio(ring: Arc<AudioRing>) -> Result<cpal::Stream, String> {
 /// Headless panel picture: C4-E4-G4 held from 0.8 s, PLAY pressed at 1.2 s,
 /// the panel drawn at `ms` into work/panel.ppm.
 /// FM1_BENCH_KEYS=ms:id[,ms:id^,ms:eN:clicks...]: queue key presses (`^`: release) and
-/// encoder turns. False when the variable is unset.
+/// encoder turns, `ms:mHEX` MIDI bytes into the MIDI IN jack. False when the variable is unset.
 fn script_keys(m: &mut Machine) -> bool {
     let Ok(keys) = std::env::var("FM1_BENCH_KEYS") else { return false };
     for k in keys.split(',') {
         if let Some((t, rest)) = k.split_once(':') {
+            // `ms:mHEX` sends MIDI bytes into the MIDI IN jack (`ms:m903c64` = note on C4)
+            if let Some(hex) = rest.trim().strip_prefix('m') {
+                if let Ok(t) = t.trim().parse::<u64>() {
+                    let at = m.soc.periph.cycle_of_ms(t);
+                    for i in (0..hex.len() & !1).step_by(2) {
+                        if let Ok(b) = u8::from_str_radix(&hex[i..i + 2], 16) {
+                            m.soc.periph.script.push_back((at, Action::Midi { b }));
+                        }
+                    }
+                }
+                continue;
+            }
             // `ms:eN:clicks` turns matrix encoder N
             if let Some((e, c)) = rest.strip_prefix('e').and_then(|r| r.split_once(':')) {
                 if let (Ok(t), Ok(enc), Ok(clicks)) = (t.trim().parse::<u64>(), e.parse::<u8>(), c.parse::<i32>()) {
@@ -533,12 +555,54 @@ fn button(k: Key) -> Option<u8> {
     })
 }
 
+/// Connect the MIDI inputs `--midi` asks for: their bytes go to the MIDI IN jack. The
+/// connections live as long as the returned value.
+fn midi_inputs(o: &Opts, tx: &mpsc::Sender<Action>) -> Vec<midir::MidiInputConnection<()>> {
+    let mut conns = Vec::new();
+    if o.midi == "none" {
+        return conns;
+    }
+    let probe = match midir::MidiInput::new("fm1-live") {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("MIDI in: {e}");
+            return conns;
+        }
+    };
+    for port in probe.ports() {
+        let Ok(name) = probe.port_name(&port) else { continue };
+        if o.midi != "all" && !name.to_lowercase().contains(&o.midi.to_lowercase()) {
+            continue;
+        }
+        let Ok(mut input) = midir::MidiInput::new("fm1-live") else { continue };
+        input.ignore(midir::Ignore::None);
+        let (tx, ch) = (tx.clone(), o.midi_ch);
+        let got = input.connect(&port, "fm1-live in", move |_, msg, _| {
+            for (i, &b) in msg.iter().enumerate() {
+                let b = if i == 0 && ch != 0 && (0x80..0xf0).contains(&b) { (b & 0xf0) | (ch - 1) } else { b };
+                let _ = tx.send(Action::Midi { b });
+            }
+        }, ());
+        match got {
+            Ok(c) => {
+                eprintln!("MIDI in: {name}");
+                conns.push(c);
+            }
+            Err(e) => eprintln!("MIDI in: {name}: {e}"),
+        }
+    }
+    if conns.is_empty() {
+        eprintln!("MIDI in: no inputs{}", if o.midi == "all" { String::new() } else { format!(" matching {:?}", o.midi) });
+    }
+    conns
+}
+
 /// Pixels of vertical mouse drag per encoder click.
 const DRAG_PER_CLICK: f32 = 12.0;
 
 fn main() {
     let Some(o) = parse() else {
-        eprintln!("usage: fm1-live [--fw ID | --fw list | --bin work/felucca_xip.bin] [--entry 0x02000120] [--mhz 240] [--bench MS]");
+        eprintln!("usage: fm1-live [--fw ID | --fw list | --bin work/felucca_xip.bin] [--entry 0x02000120] [--mhz 240] [--bench MS] [--midi all|none|NAME] [--midi-ch N]");
         std::process::exit(2);
     };
     if let Some(ms) = o.shot {
@@ -573,6 +637,7 @@ fn main() {
     let status = Arc::new(Mutex::new(String::from("booting")));
     let quit = Arc::new(AtomicBool::new(false));
     let (tx, rx) = mpsc::channel::<Action>();
+    let _midi = midi_inputs(&o, &tx);
 
     let audio_ok = _stream.is_some();
     let emu = {

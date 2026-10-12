@@ -361,6 +361,28 @@ half: the run loop checks its budget per block); JIT == block interpreter == per
   micro-ops), the careful path (pairs that cannot be glued, if/else blocks: ~9%), regions for
   the native JIT too; the browser default clock can move to 240 MHz.
 
+## 5.10 MIDI in (2026-10-12)
+
+The MIDI IN jack works: UART1 (`0x12100`, IRQ 20) in `periph.rs`, the JieLi layout from the
+SDK driver and Felucca's `hal/fm1_uart.h` (RX DMA into the ring RXSADR..RXEADR, written CON0
+bit 7 latches the bytes since the last latch into HRXCNT, RX pending at RXCNT bytes, timeout
+pending after OTCNT UART clocks of silence, TX DMA done at once). Bytes arrive one per 31250-baud
+byte time (320 us); at most a second's worth wait (a USB keyboard can send faster than DIN).
+
+- Felucca polls the count from its TIMER5 ISR; M-VAVE's firmware takes the timeout IRQ (CON0
+  0x6d) into its `midi_route` task. Notes play on Felucca, Felucca Salt, FoMni, FuMi, GHOULBOX,
+  Jangada, Melodee, PurpleMonkey, Quest, SLOOP, AMB and stock; ChoralRoot, Hortator, SLOOP ALG
+  and X0X gave no note from a plain note-on (X0X's driver says "untested on hardware").
+- **Stock listens on channel 2** here: boot code at `0x0200431A` writes `[0, 1, 2, 12]` to
+  `ENG+4780..4783`, and only `0x91` notes sound. To check on the real FM-1.
+- Front ends: the page has MIDI in (Web MIDI: off / all inputs / one device, a channel remap,
+  an activity dot; access asked only once an input is picked) and `fm1_midi(byte)` in the wasm;
+  `fm1-live` connects every MIDI input (`--midi none|NAME`, `--midi-ch N`, midir).
+- Tests: `FM1_BENCH_KEYS=1000:m903c64,...` (fm1-live) and `--keys 1000:midi:903c64` (fm1-emu)
+  script bytes; `web/smoke.mjs` checks a note sounds through the wasm; a unit test covers the
+  DMA, the latch and the timeout. Without MIDI every firmware's audio is byte-identical to
+  before; with it JIT == interpreter == per step.
+
 ## 6. Phase 5 — Boot & integration
 
 - Boot stock firmware to a stable idle/main-loop state.

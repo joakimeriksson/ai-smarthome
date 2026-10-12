@@ -51,7 +51,7 @@ struct Args {
     /// write the I2S output (44.1 kHz stereo 16-bit) here
     wav: Option<String>,
     /// front-panel script: `t[-t2]:PLAY`, `t:n7`, `t:k12`, `t:enc0:+3`,
-    /// `t:SELECT:-1`, `t:pot:512` (times in ms; a key without t2 is held 150 ms)
+    /// `t:SELECT:-1`, `t:pot:512`, `t:midi:903c64` (times in ms; a key without t2 is held 150 ms)
     keys: Vec<String>,
     /// save the LCD at these times (ms) as work/lcd_<ms>.bmp
     snap: Vec<u64>,
@@ -866,6 +866,7 @@ fn parse_hex(s: &str) -> Option<u32> {
 ///   `2000:k12`         matrix key id 12
 ///   `2000:enc0:+3`     3 clockwise clicks on encoder 0; names SELECT/ALGO/PRESET/K1..K4
 ///   `2500:pot:512`     the MASTER pot (SARADC ch 4)
+///   `3000:midi:903c64` MIDI bytes into the MIDI IN jack (note on C4)
 fn parse_key_script(item: &str) -> Option<Vec<(u64, fm1_soc::Action)>> {
     use fm1_soc::Action;
     let mut parts = item.splitn(3, ':');
@@ -876,6 +877,11 @@ fn parse_key_script(item: &str) -> Option<Vec<(u64, fm1_soc::Action)>> {
         Some((a, b)) => (a.parse::<u64>().ok()?, Some(b.parse::<u64>().ok()?)),
         None => (when.parse::<u64>().ok()?, None),
     };
+    if what.eq_ignore_ascii_case("midi") {
+        let hex = arg?;
+        let bytes: Option<Vec<u8>> = (0..hex.len() & !1).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok()).collect();
+        return Some(bytes?.into_iter().map(|b| (t0, Action::Midi { b })).collect());
+    }
     if what.eq_ignore_ascii_case("pot") {
         let v: u16 = arg?.parse().ok()?;
         return Some(vec![(t0, Action::Adc { ch: 4, value: v })]);

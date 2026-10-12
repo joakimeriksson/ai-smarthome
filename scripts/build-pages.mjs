@@ -115,8 +115,9 @@ const DEMOS = [
   {
     slug: 'fm1-sid',
     title: 'FM-1 SID Player',
-    blurb: 'Commodore 64 music on the FM-1: each tune\'s own 6502 code and reSID running ' +
-           'on the synth\'s CPU, emulated in the browser, with all of HVSC to pick from.',
+    blurb: 'The FM-1 as a Commodore 64 SID synth, with a step sequencer and stereo chorus, delay ' +
+           'and reverb, that also plays C64 tunes: each tune\'s own 6502 code and reSID on the synth\'s ' +
+           'CPU, emulated in the browser, with all of HVSC to pick from.',
     external: 'https://joakimeriksson.github.io/fm1-emu/fm1-sid/',
     repo: 'https://github.com/joakimeriksson/fm1-emu',
     accent: '#7869c4',            // the C64's light blue

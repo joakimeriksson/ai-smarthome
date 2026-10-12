@@ -33,6 +33,16 @@ const ui = (await WebAssembly.instantiate(wasm, { env: { fm1_jit_compile: () => 
 const W = ui.panel_width(), H = ui.panel_height();
 canvas.width = W;
 canvas.height = H;
+// the synth's width follows the room left below the header and the bar (index.html's canvas rule)
+document.documentElement.style.setProperty("--aspect", String(W / H));
+const fitPanel = () => document.documentElement.style.setProperty("--above",
+  `${Math.round(canvas.parentElement.getBoundingClientRect().top + scrollY)}px`);
+{
+  const ro = new ResizeObserver(fitPanel);
+  ro.observe(document.querySelector("header"));
+  ro.observe(document.querySelector(".bar"));
+}
+fitPanel();
 
 let node = null;
 let frame = null;            // the latest LCD + LEDs from the audio thread
@@ -46,6 +56,52 @@ for (const f of catalog.firmwares) fwSel.add(new Option(`${f.name} ${f.version}`
 for (const c of new Set([...CLOCKS, mhz].sort((a, b) => a - b))) mhzSel.add(new Option(`${c} MHz`, c));
 fwSel.value = fw.id;
 mhzSel.value = mhz;
+
+// the guide's firmware list, one card per catalog entry; "Play" picks it like the select does
+const NO_NOTE = "MIDI: no sound from a plain note-on";
+const MIDI_NOTES = {
+  mvave: "MIDI: channel 2 in the emulator (not yet checked on a real FM-1)",
+  felucca: "MIDI: its parts play on channels 1–4",
+  choralroot: NO_NOTE, hortator: NO_NOTE, "sloop-alg": NO_NOTE, x0x: NO_NOTE,
+};
+const cards = new Map();
+{
+  const el = (tag, cls, ...kids) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    e.append(...kids);
+    return e;
+  };
+  const link = (href, text) => Object.assign(document.createElement("a"), { href, textContent: text });
+  const list = document.getElementById("fwlist");
+  for (const f of catalog.firmwares) {
+    const play = el("button", "", "Play");
+    play.type = "button";
+    play.setAttribute("aria-label", `Play ${f.name}`);
+    play.addEventListener("click", () => {
+      if (fw.id !== f.id) {
+        fwSel.value = f.id;
+        fwSel.dispatchEvent(new Event("change"));
+      }
+      scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    const links = el("div", "links");
+    if (f.byo) links.append(link(f.download, "download FM-1.fwsc"), link(f.repo, "notes"));
+    else {
+      links.append(link(f.repo, "source"));
+      if (f.installer) links.append(link(f.installer, "install"));
+    }
+    const card = el("li", "",
+      el("div", "head", el("b", "", f.name), el("span", "dim", f.version), play),
+      el("div", "by", `${f.author} · ${f.license}`),
+      el("p", "what", f.byo ? "The firmware the FM-1 ships with: a DX7-style FM synth, both cores running. " +
+        "Bring your own copy (see below)." : f.about));
+    if (MIDI_NOTES[f.id]) card.append(el("div", "midi", MIDI_NOTES[f.id]));
+    card.append(links);
+    list.append(card);
+    cards.set(f.id, card);
+  }
+}
 
 // the package of catalog entry f, fetched from its author's site (nothing is hosted with this
 // page); kept per session. A package opened from this computer is the entry `local`. A `byo`
@@ -96,6 +152,10 @@ let loadedUrl = null;                      // the package the running machine ca
 
 function showFirmware() {
   title.textContent = `M-VAVE FM-1 · ${fw.name} (emulated)`;
+  for (const [id, card] of cards) {
+    card.classList.toggle("on", id === fw.id);
+    card.querySelector("button").textContent = id === fw.id ? "Selected" : "Play";
+  }
   const b = document.createElement("b");
   b.textContent = `${fw.name} ${fw.version}`.trim();
   let parts;

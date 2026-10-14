@@ -2,18 +2,19 @@
 # runheatpump.py - adapted for running in colonies with cronjob and CFS
 # (c) 2025 Joakim Eriksson
 #
+import os
 import hopsworks
 import toml
 
 # Read the config file from CFS
 with open("/cfs/cronfiles/config.toml", "r") as fp:
     confData = fp.read()
-print("Trying to load config.toml from:" + confData)
 conf = toml.loads(confData)
+api_key_value = os.environ.get("HOPSWORKS_API_KEY", conf['project']['api_key'])
 connection = hopsworks.connection(
     host=conf['hops']['host'],
     project=conf['project']['name'],
-    api_key_value=conf['project']['api_key']
+    api_key_value=api_key_value
 )
 print("Connected to hopsworks")
 projects = connection.get_projects()

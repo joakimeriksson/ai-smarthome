@@ -113,7 +113,7 @@ Stop and report when done. Don't proceed to Phase 2 unprompted.
 ## Reference materials
 
 - **PLAN.md** — full design.
-- **`packages/engine/src/presets/factory.ts`** — 80 patch names from the original manual + parameter reconstructions for the 40 ROM presets. Use later, not in Phase 1.
+- **`packages/engine/src/presets/factory.ts`** — 80 patch names from the original manual. The 40 ROM PRESETS carry the real parameter values, decoded from the firmware EPROMs (`tools/synthex-rom/`, see its README for the record layout and which scalings are assumptions). The 40 MEMORIES are still reconstructions: the circulating cassette dumps are user banks.
 - **`docs/manual-presets.png`** — original manual page 25, the authoritative preset name list.
 - **Per Kristian's "All 40 Synthex presets" YouTube recording** — sonic ground truth. A/B against it when patch values feel off.
 - **Vadim Zavalishin, *The Art of VA Filter Design*** — the SVF reference.

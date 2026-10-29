@@ -18,7 +18,7 @@ describe('ADSR', () => {
     expect(env.stage).toBe('sustain')
   })
 
-  it('decays to zero on noteOff', () => {
+  it('release falls 20 dB in r seconds, exponentially, then goes idle', () => {
     const env = new Adsr(SR)
     env.noteOn()
     // Hold long enough to reach sustain
@@ -26,9 +26,13 @@ describe('ADSR', () => {
     env.noteOff()
     expect(env.stage).toBe('release')
     let last = 1
-    for (let i = 0; i < Math.floor(params.r * SR) + 100; i++) {
-      last = env.step(params)
-    }
+    for (let i = 0; i < Math.floor(params.r * SR); i++) last = env.step(params)
+    expect(last).toBeCloseTo(params.s / 10, 3)
+    // a further r seconds: another factor 10
+    for (let i = 0; i < Math.floor(params.r * SR); i++) last = env.step(params)
+    expect(last).toBeCloseTo(params.s / 100, 4)
+    // -80 dB is reached after 4 r: the stage ends and the level is exactly 0
+    for (let i = 0; i < Math.floor(params.r * SR) * 3; i++) last = env.step(params)
     expect(last).toBe(0)
     expect(env.stage).toBe('idle')
   })

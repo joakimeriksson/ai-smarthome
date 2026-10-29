@@ -478,9 +478,9 @@
   // Real Synthex LFO: triangle, saw down, saw up, square
   const LFO_SHAPE_OPTS = [
     { value: 'tri' as const,         label: wSvg('M2,8 L8,2 L14,8') },                  // △ triangle
-    { value: 'ramp' as const,        label: wSvg('M2,8 L14,2 L14,8') },                 // ∧ saw down (ramp up, drop)
-    { value: 'square' as const,      label: wSvg('M2,2 L2,8 L14,2') },                  // ∧ saw up (drop, ramp up)
-    { value: 'sample-hold' as const, label: wSvg('M2,8 L2,2 L8,2 L8,8 L14,8') },        // ⊓ square pulse
+    { value: 'ramp-down' as const,   label: wSvg('M2,2 L2,8 L14,2') },                  // falling ramp (drop, ramp up)
+    { value: 'ramp' as const,        label: wSvg('M2,8 L14,2 L14,8') },                 // rising ramp (ramp up, drop)
+    { value: 'square' as const,      label: wSvg('M2,8 L2,2 L8,2 L8,8 L14,8') },        // ⊓ square
   ]
 
   onMount(() => {

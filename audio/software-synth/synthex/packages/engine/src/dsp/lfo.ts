@@ -3,6 +3,7 @@
 //   square — bipolar square ±1
 //   sample-hold — random level, held for one period
 //   random — smoothed random walk (slewed S&H, less stepped than 'sample-hold')
+//   ramp / ramp-down — rising and falling sawtooth (Synthex LFO1 shapes 3 and 2)
 //
 // Optional `delay` ramps the output amplitude in over `delay` seconds after
 // noteOn — like the original's LFO delay slider.
@@ -57,6 +58,10 @@ export class Lfo {
       case 'ramp':
         // Saw rising 0→1 over the period, mapped to [-1, +1]
         raw = this.phase * 2 - 1
+        break
+      case 'ramp-down':
+        // Falling ramp (the Synthex LFO's second shape): 1 → -1 over the period
+        raw = 1 - this.phase * 2
         break
       case 'square-uni':
         // Unipolar square: 0 or 1, then mapped to [-1, +1]

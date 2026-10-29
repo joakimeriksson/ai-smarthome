@@ -1,6 +1,10 @@
-// Linear ADSR envelope. State machine driven, sample-accurate transitions.
-// Linear segments are click-free for Phase 1 verification; exponential
-// curves can come later if we want more "analog" feel.
+// ADSR envelope. State machine driven, sample-accurate transitions.
+// Attack and decay are linear ramps (the Synthex's envelope CVs ramp
+// linearly: its filter sweeps fall linearly in note space). The release is
+// exponential, as the hardware's amplitude falls linearly in dB after
+// note-off: `r` is the time to fall 20 dB (a tenth of the level at note-off),
+// and the stage ends at -80 dB. Measured on Per Kristian's recording of the
+// 40 ROM presets; see tools/synthex-rom/README.md.
 
 export type EnvStage = 'idle' | 'attack' | 'decay' | 'sustain' | 'release'
 
@@ -11,12 +15,15 @@ export interface AdsrParams {
   r: number // seconds
 }
 
+const LN10 = Math.log(10)
+const RELEASE_FLOOR = 1e-4 // -80 dB: the release stage ends here
+
 export class Adsr {
   stage: EnvStage = 'idle'
   level = 0
-  // Snapshot of `level` at the moment of noteOff, so release can be linear
-  // (decays to 0 in exactly `r` seconds regardless of where it started).
-  private releaseStart = 0
+  // Per-sample multiplier for the release, cached per `r` value.
+  private releaseMul = 0
+  private releaseFor = -1
 
   constructor(private readonly sr: number) {}
 
@@ -26,7 +33,6 @@ export class Adsr {
 
   noteOff(): void {
     if (this.stage === 'idle') return
-    this.releaseStart = this.level
     this.stage = 'release'
   }
 
@@ -53,9 +59,13 @@ export class Adsr {
       }
       case 'sustain': return p.s
       case 'release': {
-        const inc = this.releaseStart / (Math.max(p.r, 1e-4) * this.sr)
-        this.level -= inc
-        if (this.level <= 0) {
+        if (p.r !== this.releaseFor) {
+          // 20 dB (a factor 10) per `r` seconds
+          this.releaseFor = p.r
+          this.releaseMul = Math.exp(-LN10 / (Math.max(p.r, 1e-4) * this.sr))
+        }
+        this.level *= this.releaseMul
+        if (this.level <= RELEASE_FLOOR) {
           this.level = 0
           this.stage = 'idle'
         }

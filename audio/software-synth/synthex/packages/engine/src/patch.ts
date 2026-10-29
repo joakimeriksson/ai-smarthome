@@ -2,7 +2,7 @@
 
 export type Waveform = 'triangle' | 'sawtooth' | 'square' | 'sine' | 'noise'
 export type FilterMode = 'lp24' | 'lp12' | 'bp12' | 'bp6' | 'hp12'
-export type LfoShape = 'tri' | 'square' | 'sample-hold' | 'random' | 'ramp' | 'square-uni'
+export type LfoShape = 'tri' | 'square' | 'sample-hold' | 'random' | 'ramp' | 'ramp-down' | 'square-uni'
 export type Octave = -2 | -1 | 0 | 1 | 2
 export type ChorusMode = 1 | 2 | 3
 export type GlideMode = 'off' | 'glide' | 'portamento'

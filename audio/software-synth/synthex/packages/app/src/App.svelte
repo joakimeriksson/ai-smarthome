@@ -569,9 +569,9 @@
       <div class="col">
         <Panel title="Low Frequency Oscillator">
           <div class="lfo-row">
-            <Knob label="Frequency" size={52} value={layer.lfo1.rate} min={0.05} max={20} default={5} unit="Hz"
+            <Knob label="Frequency" size={52} value={layer.lfo1.rate} min={0.05} max={30} default={5} unit="Hz" log
               onchange={(v) => setL('lfo1.rate', v)} />
-            <Knob label="Delay" size={52} value={layer.lfo1.delay} min={0} max={5} default={0} unit="s"
+            <Knob label="Delay" size={52} value={layer.lfo1.delay} min={0.001} max={30} default={0} unit="s" log
               onchange={(v) => setL('lfo1.delay', v)} />
           </div>
           <div class="lfo-row">
@@ -718,9 +718,9 @@
                 else if (v === 'glide') setL('glide.mode', layer.glide.mode === 'glide' ? 'off' : 'glide')
                 else if (v === 'portam') setL('glide.mode', layer.glide.mode === 'portamento' ? 'off' : 'portamento')
               }} />
-            <Knob label="Speed" size={40} value={layer.glide.time} min={0.01} max={10} default={0.2}
+            <Knob label="Speed" size={40} value={layer.glide.time} min={0.005} max={10} default={0.2} log
               onchange={(v) => setL('glide.time', v)} />
-            <Knob label="Glide Amount" size={40} value={layer.glide.amount} min={-24} max={24} default={0} step={1} unit="st"
+            <Knob label="Glide Amount" size={40} value={layer.glide.amount} min={-32} max={31} default={0} step={1} unit="st"
               onchange={(v) => setL('glide.amount', v)} />
           </Panel>
           <Panel title="Noise Generator" inline>
@@ -737,9 +737,10 @@
       <div class="col col-filter">
         <Panel title="Multimode Filter">
           <div class="filter-grid">
-            <Knob label="Frequency" value={layer.filter.cutoff} min={0} max={1} default={0.6}
+            <Knob label="Frequency" value={layer.filter.cutoff} min={-0.3} max={1.5} default={0.6}
+              tickLabels={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
               onchange={(v) => setL('filter.cutoff', v)} />
-            <Knob label="Envelope" value={layer.filter.envAmount} min={-1} max={1} default={0.4}
+            <Knob label="Envelope" value={layer.filter.envAmount} min={-3.1} max={3.1} default={0.4}
               onchange={(v) => setL('filter.envAmount', v)} />
             <Knob label="Resonance" value={layer.filter.resonance} min={0} max={1} default={0.2}
               onchange={(v) => setL('filter.resonance', v)} />
@@ -755,23 +756,23 @@
       <div class="col col-env">
         <div class="stack">
           <Panel title="Filter Envelope" inline>
-            <Knob label="Attack" value={layer.envFilter.a} min={0.001} max={5} default={0.005} unit="s"
+            <Knob label="Attack" value={layer.envFilter.a} min={0.001} max={15} default={0.005} unit="s" log
               onchange={(v) => setL('envFilter.a', v)} />
-            <Knob label="Decay" value={layer.envFilter.d} min={0.001} max={5} default={0.4} unit="s"
+            <Knob label="Decay" value={layer.envFilter.d} min={0.001} max={15} default={0.4} unit="s" log
               onchange={(v) => setL('envFilter.d', v)} />
             <Knob label="Sustain" value={layer.envFilter.s} min={0} max={1} default={0.5}
               onchange={(v) => setL('envFilter.s', v)} />
-            <Knob label="Release" value={layer.envFilter.r} min={0.001} max={5} default={0.3} unit="s"
+            <Knob label="Release" value={layer.envFilter.r} min={0.001} max={15} default={0.3} unit="s" log
               onchange={(v) => setL('envFilter.r', v)} />
           </Panel>
           <Panel title="Amplifier Envelope" inline>
-            <Knob label="Attack" value={layer.envAmp.a} min={0.001} max={5} default={0.005} unit="s"
+            <Knob label="Attack" value={layer.envAmp.a} min={0.001} max={15} default={0.005} unit="s" log
               onchange={(v) => setL('envAmp.a', v)} />
-            <Knob label="Decay" value={layer.envAmp.d} min={0.001} max={5} default={0.2} unit="s"
+            <Knob label="Decay" value={layer.envAmp.d} min={0.001} max={15} default={0.2} unit="s" log
               onchange={(v) => setL('envAmp.d', v)} />
             <Knob label="Sustain" value={layer.envAmp.s} min={0} max={1} default={0.85}
               onchange={(v) => setL('envAmp.s', v)} />
-            <Knob label="Release" value={layer.envAmp.r} min={0.001} max={5} default={0.3} unit="s"
+            <Knob label="Release" value={layer.envAmp.r} min={0.001} max={15} default={0.3} unit="s" log
               onchange={(v) => setL('envAmp.r', v)} />
           </Panel>
           <div class="row row-sub">

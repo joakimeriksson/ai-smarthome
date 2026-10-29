@@ -5,6 +5,8 @@
   //
   // Vertical drag adjusts value. Shift = fine ×0.25, Cmd/Ctrl = coarse ×4.
   // Double-click = default. Wheel + arrow keys for keyboard accessibility.
+  // `log` gives the knob a logarithmic taper (min > 0): equal turns are equal
+  // ratios, as on the Synthex's time and rate pots.
 
   interface Props {
     value: number
@@ -19,11 +21,12 @@
     size?: number
     tickLabels?: (string | number)[]  // custom tick labels; length sets tick count
     light?: boolean  // silver/light cap (Master Tune style)
+    log?: boolean    // logarithmic taper (needs min > 0)
   }
 
   let {
     value, min = 0, max = 1, default: def = 0, step = 0,
-    label, unit = '', format, onchange, size = 50, tickLabels, light = false,
+    label, unit = '', format, onchange, size = 50, tickLabels, light = false, log = false,
   }: Props = $props()
 
   const uid = Math.random().toString(36).slice(2, 10)
@@ -35,6 +38,15 @@
   function snap(v: number): number {
     return step > 0 ? Math.round(v / step) * step : v
   }
+  // value <-> knob position 0..1 (linear, or logarithmic with `log`)
+  function toPos(v: number): number {
+    return log ? Math.log(Math.max(v, min) / min) / Math.log(max / min) : (v - min) / (max - min)
+  }
+  function fromPos(p: number): number {
+    return log ? min * Math.pow(max / min, p) : min + p * (max - min)
+  }
+  // move by `d` of the knob's travel
+  function turn(v: number, d: number): number { return clamp(snap(fromPos(toPos(v) + d))) }
 
   let dragging = $state(false)
   let dragStartY = 0
@@ -62,8 +74,7 @@
   function pointerMove(e: PointerEvent) {
     if (!dragging) return
     const dy = dragStartY - e.clientY
-    const range = max - min
-    const next = clamp(snap(dragStartV + (dy / 200) * range * speed))
+    const next = turn(dragStartV, (dy / 200) * speed)
     if (next !== value) onchange(next)
     e.preventDefault()
   }
@@ -75,20 +86,17 @@
   function dblClick() { onchange(clamp(snap(def))) }
   function wheel(e: WheelEvent) {
     e.preventDefault()
-    const range = max - min
-    const delta = -e.deltaY / 1500 * range * (e.shiftKey ? 0.25 : 1)
-    onchange(clamp(snap(value + delta)))
+    onchange(turn(value, -e.deltaY / 1500 * (e.shiftKey ? 0.25 : 1)))
   }
   function key(e: KeyboardEvent) {
-    const range = max - min
     const fine = e.shiftKey ? 0.01 : 0.05
-    if (e.key === 'ArrowUp')   { onchange(clamp(snap(value + range * fine))); e.preventDefault() }
-    if (e.key === 'ArrowDown') { onchange(clamp(snap(value - range * fine))); e.preventDefault() }
+    if (e.key === 'ArrowUp')   { onchange(turn(value, fine)); e.preventDefault() }
+    if (e.key === 'ArrowDown') { onchange(turn(value, -fine)); e.preventDefault() }
     if (e.key === 'Home')      { onchange(min); e.preventDefault() }
     if (e.key === 'End')       { onchange(max); e.preventDefault() }
   }
 
-  let pos01 = $derived((value - min) / (max - min))
+  let pos01 = $derived(Math.max(0, Math.min(1, toPos(value))))
   let angle = $derived(start + pos01 * sweep)
 
   const isBipolar = $derived(min < 0 && max > 0)

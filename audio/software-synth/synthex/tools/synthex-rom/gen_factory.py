@@ -146,6 +146,20 @@ CUT_OFFSET = -1.0       # cutoff note with every CV at zero
 KEY_W, ENV_W = 0.698, 1.25
 MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant presets out of the limiter)
 
+# Presets whose filter envelope the recording contradicts, corrected one by one
+# until a rule covers them: (envAmount scale, filter decay in seconds).
+# Take-off: on the recording its HP12 starts near note 87 at C2 and falls to
+# the key in about 2 s, where the mapping above starts it at the engine's
+# clamp (note 140 before it) and takes the table's 13.2 s, so for its first
+# 3 s the engine played a thin edge 30 dB under the hardware, and its onset,
+# where the filter is still low, stood out as a click on every note. Fitted on
+# third-octave band levels over the first 3.8 s of the C2 note at 682.14 s:
+# 6.3 dB rms against 23.8 as mapped. The scale does not carry over to the
+# other presets (0.7 on all of them helps half, hurts the rest), nor the
+# decay to the table's last step (Fast decay, the other index-15 filter
+# decay, does not decide). See README.md, "Take-off".
+FILTER_ENV_FIX = {'Take-off': (0.65, 3.3)}
+
 def convert(p, name):
     oct1, oct2 = p[27] - 2, p[28] - 2
     w1, w2 = p[29], p[30]
@@ -191,10 +205,15 @@ def convert(p, name):
     kt = p[6] / 255
     key_track = CUT_SLOPE * KEY_W * 2 * kt                       # st per key
     env_engine = CUT_SLOPE * ENV_W * 255 / 60 * abs(env_amt)     # engine envAmount (x60 st)
+    fix = FILTER_ENV_FIX.get(name.split(' ', 1)[-1])
+    f_decay = env_time(p[22])
+    if fix:
+        env_engine *= fix[0]
+        f_decay = fix[1]
     base = CUT_OFFSET + CUT_SLOPE * (255 - p[5]) + key_track * (60 - 36)   # pot inverted
     cutoff = (base - 24) / 96
     L(f"filter: {{ mode: '{FILTERS[p[32]]}', cutoff: {r(cutoff)}, resonance: {r(p[10] / 254)}, envAmount: {r(env_engine * (-1 if invert else 1))}, keyTrack: {r(key_track)} }},")
-    L(f"envFilter: ADSR({r(attack_time(p[20]))}, {r(env_time(p[22]))}, {r(p[8] / 255)}, {r(rel(p[24]))}),")
+    L(f"envFilter: ADSR({r(attack_time(p[20]))}, {r(f_decay)}, {r(p[8] / 255)}, {r(rel(p[24]))}),")
     L(f"envAmp:    ADSR({r(attack_time(p[21]))}, {r(env_time(p[23]))}, {r(p[9] / 254)}, {r(rel(p[25]))}),")
     L(f"lfo1: {{ shape: '{LFO_SHAPES[p[31]]}', rate: {r(lfo_rate(p[3]), 2)}, delay: {r(lfo_delay(p[4]), 2)}, depthA: {r(p[1] / 255)}, depthB: {r(p[2] / 255)} }},")
     # defaults() carries env1ToCutoff: 1 for the hand-made memories; the real

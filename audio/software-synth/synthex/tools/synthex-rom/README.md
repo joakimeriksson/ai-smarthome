@@ -125,6 +125,24 @@ Index → meaning, stored width → value after the firmware's left shift:
   estimator saturates above about note 112 on these MP3 sources, so open
   readings are lower bounds; the resonant presets were read by tracking
   their resonant peak instead.
+- **Take-off** is corrected one by one (`FILTER_ENV_FIX` in `gen_factory.py`:
+  envelope amount x 0.65, filter decay 3.3 s instead of the table's 13.2 s).
+  On the recording (the C2 note at 682.14 s) its HP12 starts near note 87
+  and falls past the key's second harmonic within about 2 s; mapped as
+  above it started at the engine's clamp (note 140 before it) and fell for
+  13.2 s, so for the first 3 s the engine played a thin edge some 30 dB
+  under the hardware's sound, and the onset, where the filter is still low,
+  stood out as a click on every note. The two values are a fit of renders
+  to the recording's third-octave band levels over the note's first 3.8 s:
+  6.3 dB rms, against 23.8 as mapped (3.6 s fits as well as 3.3). Neither
+  carries over as a rule. An envelope weight of 0.7 x on every preset helps
+  half of the 20 run-through presets marked by ear (Sweep 1, Bass pluck,
+  Phased sweep, Chorale, Landing) and hurts the others (Chunky Synth, Wah
+  brass, the Brasses, Ring mod.); and the envelope table is pecostm32's
+  timing of the attack comparator, not a measurement, so its last step
+  (13.2 s) may be wrong, but Fast decay, the only other preset with that
+  filter decay, does not decide it. Single held notes from a hardware
+  Synthex would.
 
 **Still assumptions** (refine by measurement): LFO delay 1 ms to 30 s on
 the inverted scale (Whistle's vibrato reaches full depth within ~0.4 s of

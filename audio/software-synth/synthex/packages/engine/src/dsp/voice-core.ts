@@ -30,6 +30,19 @@ const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > 
  */
 export const COEFF_BLOCK = 128
 
+/**
+ * Between block boundaries the coefficients are also recomputed as soon as
+ * the cutoff has moved this far (semitones) from the note they were computed
+ * for. The block cadence alone lets a fast filter envelope outrun the
+ * filter: a 2 ms attack is shorter than a block, so the first 128 samples went
+ * through a filter still set for the envelope at 0 while the amp envelope had
+ * already opened. On Take-off (slot 42, HP12) that was a burst of raw square
+ * on every note. The hardware's cutoff follows its envelope continuously;
+ * with this bound the engine is never more than half a semitone behind, and
+ * slow modulation still costs one coefficient set per block.
+ */
+export const CUTOFF_STEP = 0.5
+
 // One instance of every shape per oscillator slot, kept alive so changing
 // `wave` mid-note doesn't reset state for the new shape and we avoid runtime
 // allocations.
@@ -104,6 +117,8 @@ export class VoiceCore {
   private prevOsc2 = 0
   private blockPhase = 0
   private coeffs: SvfCoeffs
+  /** Cutoff note the current coefficients were computed for. */
+  private coeffNote = -1e9
   private inputAtten = 1
 
   constructor(sampleRate: number, patch: LayerPatch) {
@@ -157,8 +172,14 @@ export class VoiceCore {
     }
     if (this.patch.lfo1.sync) this.lfo1.trigger()
     if (this.patch.lfo2.sync) this.lfo2.trigger()
-    if (!this.patch.osc2.sync) this.bank1.resetAll()
-    this.bank2.resetAll()
+    // Oscillator phases start from 0 only when the voice is silent. A voice
+    // that is stolen mid-release, or retriggered legato, keeps its phases
+    // like the hardware's free-running oscillators do: a reset while the
+    // amp envelope is up is a step in the waveform, i.e. a click.
+    if (fromIdle) {
+      if (!this.patch.osc2.sync) this.bank1.resetAll()
+      this.bank2.resetAll()
+    }
     this.computeGlideCoef()
 
     // Per-osc glide always fires if its amount is set; Panel Glide adds on
@@ -194,8 +215,8 @@ export class VoiceCore {
 
   // --- Audio ---------------------------------------------------------------
 
-  /** Recompute the block-rate filter coefficients from current modulation. */
-  private updateCoeffs(): void {
+  /** The modulated cutoff, as a MIDI note, from the current modulation sources. */
+  private cutoffNote(env1Level: number): number {
     const p = this.patch
     const m = p.modMatrix
     const baseCutoffNote = 24 + p.filter.cutoff * 96
@@ -210,10 +231,20 @@ export class VoiceCore {
       // Joystick right: LFO2 → cutoff (wah-wah), depth from TO FILTER slider.
       Math.max(0, this.joyX) * this.perf.lfo2Filt * this.lfo2Sample * 60 +
       m.velToCutoff * (this.velocity - 0.5) * 60 +
-      p.filter.envAmount * this.env1.level * 60 +
-      m.env1ToCutoff * (this.env1.level - 0.5) * 96 +
+      p.filter.envAmount * env1Level * 60 +
+      m.env1ToCutoff * (env1Level - 0.5) * 96 +
       p.filter.keyTrack * (this.currentNote - 60)
-    const cutoffNote = clamp(baseCutoffNote + cutoffMod, 0, 132)
+    return clamp(baseCutoffNote + cutoffMod, 0, 132)
+  }
+
+  /**
+   * Recompute the filter coefficients for `cutoffNote`. Called at the top of
+   * every block, and in between whenever the cutoff has moved more than
+   * CUTOFF_STEP since the last call (see there).
+   */
+  private updateCoeffs(cutoffNote: number): void {
+    const p = this.patch
+    this.coeffNote = cutoffNote
     // Q: 0..1 → 0.5..25. Above ~10 the filter verges on self-oscillation.
     const q = 0.5 + p.filter.resonance * p.filter.resonance * 24.5
     this.coeffs = svfCoeffs(noteToHz(cutoffNote), this.sr, q)
@@ -252,7 +283,7 @@ export class VoiceCore {
     const filterMode = p.filter.mode
 
     for (let i = 0; i < length; i++) {
-      if (this.blockPhase === 0) this.updateCoeffs()
+      const blockStart = this.blockPhase === 0
       this.blockPhase = (this.blockPhase + 1) % COEFF_BLOCK
 
       this.currentNote += this.glideCoef * (this.targetNote - this.currentNote)
@@ -265,6 +296,9 @@ export class VoiceCore {
         (1 + m.joyXToLfo2Depth * this.joyX)
       this.lfo1Sample = l1
       this.lfo2Sample = l2
+
+      const cn = this.cutoffNote(e1)
+      if (blockStart || Math.abs(cn - this.coeffNote) > CUTOFF_STEP) this.updateCoeffs(cn)
 
       this.osc1PitchOffset *= this.osc1GlideCoef
       this.osc2PitchOffset *= this.osc2GlideCoef

@@ -36,7 +36,7 @@ When Phase 1 is verified, ask before starting Phase 2.
 1. **No allocations inside `process()`.** Pre-allocate every buffer in the `AudioWorkletProcessor` constructor and reuse. Profile if unsure.
 2. **No per-sample parameter updates from the main thread.** Use `MessagePort.postMessage` for parameter changes; smooth them inside the worklet with one-pole filters (~5 ms time constant) to avoid zipper noise.
 3. **No `localStorage` / `sessionStorage`** — IndexedDB only.
-4. **Cutoff stored internally as MIDI note number**, converted to Hz at the top of each audio block (`hz = 440 * 2 ** ((note - 69) / 12)`). Makes key tracking and modulation purely additive in note-space.
+4. **Cutoff stored internally as MIDI note number**, converted to Hz at the top of each audio block (`hz = 440 * 2 ** ((note - 69) / 12)`). Makes key tracking and modulation purely additive in note-space. The conversion also reruns inside a block whenever the cutoff has moved more than half a semitone (`CUTOFF_STEP` in `dsp/voice-core.ts`): a 2 ms filter attack is shorter than a block, and holding the old coefficients for it put a click on Take-off.
 5. **PWM duty cycle clamped to `[0.05, 0.95]`.** 0% or 100% = silence = bug report.
 6. **No `// @ts-ignore` and no `console.log` in committed code.** Use `console.debug` behind a `DEBUG` flag if you need it.
 

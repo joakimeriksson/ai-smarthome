@@ -93,6 +93,13 @@ Index → meaning, stored width → value after the firmware's left shift:
   The engine's `Adsr` release is now exponential with `r` = time to fall
   20 dB. Presets with the RELEASE switch off drop at 500-800 dB/s on the
   recording, confirming that bit.
+  The VCA opens about 1.5 ms after the filter envelope starts
+  (`AMP_ONSET_DELAY` in the engine's voice core): Take-off's HP12 climbs
+  its attack in 1.5 ms and the recording has nothing of the unfiltered
+  square in the note's first 2 ms, while the static-filter presets reach
+  full level within half a millisecond once they start. With both
+  envelopes starting together the engine put a 1 ms tick on every
+  Take-off note; 1.5 ms is the smallest delay that removes it.
 - LFO rate: `27.7 * 400^(-v/255)` Hz, fitted to six measured vibrato and
   tremolo rates (Wash of sound raw 39 -> 11.0 Hz, Clavinet 53 -> 8.05,
   Whistle 58 -> 7.1, Tremolo piano 89 -> 3.39, Electric piano II 98 -> 2.8,

@@ -115,11 +115,12 @@ FILTERS = ['lp24', 'bp6', 'bp12', 'hp12']
 LFO_SHAPES = ['tri', 'ramp-down', 'ramp', 'square']
 
 # Engine scaling for the LFO routings (modMatrix x depth):
-PITCH_MOD = 0.11     # engine: 12 st * matrix * depth -> +-1.3 st at full depth
+PITCH_MOD = 0.09     # engine: 12 st * matrix * depth -> +-1.08 st at full depth, the depth being
+                     # (255 - A) / 255: the depth A pot reads inverted for the pitch (see pitch_depth)
                      # (measured: Whistle +-0.72 st at depth 0.71, Wash of sound
                      # +-0.35 st at depth 0.73 after the same analysis of an
                      # engine render; both say the old +-2 st was ~2x too deep)
-PWM_MOD = 1.0        # engine: 0.45 * matrix * depth
+PWM_MOD = 0.5        # engine: 0.45 * matrix * depth A (direct); halved 2026-10-31, see README "LFO depths"
 CUTOFF_MOD = 0.5     # engine: 60 st * matrix * depth  -> +-30 st at full depth
 AMP_MOD = 0.37       # engine: amp * (1 + matrix * lfo * depth); measured tremolo
                      # 4.7 dB p-p at depth 0.69 (Tremolo piano) and 4.2 dB at
@@ -144,6 +145,15 @@ XMOD_DEPTH = 0.175   # pulse-width cross-mod depth, from the Elka-X Laser Harp f
 CUT_SLOPE = 0.58        # semitones per DAC unit (148 st across the knob)
 CUT_OFFSET = -1.0       # cutoff note with every CV at zero
 KEY_W, ENV_W = 0.698, 1.25
+# The filter envelope's reach, measured at the onset against the recording, is about 0.6 x the decoded
+# amount on the presets whose filter envelope has a fast attack (table index <= 3, 15 ms or less)
+# running into a long decay (index > 6): Violins, Landing, Take-off, Metallic, Chorale, Filtered
+# strings (0.4-0.6 x). With a slower attack (Brass II and III, Filtered brass, Filtered chorus, index
+# 4-5) or a short decay (the plucks: Chunky Synth, Clavinet, Funky Clav., Brass I) it reads as the
+# full amount; Wah brass (attack index 6) measured 0.6 but sits with the brasses by the scorecard. Why is open; a sharp
+# peak that the hardware's envelope rounds off would do it. The rule states what was measured
+# (2026-10-31, 14 presets, fit_env and the scorecard in the session's scratchpad).
+ENV_LONG_DECAY = 0.6
 MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant presets out of the limiter)
 
 # Presets whose filter envelope the recording contradicts, corrected one by one
@@ -158,7 +168,19 @@ MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant pres
 # other presets (0.7 on all of them helps half, hurts the rest), nor the
 # decay to the table's last step (Fast decay, the other index-15 filter
 # decay, does not decide). See README.md, "Take-off".
-FILTER_ENV_FIX = {'Take-off': (0.65, 3.3)}
+# Metallic: measured 2026-10-31 on the run-through's passage at 0:47 (32 notes), after the engine's
+# synced triangle was made a phase-derived one. The cutoff per note window, read off the hardware
+# against the engine's filter-open render, puts the decoded envelope 12-18 st too high at the onsets
+# and 1 s later about right; x 0.65 (the same factor as Take-off's) centres it, with the decay kept.
+FILTER_ENV_FIX = {'Take-off': (1.0, 3.3)}   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
+
+def pitch_depth(a):
+    """The LFO's pitch depth from the depth A byte, inverted: on the recording Whistle (A 181) has the
+    deepest vibrato, 29 cents peak at its LFO rate, Wash of sound (187) 11, Filtered chorus (211) 7,
+    Violins (231), Double basses (232) and Ceilos (238) 4-6, where a direct reading would have the
+    strings 1.3 x Whistle. 1.08 st at full depth measures Whistle at ~16 cents, Wash of sound 5 and the
+    strings 3-13, between the two ends of what the recording shows."""
+    return (255 - a) / 255
 
 def convert(p, name):
     oct1, oct2 = p[27] - 2, p[28] - 2
@@ -205,11 +227,12 @@ def convert(p, name):
     kt = p[6] / 255
     key_track = CUT_SLOPE * KEY_W * 2 * kt                       # st per key
     env_engine = CUT_SLOPE * ENV_W * 255 / 60 * abs(env_amt)     # engine envAmount (x60 st)
+    if (p[20] >> 4) <= 3 and (p[22] >> 4) > 6: env_engine *= ENV_LONG_DECAY   # a fast attack (<= 15 ms) into a long decay
     fix = FILTER_ENV_FIX.get(name.split(' ', 1)[-1])
     f_decay = env_time(p[22])
     if fix:
         env_engine *= fix[0]
-        f_decay = fix[1]
+        if fix[1] is not None: f_decay = fix[1]
     base = CUT_OFFSET + CUT_SLOPE * (255 - p[5]) + key_track * (60 - 36)   # pot inverted
     cutoff = (base - 24) / 96
     L(f"filter: {{ mode: '{FILTERS[p[32]]}', cutoff: {r(cutoff)}, resonance: {r(p[10] / 254)}, envAmount: {r(env_engine * (-1 if invert else 1))}, keyTrack: {r(key_track)} }},")
@@ -219,8 +242,9 @@ def convert(p, name):
     # defaults() carries env1ToCutoff: 1 for the hand-made memories; the real
     # filter-envelope depth is filter.envAmount, so switch that extra path off.
     mm = ['env1ToCutoff: 0']
-    if routing & 0x01: mm.append(f"lfo1ToOsc1Pitch: {PITCH_MOD}")
-    if routing & 0x02: mm.append(f"lfo1ToOsc2Pitch: {PITCH_MOD}")
+    pitch_amt = r(PITCH_MOD * pitch_depth(p[1]) / max(0.05, p[1] / 255), 4)   # x depthA in the engine = PITCH_MOD x the inverted depth
+    if routing & 0x01: mm.append(f"lfo1ToOsc1Pitch: {pitch_amt}")
+    if routing & 0x02: mm.append(f"lfo1ToOsc2Pitch: {pitch_amt}")
     if routing & 0x04: mm.append(f"lfo1ToOsc1Pwm: {PWM_MOD}")
     if routing & 0x20: mm.append(f"lfo1ToOsc2Pwm: {PWM_MOD}")
     if routing & 0x10: mm.append(f"lfo1ToCutoff: {CUTOFF_MOD}")

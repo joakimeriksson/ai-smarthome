@@ -133,7 +133,7 @@ const PRESETS_B1: Record<number, Patch> = {
     osc1: { wave: 'square', octave: 0, pwm: 0.173 },
     osc2: { wave: 'square', octave: 2, detune: 1.6, pwm: 0.213, sync: false },
     mix:  { osc1: 0.56, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false, crossMod2: 0.175 },
-    filter: { mode: 'hp12', cutoff: -0.058, resonance: 0, envAmount: -3.081, keyTrack: 0.81 },
+    filter: { mode: 'hp12', cutoff: -0.058, resonance: 0, envAmount: -1.849, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 0.66, 0.075, 0.515),
     envAmp:    ADSR(0.002, 0.257, 0.299, 0.515),
     lfo1: { shape: 'tri', rate: 0.99, delay: 0.03, depthA: 0.906, depthB: 0.608 },
@@ -144,7 +144,7 @@ const PRESETS_B1: Record<number, Patch> = {
     osc1: { wave: 'square', octave: -1, pwm: 0.268 },
     osc2: { wave: 'triangle', octave: 1, detune: 313.3, pwm: 0.5, sync: true },
     mix:  { osc1: 0.7, osc2: 0.513, noise: 0, noiseColor: 'white', ringMod: false, crossMod2: 0.175 },
-    filter: { mode: 'lp24', cutoff: 0.516, resonance: 0.063, envAmount: 1.329, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.516, resonance: 0.063, envAmount: 0.797, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 0.66, 0, 1.782),
     envAmp:    ADSR(0.002, 0.074, 1, 1.782),
     lfo1: { shape: 'tri', rate: 2.41, delay: 0.05, depthA: 0.863, depthB: 0.812 },
@@ -178,11 +178,11 @@ const PRESETS_B1: Record<number, Patch> = {
     osc1: { wave: 'square', octave: 0, pwm: 0.724 },
     osc2: { wave: 'square', octave: 0, detune: 37.9, pwm: 0.787, sync: false },
     mix:  { osc1: 0.373, osc2: 0.373, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'bp6', cutoff: 0.277, resonance: 0.386, envAmount: 0.701, keyTrack: 0.095 },
+    filter: { mode: 'bp6', cutoff: 0.277, resonance: 0.386, envAmount: 0.42, keyTrack: 0.095 },
     envFilter: ADSR(0.003, 3.564, 0.784, 3.564),
     envAmp:    ADSR(0.66, 1.782, 0.929, 1.32),
     lfo1: { shape: 'tri', rate: 5.74, delay: 0, depthA: 0.941, depthB: 0 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11, lfo1ToOsc1Pwm: 1.0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0056, lfo1ToOsc1Pwm: 0.5, lfo1ToOsc2Pwm: 0.5 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 17 Brass I — RELEASE switch off
   7: single('Brass I', L({
@@ -205,7 +205,7 @@ const PRESETS_B1: Record<number, Patch> = {
     envFilter: ADSR(0.037, 0.515, 0.867, 0.66),
     envAmp:    ADSR(0.002, 0.66, 0.866, 0.515),
     lfo1: { shape: 'tri', rate: 5.87, delay: 1.28, depthA: 0.863, depthB: 0.161 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11, lfo1ToOsc2Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0143, lfo1ToOsc2Pitch: 0.0143 },
   }), { chorus: { enabled: false } }),
   // 19 Brass III
   9: single('Brass III', L({
@@ -228,11 +228,11 @@ const PRESETS_B2: Record<number, Patch> = {
     osc1: { wave: 'sawtooth', octave: -1, pwm: 0.5 },
     osc2: { wave: 'sawtooth', octave: -1, detune: 18.4, pwm: 0.5, sync: false },
     mix:  { osc1: 0.513, osc2: 0.373, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.8, resonance: 0, envAmount: 0.507, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.8, resonance: 0, envAmount: 0.304, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 3.564, 0.773, 1.782),
     envAmp:    ADSR(0.257, 3.564, 0.929, 1.782),
     lfo1: { shape: 'tri', rate: 9.18, delay: 0.25, depthA: 0.91, depthB: 1 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pitch: 0.0089 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 21 Ceilos
   1: single('Ceilos', L({
@@ -243,18 +243,18 @@ const PRESETS_B2: Record<number, Patch> = {
     envFilter: ADSR(0.33, 1.782, 0.925, 3.564),
     envAmp:    ADSR(0.257, 0.003, 1, 1.32),
     lfo1: { shape: 'tri', rate: 6.45, delay: 0.07, depthA: 0.933, depthB: 0.525 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pitch: 0.0064 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 22 Violins
   2: single('Violins', L({
     osc1: { wave: 'sawtooth', octave: 1, pwm: 0.5 },
     osc2: { wave: 'sawtooth', octave: 1, detune: 13.3, pwm: 0.5, sync: false },
     mix:  { osc1: 0.7, osc2: 0.467, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.311, resonance: 0, envAmount: 2.707, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.311, resonance: 0, envAmount: 1.624, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 3.564, 0.816, 1.782),
     envAmp:    ADSR(0.257, 3.564, 0.929, 1.32),
     lfo1: { shape: 'tri', rate: 10.57, delay: 0.07, depthA: 0.906, depthB: 0.525 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pitch: 0.0094 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 23 Church organ
   3: single('Church organ', L({
@@ -294,11 +294,11 @@ const PRESETS_B2: Record<number, Patch> = {
     osc1: { wave: 'square', octave: -1, pwm: 0.197 },
     osc2: { wave: 'square', octave: 1, detune: 9.4, pwm: 0.134, sync: false },
     mix:  { osc1: 0.467, osc2: 0.467, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'hp12', cutoff: 0.881, resonance: 0.457, envAmount: -1.825, keyTrack: 0 },
+    filter: { mode: 'hp12', cutoff: 0.881, resonance: 0.457, envAmount: -1.095, keyTrack: 0 },
     envFilter: ADSR(0.002, 6.6, 0, 1.782),
     envAmp:    ADSR(0.257, 3.564, 0.189, 3.564),
     lfo1: { shape: 'tri', rate: 11.34, delay: 1.77, depthA: 0.898, depthB: 0 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 0.5 },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 27 Filtered brass — RELEASE switch off
   7: single('Filtered brass', L({
@@ -321,7 +321,7 @@ const PRESETS_B2: Record<number, Patch> = {
     envFilter: ADSR(0.037, 3.564, 0.784, 13.2),
     envAmp:    ADSR(0.33, 1.782, 0.929, 1.782),
     lfo1: { shape: 'tri', rate: 9.62, delay: 0.16, depthA: 0.827, depthB: 0 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0188 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 29 Filtered strings
   9: single('Filtered strings', L({
@@ -345,11 +345,11 @@ const PRESETS_B3: Record<number, Patch> = {
     osc1: { wave: 'square', octave: 0, pwm: 0.268 },
     osc2: { wave: 'square', octave: 0, detune: 2.7, pwm: 0.283, sync: false },
     mix:  { osc1: 0.7, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.634, resonance: 0.165, envAmount: 0.689, keyTrack: 0 },
+    filter: { mode: 'lp24', cutoff: 0.634, resonance: 0.165, envAmount: 0.413, keyTrack: 0 },
     envFilter: ADSR(0.002, 0.198, 0.827, 1.782),
     envAmp:    ADSR(0.002, 0.037, 0.559, 1.32),
     lfo1: { shape: 'tri', rate: 3.67, delay: 0.05, depthA: 0.957, depthB: 1 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0041 },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 31 Pianet
   1: single('Pianet', L({
@@ -360,7 +360,7 @@ const PRESETS_B3: Record<number, Patch> = {
     envFilter: ADSR(0.002, 0.015, 0.192, 1.782),
     envAmp:    ADSR(0.002, 0.029, 0.819, 1.32),
     lfo1: { shape: 'tri', rate: 0.92, delay: 0.01, depthA: 0.925, depthB: 0.773 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11, lfo1ToAmp: 0.37 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0072, lfo1ToAmp: 0.37 },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 32 Funky Clav.
   2: single('Funky Clav.', L({
@@ -404,14 +404,14 @@ const PRESETS_B3: Record<number, Patch> = {
     envFilter: ADSR(0.002, 0.099, 0.424, 3.564),
     envAmp:    ADSR(0.002, 0.099, 0.78, 1.782),
     lfo1: { shape: 'tri', rate: 7.97, delay: 0, depthA: 0.878, depthB: 0.529 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 1.0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 0.5, lfo1ToOsc2Pwm: 0.5 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 36 Electric piano I — RELEASE switch off
   6: single('Electric piano I', L({
     osc1: { wave: 'square', octave: -1, pwm: 0.094 },
     osc2: { wave: 'square', octave: -1, detune: 12.5, pwm: 0.11, sync: false },
     mix:  { osc1: 0.7, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.921, resonance: 0, envAmount: 1.68, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.921, resonance: 0, envAmount: 1.008, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 0.515, 0.145, 0.01),
     envAmp:    ADSR(0.002, 0.099, 0.614, 0.01),
     lfo1: { shape: 'tri', rate: 11.89, delay: 18.47, depthA: 0.694, depthB: 0.996 },
@@ -433,7 +433,7 @@ const PRESETS_B3: Record<number, Patch> = {
     osc1: { wave: 'triangle', octave: 1, pwm: 0.5 },
     osc2: { wave: 'triangle', octave: 2, detune: 1201.6, pwm: 0.5, sync: false },
     mix:  { osc1: 0.093, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.528, resonance: 0, envAmount: 1.317, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.528, resonance: 0, envAmount: 0.79, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 0.515, 0.753, 3.564),
     envAmp:    ADSR(0.002, 0.003, 1, 3.564),
     lfo1: { shape: 'tri', rate: 11.89, delay: 0, depthA: 0.973, depthB: 0 },
@@ -464,7 +464,7 @@ const PRESETS_B4: Record<number, Patch> = {
     envFilter: ADSR(0.002, 0.074, 0.639, 3.564),
     envAmp:    ADSR(0.002, 0.003, 1, 1.782),
     lfo1: { shape: 'tri', rate: 4.03, delay: 1.77, depthA: 0.91, depthB: 0.773 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 0.5 },
     glide: { mode: 'glide', amount: 16, time: 0.124, osc1: false, osc2: true },
   }), { chorus: { enabled: true, mode: 2 } }),
   // 41 Sweep 2
@@ -476,7 +476,7 @@ const PRESETS_B4: Record<number, Patch> = {
     envFilter: ADSR(0.002, 0.006, 0.553, 0.66),
     envAmp:    ADSR(0.002, 0.198, 0.276, 0.66),
     lfo1: { shape: 'tri', rate: 2.3, delay: 0, depthA: 0.561, depthB: 0.855 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 0.5 },
     glide: { mode: 'glide', amount: 18, time: 0.558, osc1: false, osc2: true },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 42 Take-off
@@ -484,33 +484,33 @@ const PRESETS_B4: Record<number, Patch> = {
     osc1: { wave: 'square', octave: 0, pwm: 0.638 },
     osc2: { wave: 'square', octave: 0, detune: 30.9, pwm: 0.606, sync: false },
     mix:  { osc1: 0.467, osc2: 0.467, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'hp12', cutoff: 0.069, resonance: 0.449, envAmount: 1.398, keyTrack: 0.81 },
+    filter: { mode: 'hp12', cutoff: 0.069, resonance: 0.449, envAmount: 1.29, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 3.3, 0, 3.564),
     envAmp:    ADSR(0.002, 0.003, 1, 3.564),
     lfo1: { shape: 'tri', rate: 15.39, delay: 1.09, depthA: 0.855, depthB: 0.671 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 1.0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 0.5, lfo1ToOsc2Pwm: 0.5 },
   }), { chorus: { enabled: true, mode: 3 } }),
   // 43 Landing
   3: single('Landing', L({
     osc1: { wave: 'square', octave: 0, pwm: 0.906 },
     osc2: { wave: 'square', octave: 1, detune: 703.1, pwm: 0.299, sync: false },
     mix:  { osc1: 0.653, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.175, crossMod2: 0.175 },
-    filter: { mode: 'bp12', cutoff: -0.004, resonance: 0.354, envAmount: 2.272, keyTrack: 0.81 },
+    filter: { mode: 'bp12', cutoff: -0.004, resonance: 0.354, envAmount: 1.363, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 6.6, 0.82, 6.6),
     envAmp:    ADSR(0.002, 0.037, 0.874, 13.2),
     lfo1: { shape: 'tri', rate: 0.17, delay: 0, depthA: 0.42, depthB: 0.851 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 1.0, lfo1ToOsc2Pwm: 1.0, lfo1ToCutoff: 0.5 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 0.5, lfo1ToOsc2Pwm: 0.5, lfo1ToCutoff: 0.5 },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 44 Wash of sound
   4: single('Wash of sound', L({
     osc1: { wave: 'square', octave: 0, pwm: 0.5 },
     osc2: { wave: 'square', octave: -1, detune: 829.7, pwm: 0.528, sync: true },
     mix:  { osc1: 0.7, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.196, resonance: 0.504, envAmount: 2.441, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.196, resonance: 0.504, envAmount: 1.464, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 0.515, 0.859, 3.564),
     envAmp:    ADSR(0.002, 0.003, 1, 3.564),
     lfo1: { shape: 'tri', rate: 11.08, delay: 4.31, depthA: 0.733, depthB: 0.769 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11, lfo1ToOsc2Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0327, lfo1ToOsc2Pitch: 0.0327 },
     glide: { mode: 'glide', amount: 13, time: 0.153, osc1: false, osc2: true },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 45 Fast decay
@@ -518,11 +518,11 @@ const PRESETS_B4: Record<number, Patch> = {
     osc1: { wave: 'square', octave: -1, pwm: 0.094 },
     osc2: { wave: 'square', octave: -1, detune: 11.7, pwm: 0.709, sync: false },
     mix:  { osc1: 0.7, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.087, resonance: 0.331, envAmount: 2.84, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.087, resonance: 0.331, envAmount: 1.704, keyTrack: 0.81 },
     envFilter: ADSR(0.007, 13.2, 0.286, 1.782),
     envAmp:    ADSR(0.002, 0.099, 0.614, 1.782),
     lfo1: { shape: 'tri', rate: 0.37, delay: 0, depthA: 0.973, depthB: 0.996 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pwm: 0.5 },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 46 Ring mod.
   6: single('Ring mod.', L({
@@ -533,7 +533,7 @@ const PRESETS_B4: Record<number, Patch> = {
     envFilter: ADSR(0.002, 0.029, 0.173, 0.515),
     envAmp:    ADSR(0.002, 0.257, 0.488, 0.037),
     lfo1: { shape: 'tri', rate: 1.19, delay: 0, depthA: 0.757, depthB: 0.565 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 1.0 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc2Pwm: 0.5 },
     glide: { mode: 'glide', amount: 10, time: 0.846, osc1: false, osc2: true },
   }), { chorus: { enabled: true, mode: 1 } }),
   // 47 Phased sweep
@@ -541,7 +541,7 @@ const PRESETS_B4: Record<number, Patch> = {
     osc1: { wave: 'sawtooth', octave: 0, pwm: 0.5 },
     osc2: { wave: 'sawtooth', octave: 0, detune: 16, pwm: 0.5, sync: false },
     mix:  { osc1: 0.7, osc2: 0.7, noise: 0.093, noiseColor: 'pink', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.431, resonance: 0.567, envAmount: 1.426, keyTrack: 0.81 },
+    filter: { mode: 'lp24', cutoff: 0.431, resonance: 0.567, envAmount: 0.855, keyTrack: 0.81 },
     envFilter: ADSR(0.002, 6.6, 0.212, 3.564),
     envAmp:    ADSR(0.002, 0.074, 1, 1.32),
     lfo1: { shape: 'tri', rate: 2.41, delay: 0.05, depthA: 0.863, depthB: 0.812 },
@@ -567,7 +567,7 @@ const PRESETS_B4: Record<number, Patch> = {
     envFilter: ADSR(0.037, 0.037, 0.733, 0.01),
     envAmp:    ADSR(0.05, 3.564, 0.189, 0.01),
     lfo1: { shape: 'tri', rate: 7.09, delay: 0.57, depthA: 0.71, depthB: 0 },
-    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.11 },
+    modMatrix: { env1ToCutoff: 0, lfo1ToOsc1Pitch: 0.0368 },
     glide: { mode: 'portamento', amount: -4, time: 0.008, osc1: true, osc2: false },
   }), { chorus: { enabled: false } }),
 }

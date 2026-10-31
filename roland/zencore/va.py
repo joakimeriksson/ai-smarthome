@@ -3,7 +3,7 @@
 The `PAT` record holds ~945 parameters, most of which describe the PCM sample
 engine. A partial whose ``OSC_TYPE`` is VA / SuperSAW / Noise generates its
 waveform numerically and touches no sample data at all, so a synth that only
-implements the VA path needs a much smaller slice - the ~145 parameters gathered
+implements the VA path needs a much smaller slice - the ~165 parameters gathered
 here, plus the partial's matrix control (4 sources x 4 destinations + sens).
 
 This module is a *view*: it decodes, labels and groups, and never changes bytes.
@@ -106,6 +106,9 @@ def _partial(tone, n: int) -> dict:
         "penv": _env(tone, f"PTL_PENV_{n}", _FULL_ENV),
         "fenv": _env(tone, f"PTL_FENV_{n}", _FULL_ENV),
         "aenv": _env(tone, f"PTL_AENV_{n}", _AMP_ENV),
+        # the partial's 3-band EQ (gains in 0.1 dB, Q in 0.1), after its amp
+        "eq": _fields(tone, f"PTL_EQ_{n}", ("SW", "LO_GAIN", "LO_FREQ", "MID_GAIN", "MID_FREQ",
+                                            "MID_Q", "HI_GAIN", "HI_FREQ")),
         # partial delay (PCMT) and the partial's key / velocity window (PMT)
         "delay": _fields(tone, P, ("DELAY_MODE", "DLY_TIME_SYNC", "DLY_TIME_NOTE", "DLY_TIME")),
         "range": {k: tone.get("PCMT_PMT", f"PMT_{n}_{k}")

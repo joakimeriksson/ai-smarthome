@@ -8,7 +8,8 @@
  *   node webui/compare/render.mjs /tmp/patch.json /tmp/out.wav --note 62 --hold 2 --dur 3.5
  *   (--velocity 1..127, default 100 - it matters once the tone has a matrix
  *    route from VELOCITY; --ctl cc1=127, bend=-8192..8191, aft=0..127 -
- *    repeatable - sets a controller from the start, as zen_bank.py --ctl)
+ *    repeatable - sets a controller from the start, as zen_bank.py --ctl;
+ *    --float writes 32-bit float instead of 16-bit, so nothing clips)
  *
  * Note/hold/dur default to the conventions in the Synthex compare harness
  * (tools/compare/capture_ref.py), so renders line up with captures.
@@ -125,17 +126,25 @@ console.log(`  rms  L ${rms(left).toFixed(4)}  R ${rms(right).toFixed(4)}`);
 console.log(`  peak L ${peak(left).toFixed(4)}  R ${peak(right).toFixed(4)}`);
 if (peak(left) < 1e-4 && peak(right) < 1e-4) console.log("  WARNING: silent render");
 
-// -- 16-bit stereo WAV ------------------------------------------------------
-const buf = Buffer.alloc(44 + n * 4);
-buf.write("RIFF", 0); buf.writeUInt32LE(36 + n * 4, 4); buf.write("WAVE", 8);
-buf.write("fmt ", 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20);
-buf.writeUInt16LE(2, 22); buf.writeUInt32LE(SR, 24); buf.writeUInt32LE(SR * 4, 28);
-buf.writeUInt16LE(4, 32); buf.writeUInt16LE(16, 34);
-buf.write("data", 36); buf.writeUInt32LE(n * 4, 40);
+// -- stereo WAV: 16-bit, or 32-bit float with --float (no clipping, no
+// quantisation - for a loud render or one measured far below full scale) -----
+const float32 = process.argv.includes("--float");
+const bytes = float32 ? 4 : 2;
+const buf = Buffer.alloc(44 + n * 2 * bytes);
+buf.write("RIFF", 0); buf.writeUInt32LE(36 + n * 2 * bytes, 4); buf.write("WAVE", 8);
+buf.write("fmt ", 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(float32 ? 3 : 1, 20);
+buf.writeUInt16LE(2, 22); buf.writeUInt32LE(SR, 24); buf.writeUInt32LE(SR * 2 * bytes, 28);
+buf.writeUInt16LE(2 * bytes, 32); buf.writeUInt16LE(8 * bytes, 34);
+buf.write("data", 36); buf.writeUInt32LE(n * 2 * bytes, 40);
 const clip = (v) => Math.max(-32768, Math.min(32767, Math.round(v * 32767)));
 for (let i = 0; i < n; i++) {
-  buf.writeInt16LE(clip(left[i]), 44 + i * 4);
-  buf.writeInt16LE(clip(right[i]), 46 + i * 4);
+  if (float32) {
+    buf.writeFloatLE(left[i], 44 + i * 8);
+    buf.writeFloatLE(right[i], 48 + i * 8);
+  } else {
+    buf.writeInt16LE(clip(left[i]), 44 + i * 4);
+    buf.writeInt16LE(clip(right[i]), 46 + i * 4);
+  }
 }
 writeFileSync(outPath, buf);
 console.log(`  wrote ${outPath} (${(buf.length / 1024).toFixed(0)} kB, ` +

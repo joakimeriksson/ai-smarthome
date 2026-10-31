@@ -11,7 +11,7 @@
  *   node webui/compare/dsp-test.mjs
  */
 
-import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV, WAVES, SSAW, STRUCT, LFO_T, lfoHz, lfoPitch, applyMidi } from "../static/va-dsp.js";
+import { VAVoice, VAOsc, Env, LFO, SCALE, Filter, VCF_MODELS, TvfFilter, TVF, HighPass, VCF_EXTRA, ENV, WAVES, SSAW, STRUCT, LFO_T, lfoHz, lfoPitch, applyMidi, PartialEq } from "../static/va-dsp.js";
 
 const SR = 44100;
 let pass = 0, fail = 0;
@@ -666,6 +666,55 @@ function render(p, note = 57, secs = 0.5) {
   const inside = lvl(win(60, 84, 12, 12), 72), half = lvl(win(60, 84, 12, 12), 54), out = lvl(win(60, 84, 12, 12), 47);
   ok("key window: 6 keys into a 12-key fade is -12 dB ((1/2)^2), past it silent",
      close(20 * Math.log10(half / inside), -12.04, 0.2) && out < 1e-9, `${(20 * Math.log10(half / inside)).toFixed(2)} dB`);
+}
+
+// --- partial EQ (renders/eq, fit_eq.py) --------------------------------------
+{
+  const on = (over) => new PartialEq(SR, { SW: 1, LO_GAIN: 0, LO_FREQ: 200, MID_GAIN: 0, MID_FREQ: 1000,
+                                           MID_Q: 10, HI_GAIN: 0, HI_FREQ: 2000, ...over });
+  // gain in dB at one frequency: a sine through the EQ, measured once settled
+  const gain = (mk, hz) => {
+    const eqs = [].concat(mk());
+    const n = SR, out = new Float32Array(n), ref = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = Math.sin(TAU * hz * i / SR);
+      ref[i] = x;
+      out[i] = eqs.reduce((y, e) => e.process(y), x);
+    }
+    return 20 * Math.log10(magAt(out.subarray(n / 2), hz) / magAt(ref.subarray(n / 2), hz));
+  };
+  ok("EQ off, or on with every gain 0, is bypassed",
+     !new PartialEq(SR, { SW: 0, LO_GAIN: 120 }).active && !on({}).active && on({ MID_GAIN: 1 }).active);
+  const lo = () => on({ LO_GAIN: 120 });
+  ok("low shelf +12 dB: +2.75 dB at its frequency, full gain far below, flat far above",
+     close(gain(lo, 200), 2.75, 0.03) && close(gain(lo, 33), 10.56, 0.05) && close(gain(lo, 5000), 0, 0.02),
+     `${gain(lo, 200).toFixed(2)} ${gain(lo, 33).toFixed(2)} ${gain(lo, 5000).toFixed(2)}`);
+  const hi = () => on({ HI_GAIN: 120 });
+  ok("high shelf +12 dB mirrors it: +2.75 dB at 2 kHz, +9.67 at 8 kHz",
+     close(gain(hi, 2000), 2.75, 0.03) && close(gain(hi, 8000), 9.67, 0.05),
+     `${gain(hi, 2000).toFixed(2)} ${gain(hi, 8000).toFixed(2)}`);
+  const mid = () => on({ MID_GAIN: 120 });
+  ok("mid +12 dB at Q 1: exact at 1 kHz, +6 dB at 415 and 2393 Hz (Zenology's width)",
+     close(gain(mid, 1000), 12, 0.02) && close(gain(mid, 415), 6, 0.05) && close(gain(mid, 2393), 6, 0.05),
+     `${gain(mid, 1000).toFixed(2)} ${gain(mid, 415).toFixed(2)} ${gain(mid, 2393).toFixed(2)}`);
+  const mid8k = () => on({ MID_GAIN: 120, MID_FREQ: 8000 });
+  ok("mid at 8 kHz keeps Zenology's wider band: +6 dB at 3361 and 14518 Hz",
+     close(gain(mid8k, 3361), 6, 0.08) && close(gain(mid8k, 14518), 6, 0.08),
+     `${gain(mid8k, 3361).toFixed(2)} ${gain(mid8k, 14518).toFixed(2)}`);
+  const both = () => [on({ LO_GAIN: 79, MID_GAIN: 95, MID_Q: 30, HI_GAIN: 20 }),
+                      on({ LO_GAIN: -79, MID_GAIN: -95, MID_Q: 30, HI_GAIN: -20 })];
+  ok("a cut is the exact inverse of the boost",
+     [60, 200, 700, 1000, 1500, 4000, 12000].every((f) => Math.abs(gain(both, f)) < 0.001));
+}
+
+// --- oscillator pitch rounding (renders/osc/octaves) --------------------------
+{
+  const o = new VAOsc(SR); o.form = "SIN"; o.pwLocked = true; o.reset(0);
+  let n = 0, prev = o.tick(32.7032);
+  const secs = 20;
+  for (let i = 1; i < SR * secs; i++) { const v = o.tick(32.7032); if (prev < 0 && v >= 0) n++; prev = v; }
+  ok("C1 plays at 32.7204 Hz: frequencies round to multiples of 44100 / 2^20 Hz",
+     close(n / secs, 32.7204, 0.03), `${(n / secs).toFixed(3)} Hz`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

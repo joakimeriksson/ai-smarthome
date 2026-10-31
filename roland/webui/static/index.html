@@ -127,7 +127,8 @@ $("#file").textContent =
 // the schema drives every control - nothing here hardcodes a range or a label
 for (const g of ["PCMT_CMN","PCMS_CMN","PCMS_PMT",
                  ...[1,2,3,4].flatMap(n => [`PCMT_PTL_${n}`,`PCMS_PTL_${n}`,
-                       `PTL_AENV_${n}`,`PTL_FENV_${n}`,`PTL_PENV_${n}`,`PTL_LFO_${n}`])]) {
+                       `PTL_AENV_${n}`,`PTL_FENV_${n}`,`PTL_PENV_${n}`,`PTL_LFO_${n}`,
+                       `PTL_EQ_${n}`])]) {
   schema[g] = await (await fetch(`/api/schema/${g}`)).json();
 }
 const def = (g, id) => (schema[g] || []).find(p => p.id === id);
@@ -252,6 +253,9 @@ function draw() {
       ["LFO_2_FORM","LFO_2_RATE","LFO_2_PIT_DEPTH","LFO_2_TVF_DEPTH"]
         .map(id => control(`PTL_LFO_${n}`, id,
              p.lfo2[id.replace("LFO_2_","").toLowerCase()]))) +
+    card(`EQ ${n}`,
+      ["SW","LO_GAIN","LO_FREQ","MID_GAIN","MID_FREQ","MID_Q","HI_GAIN","HI_FREQ"]
+        .map(id => control(`PTL_EQ_${n}`, id, (p.eq || {})[id]))) +
     (p.matrix || []).map((m, i) => matrixCard(P, n, i + 1, m)).join("");
 }
 

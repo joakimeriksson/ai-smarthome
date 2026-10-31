@@ -33,23 +33,22 @@ export const COEFF_BLOCK = 128
 /**
  * Between block boundaries the coefficients are also recomputed as soon as
  * the cutoff has moved this far (semitones) from the note they were computed
- * for. The block cadence alone let a fast filter envelope outrun the filter:
- * Take-off (slot 42) opens its HP12 by 129 semitones in a 2 ms attack, which
- * is shorter than a block, so the first 128 samples went through a filter
- * still set for the envelope at 0 while the amp envelope had already opened —
- * a 3 ms burst of raw square 25 dB above the sound that followed, heard as a
- * click on every note. The hardware's cutoff follows its envelope
- * continuously; with this bound the engine is never more than half a semitone
- * behind, and slow modulation still costs one coefficient set per block.
+ * for. The block cadence alone lets a fast filter envelope outrun the
+ * filter: a 2 ms attack is shorter than a block, so the first 128 samples went
+ * through a filter still set for the envelope at 0 while the amp envelope had
+ * already opened. On Take-off (slot 42, HP12) that was a burst of raw square
+ * on every note. The hardware's cutoff follows its envelope continuously;
+ * with this bound the engine is never more than half a semitone behind, and
+ * slow modulation still costs one coefficient set per block.
  */
 export const CUTOFF_STEP = 0.5
 
 /**
  * The amp envelope starts this long (seconds) after note-on; the filter
  * envelope starts at once. On the recording the VCA opens only after the
- * filter envelope has done its fastest attack: Take-off's HP12 climbs 129
- * semitones in 1.5 ms and the note starts silent, with nothing of the
- * unfiltered square in its first 2 ms, while the static-filter presets open
+ * filter envelope has done its fastest attack: Take-off's HP12 does its
+ * 2 ms attack and the note starts silent, with nothing of the unfiltered
+ * square in its first 2 ms, while the static-filter presets open
  * to full level within half a millisecond once they start. With both
  * envelopes starting together the engine let the square through while the
  * filter was still low: a 1 ms tick 13 dB above the sound, on every note.

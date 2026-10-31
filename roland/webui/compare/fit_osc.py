@@ -25,6 +25,15 @@ synth plays the nearest one, band-limited to the pitch it plays at.
 
 DawDreamer sometimes starts a note late or never releases it; the steady
 stretch is found from each render, so those renders still work.
+
+The harmonics are read at each render's TRUE pitch, measured from the SAW at
+that note: Zenology rounds an oscillator's frequency to a multiple of
+44100 / 2^20 Hz (0.042 Hz - C1 plays 0.91 cents sharp, C2 and C3 0.20 flat).
+Reading at the nominal pitch instead smears the upper harmonics away over the
+window (the first capture, 2026-09-26, lost 5 dB by harmonic 32 of C1 that way
+and everything above harmonic ~55).
+
+    uv run --with numpy --with scipy webui/compare/fit_osc.py --validate # ours vs Zenology
 """
 # /// script
 # requires-python = ">=3.10"
@@ -64,11 +73,40 @@ def steady(x, hold_end):
     return onset + 0.25, end
 
 
-def harmonics(path, note, count, hold_end, periods=32, per=2048):
-    """Amplitude and phase of harmonics 1..count over an exact number of periods."""
+#: Zenology's oscillator frequency step: a 20-bit phase increment at 44.1 kHz
+PITCH_STEP = 44100 / 2 ** 20
+
+
+def read(path):
     _sr, d = wavfile.read(path)
     x = d.astype(float).mean(axis=1) if d.ndim > 1 else d.astype(float)
-    f0 = 440 * 2 ** ((note - 69) / 12)
+    return x / 32768 if d.dtype.kind == "i" else x
+
+
+def true_f0(x, note, hold_end):
+    """The pitch a harmonically rich render really plays, refined on rising
+    harmonics (each step locates harmonic k to a small fraction of a bin)."""
+    t0, end = steady(x, hold_end)
+    seg = x[int(t0 * SR):int(end * SR)]
+    n = len(seg)
+    t = np.arange(n) / SR
+    w = np.hanning(n)
+    f = 440 * 2 ** ((note - 69) / 12)
+    for k in (1, 4, 16, 64, 256):
+        if k * f > 16000:
+            break
+        grid = k * f + np.linspace(-0.6, 0.6, 241) * SR / n          # +-0.6 bin
+        mag = [np.abs(np.sum(seg * w * np.exp(-2j * np.pi * g * t))) for g in grid]
+        f = grid[int(np.argmax(mag))] / k
+    return f
+
+
+def harmonics(path, note, count, hold_end, periods=32, per=2048, f0=None):
+    """Amplitude and phase of harmonics 1..count over an exact number of periods
+    of f0 (the render's true pitch; nominal if not given)."""
+    x = read(path)
+    f0 = f0 or 440 * 2 ** ((note - 69) / 12)
+    count = min(count, int(0.49 * SR / f0))
     t0, end = steady(x, hold_end)
     periods = max(4, min(periods, int((end - t0) * f0)))
     P = SR / f0
@@ -86,19 +124,78 @@ def harmonics(path, note, count, hold_end, periods=32, per=2048):
     return amp, ph
 
 
+def validate(m, run, notes, hold_end, pitch):
+    """Ours vs Zenology per waveform and octave, each read at its own pitch:
+    level = the fundamental, shape = harmonics 2.. relative to it (those within
+    50 dB of the strongest), mean |dB| and the worst one."""
+    import tempfile
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import validate_runs as vr
+    schema = vr.Schema.load()
+    base = vr.base_tone(run, m, schema)
+    g, _, pid = m["param"].partition(".")
+    rows = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        print("\n  form  note   pitch ours-zen   level     shape mean / worst (harmonic)   harmonics")
+        for form in FORMS:
+            for note in notes:
+                tone = vr.Tone(base.data, schema)
+                tone.set(g, pid, FORMS.index(form))
+                vr.render(tone, note, m["velocity"] or 1, m, m["lead"], tmp, float32=True)
+                # up to 16 kHz: above it our band limit drops a top harmonic or two
+                count = min(900, int(16000 // pitch[note]))
+                az, _ = harmonics(run / m["files"][str(FORMS.index(form))][str(note)], note, count,
+                                  hold_end, f0=pitch[note])
+                if form == "SAW":
+                    ours_f0 = true_f0(read(tmp / "o.wav"), note, hold_end)
+                    cents = 1200 * np.log2(ours_f0 / pitch[note])
+                    validate.f0 = {**getattr(validate, "f0", {}), note: ours_f0}
+                ao, _ = harmonics(tmp / "o.wav", note, count, hold_end, f0=validate.f0[note])
+                level = 20 * np.log10(ao[0] / az[0])
+                keep = az > az.max() * 10 ** (-50 / 20)
+                keep[0] = False
+                d = 20 * np.log10((ao[keep] + 1e-12) / az[keep]) - level
+                kk = np.nonzero(keep)[0] + 1
+                worst = int(np.argmax(np.abs(d))) if len(d) else 0
+                rows.append((form, note, level, float(np.mean(np.abs(d))) if len(d) else 0.0,
+                             float(np.abs(d).max()) if len(d) else 0.0))
+                print(f"  {form:5s} {note:4d}   {cents if form == 'SAW' else 0:+6.2f} c      {level:+5.2f} dB   "
+                      f"{rows[-1][3]:5.2f} / {rows[-1][4]:5.2f} dB" + (f" (k={kk[worst]})" if len(d) else "")
+                      + f"   {keep.sum()}")
+    lv = np.array([abs(r[2]) for r in rows]); sh = np.array([r[3] for r in rows])
+    print(f"\n{len(rows)} renders: level |diff| mean {lv.mean():.2f} dB (worst {lv.max():.2f}); "
+          f"shape mean {sh.mean():.2f} dB (worst render {sh.max():.2f})")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--run", default="renders/osc/octaves")
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--validate", action="store_true",
+                    help="render every waveform and octave through our synth and compare harmonics")
     a = ap.parse_args(argv)
     run = ROOT / a.run
     m = json.loads((run / "manifest.json").read_text())
     notes = sorted(int(n) for n in next(iter(m["files"].values())))
     hold_end = m["lead"] + m["hold"]
 
+    # every waveform at a note shares the SAW's pitch (one oscillator)
+    pitch = {}
+    print("  note   nominal Hz   played Hz   cents   rounded to 44100/2^20")
+    for note in notes:
+        nom = 440 * 2 ** ((note - 69) / 12)
+        pitch[note] = true_f0(read(run / m["files"]["0"][str(note)]), note, hold_end)
+        print(f"  {note:4d}   {nom:10.4f}  {pitch[note]:10.4f}  {1200 * np.log2(pitch[note] / nom):+6.2f}"
+              f"   {round(nom / PITCH_STEP) * PITCH_STEP:10.4f}")
+
     def H(form, note, count):
         path = run / m["files"][str(FORMS.index(form))][str(note)]
-        return harmonics(path, note, count, hold_end)
+        return harmonics(path, note, count, hold_end, f0=pitch[note])
+
+    if a.validate:
+        return validate(m, run, notes, hold_end, pitch)
 
     saw_amp, _ = H("SAW", 36, 1)
     scale = (2 / np.pi) / saw_amp[0]

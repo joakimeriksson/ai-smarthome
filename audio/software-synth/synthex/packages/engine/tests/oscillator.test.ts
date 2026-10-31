@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PolyBlepSaw } from '../src/dsp/polyblep'
+import { PolyBlepSaw, PolyBlepTriangle } from '../src/dsp/polyblep'
 import { fftMagnitude, hann } from './fft'
 
 const SR = 48000
@@ -75,5 +75,27 @@ describe('PolyBLEP sawtooth', () => {
     // A6 is high enough that we accept ≥25 dB. Higher-order BLEP would do better.
     const ratioDb = 20 * Math.log10(maxAlias / fundamental)
     expect(ratioDb).toBeLessThan(-25)
+  })
+
+  it('a hard-synced triangle restarts with a step and carries no DC', () => {
+    // The hardware's slave is a saw core reset by the master, so a synced
+    // triangle jumps back to its trough. Integrating a square instead bent
+    // there and drifted to a DC offset (Metallic, slot 13).
+    const sr = 44100, master = 523.25, slave = master * 4.76  // Metallic at C5: 4' + 3 st above a 16' master
+    const tri = new PolyBlepTriangle()
+    const dtM = master / sr, dtS = slave / sr
+    let phM = 0, mean = 0, maxStep = 0, prev = 0
+    const n = sr
+    for (let i = 0; i < n; i++) {
+      const next = phM + dtM
+      if (next >= 1) tri.sync((1 - phM) / dtM)
+      phM = next >= 1 ? next - 1 : next
+      const y = tri.next(dtS)
+      if (i > 100) { mean += y; maxStep = Math.max(maxStep, Math.abs(y - prev)) }
+      prev = y
+    }
+    mean /= n - 101
+    expect(Math.abs(mean)).toBeLessThan(0.05)   // the truncated cycle leaves a little; the integrated one left 3.0
+    expect(maxStep).toBeGreaterThan(0.5)   // a free-running triangle at this rate moves 4 * dtS = 0.23 per sample
   })
 })

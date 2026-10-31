@@ -7,7 +7,7 @@
 // harness silently stopped rendering what the app plays.)
 
 import { VoiceCore } from '../../packages/engine/src/dsp/voice-core.ts'
-import { CHORUS_PRESETS } from '../../packages/engine/src/fx/chorus.ts'
+import { CHORUS_BASE, chorusLine, chorusTri } from '../../packages/engine/src/fx/chorus.ts'
 import type { LayerPatch, ChorusParams, JoystickPerformance } from '../../packages/engine/src/patch.ts'
 
 export interface NoteEvent { kind: 'on' | 'off'; t: number; note: number; velocity?: number }
@@ -26,32 +26,30 @@ export interface RenderOptions {
   joy?: { x: number; y: number } | undefined
 }
 
-// Single-tap chorus post-pass mirroring StereoChorus (fx/chorus.ts): one
-// LFO-modulated fractional delay + dry, i.e. one channel of the stereo pair —
-// which is exactly what a mono capture of the app records.
+// The chorus as the app's StereoChorus plays it, one channel: dry plus the mode's lines, each a
+// fractional delay swept by a triangle LFO around CHORUS_BASE (fx/chorus.ts has the circuit).
 function applyChorus(buf: Float32Array, sr: number, p: ChorusParams): void {
   if (!p.enabled) return
-  const preset = CHORUS_PRESETS[p.mode]
-  const rate = preset.rate * (0.5 + p.rate)
-  const depth = preset.depth * (0.5 + p.depth)
-  const baseDelay = 0.012
-  const wet = p.mix
-  const dry = 1 - p.mix * 0.5
-  const maxDelay = Math.ceil((baseDelay + depth + 0.001) * sr)
+  const lines = [0, 1].map(k => chorusLine(p, k)).filter(l => l.wet > 0)
+  const maxDelay = Math.ceil((CHORUS_BASE + 0.002 + 0.001) * sr)
   const line = new Float32Array(maxDelay + 2)
   let w = 0
-  const twoPi = 2 * Math.PI
-  for (let i = 0; i < buf.length; i++) {
-    const x = buf[i]!
+  const ph = lines.map(() => 0)
+  const src = Float32Array.from(buf)
+  for (let i = 0; i < src.length; i++) {
+    const x = src[i]!
     line[w] = x
-    const delaySec = baseDelay + depth * Math.sin((twoPi * rate * i) / sr)
-    const d = delaySec * sr
-    const di = Math.floor(d)
-    const frac = d - di
-    const r0 = (w - di + line.length) % line.length
-    const r1 = (r0 - 1 + line.length) % line.length
-    const delayed = line[r0]! * (1 - frac) + line[r1]! * frac
-    buf[i] = x * dry + delayed * wet
+    let y = x
+    for (let k = 0; k < lines.length; k++) {
+      const l = lines[k]!
+      const d = (CHORUS_BASE + l.depth * chorusTri(ph[k]!)) * sr
+      ph[k] = (ph[k]! + l.rate / sr) % 1
+      const di = Math.floor(d), frac = d - di
+      const r0 = (w - di + line.length) % line.length
+      const r1 = (r0 - 1 + line.length) % line.length
+      y += (line[r0]! * (1 - frac) + line[r1]! * frac) * l.wet
+    }
+    buf[i] = y
     w = (w + 1) % line.length
   }
 }

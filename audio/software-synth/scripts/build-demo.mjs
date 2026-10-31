@@ -39,8 +39,9 @@ const problems = []
 // ── 1. The six standalone pages: already static, copy as-is ────────────────
 const pages = (await readdir(ROOT)).filter(f => f.endsWith('.html'))
 for (const f of pages) await cp(resolve(ROOT, f), resolve(OUT, f))
-for (const dir of ['css', 'js']) await cp(resolve(ROOT, dir), resolve(OUT, dir), { recursive: true })
-console.log(`[demo] ${pages.length} pages + css/ + js/`)
+// synthex-tuning/ holds the figures and clips of synthex-tuning.html, the story of the preset calibration.
+for (const dir of ['css', 'js', 'synthex-tuning']) await cp(resolve(ROOT, dir), resolve(OUT, dir), { recursive: true })
+console.log(`[demo] ${pages.length} pages + css/ + js/ + synthex-tuning/`)
 
 // index.html is the LOCAL landing page: it points Studio and Synthex at the
 // dev servers you start by hand. In the built site they are plain siblings, so

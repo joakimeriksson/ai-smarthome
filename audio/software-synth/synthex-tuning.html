@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuning the Synthex</title>
+<meta name="description" content="How the forty ROM presets of the 1981 Elka Synthex were decoded from its EPROMs and calibrated against a recording of the real instrument, with spectrograms and clips.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tuning the Synthex: forty presets, one recording">
+<meta property="og:description" content="The EPROMs gave the knob positions. A fifteen-minute recording gave what the knobs mean. One of them reads backwards.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  /* The Synthex's own palette: warm panel grey, black end cheeks, the red two-digit program
+     display and the orange section legends. Light is the panel by day; dark is the stage. */
+  :root {
+    --bg: #ecebe6; --fg: #1d1c1a; --muted: #5f5c55; --strip: #f7f6f2; --line: #cfccc3;
+    --led: #d8321e; --led-bg: #2a1c18; --accent: #b6481f; --accent-ink: #8f3614;
+    --plate: #121014; --hw: #2f5f8f; --code-bg: #e3e1da;
+    --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --body: 'Public Sans', system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a; --fg: #ebe8e0; --muted: #a39f94; --strip: #212125; --line: #3a3a40;
+      --led: #ff4a2e; --led-bg: #0d0806; --accent: #e8793f; --accent-ink: #f0973a;
+      --plate: #121014; --hw: #7fb0e0; --code-bg: #25252a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17171a; --fg: #ebe8e0; --muted: #a39f94; --strip: #212125; --line: #3a3a40;
+    --led: #ff4a2e; --led-bg: #0d0806; --accent: #e8793f; --accent-ink: #f0973a;
+    --plate: #121014; --hw: #7fb0e0; --code-bg: #25252a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 var(--body); }
+  a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+  a:hover { border-bottom-color: var(--accent); }
+  .wrap {
+    max-width: 1040px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 64px;
+  }
+  nav.top { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--display); font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  nav.top a { border: 0; color: var(--muted); }
+  nav.top a:hover { color: var(--accent-ink); }
+
+  /* Masthead: the program display shows 10, the first preset. */
+  header.mast { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: end; margin-top: 40px; }
+  .led { background: var(--led-bg); color: var(--led); font-family: var(--display); font-weight: 600; font-size: 72px; line-height: 1; padding: 14px 18px 8px; border-radius: 3px; font-variant-numeric: tabular-nums; text-shadow: 0 0 14px color-mix(in srgb, var(--led) 60%, transparent); box-shadow: inset 0 0 0 1px #000; }
+  .kicker { margin: 0; font-family: var(--display); font-size: 16px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  h1 { margin: 6px 0 0; font-family: var(--display); font-weight: 700; font-size: clamp(40px, 7vw, 76px); line-height: 0.95; letter-spacing: 0.005em; text-transform: uppercase; text-wrap: balance; }
+  .lede { max-width: 62ch; margin: 28px 0 0; font-size: 20px; line-height: 1.5; color: var(--fg); }
+  .lede + p { color: var(--muted); font-size: 15px; margin-top: 10px; }
+
+  article { margin-top: 48px; }
+  .prose { max-width: 68ch; }
+  .prose p { margin: 0 0 1.1em; }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; letter-spacing: 0.03em; text-transform: uppercase; margin: 56px 0 14px; padding-top: 14px; border-top: 2px solid var(--accent); max-width: 68ch; text-wrap: balance; }
+  h2 small { display: block; font-size: 14px; letter-spacing: 0.14em; color: var(--accent); margin-bottom: 6px; }
+  h3 { font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: 0.04em; text-transform: uppercase; margin: 28px 0 8px; }
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.5; background: var(--code-bg); padding: 14px 16px; border-radius: 4px; overflow-x: auto; margin: 0 0 1.2em; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* Figures: dark plates at full width, captions in the margin's voice. */
+  figure { margin: 28px 0 36px; }
+  figure img { display: block; width: 100%; height: auto; max-width: 100%; background: var(--plate); border: 1px solid var(--line); border-radius: 4px; }
+  figcaption { margin-top: 10px; font-size: 14.5px; line-height: 1.5; color: var(--muted); max-width: 80ch; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  /* A preset strip: the display, the name, the two sides, the clip players. */
+  .strip { background: var(--strip); border: 1px solid var(--line); border-radius: 4px; display: grid; grid-template-columns: 84px 1fr; margin: 24px 0 36px; }
+  .strip .num { background: var(--led-bg); color: var(--led); display: grid; place-items: center; font-family: var(--display); font-weight: 600; font-size: 44px; font-variant-numeric: tabular-nums; text-shadow: 0 0 12px color-mix(in srgb, var(--led) 60%, transparent); border-right: 1px solid var(--line); border-radius: 3px 0 0 3px; }
+  .strip .body { padding: 14px 18px 16px; min-width: 0; display: grid; gap: 10px; }
+  .strip h3 { margin: 0; font-size: 26px; }
+  .strip h3 span { color: var(--muted); font-size: 15px; letter-spacing: 0.1em; margin-left: 10px; }
+  .players { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .player { display: grid; gap: 6px; min-width: 0; border-top: 3px solid var(--line); padding-top: 8px; align-content: start; }
+  .player.hw { border-top-color: var(--hw); }
+  .player.eng { border-top-color: var(--accent); }
+  .player label { font-family: var(--display); font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .player small { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  audio { width: 100%; min-width: 0; display: block; height: 36px; }
+  .settings { font-size: 13.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+  .settings b { color: var(--fg); font-weight: 600; }
+
+  table { border-collapse: collapse; font-size: 15px; margin: 0 0 1.4em; }
+  th, td { text-align: left; padding: 6px 14px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 13.5px; color: var(--muted); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .tbl { overflow-x: auto; }
+
+  aside.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; margin: 20px 0 24px; color: var(--muted); font-size: 15.5px; max-width: 66ch; }
+  aside.note b { color: var(--fg); }
+  ul.plain { padding-left: 20px; margin: 0 0 1.2em; }
+  ul.plain li { margin-bottom: 6px; }
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14.5px; max-width: 72ch; }
+  footer p { margin: 0 0 8px; }
+
+  @media (max-width: 640px) {
+    header.mast { grid-template-columns: 1fr; gap: 14px; }
+    .led { font-size: 54px; width: max-content; }
+    .strip { grid-template-columns: 60px 1fr; }
+    .strip .num { font-size: 32px; }
+    .strip .body { padding: 12px; }
+    body { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a href="index.html">Software synths</a>
+  <a href="synthex/">The Synthex, playable</a>
+  <a href="https://joakimeriksson.github.io/scintilla-fm1/">Scintilla, on the FM-1</a>
+  <a href="https://github.com/joakimeriksson/ai-smarthome/tree/master/audio/software-synth/synthex/tools/synthex-rom">The decoder</a>
+</nav>
+
+<header class="mast">
+  <div class="led">10</div>
+  <div>
+    <p class="kicker">Elka Synthex, 1981 · the forty ROM presets</p>
+    <h1>Forty presets,<br>one recording</h1>
+  </div>
+</header>
+
+<p class="lede">The Synthex's firmware gave up its forty factory presets: every knob position, every switch, packed into twenty-five bytes each. Then came the hard part. A knob position is not a sound. This is how a fifteen-minute recording of a real Synthex taught the engine what the panel means, and how one pot turned out to read backwards.</p>
+<p>October 2026. The clips on this page are the engine's; the hardware is linked to its source.</p>
+
+<article>
+
+<h2><small>1</small>The names and nothing else</h2>
+<div class="prose">
+<p>The Synthex has eighty programs. Forty PRESETS sit in ROM and forty MEMORIES came on a cassette, and page 25 of the manual lists them all: Chunky Synth, Wah brass, Brass II, Ceilos, Church organ, Ring mod., Bass pluck, Whistle. For a long time the names were all this tribute had. Its forty presets were made by ear, from the names, from memory, and from the Cherry Audio Elka-X, whose Laser Harp is itself a recreation of program 46.</p>
+<p>That last point matters. The Elka-X is a fine instrument, but its 608 presets are designer patches, not the ROM. When I later measured the decoded Ring mod. against a capture of the Elka-X Laser Harp it scored <em>worse</em> than my hand-made patch, 8.3 dB against 5.2, for the simple reason that the hand-made patch had been fitted to that capture. The reference had been the wrong instrument.</p>
+</div>
+
+<h2><small>2</small>Twenty-five bytes per sound</h2>
+<div class="prose">
+<p>The firmware is on three EPROMs, and dumps of them circulate in the <a href="https://archive.org/download/vintage-synth-firmware-collection/">vintage synth firmware collection</a>. The CPU board permutes the address and data lines, so the first job was to rebuild the 6502 image. The second was to find the presets: forty packed records of 25 bytes, 200 bits each, at <code>$D000</code> on the chip marked T41. That chip is byte-identical in every dump set, MIDI and pre-MIDI firmware alike, which is as close to a guarantee as this hobby gets.</p>
+<p>Rather than re-implement the firmware's bit unpacker and get it subtly wrong, the decoder runs the firmware's own recall routine in a 6502 simulator and reads the forty parameters it leaves in zero page. Bob Grieb's Synthex CC map, which lists the RAM address of every parameter for his MIDI retrofit, gave the parameter identities. This is the first record, program 10, Chunky Synth:</p>
+</div>
+<pre><code>154 131 191 174 183 189 174 176 141 236   0 186 128 254  90   0   0 240 240   0
+  0   0  96 112 160 144   0   1   1   1   1   0   0   0   0   0   0   0 128   0</code></pre>
+<div class="prose">
+<p>Read with the map: OSC2 detuned 26 units above centre, about ten cents; both oscillators at 8' (footage code 1), both sawtooth (wave code 1), both at full volume (240); cutoff 189, key tracking 174, envelope amount 176; filter sustain 141 of 255, amplifier sustain 236; the six envelope times as four-bit steps, 0 0 6 7 10 9; and 128 at the end, the RELEASE switch on. Small surprises hid in the bits. The glide buttons are cross-wired, so the bit the panel calls OSC1 routes to OSC2. The triangle wave gets twelve semitones added in firmware to compensate for the hardware. The LFO frequency pot reads inverted: every vibrato preset had a low raw value. I noted that one and moved on. I should have stopped.</p>
+<p>The cassette was a disappointment. Both circulating "factory presets" tapes decode cleanly, FSK at 800 and 1600 Hz with checksums that verify, but they are user banks: one has seven slots that are byte copies of ROM presets, the other three, and the names do not fit the sounds. The MEMORIES bank on this site stays a reconstruction until someone's 1982 battery RAM turns up intact.</p>
+</div>
+
+<h2><small>3</small>Everything in place and wrong</h2>
+<div class="prose">
+<p>With the records decoded and the engine's knobs mapped to them, I loaded the bank and played. It was bad. Ceilos, a string pad with no filter envelope, was muffled. The organs were muffled. Bass pluck, which on the real instrument snaps, was a thud. And the Laser Harp, the sound this whole project exists for, was simply gone: a dull bass tone where the Rendez-Vous riff should cut.</p>
+<p>The decode was not the problem. Every switch bit of Ring mod. matched what the Elka-X recreation sets: pulse 8' against pulse 2', sync, ring modulation, glide to OSC2, LFO to the second pulse width, chorus 1. The problem was the layer under the decode. The ROM says where the knobs sit. What the engine does with a knob position, how many semitones a cutoff knob spans, how fast an LFO runs at a given raw value, how long "envelope step 9" lasts, had all been assumed when the engine was written. Forty presets of real knob positions turned every assumption into an audible error at once.</p>
+</div>
+
+<h2><small>4</small>Fifteen minutes of ground truth</h2>
+<div class="prose">
+<p>What was needed was the real instrument, and <a href="https://www.perkristian.net/studio_synthex.shtml">Per Kristian</a> had recorded it: a run-through of all forty presets in order, fifteen minutes, mono, 56 kbps, on his <a href="https://www.perkristian.net/sounds/">sounds page</a>. Not a laboratory recording, but one with the only property that counts: it is a Synthex playing its own ROM.</p>
+<p>I built a small marker tool, played the file, and set a mark where each preset begins; the first ten and the last ten I am sure of, the middle twenty less so. The analysis then cut the recording into forty regions, detected the notes he plays in each, and rendered the same notes with the engine, so that a hardware clip and an engine clip could be laid side by side with the same pitches and the same timing. A spectrogram of each pair, and a stack of small measurements, did the rest.</p>
+</div>
+
+<h2><small>5</small>What the recording said</h2>
+
+<h3>The LFO runs on an exponential pot</h3>
+<div class="prose">
+<p>Six presets have an audible vibrato or tremolo, and their rates can be read straight off the harmonics. Plotted against the raw pot value they fall on one exponential within five percent, from eleven hertz for Wash of sound down to one for the slow pulse-width drift of Ring mod. The old curve was wrong by a factor of two. The depths came from running the same modulation analysis on hardware and engine renders: full-depth vibrato is ±1.3 semitones, not ±2, and full tremolo moves the level by less than five decibels, not fifteen.</p>
+</div>
+<figure>
+  <img src="synthex-tuning/lfo.webp" width="1200" height="432" alt="Log-scale plot of LFO rate against raw pot value: six measured points on a straight line from 11 Hz to 1.1 Hz, with the steeper old assumption below them." loading="lazy">
+  <figcaption><b>LFO rate against the pot.</b> Six rates measured on the recording, the fitted curve, and the curve the engine used before. The pot is inverted: 255 is the knob at its minimum.</figcaption>
+</figure>
+
+<h3>The envelopes: half, straight, and exponential</h3>
+<div class="prose">
+<p>The envelope times are a 16-step table set by an RC network on the voice card, and the table itself (3.1 ms up to 13.2 s) comes from pecostm32's Synthex emulator, which counts the CPU cycles the firmware waits for the attack comparator. The recording fixed the shapes. The attack reaches its peak in about half the table time. The decay is linear in control voltage and takes the table time; Phased sweep's cutoff falls in a straight line over 6.6 seconds. And the release is exponential: plotted in decibels it is a straight line for thirty decibels and more, falling twenty decibels per table time. The engine's release had been linear, which sounds like a hold followed by a drop, and it is now exponential.</p>
+</div>
+<figure>
+  <img src="synthex-tuning/release.webp" width="1200" height="408" alt="Three panels of level in dB after note-off for Brass III, Chimes and Brass I: the hardware traces are straight lines in dB, matching the exponential model and not the linear-amplitude one." loading="lazy">
+  <figcaption><b>Three releases on the hardware, in decibels.</b> Brass III falls 20 dB in 0.21 s where its table entry says 0.2; Chimes takes 1.8 s; Brass I has the RELEASE switch off and stops dead at over 800 dB per second. The blue curve is what a linear release of the same length would do.</figcaption>
+</figure>
+
+<h3>The filter, and the pot that reads backwards</h3>
+<div class="prose">
+<p>The cutoff was the hard one, because three things add into it: the knob, the key tracking and the envelope. The schematic gives their proportions. On the voice card the cutoff summing amplifier takes the knob through 30 kΩ, the key-tracking voltage through 43 kΩ and the envelope through 24 kΩ, so they weigh 1 : 0.70 : 1.25. The firmware gives the key tracking's shape: it writes (key − 36) × 2 to a DAC for each voice, with the KEY TRACK knob as the DAC's reference, so tracking is zero at the bottom key, C2, and the knob scales it. What was left to measure was the scale of the whole sum in semitones and where it starts.</p>
+<p>The measurements refused to agree. Presets with no filter envelope, Ceilos and the organs, read wide open on the recording while their knob values were middling. The plucks, Bass pluck and Fast decay, had the knob near its maximum <em>and</em> a full envelope, which no one programs, because there is nothing left for the envelope to open. Chunky Synth at C2 wanted one answer and Phased sweep another. I had been staring at the LFO pot's inversion for two days before I tried the obvious thing: the cutoff pot reads backwards too. Raw 255 is the knob at its minimum.</p>
+<p>Everything fell into place. The plucks became "knob near zero plus a full envelope", which is exactly how one programs a pluck. Ceilos and the organs opened up. Two anchors fixed the scale, Chunky Synth at C2 (cutoff at note 108 once the envelope has settled) and Phased sweep at its sustain (note 72), and the law then predicted seven readings it had not been fitted to, most within three semitones and none worse than seven, at the top of the range where the estimator is least reliable. Full key tracking comes out at 0.81 semitones per key, and a full envelope at about 185 semitones, which explains why the plucks snap.</p>
+</div>
+<figure>
+  <img src="synthex-tuning/cutoff.webp" width="768" height="744" alt="Scatter of predicted against measured cutoff notes for nine readings. Two diamond anchors sit on the diagonal; seven circles lie within a ±3 semitone band around it." loading="lazy">
+  <figcaption><b>The cutoff law checked.</b> Two anchors fix it; the other seven readings are not used in the fit. Five land within three semitones; Pan flutes and the top key of Electronic organ miss by six and seven. The harmonic estimator saturates above about note 112 on these MP3 sources, so the open readings are lower bounds.</figcaption>
+</figure>
+
+<h2><small>6</small>Hear the difference</h2>
+<div class="prose">
+<p>Spectrograms, time left to right, frequency on a log scale from 40 Hz to 10 kHz, one amber scale for all of them so that panels compare. The hardware panels are from Per Kristian's recording; the engine panels are the web engine rendering the same notes, eight voices and the preset's chorus, exactly as the app plays them.</p>
+</div>
+
+<div class="strip">
+  <div class="num">46</div>
+  <div class="body">
+    <h3>Ring mod.<span>Bank 4 · program 6 · the Laser Harp</span></h3>
+    <figure style="margin:4px 0 6px">
+      <img src="synthex-tuning/spec-ringmod.webp" width="1200" height="996" alt="Three spectrograms of the Laser Harp riff: the hardware with harmonics reaching 2 to 5 kHz on each note, the first decode with nothing above 300 Hz except brief attack ticks, and the calibrated engine with the harmonics back." loading="lazy">
+      <figcaption>Top, the hardware: each note of the riff carries harmonics up past 2 kHz, with the filter envelope's tick at the start. Middle, the first decode with the cutoff pot read the wrong way round: a bass tone with a brief attack and nothing above 300 Hz. Bottom, the calibrated engine. The phrases are the same riff but not note-for-note the same performance.</figcaption>
+    </figure>
+    <div class="players">
+      <div class="player hw"><label>Hardware</label><small><a href="https://www.perkristian.net/sounds/synthex_laserharp.mp3">Per Kristian's Laser Harp clip</a>, or the <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=790">run-through at 13:10</a>.</small></div>
+      <div class="player eng"><label>First decode</label><audio controls preload="none" src="synthex-tuning/engine_46_ringmod_first.mp3"></audio><small>The riff from B1 to D3 and back down to a held F#1.</small></div>
+      <div class="player eng"><label>Calibrated</label><audio controls preload="none" src="synthex-tuning/engine_46_ringmod.mp3"></audio><small>The same riff, the engine now.</small></div>
+    </div>
+    <div class="settings"><b>From the ROM:</b> pulse 8' PW 0.72 and pulse 2' PW 0.65, synced, OSC2 seven semitones up, ring modulated · LP 24 dB, knob 54 %, envelope 62 %, key tracking full · glide of ten semitones into OSC2 · LFO 1.1 Hz on the second pulse width · chorus 1.</div>
+  </div>
+</div>
+
+<div class="strip">
+  <div class="num">15</div>
+  <div class="body">
+    <h3>Tremolo piano<span>Bank 1 · program 5</span></h3>
+    <figure style="margin:4px 0 6px">
+      <img src="synthex-tuning/spec-tremolo.webp" width="1200" height="636" alt="Two spectrograms of a piano-like phrase. In both, every note is cut into vertical bands by the tremolo at 3.4 Hz." loading="lazy">
+      <figcaption>The LFO on the amplifier slices every note into bands at 3.4 Hz, in both. The engine plays the notes detected in his take, so the rhythm is his.</figcaption>
+    </figure>
+    <div class="players">
+      <div class="player hw"><label>Hardware</label><small>In the <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=87">run-through at 1:27</a>.</small></div>
+      <div class="player eng"><label>Engine</label><audio controls preload="none" src="synthex-tuning/engine_15_tremolo.mp3"></audio><small>The first twelve seconds of the same stretch.</small></div>
+    </div>
+    <div class="settings"><b>From the ROM:</b> triangle 4' and triangle 1', a little noise · LP 24 dB, knob 38 %, key tracking 51 %, envelope 96 % · LFO 3.4 Hz to the amplifier, depth 0.69 (measured: 3.39 Hz, 4.7 dB).</div>
+  </div>
+</div>
+
+<div class="strip">
+  <div class="num">49</div>
+  <div class="body">
+    <h3>Whistle<span>Bank 4 · program 9</span></h3>
+    <figure style="margin:4px 0 6px">
+      <img src="synthex-tuning/spec-whistle.webp" width="1200" height="636" alt="Two spectrograms of a single-line melody with a wavy vibrato on each harmonic and sharp ends to the notes." loading="lazy">
+      <figcaption>A 7.1 Hz vibrato draws the harmonics as waves, and the RELEASE switch is off, so every note ends in a vertical edge. The last preset of the forty.</figcaption>
+    </figure>
+    <div class="players">
+      <div class="player hw"><label>Hardware</label><small>In the <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=876">run-through at 14:36</a>.</small></div>
+      <div class="player eng"><label>Engine</label><audio controls preload="none" src="synthex-tuning/engine_49_whistle.mp3"></audio><small>The first twelve seconds of the same stretch.</small></div>
+    </div>
+    <div class="settings"><b>From the ROM:</b> triangle 2' and pulse 1' · LP 24 dB, knob 27 %, key tracking full, envelope 41 % · LFO 7.1 Hz to OSC1 pitch after a delay of 0.57 s · portamento, inaudibly short · release off.</div>
+  </div>
+</div>
+
+<div class="strip">
+  <div class="num">19</div>
+  <div class="body">
+    <h3>Brass III<span>Bank 1 · program 9</span></h3>
+    <figure style="margin:4px 0 6px">
+      <img src="synthex-tuning/spec-brass3.webp" width="1200" height="636" alt="Two spectrograms of brass chords and a bass line, with dense harmonics up to 5 kHz and matching note timing." loading="lazy">
+      <figcaption>Two sawtooths an octave up, the filter nearly open: chords and a bass line, with a 0.2 s release that the figure above measured.</figcaption>
+    </figure>
+    <div class="players">
+      <div class="player hw"><label>Hardware</label><small>In the <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=177">run-through at 2:57</a>.</small></div>
+      <div class="player eng"><label>Engine</label><audio controls preload="none" src="synthex-tuning/engine_19_brass3.mp3"></audio><small>The first twelve seconds of the same stretch.</small></div>
+    </div>
+    <div class="settings"><b>From the ROM:</b> sawtooth 4' and sawtooth 4', a little noise · LP 24 dB, knob 35 %, key tracking full, envelope 40 % · VCF attack 37 ms, decay 3.6 s · VCA release 0.2 s · chorus 1.</div>
+  </div>
+</div>
+
+<h2><small>7</small>The same presets on a pocket synth</h2>
+<div class="prose">
+<p>The engine has a second life as <a href="https://joakimeriksson.github.io/scintilla-fm1/">Scintilla</a>, an integer-only C port that runs as firmware on the M-VAVE FM-1, a pocket synth with a 240 MHz core and no floating-point unit. Its preset bank is generated from the same file as the web engine's, so the calibrated presets went straight across; the exponential release cost one multiply per sample. The port's test renders each of the eighty patches through four scenarios in both engines and holds them to within 0.1 dB of each other, and the FM-1's output, run in an emulator of its CPU, must hash-equal the host's. Both held. While the tests were rerun, one of them caught an older bug: OSC2 had been 0.66 cents flat from a rounded cents-to-semitone constant, which the synced and ring-modulated presets had been quietly paying for. Ring mod. with eight voices takes 48 % of the core.</p>
+</div>
+
+<h2><small>8</small>What is still a guess</h2>
+<div class="prose">
+<p>Honesty about the residue is the point of writing this down. The decode is exact; the mapping is measured where it could be and assumed where it could not.</p>
+<ul class="plain">
+  <li><b>Brass II's vibrato is too deep in the engine.</b> The pitch-modulation depth was fitted on Whistle and Wash of sound, where the LFO runs at full depth; Brass II, at a lower depth, wobbles visibly more in the engine than on the hardware. Either the depth pot has a curve of its own, or his modulation wheel was somewhere I cannot see.</li>
+  <li><b>The synced and ring-modulated sources differ.</b> Ring mod. and Metallic have the right brightness now but not quite the right timbre; the engine's hard sync and ring modulation are not the Synthex's circuits.</li>
+  <li><b>Mixer levels, the LFO delay curve and the glide speed curve</b> are still assumptions, calibrated only loosely (Whistle's vibrato arrives in about the right time; Ring mod.'s glide is about 0.85 s).</li>
+  <li><b>The top of the envelope table</b> reads about twice too short on Chimes and Landing. The table is kept until a cleaner recording says otherwise.</li>
+  <li><b>The middle twenty marks</b> in the run-through are my best guess at where the presets change. The measurements above use the ends.</li>
+</ul>
+<p>What would settle most of it is a recording that is not a performance: single notes across the keyboard on Ceilos, Church organ and Chunky Synth, dry, at a known level. If you own a Synthex and a microphone, you know where to find me.</p>
+</div>
+<figure>
+  <img src="synthex-tuning/spec-brass2.webp" width="1200" height="636" alt="Two spectrograms of brass stabs: the engine's harmonics wave with a visibly deeper vibrato than the hardware's." loading="lazy">
+  <figcaption><b>Brass II, hardware against engine.</b> The delayed vibrato is there in both, and deeper in the engine. Still open.</figcaption>
+</figure>
+<div class="players" style="max-width:68ch">
+  <div class="player hw"><label>Hardware</label><small>In the <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=164">run-through at 2:44</a>.</small></div>
+  <div class="player eng"><label>Engine</label><audio controls preload="none" src="synthex-tuning/engine_18_brass2.mp3"></audio><small>Brass II, the same twelve seconds.</small></div>
+</div>
+
+</article>
+
+<footer>
+  <p><b>Sources.</b> Per Kristian's Synthex recordings, <a href="https://www.perkristian.net/studio_synthex.shtml">perkristian.net</a>. The firmware dumps from dbwbp.com via the <a href="https://archive.org/download/vintage-synth-firmware-collection/">vintage synth firmware collection</a>. Bob Grieb's <a href="https://www.tauntek.com/synthexccmap.pdf">Synthex CC map</a> for the parameter identities. <a href="https://github.com/pecostm32/Elka_Synthex_Emulator">pecostm32's Synthex emulator</a> for the envelope table and the board model. The service schematic for the voice card's summing network.</p>
+  <p><b>Tools.</b> The decoder, the generator and the raw records are in <a href="https://github.com/joakimeriksson/ai-smarthome/tree/master/audio/software-synth/synthex/tools/synthex-rom">tools/synthex-rom</a>, with a README that lists what is measured, what is derived and what is assumed. The presets are never edited by hand: the generator is changed and the bank regenerated.</p>
+  <p>Play them in <a href="synthex/">the Synthex</a>, or on an FM-1 with <a href="https://joakimeriksson.github.io/scintilla-fm1/">Scintilla</a>.</p>
+</footer>
+
+</div>
+</body>
+</html>

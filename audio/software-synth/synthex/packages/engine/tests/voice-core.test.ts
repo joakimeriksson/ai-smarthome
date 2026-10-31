@@ -28,6 +28,20 @@ describe('VoiceCore', () => {
     expect(onset).toBeLessThan(body + 3)
   })
 
+  it('the amp envelope opens after the filter envelope has started (AMP_ONSET_DELAY)', () => {
+    // On the recording Take-off's first 2 ms hold nothing of the raw square:
+    // the VCA opens once the filter envelope has done its fastest attack.
+    // With both envelopes started together the engine put a 1 ms tick on
+    // every note, 13 dB above the sound that followed.
+    const takeOff = PRESETS.find(p => p.patch.name === 'Take-off')!
+    const v = new VoiceCore(SR, takeOff.patch.upper)
+    const out = new Float32Array(ms(60))
+    v.noteOn(48, 1)
+    v.render(out, 0, out.length)
+    expect(rmsDb(out, 0, ms(1))).toBeLessThan(rmsDb(out, ms(10), ms(60)) - 40)
+    expect(v.idle).toBe(false)
+  })
+
   it('retriggering a sounding voice keeps the oscillator phase (no step)', () => {
     const base = PRESETS.find(p => p.patch.name === 'Chunky Synth')!.patch.upper
     const patch = { ...base, osc1: { ...base.osc1, wave: 'sine' as const }, osc2: { ...base.osc2, wave: 'sine' as const },

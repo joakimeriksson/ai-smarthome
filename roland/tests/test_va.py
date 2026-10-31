@@ -144,3 +144,13 @@ def test_filter_mode_is_the_pcms_switch_not_the_tvf_type(tones):
     assert modes[0] == [("TVF", "LPF")]                          # Test1, INIT-derived
     assert modes[1][0] == ("TVF", "HPF")                         # JP-6 Rings: a TVF highpass
     assert all(m == "VCF" for m, _t in modes[2])                 # Laser Sync Harp: all VCF
+
+
+def test_partial_eq_is_reported(schema):
+    """OSC-SyncLd 4 has both partials' EQ on - the only corpus tone that does."""
+    tone = ToneFile.open(DATA / "EXPORT_Z-Core.svz", schema).tones[0]
+    eq = [p["eq"] for p in va_patch(tone)["partials"]]
+    assert label_of(eq[0]["SW"]) == "ON" and label_of(eq[1]["SW"]) == "ON"
+    assert (eq[0]["LO_GAIN"], eq[0]["LO_FREQ"], eq[0]["MID_GAIN"], eq[0]["MID_Q"]) == (79, 220, 95, 30)
+    assert (eq[1]["LO_GAIN"], eq[1]["MID_GAIN"], eq[1]["HI_GAIN"]) == (153, 68, 0)
+    assert label_of(eq[2]["SW"]) == "OFF"

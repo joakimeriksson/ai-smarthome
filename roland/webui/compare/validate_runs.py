@@ -49,7 +49,7 @@ EDGES = 25 * 2 ** (np.arange(0, 61) / 6)          # sixth-octave bands, 25 Hz - 
 def load(path):
     _sr, d = wavfile.read(path)
     x = d.astype(float).mean(axis=1) if d.ndim > 1 else d.astype(float)
-    return x / 32768 if np.abs(x).max() > 2 else x
+    return x / 32768 if d.dtype.kind == "i" else x
 
 
 def onset(x, lead):
@@ -85,9 +85,10 @@ def base_tone(run, m, schema):
     return t
 
 
-def render(tone, note, velocity, m, lead, tmp, scale=None, ctl=None):
+def render(tone, note, velocity, m, lead, tmp, scale=None, ctl=None, float32=False):
     """Our synth's render; scale is passed as __ZC_SCALE (fitting overrides),
-    ctl as --ctl controllers (default: the run's own, zen_bank.py --ctl)."""
+    ctl as --ctl controllers (default: the run's own, zen_bank.py --ctl),
+    float32 writes a float WAV (a render above full scale would clip in 16-bit)."""
     import os
     env = dict(os.environ)
     if scale is not None:
@@ -97,7 +98,7 @@ def render(tone, note, velocity, m, lead, tmp, scale=None, ctl=None):
                     str(tmp / "o.wav"), "--note", str(note), "--velocity", str(velocity),
                     "--hold", str(m["hold"]), "--dur", str(m["dur"]), "--lead", str(lead)]
                    + [x for k, v in (m.get("ctl") or {} if ctl is None else ctl).items()
-                      for x in ("--ctl", f"{k}={v}")],
+                      for x in ("--ctl", f"{k}={v}")] + (["--float"] if float32 else []),
                    check=True, capture_output=True, cwd=ROOT, env=env)
     return load(tmp / "o.wav")
 

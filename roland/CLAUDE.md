@@ -237,15 +237,17 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - No corpus tone uses XMOD/XMOD2; three use SYNC, one RING.
 - **Whole-tone check** (`webui/compare/compare_tones.py`, renders/tones: the
   seven playable corpus/bank tones rendered dry and wet via `zen_bank.py
-  --tone`). After the partial-delay round, 2026-09-27, level |diff| /
+  --tone`). After the partial-EQ round, 2026-10-04, level |diff| /
   spectrum (dB): OscSync-Thriller 0.4 / 1.2, MEAS SAW 0.2 / 0.8, Kaihou Keys
-  0.3 / 1.7, Laser Sync Harp 1.6 / 8.7, c64 poly 2.0 / 1.2 (level is one note,
+  0.3 / 1.7, Laser Sync Harp 1.5 / 8.7, c64 poly 2.0 / 1.2 (level is one note,
   48, at +5.8), korg minipop 1.7 / 1.6, JP-6 Rings 2.2 / 1.6, OSC-SyncLd
-  3.5 / 5.5. Tones with random parts move
+  3.2 / 5.4. Tones with random parts move
   a few tenths of a dB from run to run. Remaining:
-  - **Laser Sync Harp's timbre** (8.8 dB spectrum; its pitch envelope accounts
+  - **Laser Sync Harp's timbre** (8.7 dB spectrum; its pitch envelope accounts
     for ~2 dB of it) and **OSC-SyncLd** (phase lock off, unison x3, Analog
-    Feel 3).
+    Feel 3, SQR with FAT and PW off centre under SYNC). OSC-SyncLd's gap is
+    NOT its EQ: with the EQ switched off in both (renders/eq/syncld-noeq) ours
+    is still +0.5 to +4.7 dB and 3.6-8.8 dB in spectrum.
   - **Kaihou Keys** was +3.6 dB until partial delay went in (now 0.3 dB /
     1.7 dB spectrum): its partial 3 is KEYOFF-DECAY, silent while the key is
     held. It was never Analog Feel.
@@ -329,6 +331,33 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - Seen on the way: **Zenology's sine gets quieter above C6**, ~0.16 dB per
     semitone (-0.9 at F#6, -2.9 at F#7); ours does not - an oscillator gap,
     not measured for other waveforms.
+- **Partial EQ** (`PTL_EQ_n`: SW, three gains in 0.1 dB, three frequencies,
+  MID_Q in 0.1) - measured 2026-10-04 (renders/eq: a C1 saw, EQ on / EQ off at
+  each of 610 harmonics; `webui/compare/fit_eq.py` checks the model and
+  `--validate`s the synth). Notes on `PartialEq` in va-dsp.js. No fitted
+  numbers - three textbook sections in series, after the partial's filter and
+  amp:
+  - **Low:** a first-order shelf with its zero at LO_FREQ and pole at
+    LO_FREQ / gain, so the corner sits ~3 dB inside the shelf (+2.75 dB at
+    LO_FREQ for +12). **High:** the same, mirrored.
+  - **Mid:** a peaking biquad whose POLES carry the Q (zeros at Q / gain): the
+    dB/2 bandwidth is f0 sqrt(gain) / Q - narrower than an RBJ peak of that Q.
+  - A cut is the exact inverse of the boost. All bilinear, prewarped at their
+    own frequency - except that the mid's Q is not prewarped with it: its
+    effective Q is Q (w/2)/tan(w/2), w = 2 pi f0/fs (x0.89 at 8 kHz, x0.52 at
+    16 kHz).
+  - SW off, or on with all gains 0, is bit-transparent. In a RING pair the
+    modulator's EQ acts before the multiply; in XMOD it does nothing.
+  - Model vs Zenology: 0.000 dB worst over 58 settings x 610 harmonics; our
+    synth 0.001 dB, level change within 0.07 dB. Only OSC-SyncLd 4 in the
+    corpus uses it (both partials, +8 to +15 dB).
+- **Zenology rounds an oscillator's frequency to a multiple of 44100 / 2^20
+  Hz** (0.042 Hz, a 20-bit phase increment) - measured 2026-10-04 on the SAW
+  at C1-C6, all six to 0.0005 Hz: C1 plays 0.91 cents sharp, C2 and C3 0.20
+  flat, C4 +0.07, C5 -0.06. `VAOsc.tick` does the same (assumed to hold under
+  pitch modulation; the SuperSAW's voices are left unrounded - not measured).
+  **Any per-harmonic measurement must use the pitch actually played** - see
+  the capture gotcha under the oscillator waveforms.
 - **Reverb: not yet measurable offline** (investigated 2026-09-28). Zenology
   has no chorus of its own (CHO sends only act on hardware); its reverb
   (default SRV-2000) is audible in Logic only with BOTH the partial REV SEND
@@ -404,8 +433,8 @@ move it up into "Verified facts" *with the evidence that settled it*.
     the note (VCF, CUTOFF 256) - the ring's level depends on the note-on
     transient, 7-11 dB off; VCF at RESO 1023 is 1-5 dB louder than Zenology's;
     PKG at high cutoff (640-896) 1.5-3 dB; LPF2's damping also changes under
-    the envelope (~1 dB, unmodelled); our saw's harmonics 10-50 differ by up to
-    ~2 dB from Zenology's (an oscillator matter, not the filter).
+    the envelope (~1 dB, unmodelled). (Our saw's harmonics 10-50 used to
+    differ by up to ~2 dB - the mis-captured low tables, fixed 2026-10-04.)
   - **Zenology's Noise oscillator is white** (flat to 0.3 dB) and at the saw's
     level (+0.3 dB) - which is what makes it the filter probe. It is random
     per render, so noise scores move ~0.05 dB run to run: repeat before
@@ -450,7 +479,10 @@ move it up into "Verified facts" *with the evidence that settled it*.
   limited at playback. SAW and SQR use their tables only while PW is fixed at
   64 (no PWM, no matrix route to PW); otherwise the analytic, PW-following
   versions. PW 64 is exactly 50:50 (the guide); one PW step is 1/127.
-  Our synth vs Zenology: levels within 0.06 dB, shapes within 0.02-0.44 dB.
+  Our synth vs Zenology (`fit_osc.py --validate`, 54 renders, 2026-10-04):
+  pitch 0.00 cents, levels within 0.04 dB, shape (every harmonic to 16 kHz)
+  0.24 dB mean - worst 0.88 dB, the sine's 3rd harmonic, a product of the
+  filter's input saturation rather than the table.
   The voice gain is calibrated to it (VOICE_GAIN).
   - **Not measured:** how TRI/SIN/RAMP/JUNO/TRI2/TRI3/SIN2 follow PW. They do
     (half a PW step gives SIN a 2nd harmonic 29 dB up); the synth phase-warps
@@ -458,6 +490,13 @@ move it up into "Verified facts" *with the evidence that settled it*.
   - **Zenology's VA SAW falls** (harmonic phases 0, +pi/2, pi, -pi/2 ...): the
     analytic PW-morph saw is negated to match, and every table's phase is
     anchored to its fundamental so octave tables share one origin.
+  - **Capture gotcha - read harmonics at the pitch actually played.** The
+    first capture (2026-09-26) resampled at the nominal pitch; C1 really plays
+    0.91 cents sharp, which over a 1 s window smears the upper harmonics away:
+    the C1 tables lost 5 dB by harmonic 32 and everything above ~55, C2 and C3
+    less. The validator read Zenology the same wrong way, so it agreed. Fixed
+    2026-10-04: `fit_osc.py` measures each note's pitch on the SAW (refined on
+    rising harmonics); C1 saw shape error 20.8 -> 0.25 dB.
   - Capture gotcha: resampling a render by linear interpolation low-passes it
     (sinc^2: -1.5 dB at 10 kHz) - fit_osc.py corrects for it. And measure
     harmonics on exact period-resampled data: picking FFT peaks near k*f0
@@ -507,7 +546,8 @@ move it up into "Verified facts" *with the evidence that settled it*.
   (TVF), `fit_vcf_nl.py` (nonlinear k), `fit_env.py` (envelopes),
   `fit_osc.py` (waveforms), `fit_ssaw.py` (SuperSAW), `fit_struct.py`
   (structure), `fit_lfo.py` (LFOs), `fit_voice.py` (unison, Analog Feel,
-  randoms) and `fit_pmt.py` (partial delay, key/velocity windows) fit the synth from noise/saw/sine runs; `validate_runs.py`
+  randoms), `fit_pmt.py` (partial delay, key/velocity windows) and
+  `fit_eq.py` (partial EQ - a model check, no tables) fit the synth from noise/saw/sine runs; `validate_runs.py`
   scores our synth against any zen_bank run (level, spectrum, correlation)
   and `--write` their tables into `va-dsp.js`; each docstring has the exact
   render commands. `fit_cutoff.py` (saw harmonics) is superseded - it can only
@@ -585,9 +625,9 @@ path only (no PCM samples), fed patch JSON by this API, and validated by
 rendering the same patch in both it and Zenology and comparing spectra — the
 same measure-don't-guess approach the rest of the project uses.
 
-`zencore/va.py` is the contract between them: ~145 parameters, all present in the
+`zencore/va.py` is the contract between them: ~165 parameters, all present in the
 schema, covering oscillator / structure / filter / three envelopes / two LFOs /
-unison, plus each partial's matrix control (`partials[n].matrix`: 4 controls x
+EQ / partial delay / key and velocity window / unison, plus each partial's matrix control (`partials[n].matrix`: 4 controls x
 {src, 4 x {dst, sens}}, every slot reported, OFF included). A partial with `OSC_TYPE` of VA, SuperSAW or Noise synthesises and needs
 no wave data; `patch["playable"]` says whether a VA-only synth can play a tone.
 

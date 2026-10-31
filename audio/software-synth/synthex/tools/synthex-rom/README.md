@@ -132,6 +132,60 @@ Index → meaning, stored width → value after the firmware's left shift:
   estimator saturates above about note 112 on these MP3 sources, so open
   readings are lower bounds; the resonant presets were read by tracking
   their resonant peak instead.
+- **Metallic** was corrected the same way (envelope amount x 0.65, decay
+  kept) until the decay-length rule above took it over. Measured 2026-10-31 on the run-through's passage at
+  0:47 (32 notes), after the engine's synced triangle became a phase-derived
+  one: the cutoff per note window, read off the hardware against the
+  engine's filter-open render, had the decoded envelope 12-18 st too high
+  at the onsets (keys 48-72) and about right a second in; x 0.65 centres it
+  (keys below 48 +2.6 st, above -0.5 st). The two presets agree on the
+  factor, which argues for a rule, but the run-through gives no held notes
+  on the others to settle it.
+  What remains on Metallic is the pulse: a pulse-plus-LP24 fit of the
+  recording's harmonics reads an effective duty of 0.36 (quartiles 0.19 to
+  0.42) against 0.24 from the engine with the decoded 0.27 and the assumed
+  cross-mod depth. The static pulses measure as decoded (Electric piano I
+  0.08, Funky Clav. 0.16, Metallic piano 0.24, Clavinet 0.27, Whistle's OSC2
+  0.42 for 0.57), so it is the cross-mod, `XMOD_DEPTH` or its polarity, that
+  is unmeasured; a unipolar modulator (centre shifted up 0.1) fits Metallic
+  but cannot be checked on Fat Sound, Landing or Ring mod., whose filters
+  and sync defeat the fit. Left as is.
+- **Resonance** stays `p[10] / 254` in the patch; the engine's Q curve changed
+  instead (`voice-core.ts`, `updateCoeffs`): Q = 0.5 + 2.2 r^0.75 + 22 r^8.
+  On the recording the resonant bump over the neighbouring harmonics is 5 to
+  10 dB, Q 2 to 3, on every preset with the knob between 0.2 and 0.6 (Pianet
+  0.21, Pan flutes 0.28, Fast decay 0.33, Filtered chorus 0.44, Wash of
+  sound 0.50, Phased sweep 0.57), where the old square law gave Q 1.6 to 8.5
+  and bumps of 12 to 25 dB; the top of the knob must still self-oscillate.
+  Measured 2026-10-31; Wash of sound and Phased sweep went from the two
+  worst-scoring presets to the middle of the field with it.
+- **Filter envelope reach** (`ENV_LONG_DECAY` 0.6): read off the recording at
+  each note's onset against the engine's filter-open render (the cutoff that
+  explains the harmonics), the envelope reaches about 0.6 of its decoded
+  amount on the presets whose filter envelope has a fast attack (table index
+  up to 3, 15 ms or less) running into a long decay (index above 6): Violins
+  0.5, Landing 0.4, Take-off 0.4, Metallic 0.6, Chorale, Filtered strings.
+  With a slower attack (Brass II and III, Filtered brass, Filtered chorus,
+  index 5) or a short decay (the plucks: Chunky Synth, Clavinet, Funky Clav.,
+  Brass I) it reads as the full amount. A single global factor helped the
+  sweeps and hurt the plucks and brasses; a decay-only rule still hurt the
+  brasses. Why a sharp peak reads smaller is open; an envelope that rounds
+  it off would do it. Wah brass and Filtered strings (attack index 6)
+  measured 0.6 but take the full amount under the rule, a point or two
+  worse on the scorecard. Measured 2026-10-31 on 14 presets.
+- **LFO depth A reads inverted for the pitch** (`pitch_depth`, `PITCH_MOD`
+  0.09 = 1.1 st at full depth): the component of the pitch track at the
+  LFO's own rate is 29 cents peak on Whistle (A 181), 11 on Wash of sound
+  (187), 7 on Filtered chorus (211) and 4 to 6 on Violins, Double basses and
+  Ceilos (231 to 238), where a direct reading had the strings 1.3 x Whistle
+  and the engine 3 to 4 x the hardware on them (and 16 x on Pianet). The
+  string presets' audible 4 to 5 Hz wobble on the recording is not the LFO;
+  it sits at the chorus's rate. The PW depth stays a direct reading of A,
+  halved (`PWM_MOD` 0.5): the swing of the second harmonic at the LFO rate
+  was 1.7 to 4.8 x the hardware's on Chorale, Clavinet and Sweep 1 and
+  about right on Take-off. The amp depth (B) is unchanged; Tremolo piano and
+  Electric piano II ripple 2 dB from the first window, so the LFO delay
+  stays inverted (byte 255 = none).
 - **Take-off** is corrected one by one (`FILTER_ENV_FIX` in `gen_factory.py`:
   envelope amount x 0.65, filter decay 3.3 s instead of the table's 13.2 s).
   On the recording (the C2 note at 682.14 s) its HP12 starts near note 87

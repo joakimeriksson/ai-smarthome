@@ -261,7 +261,13 @@ export class VoiceCore {
     const p = this.patch
     this.coeffNote = cutoffNote
     // Q: 0..1 → 0.5..25. Above ~10 the filter verges on self-oscillation.
-    const q = 0.5 + p.filter.resonance * p.filter.resonance * 24.5
+    // Q from the panel's resonance. On the recording the resonant peak is 5 to 10 dB (Q 2 to 3) on
+    // every preset with the knob between 0.2 and 0.6 (Pianet 0.21, Pan flutes 0.28, Fast decay 0.33,
+    // Filtered chorus 0.44, Wash of sound 0.50, Phased sweep 0.57), where a square law gave Q 1.6 to
+    // 8.5 and peaks of 12 to 25 dB; the top of the knob still self-oscillates. So: a flat middle and a
+    // steep end. (2026-10-31; the old curve was 0.5 + 24.5 r^2.)
+    const r = p.filter.resonance, r2 = r * r, r4 = r2 * r2
+    const q = 0.5 + 2.2 * Math.pow(r, 0.75) + 22 * r4 * r4
     this.coeffs = svfCoeffs(noteToHz(cutoffNote), this.sr, q)
     // Drop input as resonance climbs so the peak stays near unity.
     this.inputAtten = 1 - p.filter.resonance * 0.6
@@ -362,8 +368,9 @@ export class VoiceCore {
         case 'noise':    s1 = this.noiseW1.next(); break
       }
 
-      // Hard sync: when osc1 wraps, force osc2 phase to 0.
-      if (p.osc2.sync && osc1Active.wrapped) osc2Active.syncTo(0)
+      // Hard sync: osc1 wrapped between this sample and the next, (1 - phase/dt1)
+      // samples from now; osc2 restarts its cycle there, band-limited (polyblep.ts).
+      if (p.osc2.sync && osc1Active.wrapped) osc2Active.sync(1 - osc1Active.phase / dt1)
 
       let s2 = 0
       switch (wave2) {

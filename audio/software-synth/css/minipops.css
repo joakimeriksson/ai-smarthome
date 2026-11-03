@@ -1,0 +1,178 @@
+/* Mini Pops 7 — black rhythm box, ivory keys, two pilot lamps */
+
+:root {
+  /* Korg (Keio) Mini Pops 7, 1973: a black steel case with a charcoal
+     panel, legends silk-screened in a warm off-white, ten ivory push keys
+     along the front, white slider caps, and a red and a green lamp beside
+     the tempo knob. Nothing on it glows except those two lamps. */
+  --chassis: #121214;
+  --chassis-edge: rgba(0, 0, 0, 0.75);
+  --cheek: linear-gradient(180deg, #1b1b1e, #0b0b0d);
+  --cheek-w: 16px;
+  --bg: #1c1c1f;
+  --panel-bg: #27272b;
+  --panel-border: #3b3b41;
+  --accent: #ff5a3c;            /* the red lamp */
+  --accent-dim: #a63a26;
+  --accent-bright: #ff8a70;
+  --text: #e9e4d6;              /* silk-screen off-white */
+  --text-dim: #a39d8f;
+  --knob-track: #0f0f11;
+  --slider-thumb: #efe9db;
+  --danger: #ff4466;
+  --led: #ff3b2f;
+  --cap: #efe9db;               /* white fader caps */
+  --cap-edge: rgba(0, 0, 0, 0.6);
+  --display-bg: #0b0b0d;
+  --display-ink: #ffb26b;
+  --display-grid: rgba(255, 178, 107, 0.1);
+  --readout-bg: transparent;
+  --readout-ink: #d9d2c2;
+  --readout-border: transparent;
+  --readout-glow: none;
+  --logo: #e9e4d6;
+  --case-ink: #c9c3b5;
+  --panel-radius: 3px;
+  --shadow-strength: 0.7;
+  --label-weight: 600;
+  --title-tracking: 2.4px;
+  --green: #48d47a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; overflow-x: hidden; }
+
+.synth-container { max-width: 1100px; margin: 0 auto; padding: 10px; }
+.synth-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 8px; }
+.synth-header h1 { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+.synth-header .subtitle { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+.header-controls { display: flex; align-items: center; gap: 12px; }
+
+.panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 6px; padding: 10px; }
+.panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-border); }
+
+.control-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.control-row label { width: 60px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; flex-shrink: 0; }
+.control-row .val { width: 40px; text-align: right; font-size: 10px; font-family: 'Courier New', monospace; color: var(--text); flex-shrink: 0; }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; background: var(--knob-track); border-radius: 2px; outline: none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--slider-thumb); cursor: pointer; }
+select { background: #0f0f11; color: var(--text); border: 1px solid var(--panel-border); border-radius: 3px; padding: 2px 4px; font-size: 11px; outline: none; }
+
+.btn { background: #3a3a40; color: var(--text); border: none; border-radius: 4px; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+.btn:hover { background: #4a4a52; }
+.btn:disabled { background: #2a2a2e; color: #666; }
+.btn-small { padding: 3px 8px; font-size: 10px; }
+
+/* --- The face: sliders left, tempo and lever centre, tone generator right --- */
+
+.mp-face { display: grid; grid-template-columns: 1fr auto 1.3fr; gap: 8px; margin-bottom: 8px; }
+.mp-faders { --hw-control: fader; }
+.mp-faders .mp-gap { width: 14px; }
+
+.mp-centre { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 210px; }
+.mp-centre .control-row { justify-content: center; }
+
+/* The two pilot lamps: red for the A section, green for B. The one that is
+   on marks the section; it flashes on the first beat of every bar. */
+.mp-lamps { display: flex; gap: 26px; align-items: center; }
+.mp-lamp { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9px; letter-spacing: 1.2px; color: var(--text-dim); }
+.mp-lamp i {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #4a1a14, #220d0a);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+  transition: box-shadow 60ms, background 60ms;
+}
+.mp-lamp.green i { background: radial-gradient(circle at 40% 35%, #15402a, #0a2014); }
+.mp-lamp.lit i { background: radial-gradient(circle at 40% 35%, #ff9d8c, var(--accent)); box-shadow: 0 0 8px rgba(255, 90, 60, 0.55); }
+.mp-lamp.green.lit i { background: radial-gradient(circle at 40% 35%, #b6ffd0, var(--green)); box-shadow: 0 0 8px rgba(72, 212, 122, 0.55); }
+.mp-lamp.flash i { box-shadow: 0 0 18px 4px rgba(255, 120, 90, 0.9); }
+.mp-lamp.green.flash i { box-shadow: 0 0 18px 4px rgba(100, 240, 150, 0.9); }
+
+/* The rhythm-section lever: a two-position toggle, up for A, down for B. */
+.mp-lever-row { display: flex; align-items: center; gap: 12px; }
+.mp-lever {
+  position: relative; width: 26px; height: 54px; border-radius: 13px;
+  background: linear-gradient(180deg, #0c0c0e, #202024);
+  border: 1px solid #000; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9);
+  cursor: pointer; padding: 0;
+}
+.mp-lever::after {
+  content: ''; position: absolute; left: 3px; width: 18px; height: 24px; border-radius: 9px;
+  top: 3px;
+  background: linear-gradient(180deg, #f3eee2, #c9c2b3);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.7), inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+  transition: top 90ms ease;
+}
+.mp-lever.b::after { top: 25px; }
+.mp-lever-labels { display: flex; flex-direction: column; justify-content: space-between; height: 54px; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim); }
+.mp-lever-labels span.on { color: var(--text); }
+
+/* synth-base paints every .btn in the accent with !important; the start key
+   on this machine is an ivory push button, red only while it runs. */
+.mp-centre .btn-play { background: linear-gradient(180deg, #f6f1e6, #d9d2c2) !important; color: #1a1a1c; min-width: 110px; border: 1px solid #8f887a !important; text-shadow: none; }
+.mp-centre .btn-play.active { background: linear-gradient(180deg, #ff7a5e, var(--accent-dim)) !important; color: #fff; }
+
+.mp-voices .mp-pads { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+.mp-pad {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: #1d1d21; border: 1px solid var(--panel-border); border-radius: 3px;
+  padding: 6px 2px 5px; cursor: pointer; color: var(--text-dim);
+  font-size: 9px; letter-spacing: 0.6px; text-transform: uppercase; font-family: inherit;
+}
+.mp-pad:hover { border-color: var(--text-dim); color: var(--text); }
+.mp-pad-led { width: 8px; height: 8px; border-radius: 50%; background: #2a120e; border: 1px solid rgba(0, 0, 0, 0.6); transition: background 50ms, box-shadow 50ms; }
+.mp-pad.hit .mp-pad-led { background: var(--accent-bright); box-shadow: 0 0 8px var(--accent); }
+.mp-pad.hit { color: var(--text); }
+
+.mp-steps { display: flex; gap: 3px; align-items: center; margin-bottom: 8px; min-height: 8px; }
+.mp-dot { flex: 1; height: 5px; border-radius: 2px; background: #1a1a1d; border: 1px solid rgba(255, 255, 255, 0.05); }
+.mp-dot.beat { background: #232327; }
+.mp-dot.cur { background: var(--display-ink); box-shadow: 0 0 6px rgba(255, 178, 107, 0.5); }
+.mp-now { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.mp-now b { color: var(--text); font-weight: 600; }
+
+#scope { width: 100%; height: 64px; border-radius: 4px; background: var(--display-bg); }
+
+/* --- The keybed: the A legends, the ten ivory keys, the B legends --- */
+
+.mp-keybed { padding: 8px 14px 10px; margin-bottom: 8px; }
+.mp-legends, .mp-keys { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.mp-legends span {
+  text-align: center; font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--text-dim); padding: 3px 0; transition: color 120ms;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mp-legends.a span { border-bottom: 1px solid transparent; }
+.mp-legends.b span { border-top: 1px solid transparent; }
+/* The lever lights the row that is live. */
+#keybed.section-a .mp-legends.a span { color: var(--text); border-bottom-color: var(--accent); }
+#keybed.section-b .mp-legends.b span { color: var(--text); border-top-color: var(--green); }
+.mp-keys { margin: 4px 0; }
+.mp-key {
+  height: 64px; border-radius: 3px; cursor: pointer; border: 1px solid #8f887a;
+  background: linear-gradient(180deg, #f6f1e6 0%, #e9e2d3 60%, #d6cfbf 100%);
+  box-shadow: 0 4px 0 #9a9385, 0 5px 4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: transform 50ms, box-shadow 50ms;
+}
+.mp-key:hover { background: linear-gradient(180deg, #fff 0%, #f1eadc 60%, #ddd6c6 100%); }
+.mp-key.on {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #9a9385, 0 2px 3px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(180deg, #e2dbcb 0%, #d6cfbf 100%);
+}
+.mp-key:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* --- Service trims: the preset pots inside the case --- */
+.mp-trims { margin-bottom: 8px; }
+.mp-trims .panel-title { color: var(--text-dim); }
+.mp-trims .control-row label { width: 70px; }
+
+@media (max-width: 900px) {
+  .mp-face { grid-template-columns: 1fr; }
+  .mp-legends span { font-size: 8px; }
+}
+
+.mp-help { font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px; padding: 6px 4px; }
+.mp-help span { color: var(--text); font-weight: 700; }

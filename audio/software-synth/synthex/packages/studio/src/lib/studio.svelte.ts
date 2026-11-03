@@ -4,7 +4,7 @@
 
 import { Track, emptyDrumGrid, emptyNoteSteps } from './track.svelte.ts'
 import { Transport } from './transport.ts'
-import { createInstrument, instrumentDef, type InstrumentKind } from './instruments.ts'
+import { createInstrument, instrumentDef, RhythmBoxInstrument, MINIPOPS_KEYS, type InstrumentKind } from './instruments.ts'
 import { Bus, loadFxModule, type FxSlot } from './mixer.svelte.ts'
 import { defaultReturns, fxDef, nextBusId, type FxKind, type ProjectBus } from './fx.ts'
 import {
@@ -95,6 +95,8 @@ export class Studio {
       const added = this.tracks[this.tracks.length - 1]!
       if (this.focused < 0) this.focused = added.id
       this.applyMix()
+      // A rhythm box added mid-song joins at the next step.
+      if (this.playing && added.isRhythmBox) this.startRhythmBox(added, this.transport?.nextTime)
       return added
     } catch (err) {
       this.error = `Failed to load ${kind}: ${err instanceof Error ? err.message : String(err)}`
@@ -233,13 +235,22 @@ export class Studio {
     this.transport.swing = this.swing
     this.transport.start()
     this.playing = true
+    // Rhythm boxes run their own clocks, started on the transport's first step.
+    for (const t of this.tracks) if (t.isRhythmBox) this.startRhythmBox(t, this.transport.startTime)
   }
 
   stop(): void {
     if (!this.transport) return
     this.transport.stop()
     this.playing = false
-    for (const t of this.tracks) t.instrument.allNotesOff()
+    for (const t of this.tracks) {
+      if (t.isRhythmBox) (t.instrument as RhythmBoxInstrument).stop()
+      t.instrument.allNotesOff()
+    }
+  }
+
+  private startRhythmBox(t: Track, at?: number): void {
+    (t.instrument as RhythmBoxInstrument).start(this.bpm, at)
   }
 
   toggle(): void {
@@ -250,6 +261,8 @@ export class Studio {
     this.bpm = v
     if (this.transport) this.transport.bpm = v
     for (const c of this.chains()) c.tempo(v)
+    // Tempo is the transport's, not a sound edit: sent straight to the box.
+    for (const t of this.tracks) if (t.isRhythmBox) t.instrument.setParam('tempo', v)
   }
 
   setSwing(v: number): void {
@@ -278,7 +291,14 @@ export class Studio {
     const t = this.tracks.find(x => x.id === id)
     if (!t) return
     const rng = makeRng(seed)
-    if (t.isPercussion) {
+    if (t.isRhythmBox) {
+      // One or two keys of one section, as a player's hand would press them.
+      const section = rng() < 0.5 ? 0 : 1
+      const first = Math.floor(rng() * MINIPOPS_KEYS.length)
+      const second = rng() < 0.35 ? Math.floor(rng() * MINIPOPS_KEYS.length) : first
+      t.setParam('section', section)
+      for (let k = 0; k < MINIPOPS_KEYS.length; k++) t.setParam(`key.${k}`, k === first || k === second)
+    } else if (t.isPercussion) {
       t.drumGrid = drumGrid(rng, t.drumGrid[0]?.length ?? 16, t.drumGrid.length)
     } else {
       const steps = t.steps.length
@@ -332,6 +352,7 @@ export class Studio {
       this.tracks = copy
       if (this.focused === id) this.focused = next.id
       this.applyMix()
+      if (this.playing && next.isRhythmBox) this.startRhythmBox(next, this.transport?.nextTime)
     } catch (err) {
       this.error = `Failed to swap to ${kind}: ${err instanceof Error ? err.message : String(err)}`
     }

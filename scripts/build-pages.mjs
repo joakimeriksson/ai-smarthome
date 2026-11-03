@@ -87,7 +87,7 @@ const DEMOS = [
   {
     slug: 'synths',
     title: 'Software Synths',
-    blurb: 'Seven instruments in a studio rack: TR-808, SID, DX7-style FM, ' +
+    blurb: 'Eight instruments in a studio rack: TR-808, Korg Mini Pops 7, SID, DX7-style FM, ' +
            'wavetable, physical modelling, virtual analog, and an Elka Synthex tribute.',
     src: 'audio/software-synth',
     accent: '#e8531f',            // the TR-808's orange

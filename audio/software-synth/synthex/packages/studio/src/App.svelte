@@ -367,7 +367,7 @@
   <section class="pattern">
     <div class="pattern-head">
       <h2>PATTERN — {studio.focusedTrack()?.name ?? 'no track'}</h2>
-      {#if studio.focusedTrack() && !studio.focusedTrack()!.isPercussion}
+      {#if studio.focusedTrack() && !studio.focusedTrack()!.isPercussion && !studio.focusedTrack()!.isRhythmBox}
         <div class="views" role="group" aria-label="Pattern view">
           {#each VIEWS as [v, label] (v)}
             <button class:on={patternView === v} onclick={() => setView(v)}>{label}</button>

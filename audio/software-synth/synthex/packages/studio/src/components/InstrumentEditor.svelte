@@ -30,6 +30,7 @@
     fm: 'fm-synth.html',
     pm: 'pm-synth.html',
     drum: 'drum-machine.html',
+    minipops: 'minipops.html',
   }
   /**
    * Where the standalone pages live. Defaults suit a static deploy that puts
@@ -141,7 +142,7 @@
         value={track.presetName ?? ''}
         onchange={(e) => applyPreset((e.target as HTMLSelectElement).value)}
       >
-        <option value="">— {track.kind === 'drum' ? 'pattern' : 'preset'} —</option>
+        <option value="">— {track.kind === 'drum' ? 'pattern' : track.kind === 'minipops' ? 'rhythm' : 'preset'} —</option>
         {#each data?.presets ?? [] as p (p.name)}
           <option value={p.name}>{p.name}</option>
         {/each}

@@ -15,7 +15,7 @@
 // the worklets — the approach the SID tracker already uses.
 
 import type { Instrument, InstrumentKind } from './instruments.ts'
-import { DrumInstrument, DRUM_CHANNELS } from './instruments.ts'
+import { DrumInstrument, RhythmBoxInstrument, DRUM_CHANNELS } from './instruments.ts'
 import { PRESSURE_AT, PRESSURE_RISE, SCOOP_TIME, BEND_AT, BEND_RISE } from './expression.ts'
 import { FxChain, peakOf, type Bus } from './mixer.svelte.ts'
 import type { SendSpec } from './fx.ts'
@@ -168,6 +168,11 @@ export class Track {
     return this.instrument instanceof DrumInstrument
   }
 
+  /** A rhythm box plays its own patterns from its own clock; the transport only starts it. */
+  get isRhythmBox(): boolean {
+    return this.instrument instanceof RhythmBoxInstrument
+  }
+
   /**
    * Mute and solo act before the fader and the sends, so a muted track is
    * silent in the returns too, pre-fader sends included.
@@ -215,6 +220,7 @@ export class Track {
 
   /** Called by the transport for every step. */
   scheduleStep(step: number, time: number, ctx: AudioContext, stepDur: number): void {
+    if (this.isRhythmBox) return
     const delayMs = Math.max(0, (time - ctx.currentTime) * 1000)
 
     if (this.isPercussion) {
@@ -285,6 +291,7 @@ export class Track {
 
   /** Steps in this track's pattern (notes, or the drum grid's width). */
   get length(): number {
+    if (this.isRhythmBox) return 16     // free-running: it never lengthens the song
     return this.isPercussion ? (this.drumGrid[0]?.length ?? 16) : this.steps.length
   }
 

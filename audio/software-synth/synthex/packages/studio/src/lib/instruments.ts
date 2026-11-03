@@ -11,7 +11,7 @@
 
 import { Synth, factoryDefault, PRESETS, type Patch } from '@synthex/engine'
 
-export type InstrumentKind = 'va' | 'ws' | 'sid' | 'fm' | 'pm' | 'drum' | 'synthex'
+export type InstrumentKind = 'va' | 'ws' | 'sid' | 'fm' | 'pm' | 'drum' | 'minipops' | 'synthex'
 
 export interface InstrumentDef {
   kind: InstrumentKind
@@ -32,6 +32,11 @@ export interface InstrumentDef {
   polyphony: number
   /** Percussion instruments are driven by channel triggers, not pitches. */
   percussion?: boolean
+  /**
+   * A rhythm box runs its own clock from the transport's start and plays
+   * the rhythm keys that are down; it has no step grid of its own.
+   */
+  rhythmBox?: boolean
 }
 
 export const INSTRUMENTS: InstrumentDef[] = [
@@ -47,11 +52,24 @@ export const INSTRUMENTS: InstrumentDef[] = [
     chassis: '#e8e2d6', ink: '#3a322a', accent: '#c47a3f', polyphony: 8 },
   { kind: 'drum',    name: 'Drums',      subtitle: 'TR-808 Model',
     chassis: '#ded7c9', ink: '#4a3a28', accent: '#e8531f', polyphony: 8, percussion: true },
+  { kind: 'minipops', name: 'Mini Pops', subtitle: 'Korg Mini Pops 7 rhythm box',
+    chassis: '#27272b', ink: '#e9e4d6', accent: '#ff5a3c', polyphony: 1, rhythmBox: true },
   { kind: 'synthex', name: 'Synthex',    subtitle: 'Elka Synthex tribute',
     chassis: '#17161a', ink: '#e8e2d8', accent: '#d65a1c', polyphony: 8 },
 ]
 
 export const DRUM_CHANNELS = ['Kick', 'Snare', 'CH Hat', 'OH Hat', 'Clap', 'Tom', 'Rim', 'Cowbell']
+
+/** The Mini Pops 7's ten keys: [A rhythm, B rhythm] per key, as printed on its panel. */
+export const MINIPOPS_KEYS: [string, string][] = [
+  ['Waltz', 'Jazz Waltz'], ['Samba', 'Meringue'], ['Mambo', 'Cha-cha'], ['Rumba', 'Beguine'],
+  ['Tango', 'Habanera'], ['Bossanova', 'Slow Rock'], ['Rock 1', 'Rock 2'], ['Rock 3', 'Rock 4'],
+  ['March 2/4', 'March 6/8'], ['Swing', 'Latin Swing'],
+]
+
+/** The Mini Pops 7's sounds, in the order its keyboard play maps notes onto them (from C2). */
+export const MINIPOPS_VOICES = ['Bass drum', 'Snare 1', 'Snare 2', 'Hi-hat', 'Cymbal 1', 'Cymbal 2',
+  'Cow bell', 'Conga', 'Large bongo', 'Small bongo', 'Claves', 'Quijada', 'Guiro', 'Tambourine']
 
 /** Voice-type names, indexed by the processor's `ch.N.type` values. */
 export const DRUM_TYPE_NAMES = ['Kick', 'Snare', 'CH Hat', 'OH Hat', 'Clap', 'Tom', 'Rim',
@@ -103,6 +121,7 @@ const PROCESSOR_FILE: Record<string, string> = {
   fm: 'fm-processor.js',
   pm: 'pm-processor.js',
   drum: 'drum-processor.js',
+  minipops: 'minipops-processor.js',
 }
 
 const PROCESSOR_NAME: Record<string, string> = {
@@ -112,6 +131,7 @@ const PROCESSOR_NAME: Record<string, string> = {
   fm: 'fm-synth-processor',
   pm: 'pm-synth-processor',
   drum: 'drum-machine-processor',
+  minipops: 'minipops-processor',
 }
 
 // One addModule() per processor per context — repeated calls would throw.
@@ -269,6 +289,37 @@ class DrumInstrument implements Instrument {
 }
 
 /**
+ * The Mini Pops 7: a preset rhythm box. It keeps its own clock, so the
+ * studio only starts and stops it (aligned to the transport's first step)
+ * and tells it the tempo; which keys are down is ordinary parameter state
+ * (`key.N`, `section`), so it persists in the project like any edit.
+ * Keyboard play strikes its fourteen sounds one-shot.
+ */
+class RhythmBoxInstrument extends WorkletInstrument {
+  constructor(ctx: AudioContext) {
+    super('minipops', ctx, 1)
+  }
+
+  override noteOn(note: number, velocity: number): void {
+    const n = MINIPOPS_VOICES.length
+    const voice = ((note - 36) % n + n) % n
+    this.post({ type: 'trigger', voice, velocity: Math.min(1, velocity / 100) })
+  }
+
+  override noteOff(): void { /* one-shots */ }
+  override allNotesOff(): void { /* one-shots decay on their own */ }
+
+  /** Start the clock at an AudioContext time (the transport's first step). */
+  start(bpm: number, startTime?: number): void {
+    this.post({ type: 'play', bpm, ...(startTime !== undefined ? { startTime } : {}) })
+  }
+
+  stop(): void {
+    this.post({ type: 'stop' })
+  }
+}
+
+/**
  * Synthex, wrapped from its own engine package. Shares the studio's
  * AudioContext and renders into the track strip instead of the speakers —
  * the standalone Synthex app is unaffected (it just omits `destination`).
@@ -340,7 +391,8 @@ export async function createInstrument(
   if (kind === 'synthex') return SynthexInstrument.create(ctx)
   await ensureModule(ctx, kind)
   if (kind === 'drum') return new DrumInstrument(ctx)
+  if (kind === 'minipops') return new RhythmBoxInstrument(ctx)
   return new WorkletInstrument(kind, ctx, instrumentDef(kind).polyphony)
 }
 
-export { DrumInstrument, WorkletInstrument, SynthexInstrument }
+export { DrumInstrument, RhythmBoxInstrument, WorkletInstrument, SynthexInstrument }

@@ -3,7 +3,7 @@
 //   node scripts/build-demo.mjs [--base /some/path/]
 //
 // Layout (the studio's cross-links assume exactly this shape):
-//   dist/                 index.html + the six synth pages, css/, js/
+//   dist/                 index.html + the standalone synth pages, css/, js/
 //   dist/synthex/         the Synthex app
 //   dist/studio/          the studio
 //
@@ -36,7 +36,7 @@ await mkdir(OUT, { recursive: true })
 
 const problems = []
 
-// ── 1. The six standalone pages: already static, copy as-is ────────────────
+// ── 1. The standalone pages: already static, copy as-is ────────────────
 const pages = (await readdir(ROOT)).filter(f => f.endsWith('.html'))
 for (const f of pages) await cp(resolve(ROOT, f), resolve(OUT, f))
 // synthex-tuning/ holds the figures and clips of synthex-tuning.html, the story of the preset calibration.
@@ -118,7 +118,7 @@ await writeFile(resolve(OUT, 'demo.html'), `<!doctype html>
 <h1>Software Synths</h1>
 <a href="${base}studio/">Studio — all instruments in one rack</a>
 <a href="${base}synthex/">Synthex — Elka Synthex tribute</a>
-<a href="${base}index.html">The six standalone synths</a>
+<a href="${base}index.html">The seven standalone synths</a>
 <p>Audio needs a click to start (browser autoplay policy) and an HTTPS
 connection (AudioWorklet requires a secure context).</p>
 `)

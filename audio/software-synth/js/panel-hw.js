@@ -316,7 +316,7 @@
       box.className = 'hw-display';
       const cap = document.createElement('span');
       cap.className = 'hw-display-caption';
-      cap.textContent = /pattern/i.test(first) ? 'Pattern' : 'Program';
+      cap.textContent = /pattern/i.test(first) ? 'Pattern' : /rhythm/i.test(first) ? 'Rhythm' : 'Program';
       select.before(box);
       box.append(cap, select);
     }

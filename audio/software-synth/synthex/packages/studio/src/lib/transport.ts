@@ -28,6 +28,8 @@ export class Transport {
 
   private timer: ReturnType<typeof setInterval> | null = null
   private nextStepTime = 0
+  /** AudioContext time of the first step of the current run. */
+  startTime = 0
   private nextStepIndex = 0
   private handlers = new Set<StepHandler>()
 
@@ -42,11 +44,15 @@ export class Transport {
     return 60 / this.bpm / this.stepsPerBeat
   }
 
+  /** AudioContext time of the next step not yet scheduled. */
+  get nextTime(): number { return this.nextStepTime }
+
   start(): void {
     if (this.playing) return
     this.playing = true
     this.nextStepIndex = 0
     this.nextStepTime = this.ctx.currentTime + 0.06
+    this.startTime = this.nextStepTime
     this.timer = setInterval(() => this.tick(), LOOKAHEAD_MS)
   }
 

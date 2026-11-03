@@ -65,6 +65,7 @@ const FILES: Partial<Record<InstrumentKind, [string, string]>> = {
   fm: ['fm-processor.js', 'fm-synth-processor'],
   pm: ['pm-processor.js', 'pm-synth-processor'],
   drum: ['drum-processor.js', 'drum-machine-processor'],
+  minipops: ['minipops-processor.js', 'minipops-processor'],
 }
 const POLYPHONY: Partial<Record<InstrumentKind, number>> = { va: 8, ws: 8, sid: 3, fm: 8, pm: 8 }
 
@@ -249,6 +250,7 @@ class OfflineTrack {
 // ── Song → events (Transport + Track.scheduleStep) ─────────────────────────
 
 function trackLength(t: ProjectTrack): number {
+  if (t.kind === 'minipops') return 16      // free-running rhythm box
   return t.kind === 'drum' ? (t.drumGrid[0]?.length ?? 16) : t.steps.length
 }
 
@@ -277,13 +279,18 @@ export async function renderProject(p: Project, loops: number) {
     for (const [k, v] of Object.entries(spec.params ?? {})) t.send({ type: 'param', param: k, value: v })
   }
 
+  // A rhythm box keeps its own clock: started once, on the first step.
+  for (const t of tracks) {
+    if (t.spec.kind === 'minipops' && !t.spec.muted) t.at(Math.round(START * SR), { type: 'play', bpm: p.bpm })
+  }
+
   for (let n = 0; n < song * loops; n++) {
     const step = n % song
     const swung = step % 2 === 1 ? p.swing * stepDur * 0.5 : 0
     const at = Math.round((START + n * stepDur + swung) * SR)
     for (const t of tracks) {
       const spec = t.spec
-      if (spec.muted) continue
+      if (spec.muted || spec.kind === 'minipops') continue
       if (spec.kind === 'drum') {
         const i = step % trackLength(spec)
         spec.drumGrid.forEach((row, ch) => {

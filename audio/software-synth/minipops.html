@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Pops 7</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/synth-base.css">
+  <link rel="stylesheet" href="css/minipops.css">
+  <link rel="stylesheet" href="css/panel-hw.css">
+</head>
+<body>
+<div class="synth-container">
+
+  <div class="synth-header">
+    <div>
+      <h1>Mini Pops 7</h1>
+      <span class="subtitle">Korg (Keio) rhythm box, 1973 &middot; 20 rhythms on 10 keys &middot; 15 sounds</span>
+    </div>
+    <div class="header-controls">
+      <select id="preset-select"><option value="">-- Rhythm --</option></select>
+      <button id="save-preset-btn" class="btn btn-small">Save</button>
+      <button id="start-btn" class="btn">Start Audio</button>
+    </div>
+  </div>
+
+  <div class="mp-face">
+    <!-- The five sliders, in the panel's order -->
+    <div class="panel mp-faders">
+      <div class="panel-title">Additional rhythm &middot; Volume &middot; Balance</div>
+      <div class="control-row"><label>Quijada</label><input type="range" id="quijada" min="0" max="1" step="0.01" value="0"><span class="val" id="quijada-val">0.00</span></div>
+      <div class="control-row"><label>Guiro</label><input type="range" id="guiro" min="0" max="1" step="0.01" value="0"><span class="val" id="guiro-val">0.00</span></div>
+      <div class="control-row"><label>Tambourine</label><input type="range" id="tambourine" min="0" max="1" step="0.01" value="0"><span class="val" id="tambourine-val">0.00</span></div>
+      <div class="control-row"><label>Volume</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.8"><span class="val" id="volume-val">0.80</span></div>
+      <div class="control-row"><label>Balance</label><input type="range" id="balance" min="0" max="1" step="0.01" value="0.5"><span class="val" id="balance-val">0.50</span></div>
+    </div>
+
+    <!-- Tempo, the lamps, the section lever, start/stop -->
+    <div class="panel mp-centre">
+      <div class="panel-title" style="align-self:stretch">Tempo</div>
+      <div class="control-row"><label>Tempo</label><input type="range" id="tempo" min="40" max="240" step="1" value="120"><span class="val" id="tempo-val">120</span></div>
+      <div class="mp-lamps">
+        <div class="mp-lamp lit" id="lamp-a"><i></i>A</div>
+        <div class="mp-lamp green" id="lamp-b"><i></i>B</div>
+      </div>
+      <div class="mp-lever-row">
+        <div class="mp-lever-labels"><span class="on">A</span><span>B</span></div>
+        <button class="mp-lever" id="lever" type="button" role="switch" aria-checked="false" aria-label="Rhythm section A or B" title="Rhythm section lever (A / B)"></button>
+      </div>
+      <button id="play-btn" class="btn btn-play">START</button>
+    </div>
+
+    <!-- The tone generator: fourteen sounds, the step, the output -->
+    <div class="panel mp-voices">
+      <div class="panel-title">Tone generator</div>
+      <div class="mp-pads" id="voices"></div>
+      <div class="mp-steps" id="steps"></div>
+      <div class="mp-now">Playing: <b id="now-playing">no key down</b></div>
+      <canvas id="scope" width="400" height="64"></canvas>
+    </div>
+  </div>
+
+  <!-- The ten keys, with each key's A rhythm printed above it and its B rhythm below -->
+  <div class="panel mp-keybed" id="keybed"></div>
+
+  <!-- The preset pots on the tone generator board (service manual p. 9) -->
+  <div class="panel mp-trims" id="trims">
+    <div class="panel-title">Service trims</div>
+    <div class="control-row"><label>Snare 1</label><input type="range" id="trim-sd1" min="0" max="2" step="0.01" value="1"><span class="val" id="trim-sd1-val">1.00</span></div>
+    <div class="control-row"><label>Snare 2</label><input type="range" id="trim-sd2" min="0" max="2" step="0.01" value="1"><span class="val" id="trim-sd2-val">1.00</span></div>
+    <div class="control-row"><label>Hi-hat</label><input type="range" id="trim-hh" min="0" max="2" step="0.01" value="1"><span class="val" id="trim-hh-val">1.00</span></div>
+    <div class="control-row"><label>Cymbal 1</label><input type="range" id="trim-cy1" min="0" max="2" step="0.01" value="1"><span class="val" id="trim-cy1-val">1.00</span></div>
+    <div class="control-row"><label>Cymbal 2</label><input type="range" id="trim-cy2" min="0" max="2" step="0.01" value="1"><span class="val" id="trim-cy2-val">1.00</span></div>
+    <div class="control-row"><label>Tambourine</label><input type="range" id="trim-ta" min="0" max="2" step="0.01" value="1"><span class="val" id="trim-ta-val">1.00</span></div>
+    <div class="control-row"><label>Quijada pitch</label><input type="range" id="quijada-pitch" min="0.7" max="1.4" step="0.01" value="1"><span class="val" id="quijada-pitch-val">1.00</span></div>
+    <div class="control-row"><label>Guiro pitch</label><input type="range" id="guiro-pitch" min="0.7" max="1.4" step="0.01" value="1"><span class="val" id="guiro-pitch-val">1.00</span></div>
+  </div>
+
+  <p class="mp-help">
+    Keys <span>1</span>&ndash;<span>9</span>, <span>0</span> press the rhythm keys (press several to combine rhythms) &middot;
+    <span>A</span> / <span>B</span> move the lever &middot; <span>space</span> starts and stops &middot; click a sound to hear it alone.
+    Rhythms and voices follow the SR-95 service manual (Unicord, 1973).
+  </p>
+
+</div>
+<script src="js/synth-shell.js"></script>
+<script src="js/minipops-main.js"></script>
+<script src="js/ui-enhance.js"></script>
+<script src="js/panel-hw.js"></script>
+</body>
+</html>

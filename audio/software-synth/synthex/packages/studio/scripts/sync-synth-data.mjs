@@ -40,6 +40,10 @@ const SOURCES = [
   // The drum bank is patterns, not sounds — the 808's voices are edited live
   // and its presets are rhythms. The studio loads them into the step grid.
   { kind: 'drum', page: 'drum-machine.html', file: 'drum-main.js',  decl: 'FACTORY_PRESETS', shape: 'patterns' },
+  // The Mini Pops 7's presets are rhythm selections (lever + keys + the
+  // additional-rhythm sliders); `rhythm()` builds them on the page.
+  { kind: 'minipops', page: 'minipops.html', file: 'minipops-main.js', decl: 'FACTORY_PRESETS', shape: 'array',
+    helpers: ['rhythm'] },
 ]
 
 /**
@@ -374,6 +378,25 @@ const DRUM_PARAMS = [
     min: -1, max: 1, step: 0.01, default: 0 },
 ]
 
+/**
+ * The Mini Pops 7's rhythm keys are buttons the page builds at runtime, so
+ * they are declared here: the lever and the ten keys, each named for both
+ * of its rhythms. Tempo and volume are left to the transport and the fader.
+ */
+const MINIPOPS_KEYS = [
+  ['Waltz', 'Jazz Waltz'], ['Samba', 'Meringue'], ['Mambo', 'Cha-cha'], ['Rumba', 'Beguine'],
+  ['Tango', 'Habanera'], ['Bossanova', 'Slow Rock'], ['Rock 1', 'Rock 2'], ['Rock 3', 'Rock 4'],
+  ['March 2/4', 'March 6/8'], ['Swing', 'Latin Swing'],
+]
+const MINIPOPS_KEY_PARAMS = [
+  { param: 'section', label: 'Section', group: 'Rhythm keys', type: 'select',
+    options: [{ value: '0', label: 'A (upper)' }, { value: '1', label: 'B (lower)' }] },
+  ...MINIPOPS_KEYS.map(([a, b], k) => ({
+    param: `key.${k}`, label: `${a} / ${b}`, group: 'Rhythm keys', type: 'toggle',
+  })),
+]
+const MINIPOPS_SKIP = new Set(['tempo', 'volume'])
+
 async function main() {
   await mkdir(DEST, { recursive: true })
   const index = []
@@ -417,6 +440,9 @@ async function main() {
       params = extractParams(html, bindingMap(src), helperSrc)
     } catch (err) {
       console.warn(`[sync-synth-data] ${kind}: no controls from ${page} (${err.message})`)
+    }
+    if (kind === 'minipops') {
+      params = [...MINIPOPS_KEY_PARAMS, ...params.filter(p => !MINIPOPS_SKIP.has(p.param))]
     }
 
     await writeFile(

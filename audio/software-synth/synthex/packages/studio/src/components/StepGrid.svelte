@@ -5,7 +5,7 @@
   // one note per step (click to toggle, scroll to pitch it), which names a
   // step's chord and marks its aftertouch, and shows a tie on the steps a
   // note holds through.
-  import { DRUM_CHANNELS, drumChannelName, instrumentDef } from '../lib/instruments.ts'
+  import { DRUM_CHANNELS, MINIPOPS_KEYS, drumChannelName, instrumentDef } from '../lib/instruments.ts'
   import { BAR_CHOICES, type Track, type NoteStep } from '../lib/track.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
   import ScoreView from './ScoreView.svelte'
@@ -91,6 +91,21 @@
     onchange()
   }
 
+  // Rhythm box: which section the lever is on and which keys are down live
+  // in the track's params, like any other edit, so they save with the project.
+  const section = $derived(Number(track?.params['section'] ?? 0) === 1 ? 1 : 0)
+  const keyDown = (k: number) => track?.params[`key.${k}`] === true
+  function toggleKey(k: number) {
+    if (!track) return
+    track.setParam(`key.${k}`, !keyDown(k))
+    onchange()
+  }
+  function setSection(s: 0 | 1) {
+    if (!track) return
+    track.setParam('section', s)
+    onchange()
+  }
+
   function toggleDrum(ch: number, i: number) {
     if (!track) return
     const row = track.drumGrid[ch]
@@ -100,7 +115,7 @@
   }
 </script>
 
-{#if track}
+{#if track && !track.isRhythmBox}
   <div class="bars" style="--accent:{accent}">
     <span>BARS</span>
     {#each BAR_CHOICES as b (b)}
@@ -111,6 +126,24 @@
 {/if}
 {#if !track}
   <div class="empty">Add a track to start writing a pattern.</div>
+{:else if track.isRhythmBox}
+  <div class="rbox" style="--accent:{accent}">
+    <div class="lever" role="group" aria-label="Rhythm section">
+      <button class:on={section === 0} onclick={() => setSection(0)} title="Upper rhythms">A</button>
+      <button class:on={section === 1} onclick={() => setSection(1)} title="Lower rhythms">B</button>
+    </div>
+    <div class="rkeys">
+      {#each MINIPOPS_KEYS as pair, k (k)}
+        <button class="rkey" class:on={keyDown(k)} class:cur={playing && false}
+          aria-pressed={keyDown(k)} onclick={() => toggleKey(k)}
+          title="{pair[0]} / {pair[1]} — press several keys to combine rhythms">
+          <span class:live={section === 0}>{pair[0]}</span>
+          <span class:live={section === 1}>{pair[1]}</span>
+        </button>
+      {/each}
+    </div>
+    <p class="hint">A preset rhythm box: it runs its own two-bar clock from the transport's first step. Press several keys to combine rhythms; the quijada, guiro and tambourine sliders are in the instrument editor.</p>
+  </div>
 {:else if track.isPercussion}
   <div class="drum-grid" style="--accent:{accent}; --cols:{Math.min(len, PAGE)}">
     {#each pages as page (page)}
@@ -282,4 +315,32 @@
   }
   .nudge button:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
   .hint { color: var(--dim); font-size: 0.7rem; margin: 0.5rem 0 0; }
+
+  /* The Mini Pops' front: the lever, then the ten ivory keys with each
+     key's two rhythm names, the live section's name lit. */
+  .rbox { display: flex; flex-direction: column; gap: 0.5rem; }
+  .lever { display: flex; gap: 3px; }
+  .lever button {
+    width: 2rem; height: 1.4rem; cursor: pointer; padding: 0;
+    background: #17171c; color: var(--dim);
+    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 2px;
+    font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+  }
+  .lever button.on { background: var(--accent); color: #08080a; border-color: var(--accent); font-weight: 700; }
+  .rkeys { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+  .rkey {
+    display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center;
+    min-height: 3.2rem; padding: 0.3rem 0.1rem; cursor: pointer;
+    background: linear-gradient(180deg, #f1ebdd, #d8d1c1); color: #6a645a;
+    border: 1px solid #8f887a; border-radius: 3px;
+    box-shadow: 0 3px 0 #9a9385, 0 4px 4px rgba(0, 0, 0, 0.5);
+    font-size: 0.55rem; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.15;
+  }
+  .rkey span { opacity: 0.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .rkey span.live { opacity: 1; color: #1a1a1c; font-weight: 700; }
+  .rkey.on {
+    transform: translateY(2px);
+    background: linear-gradient(180deg, #ddd6c6, #cfc8b8);
+    box-shadow: 0 1px 0 #9a9385, inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--accent);
+  }
 </style>

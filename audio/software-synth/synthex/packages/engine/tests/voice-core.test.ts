@@ -62,4 +62,25 @@ describe('VoiceCore', () => {
     // reset would jump by the full amplitude.
     expect(maxStep).toBeLessThan(0.05)
   })
+
+  it('a narrow pulse reaches the filter without its DC (AC_COUPLING_HZ)', () => {
+    // Electric piano I's two pulses are 9 and 11 % wide: +-1 with that duty has a mean of -0.8, more than
+    // its tone. Through the lowpass and the VCA that DC came out as a thump under every note, most of the
+    // render's energy below 20 Hz; the run-through has none. Held, the output's mean is now a small part
+    // of its rms, and from the first milliseconds (the coupling starts settled).
+    const ep = PRESETS.find(p => p.patch.name === 'Electric piano I')!
+    const v = new VoiceCore(SR, ep.patch.upper)
+    const out = new Float32Array(ms(500))
+    v.noteOn(48, 1)
+    v.render(out, 0, out.length)
+    const stats = (from: number, to: number): [number, number] => {
+      let m = 0, s = 0
+      for (let i = from; i < to; i++) { m += out[i]!; s += out[i]! * out[i]! }
+      return [m / (to - from), Math.sqrt(s / (to - from))]
+    }
+    for (const [from, to] of [[ms(5), ms(50)], [ms(200), ms(500)]] as const) {
+      const [mean, rms] = stats(from, to)
+      expect(Math.abs(mean)).toBeLessThan(0.05 * rms)
+    }
+  })
 })

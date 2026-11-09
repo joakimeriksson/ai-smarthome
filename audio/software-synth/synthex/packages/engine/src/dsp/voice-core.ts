@@ -55,6 +55,16 @@ export const CUTOFF_STEP = 0.5
  */
 export const AMP_ONSET_DELAY = 0.0015
 
+/**
+ * Corner (Hz) of the coupling between each oscillator and the mixer / ring modulator. The pulse is
+ * +-1 with duty pw, so it carries 2 pw - 1 of DC: -0.81 on Electric piano I's 9 % pulse, more than its
+ * tone. Unblocked, that DC went through the lowpass and the VCA and came out as a thump under every
+ * note (energy below 20 Hz 2 to 5 dB under the total on Brass II, Funky Clav., Electric piano I and the
+ * other narrow pulses); the run-through has none (-34 dB and lower on all forty). 5 Hz is an assumed
+ * coupling capacitor, not a measured one.
+ */
+export const AC_COUPLING_HZ = 5
+
 // One instance of every shape per oscillator slot, kept alive so changing
 // `wave` mid-note doesn't reset state for the new shape and we avoid runtime
 // allocations.
@@ -134,6 +144,10 @@ export class VoiceCore {
   /** Samples left until the amp envelope is gated on (AMP_ONSET_DELAY). */
   private ampGateIn = 0
   private inputAtten = 1
+  /** The oscillators' DC, tracked by their output coupling (AC_COUPLING_HZ). */
+  private dc1 = 0
+  private dc2 = 0
+  private readonly dcCoef: number
 
   constructor(sampleRate: number, patch: LayerPatch) {
     this.sr = sampleRate
@@ -143,6 +157,7 @@ export class VoiceCore {
     this.lfo1 = new Lfo(sampleRate)
     this.lfo2 = new Lfo(sampleRate)
     this.coeffs = svfCoeffs(noteToHz(84), sampleRate, 0.7)
+    this.dcCoef = 1 - Math.exp(-2 * Math.PI * AC_COUPLING_HZ / sampleRate)
     this.computeGlideCoef()
   }
 
@@ -193,6 +208,10 @@ export class VoiceCore {
     if (fromIdle) {
       if (!this.patch.osc2.sync) this.bank1.resetAll()
       this.bank2.resetAll()
+      // The hardware's oscillators run all the time, so their coupling has long settled when a key goes
+      // down: start the tracker at the waveform's mean (a pulse's 2 pw - 1), not at 0.
+      this.dc1 = this.patch.osc1.wave === 'square' ? 2 * this.patch.osc1.pwm - 1 : 0
+      this.dc2 = this.patch.osc2.wave === 'square' ? 2 * this.patch.osc2.pwm - 1 : 0
     }
     this.computeGlideCoef()
 
@@ -381,6 +400,15 @@ export class VoiceCore {
         case 'noise':    s2 = this.noiseW2.next(); break
       }
 
+      // Cross-mod (above) takes the oscillators as they are; the mixer and the ring modulator get them
+      // through the coupling, without their DC.
+      this.prevOsc1 = s1
+      this.prevOsc2 = s2
+      this.dc1 += this.dcCoef * (s1 - this.dc1)
+      this.dc2 += this.dcCoef * (s2 - this.dc2)
+      s1 -= this.dc1
+      s2 -= this.dc2
+
       const noiseSample = noiseColor === 'pink' ? this.noiseP.next() : this.noiseW2.next()
       const ring = s1 * s2
 
@@ -395,9 +423,6 @@ export class VoiceCore {
       const ampMod = 1 + m.lfo1ToAmp * l1 * lfo1B + m.lfo2ToAmp * l2 * lfo2B
       const velAmp = 1 + m.velToAmp * (this.velocity - 1)
       out[offset + i] = mixed * e2 * ampMod * velAmp * 0.5
-
-      this.prevOsc1 = s1
-      this.prevOsc2 = s2
     }
   }
 }

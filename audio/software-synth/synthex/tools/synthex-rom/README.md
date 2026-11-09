@@ -127,11 +127,32 @@ Index → meaning, stored width → value after the firmware's left shift:
   measured 97/98, Church organ 95 vs 96, Electronic organ 74/83/93 vs
   76/88/100 at three keys, Pan flutes 82 vs ~76. `gen_factory.py`
   re-expresses this in the engine's fields (`CUT_SLOPE`, `CUT_OFFSET`,
-  `KEY_W`, `ENV_W`): full key tracking is 0.81 st per key and a full
+  `KEY_W`, `ENV_W`): full key tracking is 1.0 st per key (see below) and a full
   envelope about 185 st (the engine clamps at note 132). The harmonic
   estimator saturates above about note 112 on these MP3 sources, so open
   readings are lower bounds; the resonant presets were read by tracking
   their resonant peak instead.
+- **Key tracking and the filter sustain** (2026-11-09, `KEY_W`,
+  `FILTER_SUSTAIN`), measured on held notes at the start of each preset's
+  passage (the run-through transcribed per passage; the cutoff offset, or
+  the sustain scale, that explains the hardware's harmonics frame by frame
+  against engine renders of the same key). Later in a passage Per Kristian
+  moves the panel: the same key on Reed organ reads +3 st at 0.6 s and +18
+  at 16.9 s, so only the openings count.
+  Full key tracking is 1.0 st per key: the organs read +0 at key 36, +3 at
+  44 and 45, +3 / +7.5 / +9 at 48 / 60 / 65, which the schematic's 0.81
+  falls behind by 0.19 st per key above C2 (with the Electronic organ check
+  above). `KEY_W` is set from it, not from the resistor.
+  The filter envelope's sustain reaches 0.7 of the decoded value: Chunky
+  Synth, Brass I, Clavinet, Sweep 1 and Sweep 2 read 15 to over 30 st under
+  the engine once their decay is over, with their onsets about right, and a
+  sustain of 0.65 to 0.85 x the decoded value explains each; a curve (s^1.5,
+  s^2) fits worse, and the same scale on the amp envelope made the level
+  profiles worse. Together the two take the spectrum distance from 5.51 to
+  4.78 dB on the forty 3 s stretches of the Scintilla A/B (18 better, 3
+  worse) and from 4.92 to 4.37 on the whole passages (13 better, 8 worse).
+  Electric piano II loses most (6.5 to 10 dB): its synced OSC2 then puts a
+  resonance near 2 kHz that the hardware does not have. Open.
 - **Metallic** was corrected the same way (envelope amount x 0.65, decay
   kept) until the decay-length rule above took it over. Measured 2026-10-31 on the run-through's passage at
   0:47 (32 notes), after the engine's synced triangle became a phase-derived
@@ -186,6 +207,12 @@ Index → meaning, stored width → value after the firmware's left shift:
   about right on Take-off. The amp depth (B) is unchanged; Tremolo piano and
   Electric piano II ripple 2 dB from the first window, so the LFO delay
   stays inverted (byte 255 = none).
+- **Filtered chorus** is corrected one by one too (`FILTER_ENV_FIX`: envelope
+  amount x 0.7, measured 2026-11-09). Its opening notes read 12-15 st under
+  the engine through the first second (reach 0.64-0.71 of the decoded
+  amount), and the band-level distance to the recording falls from 11.6 to
+  2.5 dB. Folding it into `ENV_LONG_DECAY` by dropping the attack condition
+  does not work: Brass II goes from 4.6 to 12 dB, Brass III from 3.4 to 4.8.
 - **Take-off** is corrected one by one (`FILTER_ENV_FIX` in `gen_factory.py`:
   envelope amount x 0.65, filter decay 3.3 s instead of the table's 13.2 s).
   On the recording (the C2 note at 682.14 s) its HP12 starts near note 87

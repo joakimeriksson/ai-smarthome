@@ -134,7 +134,7 @@ XMOD_DEPTH = 0.175   # pulse-width cross-mod depth, from the Elka-X Laser Harp f
 # 47/24 = 1 : 0.698 : 1.25), the firmware's key value ((key - 36) * 2, zero
 # at the bottom key C2), and two anchors on Per Kristian's recording (Chunky
 # Synth at C2, filter at sustain: note 108; Phased sweep at its sustain,
-# key 46: note 72):
+# key 46: note 72; both read before FILTER_SUSTAIN and KEY_W below were measured):
 #   fc_note = CUT_OFFSET + CUT_SLOPE * ((255-raw) + 0.698*kt*2*(key-36) + 1.25*env*level)
 # Independent checks on the same recording (not used in the fit): Filtered
 # brass 94/101 vs measured 97/98 (keys 36/48), Church organ 95 vs 96 (key
@@ -144,7 +144,22 @@ XMOD_DEPTH = 0.175   # pulse-width cross-mod depth, from the Elka-X Laser Harp f
 # re-expressed in it; the engine clamps the result at note 132.
 CUT_SLOPE = 0.58        # semitones per DAC unit (148 st across the knob)
 CUT_OFFSET = -1.0       # cutoff note with every CV at zero
-KEY_W, ENV_W = 0.698, 1.25
+# KEY_W: full key tracking is 1.0 st per key, not the 0.81 the schematic's 43K would give (0.698). Measured
+# 2026-11-09 on held notes at the start of each preset's passage in the run-through (the cutoff offset that
+# explains the hardware's harmonics, against engine renders of the same key): the organs read +0 at key 36,
+# +3 at 44 and 45, +3 / +7.5 / +9 at 48 / 60 / 65, where 0.81 st per key falls 0.19 st per key above C2
+# behind; the README's Electronic organ check had already read 76 / 88 / 100 at keys 48 / 60 / 72. Over all
+# forty presets (with FILTER_SUSTAIN below) it helps the organs, Pianet, Ceilos, Double basses and Brass II
+# most; Electric piano II loses, its synced OSC2 then sitting under the resonance (open).
+KEY_W, ENV_W = 1 / (2 * CUT_SLOPE), 1.25
+# The filter envelope's sustain level reaches 0.7 of its knob's decoded value: the held notes of the presets
+# whose envelope sits high at sustain (Chunky Synth, Brass I, Clavinet, Sweep 1, Sweep 2) read 15 to over 30
+# st under the engine once the decay is over, while their onsets were about right; a sustain of 0.65 to 0.85 x
+# the decoded value explained each (constant, not a curve: s^1.5 and s^2 fit worse). With KEY_W above, the
+# spectrum distance to the run-through falls from 5.51 to 4.78 dB on the forty 3 s stretches the Scintilla
+# A/B used (18 presets better, 3 worse) and from 4.92 to 4.37 on the whole passages (13 better, 8 worse).
+# The amp envelope's sustain stays as decoded: the same scale there made the level profiles worse.
+FILTER_SUSTAIN = 0.7
 # The filter envelope's reach, measured at the onset against the recording, is about 0.6 x the decoded
 # amount on the presets whose filter envelope has a fast attack (table index <= 3, 15 ms or less)
 # running into a long decay (index > 6): Violins, Landing, Take-off, Metallic, Chorale, Filtered
@@ -172,7 +187,15 @@ MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant pres
 # synced triangle was made a phase-derived one. The cutoff per note window, read off the hardware
 # against the engine's filter-open render, puts the decoded envelope 12-18 st too high at the onsets
 # and 1 s later about right; x 0.65 (the same factor as Take-off's) centres it, with the decay kept.
-FILTER_ENV_FIX = {'Take-off': (1.0, 3.3)}   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
+# Filtered chorus: measured 2026-11-09, after KEY_W and FILTER_SUSTAIN. Its two opening notes (keys 36
+# and 40) read 12-15 st under the engine all through the first second, an envelope reach of 0.64-0.71 x
+# the decoded amount; the band-level distance to the recording agrees, 11.6 -> 2.5 dB on the whole
+# passage and 11.6 -> 2.7 on the 3 s stretch at x 0.7 (x 0.6: 4.7 / 5.7, x 0.8: 6.1 / 5.6). Below the
+# full amount the resonance (0.44) stops sitting on the 1 kHz band. Not a rule: extending ENV_LONG_DECAY to
+# the other slow-attack long-decay presets (dropping its attack condition) took Brass II from 4.6 to 12 dB
+# and Brass III from 3.4 to 4.8, and Wah brass and Filtered brass moved within the noise.
+FILTER_ENV_FIX = {'Take-off': (1.0, 3.3),   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
+                  'Filtered chorus': (0.7, None)}
 
 def pitch_depth(a):
     """The LFO's pitch depth from the depth A byte, inverted: on the recording Whistle (A 181) has the
@@ -236,7 +259,7 @@ def convert(p, name):
     base = CUT_OFFSET + CUT_SLOPE * (255 - p[5]) + key_track * (60 - 36)   # pot inverted
     cutoff = (base - 24) / 96
     L(f"filter: {{ mode: '{FILTERS[p[32]]}', cutoff: {r(cutoff)}, resonance: {r(p[10] / 254)}, envAmount: {r(env_engine * (-1 if invert else 1))}, keyTrack: {r(key_track)} }},")
-    L(f"envFilter: ADSR({r(attack_time(p[20]))}, {r(f_decay)}, {r(p[8] / 255)}, {r(rel(p[24]))}),")
+    L(f"envFilter: ADSR({r(attack_time(p[20]))}, {r(f_decay)}, {r(p[8] / 255 * FILTER_SUSTAIN)}, {r(rel(p[24]))}),")
     L(f"envAmp:    ADSR({r(attack_time(p[21]))}, {r(env_time(p[23]))}, {r(p[9] / 254)}, {r(rel(p[25]))}),")
     L(f"lfo1: {{ shape: '{LFO_SHAPES[p[31]]}', rate: {r(lfo_rate(p[3]), 2)}, delay: {r(lfo_delay(p[4]), 2)}, depthA: {r(p[1] / 255)}, depthB: {r(p[2] / 255)} }},")
     # defaults() carries env1ToCutoff: 1 for the hand-made memories; the real

@@ -317,7 +317,7 @@ const PRESETS_B2: Record<number, Patch> = {
     osc1: { wave: 'sawtooth', octave: 0, pwm: 0.5 },
     osc2: { wave: 'sawtooth', octave: 0, detune: 37.9, pwm: 0.5, sync: false },
     mix:  { osc1: 0.653, osc2: 0.653, noise: 0, noiseColor: 'white', ringMod: false },
-    filter: { mode: 'lp24', cutoff: 0.425, resonance: 0.441, envAmount: 0.701, keyTrack: 1 },
+    filter: { mode: 'lp24', cutoff: 0.425, resonance: 0.441, envAmount: 0.491, keyTrack: 1 },
     envFilter: ADSR(0.037, 3.564, 0.549, 13.2),
     envAmp:    ADSR(0.33, 1.782, 0.929, 1.782),
     lfo1: { shape: 'tri', rate: 9.62, delay: 0.16, depthA: 0.827, depthB: 0 },

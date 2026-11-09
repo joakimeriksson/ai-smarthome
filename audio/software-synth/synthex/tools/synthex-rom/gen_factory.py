@@ -187,7 +187,15 @@ MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant pres
 # synced triangle was made a phase-derived one. The cutoff per note window, read off the hardware
 # against the engine's filter-open render, puts the decoded envelope 12-18 st too high at the onsets
 # and 1 s later about right; x 0.65 (the same factor as Take-off's) centres it, with the decay kept.
-FILTER_ENV_FIX = {'Take-off': (1.0, 3.3)}   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
+# Filtered chorus: measured 2026-11-09, after KEY_W and FILTER_SUSTAIN. Its two opening notes (keys 36
+# and 40) read 12-15 st under the engine all through the first second, an envelope reach of 0.64-0.71 x
+# the decoded amount; the band-level distance to the recording agrees, 11.6 -> 2.5 dB on the whole
+# passage and 11.6 -> 2.7 on the 3 s stretch at x 0.7 (x 0.6: 4.7 / 5.7, x 0.8: 6.1 / 5.6). Below the
+# full amount the resonance (0.44) stops sitting on the 1 kHz band. Not a rule: extending ENV_LONG_DECAY to
+# the other slow-attack long-decay presets (dropping its attack condition) took Brass II from 4.6 to 12 dB
+# and Brass III from 3.4 to 4.8, and Wah brass and Filtered brass moved within the noise.
+FILTER_ENV_FIX = {'Take-off': (1.0, 3.3),   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
+                  'Filtered chorus': (0.7, None)}
 
 def pitch_depth(a):
     """The LFO's pitch depth from the depth A byte, inverted: on the recording Whistle (A 181) has the

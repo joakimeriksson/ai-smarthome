@@ -207,6 +207,12 @@ Index → meaning, stored width → value after the firmware's left shift:
   about right on Take-off. The amp depth (B) is unchanged; Tremolo piano and
   Electric piano II ripple 2 dB from the first window, so the LFO delay
   stays inverted (byte 255 = none).
+- **Filtered chorus** is corrected one by one too (`FILTER_ENV_FIX`: envelope
+  amount x 0.7, measured 2026-11-09). Its opening notes read 12-15 st under
+  the engine through the first second (reach 0.64-0.71 of the decoded
+  amount), and the band-level distance to the recording falls from 11.6 to
+  2.5 dB. Folding it into `ENV_LONG_DECAY` by dropping the attack condition
+  does not work: Brass II goes from 4.6 to 12 dB, Brass III from 3.4 to 4.8.
 - **Take-off** is corrected one by one (`FILTER_ENV_FIX` in `gen_factory.py`:
   envelope amount x 0.65, filter decay 3.3 s instead of the table's 13.2 s).
   On the recording (the C2 note at 682.14 s) its HP12 starts near note 87

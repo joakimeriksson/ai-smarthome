@@ -211,4 +211,7 @@ the note, consistent with its 0.57 s); glide speed `0.005 * 200^(1-v/254)` s
 (calibrated so Ring mod. is about 0.85 s; Whistle's portamento at raw 232
 is inaudibly short on the recording, consistent); panel volume 10 -> mix
 0.7; LFO->cutoff 0.5; PW cross-mod depth 0.175 (from the Elka-X Laser Harp
-fit). The raw values in `data/` are the fixed point.
+fit); the oscillators' coupling into the mixer and ring modulator, a 5 Hz
+one-pole high-pass (`AC_COUPLING_HZ` in the voice core: without it a pulse's
+DC, 2 pw - 1, came out of the VCA as a thump on every note, and the run-through
+has none). The raw values in `data/` are the fixed point.

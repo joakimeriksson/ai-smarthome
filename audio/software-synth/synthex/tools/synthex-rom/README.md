@@ -151,8 +151,10 @@ Index → meaning, stored width → value after the firmware's left shift:
   profiles worse. Together the two take the spectrum distance from 5.51 to
   4.78 dB on the forty 3 s stretches of the Scintilla A/B (18 better, 3
   worse) and from 4.92 to 4.37 on the whole passages (13 better, 8 worse).
-  Electric piano II loses most (6.5 to 10 dB): its synced OSC2 then puts a
-  resonance near 2 kHz that the hardware does not have. Open.
+  Electric piano II seemed to lose most (6.5 to 10 dB, a resonance near
+  2 kHz that the hardware does not have): that was the transcription, not
+  the engine. Its stretch had three notes an octave above played ones (72,
+  74, 75 over 60, 62, 63); without them it scores 4.5 dB (2026-11-10).
 - **Metallic** was corrected the same way (envelope amount x 0.65, decay
   kept) until the decay-length rule above took it over. Measured 2026-10-31 on the run-through's passage at
   0:47 (32 notes), after the engine's synced triangle became a phase-derived
@@ -231,6 +233,22 @@ Index → meaning, stored width → value after the firmware's left shift:
   (13.2 s) may be wrong, but Fast decay, the only other preset with that
   filter decay, does not decide it. Single held notes from a hardware
   Synthex would.
+
+- **The scorer** (`ab/render_ab.ts`, `ab/score_ab.py`, 2026-11-10) renders the
+  bank on the transcribed notes, puts it through the recording's codec
+  (lame, 56 kb/s mono) and compares third-octave levels, whole-clip and in
+  100 ms frames, floored 40 dB down (the recording hums at 60 and 120 Hz
+  35-50 dB under the notes). Three sets: the 3 s stretches, the notes that
+  sound alone, and any other folder laid out the same (the first 15 s of
+  each passage was the cross-check). With it: no global constant moves
+  (each within 0.07 dB of its best; a curved attack or decay and a slew on
+  the envelope CV within 0.03), and three presets are corrected one by one
+  (`FILTER_ENV_FIX`: High pass sweep, Filtered brass, Clavichord I; the
+  rejected candidates are listed there). Stretches 5.85 -> 5.76 dB, passages
+  7.11 -> 7.04. Landing is the worst preset left (12.5 dB) and its three
+  sets disagree about the cure: on the passage the hardware's brightness
+  falls from the first frame of each note, about 10 st a second, where the
+  engine's rises for 3 s first. Open.
 
 **Still assumptions** (refine by measurement): LFO delay 1 ms to 30 s on
 the inverted scale (Whistle's vibrato reaches full depth within ~0.4 s of

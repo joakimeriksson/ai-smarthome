@@ -172,7 +172,7 @@ ENV_LONG_DECAY = 0.6
 MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant presets out of the limiter)
 
 # Presets whose filter envelope the recording contradicts, corrected one by one
-# until a rule covers them: (envAmount scale, filter decay in seconds).
+# until a rule covers them: (envAmount scale, filter decay in seconds, cutoff offset in semitones).
 # Take-off: on the recording its HP12 starts near note 87 at C2 and falls to
 # the key in about 2 s, where the mapping above starts it at the engine's
 # clamp (note 140 before it) and takes the table's 13.2 s, so for its first
@@ -194,8 +194,25 @@ MIX_SCALE = 0.7      # panel volume 10 -> 0.7 in the engine (keeps resonant pres
 # full amount the resonance (0.44) stops sitting on the 1 kHz band. Not a rule: extending ENV_LONG_DECAY to
 # the other slow-attack long-decay presets (dropping its attack condition) took Brass II from 4.6 to 12 dB
 # and Brass III from 3.4 to 4.8, and Wah brass and Filtered brass moved within the noise.
-FILTER_ENV_FIX = {'Take-off': (1.0, 3.3),   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
-                  'Filtered chorus': (0.7, None)}
+# High pass sweep, Filtered brass, Clavichord I: measured 2026-11-10 with ab/score_ab.py (the engine on the
+# transcribed notes, through the recording's codec, against the hardware: mean of the third-octave spectrum
+# distance and the same in 100 ms frames, dB). A grid of the cutoff offset and the envelope scale on each
+# preset's 3 s stretch, kept only where the first 15 s of the passage (mostly other notes) agreed, and the
+# notes that sound alone where there are any:
+#   High pass sweep  x 0.5, -8 st   stretch 10.5 -> 9.6, passage 10.5 -> 9.3
+#   Filtered brass   x 0.7, +6 st   stretch 7.9 -> 6.6, passage 7.2 -> 6.4, solo notes 5.9 -> 5.6
+#   Clavichord I     x 0.7, -12 st  stretch 6.4 -> 5.0, passage 5.7 -> 4.8
+# Filtered brass has Filtered chorus's envelope (attack index 5 into a decay of 12, 13) and takes the same
+# 0.7. Candidates the passage or the solo notes contradicted, left as decoded: Violins, Clavichord II,
+# Metallic piano, Vibes, and an offset of -20 st on the two BP12 presets (Landing 12.5 -> 7.9 on its stretch
+# and 12.2 -> 9.8 on its solo notes, but 8.4 -> 9.8 on the passage; Filtered strings 9.0 -> 7.8 and 13.9 ->
+# 14.4). The same sweep moved no global constant: CUT_OFFSET, ENV_W, KEY_W, FILTER_SUSTAIN, the stage times
+# and the resonance are each within 0.07 dB of their best value over the forty presets.
+FILTER_ENV_FIX = {'Take-off': (1.0, 3.3, 0),   # the 0.65 x of Take-off and Metallic became ENV_LONG_DECAY
+                  'Filtered chorus': (0.7, None, 0),
+                  'High pass sweep': (0.5, None, -8),
+                  'Filtered brass': (0.7, None, 6),
+                  'Clavichord I': (0.7, None, -12)}
 
 def pitch_depth(a):
     """The LFO's pitch depth from the depth A byte, inverted: on the recording Whistle (A 181) has the
@@ -257,6 +274,7 @@ def convert(p, name):
         env_engine *= fix[0]
         if fix[1] is not None: f_decay = fix[1]
     base = CUT_OFFSET + CUT_SLOPE * (255 - p[5]) + key_track * (60 - 36)   # pot inverted
+    if fix: base += fix[2]
     cutoff = (base - 24) / 96
     L(f"filter: {{ mode: '{FILTERS[p[32]]}', cutoff: {r(cutoff)}, resonance: {r(p[10] / 254)}, envAmount: {r(env_engine * (-1 if invert else 1))}, keyTrack: {r(key_track)} }},")
     L(f"envFilter: ADSR({r(attack_time(p[20]))}, {r(f_decay)}, {r(p[8] / 255 * FILTER_SUSTAIN)}, {r(rel(p[24]))}),")

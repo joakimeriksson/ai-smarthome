@@ -24,6 +24,12 @@ export interface RenderOptions {
   performance?: JoystickPerformance | undefined
   /** Static joystick position, x/y in -1..1. */
   joy?: { x: number; y: number } | undefined
+  /**
+   * When the layer's LFO is strobed (VoiceCore.syncLfo), in seconds. Default: as the app does it, at every
+   * note-on of this render that finds no key held, if the patch has an LFO delay. A render of one voice out
+   * of several passes the layer's strobes here.
+   */
+  lfoSync?: number[] | undefined
 }
 
 // The chorus as the app's StereoChorus plays it, one channel: dry plus the mode's lines, each a
@@ -67,17 +73,25 @@ export function render(opts: RenderOptions): Float32Array {
 
   const noteEvents = [...opts.events].sort((a, b) => a.t - b.t)
   const paramEvents = [...(opts.params ?? [])].sort((a, b) => a.t - b.t)
-  let eIdx = 0, pIdx = 0
+  const syncs = opts.lfoSync ? [...opts.lfoSync].sort((a, b) => a - b) : undefined
+  let eIdx = 0, pIdx = 0, sIdx = 0, held = 0
 
   // Render in runs that end at the next event, so events land on the exact
   // sample they were scheduled for while the core still sees long chunks.
   let i = 0
   while (i < n) {
     const t = i / sr
+    while (syncs && sIdx < syncs.length && syncs[sIdx]! <= t) { core.syncLfo(); sIdx++ }
     while (eIdx < noteEvents.length && noteEvents[eIdx]!.t <= t) {
       const ev = noteEvents[eIdx]!
-      if (ev.kind === 'on') core.noteOn(ev.note, ev.velocity ?? 1)
-      else core.noteOff()
+      if (ev.kind === 'on') {
+        if (!syncs && held === 0 && patch.lfo1.delay > 0) core.syncLfo()
+        held++
+        core.noteOn(ev.note, ev.velocity ?? 1)
+      } else {
+        held = Math.max(0, held - 1)
+        core.noteOff()
+      }
       eIdx++
     }
     while (pIdx < paramEvents.length && paramEvents[pIdx]!.t <= t) {
@@ -89,6 +103,7 @@ export function render(opts: RenderOptions): Float32Array {
     // Next sample index at which something happens.
     const nextT = Math.min(
       eIdx < noteEvents.length ? noteEvents[eIdx]!.t : Infinity,
+      syncs && sIdx < syncs.length ? syncs[sIdx]! : Infinity,
       pIdx < paramEvents.length ? paramEvents[pIdx]!.t : Infinity,
     )
     const nextI = nextT === Infinity ? n : Math.min(n, Math.max(i + 1, Math.ceil(nextT * sr)))

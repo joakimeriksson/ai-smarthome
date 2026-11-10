@@ -38,7 +38,8 @@ interface ParamMsg { type: 'param'; path: string; value: number | string | boole
 interface JoyMsg { type: 'joy'; x: number; y: number }
 interface PerfMsg { type: 'perf'; perf: JoystickPerformance }
 interface PitchBendMsg { type: 'bend'; semitones: number }
-type InMsg = NoteOnMsg | NoteOffMsg | PatchMsg | ParamMsg | JoyMsg | PerfMsg | PitchBendMsg
+interface LfoSyncMsg { type: 'lfoSync' }
+type InMsg = NoteOnMsg | NoteOffMsg | PatchMsg | ParamMsg | JoyMsg | PerfMsg | PitchBendMsg | LfoSyncMsg
 
 function defaultPatch(): LayerPatch {
   const z = (): Record<ModSlot, number> => ({
@@ -87,6 +88,7 @@ class SynthexVoiceProcessor extends AudioWorkletProcessor {
       case 'joy': this.core.setJoy(msg.x, msg.y); return
       case 'perf': this.core.setPerformance(msg.perf); return
       case 'bend': this.core.setPitchBend(msg.semitones); return
+      case 'lfoSync': this.core.syncLfo(); return
     }
   }
 

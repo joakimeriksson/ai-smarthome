@@ -209,6 +209,11 @@ export class Synth {
     const chain = which === 'upper' ? this.upper : this.lower
     if (!chain) return
     const layer = this.patch[which]
+    // The layer's one LFO: restarted, with its delay ramp, by the first key of a phrase, and only when
+    // the patch has a delay (VoiceCore.syncLfo has the firmware's rule).
+    if (chain.heldNotes.length === 0 && layer.lfo1.delay > 0) {
+      for (const v of chain.voices) v.port.postMessage({ type: 'lfoSync' })
+    }
     chain.heldNotes.push(note)
 
     switch (layer.keyAssign) {

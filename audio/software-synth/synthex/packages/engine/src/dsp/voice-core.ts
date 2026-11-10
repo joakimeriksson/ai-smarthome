@@ -187,6 +187,19 @@ export class VoiceCore {
   setPerformance(perf: JoystickPerformance): void { this.perf = perf }
   setPitchBend(semitones: number): void { this.pitchBendSemis = semitones }
 
+  /**
+   * The Synthex has one LFO per layer, running whether or not a key is down; each voice here carries a
+   * copy, and since a silent voice keeps advancing its copy (render), the copies of a layer stay in phase.
+   * The firmware strobes the LFO board's SYNC line, which restarts both the oscillator and the delay ramp,
+   * when a key goes down while no other key of the layer is held, and only if the DELAY knob is off its
+   * stop ($F5FD-$F61B: the layer's gate mask must be empty, and $019F holds "delay byte > $F4" per layer).
+   * So a patch without delay has an LFO that no key ever restarts, and a patch with delay fades its LFO in
+   * once per phrase, not once per note. The voices' owner calls this on every voice of the layer then.
+   */
+  syncLfo(): void {
+    this.lfo1.sync(this.patch.lfo1.shape)
+  }
+
   noteOn(note: number, velocity: number): void {
     const fromIdle = this.env2.stage === 'idle'
     const mode = this.patch.glide.mode
@@ -298,12 +311,15 @@ export class VoiceCore {
    * sample counter, so output does not depend on how the host slices time.
    */
   render(out: Float32Array, offset: number, length: number): void {
+    const p = this.patch
     if (this.idle) {
       out.fill(0, offset, offset + length)
+      // The layer's LFOs do not stop with the voice (see syncLfo).
+      this.lfo1.advance(p.lfo1.rate, p.lfo1.shape, p.lfo1.delay, length)
+      this.lfo2.advance(p.lfo2.rate, p.lfo2.shape, p.lfo2.delay, length)
       return
     }
 
-    const p = this.patch
     const m = p.modMatrix
     const oct1 = Math.pow(2, p.osc1.octave)
     const oct2 = Math.pow(2, p.osc2.octave)

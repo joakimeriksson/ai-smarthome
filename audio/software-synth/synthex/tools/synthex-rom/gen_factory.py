@@ -99,7 +99,7 @@ def lfo_rate(v):
 def lfo_delay(v):
     """Inverted like the rate pot. 1 ms .. 30 s; near the stop = no delay."""
     inv = 255 - v
-    if inv < 12: return 0.0
+    if inv < 11: return 0.0     # the firmware's own threshold: a byte above $F4 never strobes the LFO's SYNC
     return 0.001 * 30000 ** (inv / 255)
 
 def glide_time(v):
@@ -114,17 +114,24 @@ WAVES = ['triangle', 'sawtooth', 'square', 'square', 'square']
 FILTERS = ['lp24', 'bp6', 'bp12', 'hp12']
 LFO_SHAPES = ['tri', 'ramp-down', 'ramp', 'square']
 
-# Engine scaling for the LFO routings (modMatrix x depth):
-PITCH_MOD = 0.09     # engine: 12 st * matrix * depth -> +-1.08 st at full depth, the depth being
-                     # (255 - A) / 255: the depth A pot reads inverted for the pitch (see pitch_depth)
-                     # (measured: Whistle +-0.72 st at depth 0.71, Wash of sound
-                     # +-0.35 st at depth 0.73 after the same analysis of an
-                     # engine render; both say the old +-2 st was ~2x too deep)
-PWM_MOD = 0.5        # engine: 0.45 * matrix * depth A (direct); halved 2026-10-31, see README "LFO depths"
-CUTOFF_MOD = 0.5     # engine: 60 st * matrix * depth  -> +-30 st at full depth
-AMP_MOD = 0.37       # engine: amp * (1 + matrix * lfo * depth); measured tremolo
-                     # 4.7 dB p-p at depth 0.69 (Tremolo piano) and 4.2 dB at
-                     # 0.68 (Electric piano II) -> modulation index 0.26
+# Engine scaling for the LFO routings (modMatrix x depth). Both depth knobs read inverted (byte 255 = no
+# modulation), like the rate, delay and cutoff knobs: on the LFO board (410CST5850) the level CVs LEV1 and
+# LEV2 set the bias of the two 13600s through a current source of (5 V - LEV) / 10K (1458 2M / 3M with the
+# BC559s 169 / 173), and the firmware writes the stored bytes to those sample-and-holds as they are. One OTA
+# (A) feeds the oscillators' pitch and both pulse widths, the other (B) the VCA and the VCF.
+PITCH_MOD = 0.09     # engine: 12 st * matrix * depth -> +-1.08 st at full depth
+                     # (measured: Whistle (A 181) 29 cents peak at its LFO rate, Wash of sound (187) 11,
+                     # Filtered chorus (211) 7, Violins, Double basses and Ceilos (231-238) 4-6)
+PWM_MOD = 2.0        # engine: 0.45 * matrix * depth -> +-0.9 of duty at full depth. The board sums the LFO into
+                     # the pulse-width CV 1.7 x as strongly as the PW knob (12K against 10K + 10K into 22K).
+                     # With the direct reading, halved, the second harmonic's swing was 1.7 to 4.8 x the
+                     # hardware's on Chorale, Clavinet and Sweep 1 (A 224-240) and about right on Take-off (218)
+CUTOFF_MOD = 2.0     # engine: 60 st * matrix * depth. Not measured: Landing and Filtered strings, the two
+                     # presets with the routing, score the same within 0.5 dB from 0.5 to 2
+AMP_MOD = 1.0        # engine: amp * (1 + matrix * lfo * depth). The level's ripple at the LFO rate over the
+                     # first 15 s of each passage, hardware against renders: Church organ 1.5 dB (direct
+                     # reading 4.9, inverted 1.1), Reed organ 2.0 (3.9, 1.0), Tremolo piano 4.6 and Electric
+                     # piano II 6.5 (3.5 and 4.0 either way at 0.8, the two readings being equal near B = 175)
 XMOD_DEPTH = 0.175   # pulse-width cross-mod depth, from the Elka-X Laser Harp fit
 # VCF cutoff mapping. The cutoff pot reads INVERTED like the two LFO pots
 # (raw 255 = knob at minimum): with that, Bass pluck and Fast decay sit at
@@ -214,14 +221,6 @@ FILTER_ENV_FIX = {'Take-off': (1.0, 3.3, 0),   # the 0.65 x of Take-off and Meta
                   'Filtered brass': (0.7, None, 6),
                   'Clavichord I': (0.7, None, -12)}
 
-def pitch_depth(a):
-    """The LFO's pitch depth from the depth A byte, inverted: on the recording Whistle (A 181) has the
-    deepest vibrato, 29 cents peak at its LFO rate, Wash of sound (187) 11, Filtered chorus (211) 7,
-    Violins (231), Double basses (232) and Ceilos (238) 4-6, where a direct reading would have the
-    strings 1.3 x Whistle. 1.08 st at full depth measures Whistle at ~16 cents, Wash of sound 5 and the
-    strings 3-13, between the two ends of what the recording shows."""
-    return (255 - a) / 255
-
 def convert(p, name):
     oct1, oct2 = p[27] - 2, p[28] - 2
     w1, w2 = p[29], p[30]
@@ -279,13 +278,12 @@ def convert(p, name):
     L(f"filter: {{ mode: '{FILTERS[p[32]]}', cutoff: {r(cutoff)}, resonance: {r(p[10] / 254)}, envAmount: {r(env_engine * (-1 if invert else 1))}, keyTrack: {r(key_track)} }},")
     L(f"envFilter: ADSR({r(attack_time(p[20]))}, {r(f_decay)}, {r(p[8] / 255 * FILTER_SUSTAIN)}, {r(rel(p[24]))}),")
     L(f"envAmp:    ADSR({r(attack_time(p[21]))}, {r(env_time(p[23]))}, {r(p[9] / 254)}, {r(rel(p[25]))}),")
-    L(f"lfo1: {{ shape: '{LFO_SHAPES[p[31]]}', rate: {r(lfo_rate(p[3]), 2)}, delay: {r(lfo_delay(p[4]), 2)}, depthA: {r(p[1] / 255)}, depthB: {r(p[2] / 255)} }},")
+    L(f"lfo1: {{ shape: '{LFO_SHAPES[p[31]]}', rate: {r(lfo_rate(p[3]), 2)}, delay: {r(lfo_delay(p[4]), 2)}, depthA: {r((255 - p[1]) / 255)}, depthB: {r((255 - p[2]) / 255)} }},")
     # defaults() carries env1ToCutoff: 1 for the hand-made memories; the real
     # filter-envelope depth is filter.envAmount, so switch that extra path off.
     mm = ['env1ToCutoff: 0']
-    pitch_amt = r(PITCH_MOD * pitch_depth(p[1]) / max(0.05, p[1] / 255), 4)   # x depthA in the engine = PITCH_MOD x the inverted depth
-    if routing & 0x01: mm.append(f"lfo1ToOsc1Pitch: {pitch_amt}")
-    if routing & 0x02: mm.append(f"lfo1ToOsc2Pitch: {pitch_amt}")
+    if routing & 0x01: mm.append(f"lfo1ToOsc1Pitch: {PITCH_MOD}")
+    if routing & 0x02: mm.append(f"lfo1ToOsc2Pitch: {PITCH_MOD}")
     if routing & 0x04: mm.append(f"lfo1ToOsc1Pwm: {PWM_MOD}")
     if routing & 0x20: mm.append(f"lfo1ToOsc2Pwm: {PWM_MOD}")
     if routing & 0x10: mm.append(f"lfo1ToCutoff: {CUTOFF_MOD}")

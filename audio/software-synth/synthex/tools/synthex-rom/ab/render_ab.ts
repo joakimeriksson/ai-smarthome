@@ -3,6 +3,7 @@
 // DATA is the A/B folder (N-hw.wav and notes/N.txt for the 3 s stretches; full/N-hw.wav and full/N-solo.txt
 // for the notes that sound alone in the whole passage). A note file is "t:note:dur,..." in seconds from the
 // start of the hardware clip. One VoiceCore per note, summed, the chorus as the app plays it; mono 44.1 kHz.
+// The voices share the layer's LFO as in the app: strobed by the keys that find no other held.
 // --notes DIR reads the note files from DIR; --stems writes one file per note (N-k.wav, at a fixed gain of
 // 0.1) so that a subset can be mixed afterwards.
 // --mod names a module whose default export (layer, slot, raw) edits the layer patch in place before the
@@ -49,11 +50,18 @@ for (const slot of PRESETS) {
     continue
   }
   const dur = Math.max(...notes.map(([t, , d]) => t + d)) + 1.5
+  // The layer's LFO strobes: a key that goes down while no other is held, on a patch with an LFO delay.
+  const lfoSync: number[] = []
+  let heldUntil = -Infinity
+  for (const [t, , d] of [...notes].sort((a, b) => a[0] - b[0])) {
+    if (t >= heldUntil && layer.lfo1.delay > 0) lfoSync.push(t)
+    heldUntil = Math.max(heldUntil, t + d)
+  }
   const mix = new Float32Array(Math.floor(dur * sr))
   for (const [t, note, d] of notes) {
     const buf = render({ patch: layer, durationSec: dur, sampleRate: sr,
       events: [{ kind: 'on', t, note, velocity: 100 }, { kind: 'off', t: t + d, note }],
-      fx: { chorus: slot.patch.fx.chorus } })
+      fx: { chorus: slot.patch.fx.chorus }, lfoSync })
     if (stems) { writeWav(join(out, `${slot.address}-${notes.findIndex(n => n[0] === t && n[1] === note && n[2] === d)}.wav`), buf.map(v => v * 0.1), sr); continue }
     for (let i = 0; i < mix.length; i++) mix[i]! += buf[i]!
   }

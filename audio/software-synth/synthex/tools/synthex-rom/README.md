@@ -105,10 +105,34 @@ Index → meaning, stored width → value after the firmware's left shift:
   Whistle 58 -> 7.1, Tremolo piano 89 -> 3.39, Electric piano II 98 -> 2.8,
   Ring mod. 134 -> 1.1), all within 5 %. The pot is inverted (low raw value
   = fast), as the data already suggested.
-- LFO depths, by running the same modulation analysis on hardware and on
-  engine renders: pitch +-1.3 st at full depth (`PITCH_MOD 0.11`; Whistle and
-  Wash of sound), amplitude index 0.37 at full depth (`AMP_MOD`; Tremolo
-  piano 4.7 dB p-p at 0.69, Electric piano II 4.2 dB at 0.68).
+- **One LFO per layer, and when a key restarts it** (2026-11-10; firmware and the schematic of the LFO
+  board 410CST5850, sheet 6). The board has one oscillator per layer: a capacitor (330 nF) discharged by the
+  rate's current and reset to +5 V, a falling ramp; the rising ramp is its inversion, the square a comparator
+  on it, the triangle the two ramps switched at mid-cycle. It runs whether or not a key is down. Its SYNC
+  line restarts the ramp (for the triangle it sets the capacitor to the triangle's middle instead) and
+  recharges the delay capacitor, whose discharge fades the modulation in. The firmware strobes SYNC in the
+  key-assign routine ($F5FD-$F61B) only when a key goes down while no other key of the layer is gated, and
+  never when the layer's delay byte is above $F4 (the flags in $019F, set at $EF15). So the 15 presets
+  without delay (Landing, Chorale, Clavinet, Electric piano II, Ring mod. and ten more) have an LFO that no key restarts, and the others fade
+  it in once per phrase. `VoiceCore.syncLfo` and `Lfo.advance` play that: every voice carries a copy of the
+  layer's LFO, a silent voice keeps advancing it, and the voices' owner strobes all of them. Until then each
+  voice's LFO stopped while the voice was silent and its delay ramp ran once, when the voice was created.
+  Cherry Audio's Elka-X behaves the same way (its LFO carries on across notes unless RESET is on).
+- **Both LFO depth knobs read inverted** (byte 255 = none), like the rate, delay and cutoff knobs. On the
+  board the level CVs set the bias of the two 13600s through (5 V - LEV) / 10K, and the firmware writes
+  the stored bytes to those sample-and-holds unchanged ($FAB1). OTA A feeds the pitch and both pulse widths,
+  OTA B the VCA and the VCF. Measured: the pitch at the LFO's own rate is 29 cents peak on Whistle (A 181),
+  11 on Wash of sound (187), 7 on Filtered chorus (211) and 4 to 6 on Violins, Double basses and Ceilos
+  (231 to 238), where a direct reading had the strings 1.3 x Whistle (`PITCH_MOD` 0.09 = 1.1 st at full
+  depth); the level's ripple at the LFO rate over the first 15 s of a passage is 1.5 dB on Church organ
+  (B 242) and 2.0 on Reed organ (239), where the direct reading renders 4.9 and 3.9 and the inverted one
+  1.2 and 1.0, with Tremolo piano 4.6 (render 4.4), Pianet 3.6 (3.4), Electric piano II 6.5 (4.9)
+  (`AMP_MOD` 1.0: full tremolo at full depth). The pulse-width depth (`PWM_MOD` 2.0) follows the board's
+  resistors and the earlier harmonic-swing reading; the cutoff depth (`CUTOFF_MOD` 2.0) is not measured:
+  the A/B scores of Landing and Filtered strings, the only presets with the routing, do not tell 0.5
+  from 2. The string presets' audible 4 to 5 Hz wobble on the recording is not the LFO; it sits at the
+  chorus's rate. Tremolo piano and Electric piano II ripple from the first window, so the LFO delay stays
+  inverted (byte 255 = none).
 - Key tracking and the whole VCF cutoff mapping. **The cutoff pot reads
   inverted** (raw 255 = knob at minimum), like the two LFO pots: that is
   what makes Bass pluck and Fast decay "knob near zero plus a full
@@ -196,19 +220,6 @@ Index → meaning, stored width → value after the firmware's left shift:
   it off would do it. Wah brass and Filtered strings (attack index 6)
   measured 0.6 but take the full amount under the rule, a point or two
   worse on the scorecard. Measured 2026-10-31 on 14 presets.
-- **LFO depth A reads inverted for the pitch** (`pitch_depth`, `PITCH_MOD`
-  0.09 = 1.1 st at full depth): the component of the pitch track at the
-  LFO's own rate is 29 cents peak on Whistle (A 181), 11 on Wash of sound
-  (187), 7 on Filtered chorus (211) and 4 to 6 on Violins, Double basses and
-  Ceilos (231 to 238), where a direct reading had the strings 1.3 x Whistle
-  and the engine 3 to 4 x the hardware on them (and 16 x on Pianet). The
-  string presets' audible 4 to 5 Hz wobble on the recording is not the LFO;
-  it sits at the chorus's rate. The PW depth stays a direct reading of A,
-  halved (`PWM_MOD` 0.5): the swing of the second harmonic at the LFO rate
-  was 1.7 to 4.8 x the hardware's on Chorale, Clavinet and Sweep 1 and
-  about right on Take-off. The amp depth (B) is unchanged; Tremolo piano and
-  Electric piano II ripple 2 dB from the first window, so the LFO delay
-  stays inverted (byte 255 = none).
 - **Filtered chorus** is corrected one by one too (`FILTER_ENV_FIX`: envelope
   amount x 0.7, measured 2026-11-09). Its opening notes read 12-15 st under
   the engine through the first second (reach 0.64-0.71 of the decoded
@@ -248,14 +259,21 @@ Index → meaning, stored width → value after the firmware's left shift:
   7.11 -> 7.04. Landing is the worst preset left (12.5 dB) and its three
   sets disagree about the cure: on the passage the hardware's brightness
   falls from the first frame of each note, about 10 st a second, where the
-  engine's rises for 3 s first. Open.
+  engine's rose for 3 s first, every voice's LFO then starting at its
+  trough. Its LFO (0.17 Hz on the cutoff and both pulse widths, no delay)
+  is never restarted by a key, so the phase under each note of the
+  recording is whatever it was; with the layer's LFO running through and
+  the falling half under the note the stretch scores 8.3 dB. Its rate byte
+  (217) is far outside the six the rate curve was fitted on (39 to 134),
+  and its passage is transcribed about a second late. Open.
 
 **Still assumptions** (refine by measurement): LFO delay 1 ms to 30 s on
 the inverted scale (Whistle's vibrato reaches full depth within ~0.4 s of
 the note, consistent with its 0.57 s); glide speed `0.005 * 200^(1-v/254)` s
 (calibrated so Ring mod. is about 0.85 s; Whistle's portamento at raw 232
 is inaudibly short on the recording, consistent); panel volume 10 -> mix
-0.7; LFO->cutoff 0.5; PW cross-mod depth 0.175 (from the Elka-X Laser Harp
+0.7; LFO->cutoff 2.0 x the inverted depth B; the LFO's phase and polarity at a SYNC (taken
+as the triangle's middle, falling); PW cross-mod depth 0.175 (from the Elka-X Laser Harp
 fit); the oscillators' coupling into the mixer and ring modulator, a 5 Hz
 one-pole high-pass (`AC_COUPLING_HZ` in the voice core: without it a pulse's
 DC, 2 pw - 1, came out of the VCA as a thump on every note, and the run-through

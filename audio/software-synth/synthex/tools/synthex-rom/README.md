@@ -278,3 +278,22 @@ fit); the oscillators' coupling into the mixer and ring modulator, a 5 Hz
 one-pole high-pass (`AC_COUPLING_HZ` in the voice core: without it a pulse's
 DC, 2 pw - 1, came out of the VCA as a thump on every note, and the run-through
 has none). The raw values in `data/` are the fixed point.
+
+**The ring modulator** is the voice board's (410CST5800, service manual
+page 22), not a multiplier. Each oscillator is a counter whose bits pass
+through XOR gates into the waveform DAC; with RING MOD on, the gates' other
+input is the other oscillator's pulse, so the wave is inverted while that
+pulse is high. For OSC2's pulse this is
+`(A - A')/2 + s1 (A + A')/2`, A the pulse of width pw2, A' the one of width
+1 - pw2 from the same phase (`PolyBlepSquare.mirror`), s1 OSC1's pulse:
+constant amplitude, a part of OSC2 that OSC1 does not touch, and the plain
+product at pw 0.5. It is made from the uncoupled waves and coupled by its
+own tracker. Until 2026-11-11 it was the product of the two coupled waves:
+Ring mod.'s 72 % pulse then sat at +0.57 / -1.43 and the product was 8 dB
+louder for 4 ms of every cycle of a low note, a treble burst 10 to 14 ms
+into it (11 dB over the note; the recording and the new model: 3 dB). A/B
+distance: Clavichord II 4.3 -> 3.0 dB, Landing 10.0 -> 8.2, Ring mod. 2.9 ->
+3.4 (3.4 also before the coupling). Other waveforms keep the product of the
+raw waves. Open: which way round OSC1's pulse switches (both score alike),
+and the cross-mod source, which the sheet draws from the other oscillator's
+DAC wave, not its pulse.

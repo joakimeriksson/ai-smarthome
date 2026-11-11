@@ -419,7 +419,7 @@ export class VoiceCore {
         case 'noise':    s2 = this.noiseW2.next(); break
       }
 
-      // Cross-mod (above) and the ring modulator take the oscillators as they are; the mixer gets
+      // The ring modulator takes the oscillators as they are; the mixer gets
       // them, and the ring modulator's output, through the coupling, without their DC.
       //
       // The Synthex's ring modulator is digital (board 410CST5800). An oscillator is a counter whose
@@ -433,8 +433,15 @@ export class VoiceCore {
       // Ring mod.'s 72 %: 8 dB louder for 4 ms of each cycle of a C2, a click 10 ms into every note; the
       // run-through's treble is level within 3 dB there). Which way round OSC1's pulse switches is not
       // read off the sheet; the other waveforms are still the plain product.
-      this.prevOsc1 = s1
-      this.prevOsc2 = s2
+      //
+      // Cross-mod (the MOD switch into the pulse comparator, 10K / 10K with the PW voltage) does not
+      // take the other oscillator's output either but its DAC wave, in front of the comparator: the
+      // counter's ramp folded into a triangle by the oscillator's own flip-flop, or, on the ringed
+      // oscillator, the ramp as the other pulse flips it. Its polarity is fitted (Metallic, Ring mod.).
+      this.prevOsc1 = wave1 === 'noise' ? s1 : 4 * Math.abs(osc1Active.phase - 0.5) - 1
+      if (wave2 === 'noise') this.prevOsc2 = s2
+      else if (ringEnabled && wave2 === 'square') this.prevOsc2 = (s1 > 0 ? -1 : 1) * (2 * osc2Active.phase - 1)
+      else this.prevOsc2 = 4 * Math.abs(osc2Active.phase - 0.5) - 1
       let ring = s1 * s2
       if (ringEnabled && wave2 === 'square') {
         const m = this.bank2.square.mirror

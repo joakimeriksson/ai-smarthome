@@ -56,7 +56,7 @@ export const CUTOFF_STEP = 0.5
 export const AMP_ONSET_DELAY = 0.0015
 
 /**
- * Corner (Hz) of the coupling between each oscillator and the mixer / ring modulator. The pulse is
+ * Corner (Hz) of the coupling between each oscillator, or the ring modulator's output, and the mixer. The pulse is
  * +-1 with duty pw, so it carries 2 pw - 1 of DC: -0.81 on Electric piano I's 9 % pulse, more than its
  * tone. Unblocked, that DC went through the lowpass and the VCA and came out as a thump under every
  * note (energy below 20 Hz 2 to 5 dB under the total on Brass II, Funky Clav., Electric piano I and the
@@ -147,6 +147,8 @@ export class VoiceCore {
   /** The oscillators' DC, tracked by their output coupling (AC_COUPLING_HZ). */
   private dc1 = 0
   private dc2 = 0
+  /** The ring modulator's own DC: its output is coupled like an oscillator's. */
+  private dcRing = 0
   private readonly dcCoef: number
 
   constructor(sampleRate: number, patch: LayerPatch) {
@@ -225,6 +227,7 @@ export class VoiceCore {
       // down: start the tracker at the waveform's mean (a pulse's 2 pw - 1), not at 0.
       this.dc1 = this.patch.osc1.wave === 'square' ? 2 * this.patch.osc1.pwm - 1 : 0
       this.dc2 = this.patch.osc2.wave === 'square' ? 2 * this.patch.osc2.pwm - 1 : 0
+      this.dcRing = this.patch.osc2.wave === 'square' ? this.dc2 : this.dc1 * this.dc2
     }
     this.computeGlideCoef()
 
@@ -410,23 +413,41 @@ export class VoiceCore {
       let s2 = 0
       switch (wave2) {
         case 'sawtooth': s2 = this.bank2.saw.next(dt2); break
-        case 'square':   s2 = this.bank2.square.next(dt2, pwm2); break
+        case 'square':   s2 = this.bank2.square.next(dt2, pwm2, ringEnabled); break
         case 'triangle': s2 = this.bank2.triangle.next(dt2); break
         case 'sine':     s2 = this.bank2.sine.next(dt2); break
         case 'noise':    s2 = this.noiseW2.next(); break
       }
 
-      // Cross-mod (above) takes the oscillators as they are; the mixer and the ring modulator get them
-      // through the coupling, without their DC.
+      // Cross-mod (above) and the ring modulator take the oscillators as they are; the mixer gets
+      // them, and the ring modulator's output, through the coupling, without their DC.
+      //
+      // The Synthex's ring modulator is digital (board 410CST5800). An oscillator is a counter whose
+      // bits pass through XOR gates into the waveform DAC; with RING MOD on, the gates' other input is
+      // the other oscillator's output pulse, so the ramp runs backwards while that pulse is high. The
+      // pulse comparator behind the DAC then gives pulse(pw) or its mirror image, -pulse(1 - pw):
+      //   ring = (A - A') / 2 + s1 (A + A') / 2,   A = pulse(pw), A' = pulse(1 - pw), s1 = OSC1's pulse
+      // one amplitude throughout, a part of OSC2 that OSC1 does not touch (none at pw = 0.5, where this
+      // is the plain product s1 A), and no DC of its own beyond OSC2's. Multiplying the coupled signals
+      // instead (2026-11-10) made the product swell with a narrow pulse's long half (+0.57 / -1.43 at
+      // Ring mod.'s 72 %: 8 dB louder for 4 ms of each cycle of a C2, a click 10 ms into every note; the
+      // run-through's treble is level within 3 dB there). Which way round OSC1's pulse switches is not
+      // read off the sheet; the other waveforms are still the plain product.
       this.prevOsc1 = s1
       this.prevOsc2 = s2
+      let ring = s1 * s2
+      if (ringEnabled && wave2 === 'square') {
+        const m = this.bank2.square.mirror
+        ring = (s2 - m) / 2 + s1 * (s2 + m) / 2
+      }
+      this.dcRing += this.dcCoef * (ring - this.dcRing)
+      ring -= this.dcRing
       this.dc1 += this.dcCoef * (s1 - this.dc1)
       this.dc2 += this.dcCoef * (s2 - this.dc2)
       s1 -= this.dc1
       s2 -= this.dc2
 
       const noiseSample = noiseColor === 'pink' ? this.noiseP.next() : this.noiseW2.next()
-      const ring = s1 * s2
 
       let mixed =
         s1 * p.mix.osc1 +

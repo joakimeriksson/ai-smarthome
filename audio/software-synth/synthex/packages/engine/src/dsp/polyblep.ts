@@ -134,10 +134,41 @@ export class PolyBlepSaw extends SyncedOsc {
 // `pwm` is the duty cycle in [0.05, 0.95] — caller clamps.
 export class PolyBlepSquare extends SyncedOsc {
   private pwm = 0.5
+  /**
+   * With `next(dt, pwm, true)`: the same cycle's pulse of width 1 - pwm, i.e. this pulse mirrored in
+   * time and inverted. The Synthex's ring modulator switches between the two (see VoiceCore).
+   */
+  mirror = 0
+  private pendingMirror = 0
   protected value(phase: number): number { return phase < this.pwm ? 1 : -1 }
   protected slope(): number { return 0 }
 
-  next(dt: number, pwm: number): number {
+  override reset(phase = 0): void {
+    super.reset(phase)
+    this.pendingMirror = 0
+  }
+
+  /** The pulse of width w from this oscillator's phase, before `next()` moves it. */
+  private companion(dt: number, w: number): number {
+    const ph = this.phase
+    let s = ph < w ? 1 : -1
+    const tau = this.syncTau, syncing = tau >= 0
+    const tauWrap = (1 - ph) / dt, tauEdge = (w - ph) / dt
+    if (ph > 1 - dt && (!syncing || tauWrap < tau)) s += 2 * stepBefore(tauWrap)
+    if (ph < w && tauEdge < 1 && (!syncing || tauEdge < tau)) s -= 2 * stepBefore(tauEdge)
+    if (this.afterSync) s += this.pendingMirror
+    else if (ph < dt) s += 2 * stepAfter(ph / dt)
+    if (ph >= w && ph < w + dt) s -= 2 * stepAfter((ph - w) / dt)
+    if (syncing) {
+      const a = 1 - (frac(ph + tau * dt) < w ? 1 : -1)
+      this.pendingMirror = a * stepAfter(1 - tau)
+      s += a * stepBefore(tau)
+    }
+    return s
+  }
+
+  next(dt: number, pwm: number, withMirror = false): number {
+    if (withMirror) this.mirror = this.companion(dt, 1 - pwm)
     this.pwm = pwm
     const ph = this.phase
     let s = ph < pwm ? 1 : -1

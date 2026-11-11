@@ -196,7 +196,8 @@ Index → meaning, stored width → value after the firmware's left shift:
   0.42 for 0.57), so it is the cross-mod, `XMOD_DEPTH` or its polarity, that
   is unmeasured; a unipolar modulator (centre shifted up 0.1) fits Metallic
   but cannot be checked on Fat Sound, Landing or Ring mod., whose filters
-  and sync defeat the fit. Left as is.
+  and sync defeat the fit. Resolved 2026-11-11 by the schematic: see the
+  cross-mod under the ring modulator below.
 - **Resonance** stays `p[10] / 254` in the patch; the engine's Q curve changed
   instead (`voice-core.ts`, `updateCoeffs`): Q = 0.5 + 2.2 r^0.75 + 22 r^8.
   On the recording the resonant bump over the neighbouring harmonics is 5 to
@@ -273,8 +274,7 @@ the note, consistent with its 0.57 s); glide speed `0.005 * 200^(1-v/254)` s
 (calibrated so Ring mod. is about 0.85 s; Whistle's portamento at raw 232
 is inaudibly short on the recording, consistent); panel volume 10 -> mix
 0.7; LFO->cutoff 2.0 x the inverted depth B; the LFO's phase and polarity at a SYNC (taken
-as the triangle's middle, falling); PW cross-mod depth 0.175 (from the Elka-X Laser Harp
-fit); the oscillators' coupling into the mixer and ring modulator, a 5 Hz
+as the triangle's middle, falling); the cross-mod's polarity (fitted, below); the oscillators' coupling into the mixer and ring modulator, a 5 Hz
 one-pole high-pass (`AC_COUPLING_HZ` in the voice core: without it a pulse's
 DC, 2 pw - 1, came out of the VCA as a thump on every note, and the run-through
 has none). The raw values in `data/` are the fixed point.
@@ -294,6 +294,22 @@ louder for 4 ms of every cycle of a low note, a treble burst 10 to 14 ms
 into it (11 dB over the note; the recording and the new model: 3 dB). A/B
 distance: Clavichord II 4.3 -> 3.0 dB, Landing 10.0 -> 8.2, Ring mod. 2.9 ->
 3.4 (3.4 also before the coupling). Other waveforms keep the product of the
-raw waves. Open: which way round OSC1's pulse switches (both score alike),
-and the cross-mod source, which the sheet draws from the other oscillator's
-DAC wave, not its pulse.
+raw waves. Open: which way round OSC1's pulse switches (both score alike).
+
+**Cross-mod** (waveform 4, the MOD switch) is on the same sheet: the pulse
+comparator compares the oscillator's DAC wave with the PW voltage plus,
+through 10K / 10K, the other oscillator's DAC wave. So the modulator is not
+the other oscillator's output but the wave in front of its comparator: the
+counter's ramp folded into a triangle by the oscillator's own flip-flop, or,
+on the ringed oscillator, the ramp as the other pulse flips it
+(`prevOsc1 / 2` in the voice core). The depth follows from the divider: the
+wave's full swing moves the width by +-0.25 (`XMOD_DEPTH` 0.556 x the
+engine's 0.45). Until 2026-11-11 it was 0.175 of the other oscillator's
+pulse, from an Elka-X fit. A/B distance of the four presets that have it,
+after the ring modulator above: Ring mod. 3.4 -> 2.9 dB, Landing 8.2 -> 7.6,
+Metallic 6.3 -> 4.0, Fat Sound 4.2 -> 3.5; the treble burst at Ring mod.'s
+note start stays at the recording's 3 dB (2.6). The polarity is fitted: the
+triangle taken as 4 |phase - 1/2| - 1, high at the start of the cycle
+(Metallic 4.0 against 5.1 the other way, Ring mod. 2.9 against 3.5; Fat
+Sound prefers the other, 3.2 against 3.5). The comparator's 10 nF is not
+modelled.

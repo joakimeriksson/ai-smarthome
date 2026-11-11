@@ -132,7 +132,9 @@ AMP_MOD = 1.0        # engine: amp * (1 + matrix * lfo * depth). The level's rip
                      # first 15 s of each passage, hardware against renders: Church organ 1.5 dB (direct
                      # reading 4.9, inverted 1.1), Reed organ 2.0 (3.9, 1.0), Tremolo piano 4.6 and Electric
                      # piano II 6.5 (3.5 and 4.0 either way at 0.8, the two readings being equal near B = 175)
-XMOD_DEPTH = 0.175   # pulse-width cross-mod depth, from the Elka-X Laser Harp fit
+XMOD_DEPTH = 0.556   # pulse-width cross-mod: the engine's 0.45 x this = 0.25, the other oscillator's DAC wave
+                     # (+-1) through the comparator's 10K / 10K against the PW voltage (board 410CST5800).
+                     # Was 0.175 of the other oscillator's pulse, from an Elka-X fit of the Laser Harp
 # VCF cutoff mapping. The cutoff pot reads INVERTED like the two LFO pots
 # (raw 255 = knob at minimum): with that, Bass pluck and Fast decay sit at
 # knob ~0 plus a full envelope, Ceilos and the organs are open, and the

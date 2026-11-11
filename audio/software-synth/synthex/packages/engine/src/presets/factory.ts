@@ -132,7 +132,7 @@ const PRESETS_B1: Record<number, Patch> = {
   2: single('Fat Sound', L({
     osc1: { wave: 'square', octave: 0, pwm: 0.173 },
     osc2: { wave: 'square', octave: 2, detune: 1.6, pwm: 0.213, sync: false },
-    mix:  { osc1: 0.56, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false, crossMod2: 0.175 },
+    mix:  { osc1: 0.56, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: false, crossMod2: 0.556 },
     filter: { mode: 'hp12', cutoff: -0.01, resonance: 0, envAmount: -1.849, keyTrack: 1 },
     envFilter: ADSR(0.002, 0.66, 0.052, 0.515),
     envAmp:    ADSR(0.002, 0.257, 0.299, 0.515),
@@ -143,7 +143,7 @@ const PRESETS_B1: Record<number, Patch> = {
   3: single('Metallic', L({
     osc1: { wave: 'square', octave: -1, pwm: 0.268 },
     osc2: { wave: 'triangle', octave: 1, detune: 313.3, pwm: 0.5, sync: true },
-    mix:  { osc1: 0.7, osc2: 0.513, noise: 0, noiseColor: 'white', ringMod: false, crossMod2: 0.175 },
+    mix:  { osc1: 0.7, osc2: 0.513, noise: 0, noiseColor: 'white', ringMod: false, crossMod2: 0.556 },
     filter: { mode: 'lp24', cutoff: 0.564, resonance: 0.063, envAmount: 0.797, keyTrack: 1 },
     envFilter: ADSR(0.002, 0.66, 0, 1.782),
     envAmp:    ADSR(0.002, 0.074, 1, 1.782),
@@ -494,7 +494,7 @@ const PRESETS_B4: Record<number, Patch> = {
   3: single('Landing', L({
     osc1: { wave: 'square', octave: 0, pwm: 0.906 },
     osc2: { wave: 'square', octave: 1, detune: 703.1, pwm: 0.299, sync: false },
-    mix:  { osc1: 0.653, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.175, crossMod2: 0.175 },
+    mix:  { osc1: 0.653, osc2: 0.7, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.556, crossMod2: 0.556 },
     filter: { mode: 'bp12', cutoff: 0.044, resonance: 0.354, envAmount: 1.363, keyTrack: 1 },
     envFilter: ADSR(0.002, 6.6, 0.574, 6.6),
     envAmp:    ADSR(0.002, 0.037, 0.874, 13.2),
@@ -528,7 +528,7 @@ const PRESETS_B4: Record<number, Patch> = {
   6: single('Ring mod.', L({
     osc1: { wave: 'square', octave: -1, pwm: 0.717 },
     osc2: { wave: 'square', octave: 1, detune: 709, pwm: 0.654, sync: true },
-    mix:  { osc1: 0.513, osc2: 0.467, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.175 },
+    mix:  { osc1: 0.513, osc2: 0.467, noise: 0, noiseColor: 'white', ringMod: true, crossMod: 0.556 },
     filter: { mode: 'lp24', cutoff: 0.817, resonance: 0, envAmount: 1.897, keyTrack: 1 },
     envFilter: ADSR(0.002, 0.029, 0.121, 0.515),
     envAmp:    ADSR(0.002, 0.257, 0.488, 0.037),

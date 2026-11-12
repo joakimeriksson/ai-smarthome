@@ -56,6 +56,24 @@ export const CUTOFF_STEP = 0.5
 export const AMP_ONSET_DELAY = 0.0015
 
 /**
+ * The highest cutoff the filter reaches (a MIDI note: 120 = 8.4 kHz), whatever
+ * the knob, the envelope and the key tracking add up to. Measured on the
+ * recording at the notes' onsets: the presets whose filter envelope snaps
+ * far past the top (Ring mod., Chunky Synth, Funky Clav., Clavichord II,
+ * Bass pluck: 60 to 110 semitones of envelope on a 2 ms attack) were 7 to
+ * 18 dB brighter above 3 kHz in their loudest 30 ms than the Synthex, a
+ * hard hit on every note, while 120 ms later they agreed. Neither a
+ * smaller envelope reach nor a lag on the envelope explains it (Ring mod.
+ * stays 6 dB over at half the reach); a ceiling does, for all of them. With
+ * the ceiling at 132 (16.7 kHz) the forty presets' onsets were 6.1 dB off
+ * above 3 kHz, at 120 they are 5.1; the A/B score goes from 5.65 to 5.60,
+ * Ring mod.'s from 4.21 to 3.70. Under 116 the open presets (the clavinets,
+ * the organs) lose treble the recording has. The recording is an MP3 cut at
+ * 11 kHz, so this is a fit from 3 to 9 kHz, not a reading of the circuit.
+ */
+export const CUTOFF_CEILING = 120
+
+/**
  * Corner (Hz) of the coupling between each oscillator, or the ring modulator's output, and the mixer. The pulse is
  * +-1 with duty pw, so it carries 2 pw - 1 of DC: -0.81 on Electric piano I's 9 % pulse, more than its
  * tone. Unblocked, that DC went through the lowpass and the VCA and came out as a thump under every
@@ -284,7 +302,7 @@ export class VoiceCore {
       p.filter.envAmount * env1Level * 60 +
       m.env1ToCutoff * (env1Level - 0.5) * 96 +
       p.filter.keyTrack * (this.currentNote - 60)
-    return clamp(baseCutoffNote + cutoffMod, 0, 132)
+    return clamp(baseCutoffNote + cutoffMod, 0, CUTOFF_CEILING)
   }
 
   /**

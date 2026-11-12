@@ -313,3 +313,23 @@ triangle taken as 4 |phase - 1/2| - 1, high at the start of the cycle
 (Metallic 4.0 against 5.1 the other way, Ring mod. 2.9 against 3.5; Fat
 Sound prefers the other, 3.2 against 3.5). The comparator's 10 nF is not
 modelled.
+
+**The cutoff's ceiling** (2026-11-12). The filter opens no further than note
+120, 8.4 kHz (`CUTOFF_CEILING` in the voice core; it was 132, 16.7 kHz).
+Found by ear on Ring mod., the laser harp: every note began with a hard hit.
+Its filter envelope adds 114 semitones on a 2 ms attack, so the filter stood
+wide open for the first 20 ms of a note; `ab/onset.py` (each note's loudest
+30 ms, by band) put that at 6.6 dB over the recording above 3 kHz, and the
+other plucks with it (Chunky Synth 14.6, Funky Clav. 18.5, Bass pluck 12.9,
+Clavichord II 7.1), all of them right again 120 ms later. A lag on the
+envelope does not move it and half the envelope's reach leaves Ring mod. at
+5.6; a ceiling brings all of them down. At 120 the forty presets' onsets
+above 3 kHz are 5.1 dB off (6.1 before), the A/B score 5.60 (5.65), Ring mod.
+3.70 (4.21), eleven presets better and seven worse (the worst Electric
+piano I, +0.7, already too dark). Under 116 the clavinets and the organs
+lose treble the recording has. A second Synthex on the same preset (Magnus
+Gladen's video, full band) agrees: its attack's jump over the sound 150 ms
+later is 6.5 dB at 3-9 kHz and 12.3 at 9-16 kHz; the engine's 7.6 and 10.8
+at 120, 11.0 and 26.4 without the ceiling. It is a fit to recordings, not a
+reading of the filter's circuit. What is left: below 1 kHz the engine's
+attack is 1 to 2.5 dB stronger than both recordings'.
